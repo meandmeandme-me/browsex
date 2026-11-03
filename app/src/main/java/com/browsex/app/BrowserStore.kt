@@ -40,7 +40,7 @@ class BrowserStore(context: Context) {
 
     private fun writeList(key: String, values: List<String>) {
         val array = JSONArray()
-        values.forEach(array::put)
+        values.forEach { array.put(it) }
         prefs.edit().putString(key, array.toString()).apply()
     }
 }
