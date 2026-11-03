@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BrowseX</title>
+<style>
+  body { margin:0; background:#0F1217; color:#fff; font-family: sans-serif; display:flex; flex-direction:column; align-items:center; padding:48px 20px; }
+  h1 { font-size:34px; margin:0 0 28px 0; }
+  h1 span { color:#2F7BFF; }
+  form { width:100%; max-width:520px; }
+  input { width:100%; box-sizing:border-box; padding:14px 20px; border-radius:28px; border:1px solid #2a323d; background:#1E252E; color:#fff; font-size:16px; outline:none; }
+  input:focus { border-color:#2F7BFF; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%; max-width:520px; margin-top:34px; }
+  a { text-decoration:none; color:#fff; background:#1E252E; border-radius:16px; padding:22px 8px; text-align:center; font-size:15px; }
+</style>
+</head>
+<body>
+  <h1>Browse<span>X</span></h1>
+  <form action="https://www.google.com/search" method="get">
+    <input type="search" name="q" placeholder="Search Google or type a URL">
+  </form>
+  <div class="grid">
+    <a href="https://www.google.com">Google</a>
+    <a href="https://m.youtube.com">YouTube</a>
+    <a href="https://www.wikipedia.org">Wikipedia</a>
+  </div>
+</body>
+</html>
