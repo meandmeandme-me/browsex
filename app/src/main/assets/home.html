@@ -1,29 +1,44 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <title>BrowseX</title>
 <style>
-  body { margin:0; background:#0F1217; color:#fff; font-family: sans-serif; display:flex; flex-direction:column; align-items:center; padding:48px 20px; }
-  h1 { font-size:34px; margin:0 0 28px 0; }
-  h1 span { color:#2F7BFF; }
-  form { width:100%; max-width:520px; }
-  input { width:100%; box-sizing:border-box; padding:14px 20px; border-radius:28px; border:1px solid #2a323d; background:#1E252E; color:#fff; font-size:16px; outline:none; }
-  input:focus { border-color:#2F7BFF; }
-  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%; max-width:520px; margin-top:34px; }
-  a { text-decoration:none; color:#fff; background:#1E252E; border-radius:16px; padding:22px 8px; text-align:center; font-size:15px; }
+:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--field:#212832;--line:#303a48;--blue:#4184f5;--muted:#9aa7b8}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 20%,#17243a 0%,var(--bg) 55%);color:#f4f7fb;font:16px system-ui,-apple-system,sans-serif;display:flex;justify-content:center}
+main{width:min(680px,100%);padding:clamp(56px,14vh,130px) 22px 40px;text-align:center}
+.brand{font-size:clamp(42px,10vw,64px);font-weight:800;letter-spacing:-3px;margin:0 0 10px}
+.brand span{color:var(--blue)}
+.tagline{color:var(--muted);margin:0 0 34px}
+.search{display:flex;gap:10px;width:100%;padding:7px;background:var(--field);border:1px solid var(--line);border-radius:18px}
+.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:white;padding:10px 12px;font:inherit}
+.search button{border:0;border-radius:12px;background:var(--blue);color:white;padding:0 18px;font-weight:650}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
+a{color:inherit;text-decoration:none}
+.tile{display:block;background:rgba(33,40,50,.85);border:1px solid var(--line);border-radius:16px;padding:20px 8px;transition:transform .15s,border-color .15s}
+.tile:active{transform:scale(.97);border-color:var(--blue)}
+.tile b{display:block;font-size:15px}.tile small{display:block;color:var(--muted);margin-top:5px}
+footer{margin-top:54px;color:#68778a;font-size:12px}
+@media(max-width:420px){.grid{gap:8px}.tile{padding:16px 4px}}
 </style>
 </head>
 <body>
-  <h1>Browse<span>X</span></h1>
-  <form action="https://www.google.com/search" method="get">
-    <input type="search" name="q" placeholder="Search Google or type a URL">
+<main>
+  <h1 class="brand">Browse<span>X</span></h1>
+  <p class="tagline">A faster, calmer way to explore the web.</p>
+  <form class="search" action="https://www.google.com/search" method="get">
+    <input type="search" name="q" placeholder="Search or enter a website" autocomplete="off" autofocus>
+    <button type="submit">Go</button>
   </form>
-  <div class="grid">
-    <a href="https://www.google.com">Google</a>
-    <a href="https://m.youtube.com">YouTube</a>
-    <a href="https://www.wikipedia.org">Wikipedia</a>
-  </div>
+  <nav class="grid" aria-label="Quick links">
+    <a class="tile" href="https://www.google.com"><b>Google</b><small>Search</small></a>
+    <a class="tile" href="https://www.youtube.com"><b>YouTube</b><small>Watch</small></a>
+    <a class="tile" href="https://www.wikipedia.org"><b>Wikipedia</b><small>Learn</small></a>
+  </nav>
+  <footer>BrowseX · Powered by GeckoView</footer>
+</main>
 </body>
 </html>
