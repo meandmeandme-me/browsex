@@ -109,8 +109,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::geckoView.isInitialized) {
+            geckoView.releaseSession()
+        }
+        tabs.toList().forEach { it.session.close() }
+        tabs.clear()
+        current = null
         super.onDestroy()
-        tabs.forEach { it.session.close() }
     }
 
     // ---------------------------------------------------------------- UI
