@@ -1,0 +1,40 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Bundle uBlock Origin (Firefox extension)
+        run: |
+          mkdir -p app/src/main/assets/ublock
+          if curl -fsSL -o ubo.xpi "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"; then
+            unzip -q -o ubo.xpi -d app/src/main/assets/ublock
+            rm -rf app/src/main/assets/ublock/META-INF
+            echo "uBlock Origin bundled"
+          else
+            echo "Could not download uBlock Origin; building without it"
+          fi
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BrowseX-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
