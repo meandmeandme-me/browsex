@@ -2,15 +2,11 @@ package com.browsex.app
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.text.InputType
-import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -31,384 +27,413 @@ import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
-private const val TAG = "BrowseX"
-private const val HOME = "resource://android/assets/home.html"
+private const val HOME_URL = "resource://android/assets/home.html"
+private const val SEARCH_GOOGLE = "https://www.google.com/search?q="
+private const val SEARCH_DDG = "https://html.duckduckgo.com/html/?q="
+private const val SEARCH_BING = "https://www.bing.com/search?q="
+private val COLOR_BG = Color.rgb(13, 17, 23)
+private val COLOR_PANEL = Color.rgb(22, 27, 34)
+private val COLOR_FIELD = Color.rgb(33, 40, 50)
+private val COLOR_ACCENT = Color.rgb(65, 132, 245)
 
-private val BG = Color.parseColor("#0F1217")
-private val BAR = Color.parseColor("#161B22")
-private val FIELD = Color.parseColor("#1E252E")
-private val ACCENT = Color.parseColor("#2F7BFF")
-
-/** One GeckoRuntime (the Firefox engine) for the whole app. */
-object GeckoHolder {
-    private var runtime: GeckoRuntime? = null
-    fun get(context: Context): GeckoRuntime {
-        val existing = runtime
-        if (existing != null) return existing
-        val created = GeckoRuntime.create(context.applicationContext)
-        runtime = created
-        return created
+/** GeckoRuntime is process-wide. Sessions are owned by MainActivity and always closed there. */
+private object BrowserEngine {
+    @Volatile private var instance: GeckoRuntime? = null
+    fun runtime(context: Context): GeckoRuntime = instance ?: synchronized(this) {
+        instance ?: GeckoRuntime.create(context.applicationContext).also { instance = it }
     }
 }
 
-/** One browser tab = one GeckoSession. */
-class Tab(val session: GeckoSession) {
-    var title: String = ""
-    var url: String = ""
-    var canGoBack: Boolean = false
+private data class BrowserTab(
+    val session: GeckoSession = GeckoSession(),
+    var title: String = "New tab",
+    var url: String = HOME_URL,
+    var progress: Int = 0,
+    var canGoBack: Boolean = false,
     var canGoForward: Boolean = false
-    var progress: Int = 0
-}
+)
 
 class MainActivity : AppCompatActivity() {
-
-    private val tabs = mutableListOf<Tab>()
-    private var current: Tab? = null
-    private var isFullscreen = false
-    private val ui = Handler(Looper.getMainLooper())
-
-    private lateinit var geckoView: GeckoView
-    private lateinit var urlBar: EditText
-    private lateinit var progressBar: ProgressBar
+    private val tabs = mutableListOf<BrowserTab>()
+    private var activeTab: BrowserTab? = null
+    private lateinit var store: BrowserStore
+    private lateinit var browserView: GeckoView
+    private lateinit var address: EditText
+    private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
-    private lateinit var backBtn: TextView
-    private lateinit var fwdBtn: TextView
-    private lateinit var tabsBtn: TextView
+    private lateinit var backButton: TextView
+    private lateinit var forwardButton: TextView
+    private lateinit var tabsButton: TextView
+    private var fullscreen = false
+    private var shuttingDown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = BG
-        window.navigationBarColor = BAR
-        setContentView(buildUi())
+        store = BrowserStore(this)
+        window.statusBarColor = COLOR_BG
+        window.navigationBarColor = COLOR_PANEL
+        setContentView(createBrowserUi())
 
-        val backCallback = object : OnBackPressedCallback(true) {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val tab = current
-                if (isFullscreen) {
-                    tab?.session?.exitFullScreen()
-                } else if (tab != null && tab.canGoBack) {
-                    tab.session.goBack()
-                } else if (tabs.size > 1 && tab != null) {
-                    closeTab(tab)
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                val tab = activeTab
+                when {
+                    fullscreen -> tab?.session?.exitFullScreen()
+                    tab?.canGoBack == true -> tab.session.goBack()
+                    tabs.size > 1 && tab != null -> closeTab(tab)
+                    else -> finish()
                 }
             }
-        }
-        onBackPressedDispatcher.addCallback(this, backCallback)
+        })
 
-        installExtensions()
-        openTab(intent?.data?.toString() ?: HOME)
+        prepareBuiltInExtension()
+        val initial = intent?.data?.let(::safeExternalUrl) ?: HOME_URL
+        createTab(initial)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.data?.let { openTab(it.toString()) }
+        setIntent(intent)
+        intent.data?.let(::safeExternalUrl)?.let(::createTab)
     }
 
     override fun onDestroy() {
-        if (::geckoView.isInitialized) {
-            geckoView.releaseSession()
-        }
+        shuttingDown = true
+        if (::browserView.isInitialized) browserView.releaseSession()
         tabs.toList().forEach { it.session.close() }
         tabs.clear()
-        current = null
+        activeTab = null
         super.onDestroy()
     }
 
-    // ---------------------------------------------------------------- UI
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    private fun buildUi(): View {
+    private fun createBrowserUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(BG)
+            setBackgroundColor(COLOR_BG)
         }
-        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
-            )
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, 0)
             insets
         }
 
-        // Top: address bar + thin progress bar
         topBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(BG)
+            setBackgroundColor(COLOR_BG)
         }
-        urlBar = EditText(this).apply {
-            hint = "Search or enter address"
-            setHintTextColor(Color.parseColor("#7D8794"))
+        val addressRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(6))
+        }
+        address = EditText(this).apply {
+            hint = "Search or enter website"
+            setHintTextColor(Color.rgb(145, 155, 168))
             setTextColor(Color.WHITE)
             textSize = 15f
-            setSingleLine(true)
+            singleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
-            setPadding(dp(18), 0, dp(18), 0)
-            background = GradientDrawable().apply {
-                setColor(FIELD)
-                cornerRadius = dp(22).toFloat()
-            }
-            setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == EditorInfo.IME_ACTION_GO) {
-                    go(text.toString())
+            setPadding(dp(16), 0, dp(12), 0)
+            background = rounded(COLOR_FIELD, 24)
+            setOnEditorActionListener { _, action, _ ->
+                if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
+                    navigate(address.text.toString())
                     true
-                } else {
-                    false
-                }
+                } else false
             }
-            setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) updateUrlBar()
-            }
+            setOnFocusChangeListener { _, focused -> if (!focused) updateAddress() }
         }
-        val urlRow = LinearLayout(this).apply {
-            setPadding(dp(10), dp(8), dp(10), dp(6))
-        }
-        urlRow.addView(
-            urlBar,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44))
-        )
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+        addressRow.addView(address, LinearLayout.LayoutParams(0, dp(46), 1f))
+        addressRow.addView(actionButton("⋮", "Browser menu") { showBrowserMenu() }, LinearLayout.LayoutParams(dp(44), dp(46)))
+        progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            isIndeterminate = false
-            progressTintList = ColorStateList.valueOf(ACCENT)
-            visibility = View.INVISIBLE
+            progressTintList = android.content.res.ColorStateList.valueOf(COLOR_ACCENT)
+            visibility = View.GONE
         }
-        topBar.addView(urlRow)
-        topBar.addView(
-            progressBar,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3))
-        )
+        topBar.addView(addressRow)
+        topBar.addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
 
-        // Middle: the Firefox engine view
-        geckoView = GeckoView(this)
-
-        // Bottom: buttons
+        browserView = GeckoView(this).apply { setBackgroundColor(Color.WHITE) }
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(BAR)
+            gravity = Gravity.CENTER
+            setBackgroundColor(COLOR_PANEL)
         }
-        backBtn = barButton("Back") { current?.session?.goBack() }
-        fwdBtn = barButton("Forward") { current?.session?.goForward() }
-        val reloadBtn = barButton("Reload") { current?.session?.reload() }
-        val homeBtn = barButton("Home") { current?.session?.loadUri(HOME) }
-        tabsBtn = barButton("Tabs 1") { showTabs() }
-        listOf(backBtn, fwdBtn, reloadBtn, homeBtn, tabsBtn).forEach { bottomBar.addView(it) }
+        backButton = bottomButton("‹", "Back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
+        forwardButton = bottomButton("›", "Forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
+        bottomButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }
+        bottomButton("+", "New tab") { createTab(HOME_URL) }
+        tabsButton = bottomButton("1", "Tabs") { showTabs() }
+        listOf(backButton, forwardButton).forEach { it.alpha = 0.45f }
 
         root.addView(topBar)
-        root.addView(
-            geckoView,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-        )
-        root.addView(
-            bottomBar,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52))
-        )
+        root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(54)))
         return root
     }
 
-    private fun barButton(label: String, onClick: () -> Unit): TextView {
-        return TextView(this).apply {
+    private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
+        setColor(color)
+        cornerRadius = dp(radius).toFloat()
+    }
+
+    private fun actionButton(label: String, description: String, action: () -> Unit) =
+        TextView(this).apply {
             text = label
-            textSize = 13f
-            setTextColor(Color.WHITE)
+            contentDescription = description
+            textSize = 22f
             gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-            setOnClickListener { onClick() }
+            setTextColor(Color.WHITE)
+            setOnClickListener { action() }
         }
-    }
 
-    private fun refreshUi() {
-        val t = current ?: return
-        updateUrlBar()
-        progressBar.progress = t.progress
-        progressBar.visibility = if (t.progress in 1..99) View.VISIBLE else View.INVISIBLE
-        backBtn.alpha = if (t.canGoBack) 1f else 0.35f
-        fwdBtn.alpha = if (t.canGoForward) 1f else 0.35f
-        tabsBtn.text = "Tabs ${tabs.size}"
-    }
-
-    private fun updateUrlBar() {
-        if (urlBar.hasFocus()) return
-        val u = current?.url ?: ""
-        urlBar.setText(if (u.startsWith("resource://")) "" else u)
-    }
-
-    private fun setFullscreen(fs: Boolean) {
-        isFullscreen = fs
-        topBar.visibility = if (fs) View.GONE else View.VISIBLE
-        bottomBar.visibility = if (fs) View.GONE else View.VISIBLE
-        val controller = WindowInsetsControllerCompat(window, window.decorView)
-        if (fs) {
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-        } else {
-            controller.show(WindowInsetsCompat.Type.systemBars())
+    private fun bottomButton(label: String, description: String, action: () -> Unit) =
+        actionButton(label, description, action).also {
+            it.textSize = 23f
+            bottomBar.addView(it, LinearLayout.LayoutParams(0, -1, 1f))
         }
+
+    private fun updateChrome() {
+        val tab = activeTab ?: return
+        if (!address.hasFocus()) updateAddress()
+        progress.progress = tab.progress
+        progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
+        backButton.alpha = if (tab.canGoBack) 1f else 0.4f
+        forwardButton.alpha = if (tab.canGoForward) 1f else 0.4f
+        tabsButton.text = tabs.size.toString()
     }
 
-    // ---------------------------------------------------------------- Navigation
+    private fun updateAddress() {
+        if (!::address.isInitialized || address.hasFocus()) return
+        val url = activeTab?.url.orEmpty()
+        address.setText(if (url.startsWith("resource://")) "" else url)
+    }
 
-    private fun toUri(input: String): String {
-        val t = input.trim()
-        if (t.isEmpty()) return HOME
-        val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(t) ||
-            t.startsWith("about:")
-        if (hasScheme) return t
-        if (!t.contains(' ') && (t.contains('.') || t.startsWith("localhost"))) {
-            return "https://$t"
+    private fun normalizeInput(raw: String): String {
+        val value = raw.trim()
+        if (value.isEmpty()) return HOME_URL
+        if (value.startsWith("about:") || value.startsWith("resource://")) return value
+        val explicitScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(value)
+        if (explicitScheme) {
+            val scheme = Uri.parse(value).scheme?.lowercase()
+            if (scheme == "http" || scheme == "https") return value
+            return SEARCH_GOOGLE + Uri.encode(value)
         }
-        return "https://www.google.com/search?q=" + Uri.encode(t)
+        val looksLikeHost = !value.contains(" ") &&
+            (value == "localhost" || value.contains(".") || value.startsWith("192.168."))
+        if (looksLikeHost) return "https://$value"
+        val base = when (store.searchEngine) {
+            "DuckDuckGo" -> SEARCH_DDG
+            "Bing" -> SEARCH_BING
+            else -> SEARCH_GOOGLE
+        }
+        return base + Uri.encode(value)
     }
 
-    private fun go(input: String) {
-        current?.session?.loadUri(toUri(input))
-        urlBar.clearFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(urlBar.windowToken, 0)
-        geckoView.requestFocus()
+    private fun safeExternalUrl(uri: Uri): String? {
+        val scheme = uri.scheme?.lowercase()
+        return if ((scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()) uri.toString() else null
     }
 
-    // ---------------------------------------------------------------- Tabs
+    private fun navigate(raw: String) {
+        val tab = activeTab ?: return
+        val target = normalizeInput(raw)
+        tab.session.loadUri(target)
+        address.clearFocus()
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(address.windowToken, 0)
+        browserView.requestFocus()
+    }
 
-    private fun attachDelegates(tab: Tab) {
-        val s = tab.session
+    private fun createTab(url: String) {
+        if (shuttingDown) return
+        val tab = BrowserTab()
+        attachDelegates(tab)
+        tab.session.open(BrowserEngine.runtime(this))
+        tabs.add(tab)
+        activateTab(tab)
+        tab.session.loadUri(url)
+    }
 
-        s.progressDelegate = object : GeckoSession.ProgressDelegate {
+    private fun activateTab(tab: BrowserTab) {
+        if (!tabs.contains(tab)) return
+        activeTab = tab
+        browserView.setSession(tab.session)
+        updateChrome()
+    }
+
+    private fun closeTab(tab: BrowserTab) {
+        val index = tabs.indexOf(tab)
+        if (index < 0) return
+        val wasActive = activeTab === tab
+        if (wasActive) browserView.releaseSession()
+        tabs.removeAt(index)
+        tab.session.close()
+        if (tabs.isEmpty()) createTab(HOME_URL)
+        else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
+        else updateChrome()
+    }
+
+    private fun attachDelegates(tab: BrowserTab) {
+        val session = tab.session
+        session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
-                tab.progress = 5
-                if (tab === current) refreshUi()
+                tab.progress = 1
+                if (tab === activeTab) updateChrome()
             }
-
-            override fun onProgressChange(session: GeckoSession, progress: Int) {
-                tab.progress = progress
-                if (tab === current) refreshUi()
+            override fun onProgressChange(session: GeckoSession, progressValue: Int) {
+                tab.progress = progressValue
+                if (tab === activeTab) updateChrome()
             }
-
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.progress = 100
-                if (tab === current) refreshUi()
+                if (success) store.addHistory(tab.url)
+                if (tab === activeTab) updateChrome()
             }
         }
-
-        s.navigationDelegate = object : GeckoSession.NavigationDelegate {
+        session.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLocationChange(
                 session: GeckoSession,
                 url: String?,
                 perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean
             ) {
-                tab.url = url ?: ""
-                if (tab === current) refreshUi()
+                tab.url = url.orEmpty()
+                if (tab === activeTab) updateChrome()
             }
-
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
                 tab.canGoBack = canGoBack
-                if (tab === current) refreshUi()
+                if (tab === activeTab) updateChrome()
             }
-
             override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
                 tab.canGoForward = canGoForward
-                if (tab === current) refreshUi()
+                if (tab === activeTab) updateChrome()
             }
-
-            // Pages that open a new window after a real tap become a new tab.
-            // (Gecko itself already blocks popups that happen without a tap.)
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-                val newTab = Tab(GeckoSession())
-                attachDelegates(newTab)
-                tabs.add(newTab)
-                // Gecko opens the returned session itself; show it right after.
-                ui.post { switchTo(newTab) }
-                return GeckoResult.fromValue(newTab.session)
+                val child = BrowserTab()
+                attachDelegates(child)
+                tabs.add(child)
+                runOnUiThread { if (!isFinishing && !shuttingDown) activateTab(child) }
+                return GeckoResult.fromValue(child.session)
             }
         }
-
-        s.contentDelegate = object : GeckoSession.ContentDelegate {
+        session.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onTitleChange(session: GeckoSession, title: String?) {
-                tab.title = title ?: ""
+                tab.title = title?.takeIf { it.isNotBlank() } ?: "New tab"
+                if (tab === activeTab) updateChrome()
             }
-
             override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
-                if (tab === current) setFullscreen(fullScreen)
+                if (tab === activeTab) setFullscreen(fullScreen)
             }
-
-            override fun onCloseRequest(session: GeckoSession) {
-                closeTab(tab)
-            }
+            override fun onCloseRequest(session: GeckoSession) { closeTab(tab) }
         }
     }
 
-    private fun openTab(uri: String) {
-        val tab = Tab(GeckoSession())
-        attachDelegates(tab)
-        tab.session.open(GeckoHolder.get(this))
-        tabs.add(tab)
-        switchTo(tab)
-        tab.session.loadUri(uri)
-    }
-
-    private fun switchTo(tab: Tab) {
-        current = tab
-        geckoView.setSession(tab.session)
-        refreshUi()
-    }
-
-    private fun closeTab(tab: Tab) {
-        val index = tabs.indexOf(tab)
-        if (index < 0) return
-        val wasCurrent = tab === current
-        if (wasCurrent) geckoView.releaseSession()
-        tabs.removeAt(index)
-        tab.session.close()
-        if (tabs.isEmpty()) {
-            openTab(HOME)
-        } else if (wasCurrent) {
-            switchTo(tabs[minOf(index, tabs.size - 1)])
-        } else {
-            refreshUi()
-        }
+    private fun setFullscreen(enabled: Boolean) {
+        fullscreen = enabled
+        topBar.visibility = if (enabled) View.GONE else View.VISIBLE
+        bottomBar.visibility = if (enabled) View.GONE else View.VISIBLE
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        if (enabled) {
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else controller.show(WindowInsetsCompat.Type.systemBars())
     }
 
     private fun showTabs() {
-        val labels = tabs.map {
-            val name = if (it.title.isNotBlank()) it.title else it.url
-            (if (name.isBlank()) "New tab" else name).take(45)
+        val labels = tabs.mapIndexed { index, tab ->
+            val current = if (tab === activeTab) "✓ " else ""
+            "$current${index + 1}. ${tab.title}".take(70)
         }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Tabs (${tabs.size})")
-            .setItems(labels) { _, which -> switchTo(tabs[which]) }
-            .setPositiveButton("New tab") { _, _ -> openTab(HOME) }
-            .setNegativeButton("Close this tab") { _, _ -> current?.let { closeTab(it) } }
-            .setNeutralButton("Cancel", null)
+            .setTitle("Open tabs · ${tabs.size}")
+            .setItems(labels) { _, which -> activateTab(tabs.getOrNull(which) ?: return@setItems) }
+            .setPositiveButton("New tab") { _, _ -> createTab(HOME_URL) }
+            .setNegativeButton("Close current") { _, _ -> activeTab?.let(::closeTab) }
+            .setNeutralButton("Done", null)
             .show()
     }
 
-    // ---------------------------------------------------------------- Extensions
+    private fun showBrowserMenu() {
+        val actions = arrayOf(
+            if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
+            "Bookmarks", "History", "Share page", "Copy page address",
+            "Search engine", "Clear browsing history"
+        )
+        AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
+            when (index) {
+                0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
+                    val added = store.toggleBookmark(it)
+                    toast(if (added) "Bookmark saved" else "Bookmark removed")
+                }
+                1 -> showSavedPages("Bookmarks", store.bookmarks())
+                2 -> showSavedPages("History", store.history())
+                3 -> shareCurrentPage()
+                4 -> copyCurrentAddress()
+                5 -> chooseSearchEngine()
+                6 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
+            }
+        }.show()
+    }
 
-    /**
-     * Installs uBlock Origin if the build bundled it (GitHub Actions downloads it
-     * into assets/ublock). Fire-and-forget: Gecko logs any problem in logcat.
-     */
-    private fun installExtensions() {
+    private fun showSavedPages(title: String, pages: List<String>) {
+        if (pages.isEmpty()) { toast("Nothing saved yet"); return }
+        AlertDialog.Builder(this).setTitle(title)
+            .setItems(pages.map { it.take(80) }.toTypedArray()) { _, index ->
+                pages.getOrNull(index)?.let { createTab(it) }
+            }.setNegativeButton("Close", null).show()
+    }
+
+    private fun chooseSearchEngine() {
+        val choices = arrayOf("Google", "DuckDuckGo", "Bing")
+        AlertDialog.Builder(this).setTitle("Default search engine")
+            .setSingleChoiceItems(choices, choices.indexOf(store.searchEngine).coerceAtLeast(0)) { dialog, which ->
+                store.searchEngine = choices[which]
+                dialog.dismiss()
+                toast("Search engine: ${store.searchEngine}")
+            }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun shareCurrentPage() {
+        val tab = activeTab ?: return
+        val url = tab.url
+        if (!url.startsWith("http")) return
+        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+        }, "Share page"))
+    }
+
+    private fun copyCurrentAddress() {
+        val url = activeTab?.url.orEmpty()
+        if (!url.startsWith("http")) return
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Page address", url))
+        toast("Address copied")
+    }
+
+    private fun toast(message: String) {
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    private fun prepareBuiltInExtension() {
         try {
             val files = assets.list("ublock")
-            if (files == null || files.isEmpty()) {
-                Log.i(TAG, "uBlock Origin is not bundled in this build")
-                return
+            if (!files.isNullOrEmpty()) {
+                BrowserEngine.runtime(this).webExtensionController.ensureBuiltIn(
+                    "resource://android/assets/ublock/",
+                    "uBlock0@raymondhill.net"
+                )
             }
-            GeckoHolder.get(this).webExtensionController.ensureBuiltIn(
-                "resource://android/assets/ublock/",
-                "uBlock0@raymondhill.net"
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Could not install uBlock Origin", e)
+        } catch (_: Exception) {
+            // Extension failure must never prevent the browser engine from starting.
         }
     }
 }
