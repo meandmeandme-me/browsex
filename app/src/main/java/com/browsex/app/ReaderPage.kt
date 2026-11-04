@@ -25,7 +25,7 @@ class ReaderPage(
 ) {
     private val colors get() = BrowseXColors.resolve(context, store)
     private val density = context.resources.displayMetrics.density
-    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
+    private fun t(en: String, ar: String) = BrowseXStrings.text(context, en, ar)
     private fun dp(value: Int) = (value * density).toInt()
 
     fun show() {
