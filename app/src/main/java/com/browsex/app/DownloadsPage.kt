@@ -44,7 +44,7 @@ internal class DownloadsPage(private val activity: MainActivity) {
             setTextColor(Color.rgb(19, 43, 64))
         })
         heading.addView(TextView(activity).apply {
-            text = "Files downloaded by Browse X"
+            text = "Downloads managed by Android"
             textSize = 12f
             setTextColor(Color.rgb(83, 105, 123))
         })
