@@ -1,5 +1,6 @@
 package com.browsex.app
 
+import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebResponse
@@ -28,6 +29,7 @@ internal interface BrowserSessionDelegateCallbacks {
  * Adapts GeckoView callbacks into BrowseX-owned events.
  * The adapter has no direct Activity, widget or persistence API dependency; the host owns side effects.
  */
+@androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
 internal class BrowserSessionDelegateFactory(
     private val callbacks: BrowserSessionDelegateCallbacks
 ) {
