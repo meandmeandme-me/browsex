@@ -50,8 +50,9 @@ private const val MAX_LIVE_GECKO_SESSIONS = 3
 
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private val tabRegistry = BrowserTabRegistry<BrowserTab>()
+    private val sessionDelegateFactory by lazy { BrowserSessionDelegateFactory(this) }
     private val tabs: List<BrowserTab> get() = tabRegistry.tabs
     private val activeTab: BrowserTab? get() = tabRegistry.activeTab
     private lateinit var store: BrowserStore
@@ -716,7 +717,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun attachDelegates(tab: BrowserTab) {
-        val session = tab.session
         tab.permissionDelegate = BrowseXPermissionDelegate(
             this,
             store,
@@ -725,114 +725,122 @@ class MainActivity : AppCompatActivity() {
             },
             tab.privateMode
         )
-        session.permissionDelegate = tab.permissionDelegate
-        session.progressDelegate = object : GeckoSession.ProgressDelegate {
-            override fun onPageStart(session: GeckoSession, url: String) {
-                tab.progress = 1
-                if (tab === activeTab) updateChrome()
+        tab.session.permissionDelegate = tab.permissionDelegate
+        sessionDelegateFactory.attach(tab)
+    }
+
+    override fun onPageStart(tab: BrowserTab) {
+        tab.progress = 1
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onProgressChange(tab: BrowserTab, progress: Int) {
+        tab.progress = progress
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onPageStop(tab: BrowserTab, success: Boolean) {
+        tab.progress = 100
+        if (success) {
+            if (!tab.privateMode) {
+                val historyTitle = tab.title.takeIf { it.isNotBlank() && it != "New tab" }
+                    ?: Uri.parse(tab.url).host.orEmpty()
+                store.addHistory(tab.url, historyTitle)
             }
-            override fun onProgressChange(session: GeckoSession, progressValue: Int) {
-                tab.progress = progressValue
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onPageStop(session: GeckoSession, success: Boolean) {
-                tab.progress = 100
-                if (success) {
-                    if (!tab.privateMode) {
-                        val historyTitle = tab.title.takeIf { it.isNotBlank() && it != "New tab" }
-                            ?: Uri.parse(tab.url).host.orEmpty()
-                        store.addHistory(tab.url, historyTitle)
-                    }
-                    tab.recoveryAttempts = 0
-                    tab.crashed = false
-                }
-                if (tab === activeTab) updateChrome()
-            }
+            tab.recoveryAttempts = 0
+            tab.crashed = false
         }
-        session.navigationDelegate = object : GeckoSession.NavigationDelegate {
-            override fun onLocationChange(
-                session: GeckoSession,
-                url: String?,
-                perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
-                hasUserGesture: Boolean
-            ) {
-                tab.url = url.orEmpty()
-                tab.sitePermissions = perms.toList()
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
-                tab.canGoBack = canGoBack
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
-                tab.canGoForward = canGoForward
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-                if (isFinishing || shuttingDown || tabs.size >= TabSessionState.MAX_TABS) {
-                    runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
-                    return null
-                }
-                val child = BrowserTab(privateMode = tab.privateMode)
-                attachDelegates(child)
-                child.session.open(BrowserRuntimeOwner.runtime(this@MainActivity))
-                child.sessionOpened = true
-                tabRegistry.add(child)
-                runOnUiThread {
-                    if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
-                    else if (tabs.contains(child)) closeTab(child)
-                }
-                return GeckoResult.fromValue(child.session)
-            }
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onLocationChange(
+        tab: BrowserTab,
+        url: String?,
+        permissions: List<GeckoSession.PermissionDelegate.ContentPermission>
+    ) {
+        tab.url = url.orEmpty()
+        tab.sitePermissions = permissions.toList()
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onCanGoBack(tab: BrowserTab, canGoBack: Boolean) {
+        tab.canGoBack = canGoBack
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onCanGoForward(tab: BrowserTab, canGoForward: Boolean) {
+        tab.canGoForward = canGoForward
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onNewSession(parent: BrowserTab, uri: String): GeckoResult<GeckoSession>? {
+        if (isFinishing || shuttingDown || tabs.size >= TabSessionState.MAX_TABS) {
+            runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
+            return null
         }
-        session.contentDelegate = object : GeckoSession.ContentDelegate {
-            override fun onTitleChange(session: GeckoSession, title: String?) {
-                tab.title = title?.takeIf { it.isNotBlank() } ?: "New tab"
-                if (tab === activeTab) updateChrome()
+        val child = BrowserTab(privateMode = parent.privateMode)
+        attachDelegates(child)
+        child.session.open(BrowserRuntimeOwner.runtime(this))
+        child.sessionOpened = true
+        tabRegistry.add(child)
+        runOnUiThread {
+            if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
+            else if (tabs.contains(child)) closeTab(child)
+        }
+        return GeckoResult.fromValue(child.session)
+    }
+
+    override fun onTitleChange(tab: BrowserTab, title: String?) {
+        tab.title = title?.takeIf { it.isNotBlank() } ?: "New tab"
+        if (tab === activeTab) updateChrome()
+    }
+
+    override fun onFullscreen(tab: BrowserTab, enabled: Boolean) {
+        if (tab === activeTab) setFullscreen(enabled)
+    }
+
+    override fun onCloseRequest(tab: BrowserTab) {
+        closeTab(tab)
+    }
+
+    override fun onExternalResponse(response: WebResponse) {
+        enqueueDownload(response)
+    }
+
+    override fun onContentProcessCrash(tab: BrowserTab, session: GeckoSession) {
+        runOnUiThread {
+            if (shuttingDown || isFinishing || isDestroyed ||
+                !tabs.contains(tab) || tab.session !== session
+            ) return@runOnUiThread
+            if (tab.recoveryAttempts >= 1) {
+                tab.crashed = true
+                tab.progress = 0
+                if (tab === activeTab) toast("This tab crashed again. Reopen it to continue.")
+                updateChrome()
+                return@runOnUiThread
             }
-            override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
-                if (tab === activeTab) setFullscreen(fullScreen)
-            }
-            override fun onCloseRequest(session: GeckoSession) { closeTab(tab) }
-            override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
-                enqueueDownload(response)
-            }
-            override fun onCrash(session: GeckoSession) {
-                runOnUiThread {
-                    if (shuttingDown || isFinishing || isDestroyed ||
-                        !tabs.contains(tab) || tab.session !== session
-                    ) return@runOnUiThread
-                    if (tab.recoveryAttempts >= 1) {
-                        tab.crashed = true
-                        tab.progress = 0
-                        if (tab === activeTab) toast("This tab crashed again. Reopen it to continue.")
-                        updateChrome()
-                        return@runOnUiThread
-                    }
-                    tab.recoveryAttempts += 1
-                    val restoreUrl = tab.url.ifBlank { homePageUrl() }
-                    val wasActive = tab === activeTab
-                    tab.permissionDelegate?.cancelPending()
-                    cancelPlatformPermissionRequests(session)
-                    attachDelegates(tab)
-                    try {
-                        session.open(BrowserRuntimeOwner.runtime(this@MainActivity))
-                        tab.sessionOpened = true
-                        if (wasActive) {
-                            activateTab(tab)
-                            session.loadUri(restoreUrl)
-                        } else {
-                            session.setFocused(false)
-                            session.setActive(false)
-                            session.loadUri(restoreUrl)
-                        }
-                    } catch (error: RuntimeException) {
-                        tab.sessionOpened = false
-                        tab.crashed = true
-                        android.util.Log.e("BrowseX", "Tab recovery failed", error)
-                        if (wasActive) toast("Could not restore this tab. Open a new tab.")
-                    }
+            tab.recoveryAttempts += 1
+            val restoreUrl = tab.url.ifBlank { homePageUrl() }
+            val wasActive = tab === activeTab
+            tab.permissionDelegate?.cancelPending()
+            cancelPlatformPermissionRequests(session)
+            attachDelegates(tab)
+            try {
+                session.open(BrowserRuntimeOwner.runtime(this))
+                tab.sessionOpened = true
+                if (wasActive) {
+                    activateTab(tab)
+                    session.loadUri(restoreUrl)
+                } else {
+                    session.setFocused(false)
+                    session.setActive(false)
+                    session.loadUri(restoreUrl)
                 }
+            } catch (error: RuntimeException) {
+                tab.sessionOpened = false
+                tab.crashed = true
+                android.util.Log.e("BrowseX", "Tab recovery failed", error)
+                if (wasActive) toast("Could not restore this tab. Open a new tab.")
             }
         }
     }
