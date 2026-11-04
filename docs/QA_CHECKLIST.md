@@ -20,14 +20,14 @@ Implementation and verification are tracked separately. Items under “implement
 
 ## Final automated CI gates (run once after implementation is complete)
 
-- [ ] Gradle configuration resolves reproducibly.
-- [ ] Kotlin compilation succeeds.
-- [ ] Unit tests pass, including the configured-home-URL snapshot test.
-- [ ] Android lint completes with no new errors.
-- [ ] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
-- [ ] APK package ID and minSdk are correct.
-- [ ] APKs contain the expected GeckoView native libraries for each ABI.
-- [ ] CI uploads debug artifacts only after every required gate passes; public release publishing waits for stable signing.
+- [x] Gradle configuration resolves reproducibly.
+- [x] Kotlin compilation succeeds.
+- [x] Unit tests pass, including the configured-home-URL snapshot test.
+- [x] Android lint completes with no new errors.
+- [x] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
+- [x] APK package ID and minSdk are correct.
+- [x] APKs contain the expected GeckoView native libraries for each ABI.
+- [x] CI uploads debug artifacts only after every required gate passes; public release publishing waits for stable signing.
 
 ## Functional checks (physical-device validation still required)
 

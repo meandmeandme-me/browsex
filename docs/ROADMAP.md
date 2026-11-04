@@ -52,7 +52,7 @@ This file records implementation state separately from device verification. A ch
 ## Phase 4 — release hardening
 
 - [x] CI workflow defines unit-test, lint, ABI APK build, package verification and checksums.
-- [ ] Run the one final comprehensive CI/QA pass after this implementation batch is complete.
+- [x] Run the final comprehensive CI pass for commit `c015a4f`; JVM tests, lint, ABI builds, APK verification and artifact uploads succeeded.
 - [ ] Run Android 10/API 29 smoke tests and current Android smoke tests.
 - [ ] Verify cold start, offline/error page, downloads, external links, theme switching and process recreation.
 - [ ] Configure stable release signing and version/update policy.
