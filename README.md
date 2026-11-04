@@ -67,6 +67,7 @@ gradle testDebugUnitTest lintDebug assembleDebug
 - [Localization workflow](docs/LOCALIZATION.md) — BCP 47 locale packs, RTL and translation quality gates.
 - [Storage migration decision](docs/decisions/ADR-001-storage-boundaries.md) — preserve legacy data while moving to focused stores.
 - [Browser engine decision](docs/decisions/ADR-002-browser-engine.md) — GeckoView is provisional and subject to capability review.
+- [Release signing](docs/release/RELEASE_SIGNING.md) — secure signing identity and optional signed-APK CI path.
 - [World-browser product requirements](docs/WORLD_BROWSER_PRODUCT_REQUIREMENTS.md) — competitor research, user-behavior evidence, global requirements and Uizard brief.
 - [Account and sync foundation](docs/ACCOUNT_SYNC_FOUNDATION.md) — provider-neutral identity, security boundaries and opt-in sync design.
 - [Uizard screen map](docs/design/UIDIZARD_SCREEN_MAP.md) — responsive screens, interaction flows and required UI states.
