@@ -166,7 +166,7 @@ class BrowserStore(context: Context) {
         return true
     }
 
-    fun savedSessions(): List<SavedBrowserSession> = try {
+    internal fun savedSessions(): List<SavedBrowserSession> = try {
         val array = JSONArray(prefs.getString("named_sessions_v1", "[]"))
         (0 until minOf(array.length(), 10)).mapNotNull { index ->
             val item = array.optJSONObject(index) ?: return@mapNotNull null
