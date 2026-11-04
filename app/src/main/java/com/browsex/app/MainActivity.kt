@@ -137,6 +137,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
     private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
+    private lateinit var downloadRequestCoordinator: BrowserDownloadRequestCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
@@ -179,8 +180,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
-    private val waitingForLegacyDownloads = java.util.ArrayDeque<WebResponse>()
-    private var legacyDownloadPermissionInFlight = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -272,13 +271,8 @@ class MainActivity : AppCompatActivity() {
         legacyDownloadPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-            legacyDownloadPermissionInFlight = false
-            val pending = waitingForLegacyDownloads.toList()
-            waitingForLegacyDownloads.clear()
-            if (granted) pending.forEach(::enqueueDownload)
-            else {
-                pending.forEach { it.body?.close() }
-                if (!isFinishing && !isDestroyed) toast("Storage permission was denied; download cancelled")
+            if (::downloadRequestCoordinator.isInitialized) {
+                downloadRequestCoordinator.onLegacyPermissionResult(granted)
             }
         }
         notificationPermissionLauncher = registerForActivityResult(
@@ -292,6 +286,22 @@ class MainActivity : AppCompatActivity() {
             callbacks.forEach { callback -> callback(granted && NotificationManagerCompat.from(this).areNotificationsEnabled()) }
             launchNextPlatformPermission()
         }
+        downloadRequestCoordinator = BrowserDownloadRequestCoordinator(
+            apiLevel = Build.VERSION.SDK_INT,
+            hasLegacyStoragePermission = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                    PackageManager.PERMISSION_GRANTED
+            },
+            canRequestLegacyStoragePermission = {
+                ::legacyDownloadPermissionLauncher.isInitialized && !isFinishing && !isDestroyed
+            },
+            requestLegacyStoragePermission = {
+                legacyDownloadPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            },
+            startDownload = ::startStreamDownload,
+            isHostAvailable = { !isFinishing && !isDestroyed },
+            showMessage = ::toast
+        )
         browserRuntime = BrowserRuntimeOwner.runtime(applicationContext)
         browserRuntime?.settings?.setPreferredColorScheme(when (store.themeMode) {
             "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
@@ -374,8 +384,7 @@ class MainActivity : AppCompatActivity() {
         persistTabs()
         shuttingDown = true
         platformPermissionQueue.rejectAll()
-        waitingForLegacyDownloads.toList().forEach { it.body?.close() }
-        waitingForLegacyDownloads.clear()
+        if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         notificationPermissionCallbacks.toList().forEach { it(false) }
         notificationPermissionCallbacks.clear()
@@ -970,38 +979,15 @@ class MainActivity : AppCompatActivity() {
         }.show()
     }
 
-    /** Routes GeckoView's external responses through Android's supported download service. */
+    /** Routes GeckoView responses into the dedicated download request coordinator. */
     private fun enqueueDownload(response: WebResponse) {
-        val url = response.uri
-        val uri = runCatching { Uri.parse(url) }.getOrNull()
-        val body = response.body
-        if (uri == null || (uri.scheme != "https" && uri.scheme != "http") ||
-            uri.host.isNullOrBlank() || uri.userInfo != null || body == null ||
-            response.statusCode !in 200..299
-        ) {
-            body?.close()
+        downloadRequestCoordinator.enqueue(response)
+    }
+
+    /** Starts a response stream after validation and any required Android permission prompt. */
+    private fun startStreamDownload(response: WebResponse) {
+        val body = response.body ?: run {
             toast("This download response is not supported")
-            return
-        }
-        if (Build.VERSION.SDK_INT <= 28 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-        ) {
-            if (!::legacyDownloadPermissionLauncher.isInitialized || isFinishing || isDestroyed) {
-                body.close()
-                toast("Storage permission is unavailable")
-                return
-            }
-            // Keep only a small bounded queue of original response streams while permission is requested.
-            if (waitingForLegacyDownloads.size >= 5) {
-                body.close()
-                toast("Too many downloads are waiting for storage permission")
-                return
-            }
-            waitingForLegacyDownloads.add(response)
-            if (!legacyDownloadPermissionInFlight) {
-                legacyDownloadPermissionInFlight = true
-                legacyDownloadPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            }
             return
         }
         val started = streamDownloadCoordinator.start(
