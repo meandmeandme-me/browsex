@@ -63,6 +63,7 @@ gradle testDebugUnitTest lintDebug assembleDebug
 
 ## Product and architecture planning
 
+- [Open-source browser audit and product gaps](docs/OPEN_SOURCE_BROWSER_AUDIT.md) — source-tree findings, competitor patterns and recommended rebuild priorities.
 - [World-browser product requirements](docs/WORLD_BROWSER_PRODUCT_REQUIREMENTS.md) — competitor research, user-behavior evidence, global requirements and Uizard brief.
 - [Account and sync foundation](docs/ACCOUNT_SYNC_FOUNDATION.md) — provider-neutral identity, security boundaries and opt-in sync design.
 - [Uizard screen map](docs/design/UIDIZARD_SCREEN_MAP.md) — responsive screens, interaction flows and required UI states.
