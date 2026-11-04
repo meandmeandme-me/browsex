@@ -14,7 +14,7 @@
 | Area | Already present in `rewrite-v2` | Remaining work |
 |---|---|---|
 | 1. Site privacy and security | HTTP(S)-only navigation validation; Android runtime permission flow for location/camera/microphone; per-site content permission controls; camera/microphone decisions stored by origin; website notification bridge; private notification suppression; Android app notification setting; privacy center for selective cookies, DOM storage, cache, site permissions and auth-session clearing after closing sessions; host-scoped site-data clearing from Site Info | Add Android-backed coverage for clear-data completion/failure and prompt cancellation; harden origin canonicalization and permission expiry/reset. Do not promise revocation for Gecko grants GeckoView cannot revoke. |
-| 2. Sessions and tab recovery | One process-wide GeckoRuntime; per-tab GeckoSession ownership; validated persisted regular-tab URL snapshot; active tab restoration; 20-tab cap; lazy opening of background tabs; one automatic content-process recovery attempt; Gecko private-mode tabs excluded from history and persistence; BrowseX Recall across regular tabs and library | Persist richer safe tab metadata (title and timestamps); explicit restore-last-session and close-session behavior; robust crash/restart tests; process-recreation tests; add a safe memory-pressure policy for inactive tabs only. |
+| 2. Sessions and tab recovery | One process-wide GeckoRuntime; per-tab GeckoSession ownership; validated persisted regular-tab URL snapshot; active tab restoration; 20-tab cap; lazy opening of background tabs; one automatic content-process recovery attempt; Gecko private-mode tabs excluded from history and persistence; BrowseX Recall; named regular-tab sessions with save/list/open/delete; basic lifecycle-aware memory-pressure release of inactive sessions | Persist richer safe tab metadata (title and timestamps); add recently-closed tab restore; verify process recreation, named-session persistence and crash recovery; profile memory policy on low-RAM devices. |
 | 3. Bookmarks, folders, import/export | Bounded URL validation; stable generated bookmark IDs; default-folder migration from legacy URL-only data; create/rename/delete folders; move bookmarks; manual earlier/later ordering; versioned JSON export/import with size/URL limits and folder-ID/name remapping; title-aware search | Add Android-backed persistence and round-trip tests; add explicit duplicate/replace preview and conflict UI; consider drag reordering after accessible controls are in place. |
 | 4. Home customization and themes | System/Light/Dark theme; Arabic/English/System language; shared palette; locale-script-aware RTL; persisted quick-link/discovery visibility and grid/list shortcut layout; reset to defaults | Allow users to add/remove/reorder individual shortcuts and sections; resource-based multilingual UI; consolidate tokens and verify live changes, contrast and RTL on devices. |
 | 5. Extensible architecture | Separate BrowserStore, permission/notification bridges, palette and several feature pages; documented lifecycle invariants | MainActivity remains a large coordinator; introduce feature contracts and small controllers/repositories; isolate tab/session coordination, privacy, library, settings and home preferences; add migrations and unit tests before UI rewrites. |
@@ -51,9 +51,9 @@ These are target boundaries, not a claim that these classes already exist. Intro
 - Add tests for malformed origins, navigation between prompt and response, denied Android permission and private notifications.
 
 ### B. Session reliability
-- Define serializable tab metadata and migration version.
-- Add explicit restore/close behavior and process-recreation tests.
-- Add a safe memory-pressure policy for inactive tabs only.
+- Named sessions and bounded lazy tab restoration are implemented; private tabs are excluded.
+- Persist richer safe tab metadata and add recently-closed tab restore.
+- Verify restore, close and process recreation; profile the existing inactive-session memory policy.
 
 ### C. Library
 - Bookmark IDs, folder CRUD, ordering, migration and validated JSON backup are implemented in the current branch.
