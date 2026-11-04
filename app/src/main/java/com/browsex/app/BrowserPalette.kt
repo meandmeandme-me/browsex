@@ -25,10 +25,9 @@ internal data class BrowseXColors(
             )
         }
 
-        fun isArabic(store: BrowserStore): Boolean = when (store.languageMode) {
-            "ar" -> true
-            "en" -> false
-            else -> Locale.getDefault().language.startsWith("ar")
+        fun isArabic(store: BrowserStore): Boolean = when {
+            store.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
+            else -> store.languageMode.substringBefore('-').equals("ar", ignoreCase = true)
         }
 
         /** Layout direction follows the actual locale, independently of translation availability. */
