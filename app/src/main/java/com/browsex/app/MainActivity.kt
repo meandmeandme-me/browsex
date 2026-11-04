@@ -405,8 +405,6 @@ class MainActivity : AppCompatActivity() {
         if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
-        notificationPermissionCallbacks.toList().forEach { it(false) }
-        notificationPermissionCallbacks.clear()
         dataClearDialog?.dismiss()
         dataClearDialog = null
         browserRuntime?.setWebNotificationDelegate(null)
