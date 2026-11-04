@@ -536,7 +536,7 @@ class MainActivity : AppCompatActivity() {
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
-            "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page",
+            "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
             "Search engine", "Clear browsing history", "Settings"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
@@ -551,13 +551,52 @@ class MainActivity : AppCompatActivity() {
                 4 -> shareCurrentPage()
                 5 -> copyCurrentAddress()
                 6 -> findInPage()
-                7 -> chooseSearchEngine()
-                8 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                7 -> openReaderMode()
+                8 -> chooseSearchEngine()
+                9 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                9 -> showSettings()
+                10 -> showSettings()
             }
         }.show()
+    }
+
+
+    /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
+    private fun openReaderMode() {
+        val tab = activeTab ?: return
+        if (!tab.url.startsWith("http://") && !tab.url.startsWith("https://")) {
+            toast("Open a webpage first")
+            return
+        }
+        val sourceUrl = tab.url
+        val loading = AlertDialog.Builder(this)
+            .setTitle("Reader mode")
+            .setMessage("Preparing a clean reading view…")
+            .setNegativeButton("Cancel", null)
+            .create()
+        loading.show()
+        tab.session.getSessionPageExtractor().getPageContent().accept(
+            { extracted ->
+                runOnUiThread {
+                    if (loading.isShowing) loading.dismiss()
+                    if (isFinishing || isDestroyed || activeTab !== tab || tab.url != sourceUrl) return@runOnUiThread
+                    val content = extracted?.trim().orEmpty()
+                    if (content.isBlank()) {
+                        toast("This page does not contain readable text")
+                    } else {
+                        ReaderPage(this, tab.title, sourceUrl, content).show()
+                    }
+                }
+            },
+            { error ->
+                runOnUiThread {
+                    if (loading.isShowing) loading.dismiss()
+                    android.util.Log.w("BrowseX", "Reader extraction failed", error)
+                    if (!isFinishing && !isDestroyed) toast("Could not prepare reader view")
+                }
+            }
+        )
     }
 
     private fun showSettings() {
