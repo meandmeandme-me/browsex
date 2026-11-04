@@ -242,4 +242,5 @@
     <string name="ui_import_preview">معاينة الاستيراد</string>
     <string name="ui_replace_all_current_bookmarks_and_folders">استبدال جميع المفضلة والمجلدات الحالية؟</string>
     <string name="ui_import_preview_message">العناصر: %1$d\nالصالح: %2$d\nالمتجاهل: %3$d\nالمكرر في النسخة: %4$d\nالموجود مسبقًا: %5$d\nالمجلدات: %6$d</string>
+    <string name="ui_tabs_title">علامات التبويب</string>
 </resources>
