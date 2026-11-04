@@ -41,6 +41,15 @@ class NavigationInputTest {
         assertFalse(NavigationInput.isValidWebUrl("javascript:alert(1)"))
     }
 
+    @Test fun externalIntentsOnlyAcceptCredentialFreeHttpAndHttpsUrls() {
+        assertEquals("https://example.com/path", NavigationInput.externalWebUrl("https://example.com/path"))
+        assertEquals("http://localhost:8080", NavigationInput.externalWebUrl("http://localhost:8080"))
+        assertEquals(null, NavigationInput.externalWebUrl("javascript:alert(1)"))
+        assertEquals(null, NavigationInput.externalWebUrl("file:///etc/passwd"))
+        assertEquals(null, NavigationInput.externalWebUrl("https://user:pass@example.com"))
+        assertEquals(null, NavigationInput.externalWebUrl("https:///missing-host"))
+    }
+
     @Test fun onlyAllowsTheKnownInternalHomePage() {
         assertEquals(home, NavigationInput.normalize(home, "Google", home))
         assertEquals("about:blank", NavigationInput.normalize("about:blank", "Google", home))
