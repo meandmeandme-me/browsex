@@ -110,7 +110,7 @@ jobs:
             grep -F "package: name='com.browsex.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
           done
-          printf '%s\\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
+          printf '%s\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
 
       - name: Upload signed release APKs
         if: ${{ env.BROWSEX_RELEASE_SIGNING_CONFIGURED == 'true' }}
