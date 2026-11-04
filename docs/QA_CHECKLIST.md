@@ -47,7 +47,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] BrowseX downloads list includes only IDs registered by BrowseX.
 - [ ] Downloads complete, open, cancel, remove and survive process restart; missing Android records are clearable.
 - [ ] Verify Android 8–9 legacy storage permission and Android 10+ scoped-storage behavior.
-- [ ] Verify cookies, redirects, duplicate names, storage-full, network loss, HTTP failures and POST/custom-header limitations. DownloadManager re-fetches the URL; it is not a byte-for-byte continuation of every original Gecko request.
+- [ ] Verify direct response-stream downloads for GET, POST, authenticated responses, cookies, one-time URLs, redirects, duplicate names, storage-full and network loss; verify the exact received bytes and no second network request.
 - [ ] Reader mode handles non-article pages, large font and extraction failures gracefully.
 - [ ] Rotation, system theme changes and fullscreen return browser chrome correctly.
 - [ ] Arabic RTL, English LTR, 200% font scale, TalkBack and narrow 720px-wide screens have no clipped controls.
@@ -76,5 +76,5 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [ ] Reorder bookmarks within a folder and verify items in other folders retain their order.
 - [ ] Search bookmarks/history by page title, domain and URL.
 - [ ] Trigger Android memory pressure with multiple tabs; verify active tab remains usable and inactive tabs reopen from validated URLs.
-- [ ] Verify downloads from GET, POST, authenticated and one-time URL responses once response-stream transfer is implemented; current DownloadManager behavior is not sufficient evidence.
+- [ ] Verify response-stream writer cleanup on process death, MediaStore pending-row cleanup, FileProvider access on Android 8/9, and large-file behavior.
 - [ ] Verify all target locales, mixed RTL/LTR text, screen readers, large font scale, landscape and tablet layouts.
