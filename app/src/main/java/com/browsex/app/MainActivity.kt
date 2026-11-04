@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         BrowserContentProcessRecoveryCoordinator(
             dispatchToMain = { action -> runOnUiThread(action) },
             isHostUnavailable = { shuttingDown || isFinishing || isDestroyed },
-            containsTab = { tab -> tabs.contains(tab) },
+            containsTab = { tab -> tabs.any { it === tab } },
             isActiveTab = { tab -> tab === activeTab },
             homeUrl = ::homePageUrl,
             runtime = { BrowserRuntimeOwner.runtime(this) },
@@ -826,7 +826,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
                     storage?.setPermission(permission, value)
                     storage?.getPermissions(url, false)?.accept(
                         { updated -> runOnUiThread {
-                            if (tabs.contains(tab) && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
+                            if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
                     )
@@ -850,7 +850,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
                     tab.sitePermissions = emptyList()
                     storage?.getPermissions(url, false)?.accept(
                         { updated -> runOnUiThread {
-                            if (tabs.contains(tab) && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
+                            if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
                     )
@@ -973,7 +973,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         val regularTabs = tabs.filterNot { it.privateMode }
         val snapshot = TabSessionState.normalize(
             regularTabs.map { it.url },
-            regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0,
+            regularTabs.indexOfFirst { it === activeTab }.takeIf { it >= 0 } ?: 0,
             HOME_URL
         )
         val tabsToRestore = snapshot.urls.mapIndexed { index, url ->

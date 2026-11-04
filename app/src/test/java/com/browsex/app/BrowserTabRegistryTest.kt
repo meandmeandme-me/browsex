@@ -22,6 +22,24 @@ class BrowserTabRegistryTest {
     }
 
     @Test
+    fun equalButDistinctTabsRemainDistinctForSelectionAndRemoval() {
+        val registry = BrowserTabRegistry<FakeTab>()
+        val first = FakeTab("https://same.example")
+        val second = FakeTab("https://same.example")
+
+        assertTrue(first == second)
+        assertTrue(registry.add(first))
+        assertTrue(registry.add(second))
+        assertTrue(registry.select(second))
+        assertTrue(registry.activeTab === second)
+
+        val selectedIndex = registry.tabs.indexOfFirst { it === registry.activeTab }
+        assertEquals(1, selectedIndex)
+        registry.removeAt(0)
+        assertTrue(registry.activeTab === second)
+    }
+
+    @Test
     fun selectionRequiresMembershipAndRemovalClearsSelectedTab() {
         val registry = BrowserTabRegistry<FakeTab>()
         val first = FakeTab("https://one.example")

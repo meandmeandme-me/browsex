@@ -15,7 +15,8 @@ internal class BrowserTabPersistenceCoordinator(
 
     fun persistOpenTabs() {
         val regularTabs = tabs().filterNot { it.privateMode }
-        val activeIndex = regularTabs.indexOf(activeTab()).takeIf { it >= 0 } ?: 0
+        val selectedTab = activeTab()
+        val activeIndex = regularTabs.indexOfFirst { it === selectedTab }.takeIf { it >= 0 } ?: 0
         store.saveOpenTabs(regularTabs.map { it.url }, activeIndex)
     }
 }

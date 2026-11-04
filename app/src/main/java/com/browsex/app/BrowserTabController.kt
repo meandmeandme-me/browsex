@@ -76,7 +76,7 @@ internal class BrowserTabController(
     }
 
     fun activateTab(tab: BrowserTab) {
-        if (!tabs.contains(tab)) return
+        if (tabs.none { it === tab }) return
         val previous = activeTab
         if (previous !== tab) {
             previous?.takeIf { it.sessionOpened }?.let {
@@ -111,7 +111,7 @@ internal class BrowserTabController(
     }
 
     fun closeTab(tab: BrowserTab) {
-        val index = tabs.indexOf(tab)
+        val index = tabs.indexOfFirst { it === tab }
         if (index < 0) return
         val wasActive = activeTab === tab
         if (!tab.privateMode) recordRecentlyClosed(tab)
@@ -136,8 +136,8 @@ internal class BrowserTabController(
         child.sessionOpened = true
         registry.add(child)
         dispatchToMain {
-            if (!isHostUnavailable() && tabs.contains(child)) activateTab(child)
-            else if (tabs.contains(child)) closeTab(child)
+            if (!isHostUnavailable() && tabs.any { it === child }) activateTab(child)
+            else if (tabs.any { it === child }) closeTab(child)
         }
         return GeckoResult.fromValue(child.session)
     }
