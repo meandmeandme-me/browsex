@@ -56,16 +56,17 @@ internal class BrowserSessionLifecycleCoordinator(
      */
     private fun closeCurrentSession(tab: BrowserTab) {
         try {
-            beforeSessionClose(tab)
+            runCatching { beforeSessionClose(tab) }
+                .onFailure { android.util.Log.w("BrowseX", "Could not cancel pending tab permissions", it) }
             if (tab.sessionOpened) {
                 runCatching {
                     tab.session.setFocused(false)
                     tab.session.setActive(false)
                     tab.session.close()
-                }
+                }.onFailure { android.util.Log.w("BrowseX", "Could not close GeckoSession cleanly", it) }
             }
         } finally {
-            // Host callback failures must not leave stale session state attached to a tab.
+            // Cleanup remains deterministic even if a host callback or Gecko close fails.
             tab.sessionOpened = false
             tab.permissionDelegate = null
             tab.sitePermissions = emptyList()
