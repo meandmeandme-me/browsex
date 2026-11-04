@@ -15,16 +15,8 @@ internal class BrowserSessionLifecycleCoordinator(
 ) {
     fun releaseInactive(tab: BrowserTab) {
         if (tab === registry.activeTab || !tab.sessionOpened) return
-        beforeSessionClose(tab)
-        runCatching {
-            tab.session.setFocused(false)
-            tab.session.setActive(false)
-            tab.session.close()
-        }
+        closeCurrentSession(tab)
         tab.session = createSession(tab.privateMode)
-        tab.sessionOpened = false
-        tab.permissionDelegate = null
-        tab.sitePermissions = emptyList()
     }
 
     fun enforceLiveSessionBudget() {
@@ -44,39 +36,27 @@ internal class BrowserSessionLifecycleCoordinator(
 
     /** Closes a tab session permanently before the host removes its tab record. */
     fun closeAndDiscard(tab: BrowserTab) {
-        beforeSessionClose(tab)
-        if (tab.sessionOpened) {
-            runCatching {
-                tab.session.setFocused(false)
-                tab.session.setActive(false)
-                tab.session.close()
-            }
-        }
-        tab.sessionOpened = false
-        tab.permissionDelegate = null
-        tab.sitePermissions = emptyList()
+        closeCurrentSession(tab)
     }
 
     /** Closes and replaces a tab's session, preserving its URL and private-mode setting. */
     fun resetSession(tab: BrowserTab) {
-        beforeSessionClose(tab)
-        if (tab.sessionOpened) {
-            runCatching {
-                tab.session.setFocused(false)
-                tab.session.setActive(false)
-                tab.session.close()
-            }
-        }
+        closeCurrentSession(tab)
         tab.session = createSession(tab.privateMode)
-        tab.sessionOpened = false
-        tab.permissionDelegate = null
-        tab.sitePermissions = emptyList()
     }
 
-    /** Releases all opened sessions without removing tab records from the registry. */
+    /** Releases all opened sessions and clears per-session delegates before host teardown. */
     fun closeAllSessions() {
-        registry.tabs.forEach { tab ->
-            beforeSessionClose(tab)
+        registry.tabs.forEach(::closeCurrentSession)
+    }
+
+    /**
+     * Runs host-owned permission cancellation before closing GeckoSession.
+     * Clears session-scoped state even if Gecko's close operation throws.
+     */
+    private fun closeCurrentSession(tab: BrowserTab) {
+        beforeSessionClose(tab)
+        try {
             if (tab.sessionOpened) {
                 runCatching {
                     tab.session.setFocused(false)
@@ -84,7 +64,10 @@ internal class BrowserSessionLifecycleCoordinator(
                     tab.session.close()
                 }
             }
+        } finally {
             tab.sessionOpened = false
+            tab.permissionDelegate = null
+            tab.sitePermissions = emptyList()
         }
     }
 
