@@ -5,6 +5,21 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val stableDebugKeystorePath = System.getenv("BROWSEX_DEBUG_KEYSTORE_PATH")
+val stableDebugStorePassword = System.getenv("BROWSEX_DEBUG_STORE_PASSWORD")
+val stableDebugKeyAlias = System.getenv("BROWSEX_DEBUG_KEY_ALIAS")
+val stableDebugKeyPassword = System.getenv("BROWSEX_DEBUG_KEY_PASSWORD")
+val stableDebugSigningValues = listOf(
+    stableDebugKeystorePath,
+    stableDebugStorePassword,
+    stableDebugKeyAlias,
+    stableDebugKeyPassword
+)
+val stableDebugSigningConfigured = stableDebugSigningValues.all { !it.isNullOrBlank() }
+if (stableDebugSigningValues.any { !it.isNullOrBlank() } && !stableDebugSigningConfigured) {
+    error("Stable debug signing is partially configured. Set all BROWSEX_DEBUG_* secrets or none.")
+}
+
 android {
     namespace = "com.browsex.app"
     compileSdk = 36
@@ -28,7 +43,23 @@ android {
         }
     }
 
+    signingConfigs {
+        if (stableDebugSigningConfigured) {
+            create("stableDebug") {
+                storeFile = file(stableDebugKeystorePath!!)
+                storePassword = stableDebugStorePassword
+                keyAlias = stableDebugKeyAlias
+                keyPassword = stableDebugKeyPassword
+            }
+        }
+    }
+
     buildTypes {
+        getByName("debug") {
+            if (stableDebugSigningConfigured) {
+                signingConfig = signingConfigs.getByName("stableDebug")
+            }
+        }
         release {
             isMinifyEnabled = false
         }

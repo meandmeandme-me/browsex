@@ -51,3 +51,35 @@ GitHub-hosted runners مؤقتة، وGradle ينشئ debug keystore محلياً
 ## التوقيع الحالي وحدود الإصدار
 
 الـworkflow الحالي ينتج Debug APKs ويتحقق من سلامة التوقيع والـABI والـSHA-256. هذا يثبت أن APK صالح وموقّع، لكنه لا يثبت أن شهادة Debug ستبقى نفسها في تشغيل مستقبلي. إصدار التحديث للمستخدمين يحتاج مفتاح Release ثابتاً، محفوظاً في مكان آمن، وإعداد CI لاستخدامه.
+
+
+## إعداد توقيع Debug ثابت لتحديثات CI المستقبلية
+
+هذا إعداد اختياري لكنه موصى به حتى لا تتغير شهادة APK بين تشغيلات GitHub Actions. أنشئ مفتاحاً واحداً على جهازك واحتفظ بنسخة احتياطية آمنة:
+
+```bash
+keytool -genkeypair -v -keystore browsex-debug.keystore -storetype PKCS12 -alias browsex-debug -keyalg RSA -keysize 2048 -validity 10000
+```
+
+حوّل ملف keystore إلى Base64. على Linux/macOS:
+
+```bash
+base64 -w 0 browsex-debug.keystore
+```
+
+على PowerShell:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("browsex-debug.keystore"))
+```
+
+في GitHub افتح **Settings → Secrets and variables → Actions** وأضف الأسرار التالية:
+
+- `BROWSEX_DEBUG_KEYSTORE_BASE64`: ناتج Base64 الكامل.
+- `BROWSEX_DEBUG_STORE_PASSWORD`: كلمة مرور keystore.
+- `BROWSEX_DEBUG_KEY_ALIAS`: استخدم `browsex-debug` إذا أبقيت الاسم كما في الأمر.
+- `BROWSEX_DEBUG_KEY_PASSWORD`: كلمة مرور المفتاح.
+
+بعدها سيستخدم CI الشهادة نفسها في كل Debug build. لا ترفع ملف keystore أو كلمات المرور إلى Git. عند فقدان المفتاح لن تستطيع تحديث APKs الموقّعة به. هذا المفتاح Debug للاختبار فقط؛ إصدار النشر العام يحتاج مفتاح Release مستقل وسياسة حفظ واستعادة خاصة به.
+
+**تنبيه ترحيل:** إضافة مفتاح ثابت الآن لا تغيّر توقيع APKs القديمة التي بُنيت بمفاتيح runners المؤقتة. APK الجديد لن يحدّث تثبيتاً قديماً إلا إذا كان المفتاح هو نفسه المفتاح الذي وقّع ذلك التثبيت. لا تحذف التطبيق القديم وبياناته قبل اتخاذ قرار الترحيل.

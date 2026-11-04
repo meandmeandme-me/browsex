@@ -36,6 +36,26 @@ jobs:
           set -o pipefail
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Configure stable debug signing (optional)
+        shell: bash
+        env:
+          BROWSEX_DEBUG_KEYSTORE_BASE64: ${{ secrets.BROWSEX_DEBUG_KEYSTORE_BASE64 }}
+          BROWSEX_DEBUG_STORE_PASSWORD: ${{ secrets.BROWSEX_DEBUG_STORE_PASSWORD }}
+          BROWSEX_DEBUG_KEY_ALIAS: ${{ secrets.BROWSEX_DEBUG_KEY_ALIAS }}
+          BROWSEX_DEBUG_KEY_PASSWORD: ${{ secrets.BROWSEX_DEBUG_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$BROWSEX_DEBUG_KEYSTORE_BASE64" ]]; then
+            echo "::notice::No stable debug keystore configured; this run will use the runner's temporary debug certificate."
+            exit 0
+          fi
+          printf '%s' "$BROWSEX_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/browsex-debug.keystore"
+          {
+            echo "BROWSEX_DEBUG_KEYSTORE_PATH=$RUNNER_TEMP/browsex-debug.keystore"
+            echo "BROWSEX_DEBUG_STORE_PASSWORD=$BROWSEX_DEBUG_STORE_PASSWORD"
+            echo "BROWSEX_DEBUG_KEY_ALIAS=$BROWSEX_DEBUG_KEY_ALIAS"
+            echo "BROWSEX_DEBUG_KEY_PASSWORD=$BROWSEX_DEBUG_KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
