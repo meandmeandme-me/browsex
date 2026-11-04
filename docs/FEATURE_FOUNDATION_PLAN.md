@@ -75,7 +75,7 @@ These are target boundaries, not a claim that these classes already exist. Intro
 - Add provider-neutral identity interfaces first; add Google, Microsoft and Apple adapters only after provider-specific security and consent review.
 - Sync only user-selected data types; keep private tabs, cookies and site permissions out of cloud sync by default.
 - Define encryption, key recovery, conflict resolution, offline behavior and account deletion/export before implementing a backend.
-- Shared Android resource lookup now covers browser chrome, Settings, Downloads and Saved Pages with English/Arabic resources; BCP 47 tags are validated and home-page direction follows RTL locale scripts.
+- Shared Android resource lookup now covers browser chrome, Settings, Downloads, Saved Pages, Site Info, Reader and Recall with English/Arabic resources; BCP 47 tags are validated, home-page direction follows RTL locale scripts, and Unicode NFKC search normalization is used in library/Recall.
 - Add reviewed locale packs for more languages; finish custom home-page and secondary prompt localization, plurals, date/number formats, Unicode normalization and mixed-direction verification.
 
 ## Definition of done
