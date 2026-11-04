@@ -196,7 +196,14 @@ class BrowserStore(context: Context) {
                     item.optLong("visitedAt", 0L).coerceAtLeast(0L)
                 )
             }.distinctBy { it.url }
-        } catch (_: Exception) { emptyList() }
+        } catch (_: Exception) {
+            // Recover from the legacy URL-only mirror if a newer metadata payload is damaged.
+            val fallback = readList("history").map { url ->
+                BrowserHistoryEntry(url, android.net.Uri.parse(url).host.orEmpty().ifBlank { url }.take(160), 0L)
+            }
+            writeHistoryEntries(fallback)
+            fallback
+        }
     }
 
     internal fun bookmarkFolders(): List<BookmarkFolder> = readBookmarkFolders()
