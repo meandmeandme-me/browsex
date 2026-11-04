@@ -29,6 +29,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Extract process-wide GeckoRuntime ownership and the tab/session state model from MainActivity into a dedicated browser-core file.
 - [x] Extract tab membership/selection into BrowserTabRegistry and isolate pure GeckoSession budget/memory-pressure policy.
 - [x] Move tab workspace UI and saved/recent session actions into TabsPage with injected browser callbacks.
+- [x] Centralize tab close cleanup (pending site/Android permission rejection, session deactivation and close) in BrowserSessionLifecycleCoordinator.
 - [x] Extract GeckoSession progress/navigation/content delegate wiring behind a BrowseX-owned callback contract.
 - [ ] Move tab open/close/recovery orchestration and Activity-hosted GeckoSession event handling into a lifecycle-aware coordinator.
 - [x] Split BrowserStore responsibilities into preference, session, library and download stores while preserving existing SharedPreferences keys and the feature-facing facade.
@@ -57,6 +58,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Request legacy external-storage permission only on Android API 26–28.
 - [x] Add a dedicated response-stream writer for Gecko external responses; save the received response body directly without re-fetching, including POST/authenticated/one-time URL responses.
 - [x] Persist queued/running/completed/failed/cancelled stream-download states, byte progress and known Content-Length; show live progress and cancellation in Downloads; delete partial output on handled cancellation/failure.
+- [x] Keep stream-download cancellation terminal-state persistence in the writer completion callback, avoiding duplicate cancellation writes from the UI coordinator.
 - [x] Mark unfinished stream downloads interrupted on the next app startup; do not claim process-death continuation.
 - [ ] Add safe retry/resume only when the original response can be continued; one-shot POST/authenticated responses are not resumable by default.
 - [ ] Add Android-backed tests for GET, POST, authenticated responses, progress, cancellation, interrupted records and partial-file cleanup.
