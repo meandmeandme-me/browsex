@@ -189,7 +189,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  applyTheme(shouldDark);
  $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
  if(requestedTheme==='system'&&window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',event=>applyTheme(event.matches));}
- $('greeting-title').textContent=copy.main.join('\\n');
+ $('greeting-title').textContent=copy.main.join('\n');
  $('everyday-title').textContent=copy.everyday;$('reset').textContent=copy.reset;
  $('reading-title').textContent=copy.begin;document.querySelector('.section-head a').textContent=copy.explore;
  document.querySelector('.kicker').textContent=copy.kicker;
