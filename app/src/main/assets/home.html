@@ -3,105 +3,90 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#edf2fa">
-<title>BrowseX</title>
+<meta name="theme-color" content="#eff5fa">
+<title>Browse X</title>
 <style>
-:root{color-scheme:light;--ink:#17233b;--muted:#71809a;--accent:#3868c8;--line:#ffffffa8;--glass:#ffffffa6;--glass2:#ffffff78;--shadow:0 18px 55px #31476b18;--bg1:#f4f7fc;--bg2:#e7eef9}
+:root{color-scheme:light;--canvas:#eff5fa;--pearl:#f7f9fc;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--white:#fff;--shadow:0 6px 24px rgba(38,77,108,.07);--card-radius:22px}
 *{box-sizing:border-box}
-html{min-height:100%;background:var(--bg1)}
-body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;background:radial-gradient(ellipse at 12% 8%,#dce8ff 0,transparent 34%),radial-gradient(ellipse at 90% 22%,#e8ddff 0,transparent 32%),linear-gradient(150deg,var(--bg1),var(--bg2));}
-main{width:min(760px,100%);margin:auto;padding:clamp(28px,7vh,72px) clamp(18px,5vw,38px) 38px}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(38px,8vh,74px)}
-.brand{font-size:29px;font-weight:780;letter-spacing:-1.5px}.brand span{color:var(--accent)}
-.subbrand{font-size:11px;letter-spacing:2.2px;color:var(--muted);text-transform:uppercase;margin-top:2px}
-.head-actions{display:flex;gap:8px}
-.round{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;background:var(--glass);color:var(--ink);font-size:17px;box-shadow:0 6px 20px #31476b12;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-.intro{margin-bottom:24px}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
-h1{font-size:clamp(27px,6vw,39px);line-height:1.12;letter-spacing:-1.3px;margin:0 0 8px;font-weight:760}
-.intro p{color:var(--muted);font-size:14px;margin:0}
-.search-shell{display:flex;align-items:center;gap:10px;padding:8px 9px 8px 17px;border:1px solid #ffffffd9;border-radius:23px;background:#ffffffbd;box-shadow:0 14px 42px #405b8520,inset 0 1px 0 #fff;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-.search-icon{font-size:19px;color:#8190a9}
-.search-shell input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:15px;padding:11px 0}
-.search-shell input::placeholder{color:#8794a9}
-.search-shell button{width:44px;height:44px;border:0;border-radius:16px;background:linear-gradient(145deg,#477bd9,#315bb2);color:white;font-size:20px;box-shadow:0 6px 14px #3868c844}
-.engines{display:flex;gap:8px;justify-content:center;margin:13px 0 34px;flex-wrap:wrap}
-.engines button{border:1px solid #ffffffbd;background:#ffffff64;color:#65738c;padding:7px 13px;border-radius:99px;font:inherit;font-size:11px}
-.engines button[aria-pressed=true]{background:#ffffffd9;color:#2f5eae;border-color:#ffffff;box-shadow:0 4px 15px #385b9020}
-.section{display:flex;justify-content:space-between;align-items:center;margin:0 2px 14px}
-.section h2{font-size:13px;letter-spacing:1.3px;text-transform:uppercase;margin:0;font-weight:750}
-.section span{font-size:11px;color:var(--muted)}
-.favorites{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
-.favorite{display:flex;flex-direction:column;align-items:center;gap:9px;padding:15px 6px 13px;min-width:0;border:1px solid var(--line);border-radius:20px;background:var(--glass2);box-shadow:0 7px 24px #31476b0b;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-decoration:none;color:var(--ink);transition:transform .15s,background .15s}
-.favorite:active{transform:scale(.96);background:#fff}
-.fav-icon{display:grid;place-items:center;width:45px;height:45px;border-radius:15px;background:linear-gradient(145deg,#ffffff,#e9effa);box-shadow:0 4px 12px #31476b18;font-size:20px;font-weight:750;color:#4168b2}
-.favorite b{font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.panel{margin-top:28px;padding:18px;border:1px solid var(--line);border-radius:23px;background:var(--glass2);box-shadow:var(--shadow);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
-.panel-head b{font-size:13px}.panel-head span{font-size:11px;color:var(--muted)}
-.privacy-row{display:flex;align-items:center;gap:13px}
-.privacy-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#e2ecff,#f2edff);font-size:19px}
-.privacy-row strong{display:block;font-size:12px}.privacy-row small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
-footer{text-align:center;margin-top:30px;color:#8b98ad;font-size:10px;letter-spacing:.3px}
-[dir=rtl] header,[dir=rtl] .section,[dir=rtl] .panel-head{flex-direction:row}
-body.dark{--ink:#f0f4ff;--muted:#a3b0c6;--accent:#a9bfff;--line:#ffffff20;--glass:#1c2946c9;--glass2:#1b2944a8;--bg1:#10182a;--bg2:#19243b;background:radial-gradient(ellipse at 12% 8%,#293a60 0,transparent 34%),radial-gradient(ellipse at 90% 22%,#34284e 0,transparent 32%),linear-gradient(150deg,var(--bg1),var(--bg2))}
-body.dark .round,body.dark .search-shell{background:#1c2946d9;color:var(--ink);border-color:#ffffff25}
-body.dark .search-shell input{color:var(--ink)}
-body.dark .search-shell input::placeholder{color:#a3b0c6}
-body.dark .fav-icon{background:linear-gradient(145deg,#334567,#263650);color:#dbe6ff}
-body.dark .engines button{background:#1c2946aa;color:#b7c5dc;border-color:#ffffff20}
-body.dark .engines button[aria-pressed=true]{background:#3a527d;color:#fff}
-@media(max-width:410px){main{padding-top:24px}.favorites{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.favorite{padding:12px 3px}.fav-icon{width:40px;height:40px}.favorite b{font-size:10px}.panel{padding:15px}}
-@media(min-width:620px){.favorites{gap:15px}.favorite{padding:20px 8px}.fav-icon{width:52px;height:52px}}
+html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+body{background:linear-gradient(112deg,#e0f6fc 0%,#f4f7fc 48%,#e6ecfc 100%);background-attachment:fixed}
+main{width:min(100%,560px);margin:auto;padding:24px 20px 34px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:25px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#5fc8e9,#3b69c9 58%,#766bd1);display:grid;place-items:center;color:white;font-size:26px;font-weight:300;box-shadow:0 5px 14px #477cc333}
+.brand-name{font-size:23px;font-weight:750;letter-spacing:-.7px}
+.icon-btn{width:44px;height:44px;border:0;border-radius:10px;background:#fff;color:var(--ink);font-size:21px;box-shadow:var(--shadow)}
+.greeting{margin:0 0 25px}
+h1{font-size:32px;line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:750}
+.greeting p{font-size:14px;color:var(--muted);margin:0}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px}
+.section-head h2{font-size:17px;font-weight:450;margin:0}
+.text-action{border:0;background:transparent;color:var(--blue);font-size:13px;font-weight:650;padding:6px 0}
+.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:27px}
+.shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink)}
+.shortcut-icon{width:56px;height:56px;border-radius:18px;background:#fff;display:grid;place-items:center;font-size:25px;font-weight:500;box-shadow:var(--shadow);color:var(--blue)}
+.shortcut:nth-child(2) .shortcut-icon{color:#132b40}
+.shortcut:nth-child(3) .shortcut-icon{color:#132b40}
+.shortcut:nth-child(4) .shortcut-icon{color:#132b40}
+.shortcut span:last-child{font-size:11px;font-weight:550;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.reading-head{margin-bottom:14px}
+.reading-card{padding:12px;border-radius:22px;background:#fff;border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block}
+.editorial-art{height:138px;border-radius:16px;overflow:hidden;position:relative;background:linear-gradient(130deg,#b7cbd2 0%,#d7d6c7 45%,#8da8a9 100%)}
+.editorial-art:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7e8cf,#b5a58f 65%,#7c8e8c);left:8%;top:-62px;box-shadow:100px 48px 0 -28px rgba(255,255,255,.35)}
+.editorial-art:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(16,40,51,.08),transparent 60%),linear-gradient(0deg,rgba(14,35,45,.18),transparent 55%)}
+.article-info{padding:10px 0 0}
+.kicker{font-size:11px;color:var(--blue);letter-spacing:.2px;margin-bottom:5px}
+.article-title{font-size:20px;line-height:1.2;margin:0 0 6px;font-weight:500}
+.article-meta{font-size:12px;color:var(--muted)}
+.search-hint{margin:22px 0 0;text-align:center;font-size:11px;color:#71869a}
+body.dark{--canvas:#111d2e;--ink:#edf5ff;--muted:#aab9c9;--line:#31445a;--white:#1c2b40;background:linear-gradient(120deg,#1c3547,#1c263e 52%,#302c4a);color:var(--ink)}
+body.dark .icon-btn,body.dark .shortcut-icon,body.dark .reading-card{background:#20334a;color:var(--ink)}
+body.dark .mark{box-shadow:none}
+body.dark .editorial-art{filter:brightness(.8)}
+@media(max-width:360px){main{padding:18px 14px}.shortcuts{gap:5px}.shortcut-icon{width:50px;height:50px}.shortcut span:last-child{font-size:10px}h1{font-size:29px}}
+@media(min-width:700px){main{padding-top:38px}.shortcuts{gap:16px}.shortcut-icon{width:62px;height:62px}}
 </style>
 </head>
 <body>
 <main>
 <header>
- <div><div class="brand">Browse<span>X</span></div><div class="subbrand">A little more room to explore</div></div>
- <div class="head-actions"><button class="round" id="theme" aria-label="Toggle appearance" type="button">☾</button><button class="round" id="language" aria-label="Change language" type="button">文</button></div>
+ <div class="brand"><div class="mark" aria-hidden="true">✳</div><div class="brand-name">Browse X</div></div>
+ <button class="icon-btn" id="settings" aria-label="Settings">☷</button>
 </header>
-<section class="intro"><div class="eyebrow" id="eyebrow">YOUR SPACE ON THE WEB</div><h1 id="headline">Where would you<br>like to go?</h1><p id="subline">Search the web, or pick up where you left off.</p></section>
-<form class="search-shell" id="search">
- <span class="search-icon">⌕</span><input id="query" type="search" placeholder="Search or enter website" autocomplete="off" aria-label="Search or enter website"><button type="submit" aria-label="Search">↑</button>
-</form>
-<div class="engines"><button type="button" data-engine="google" aria-pressed="true">Google</button><button type="button" data-engine="duck" aria-pressed="false">DuckDuckGo</button><button type="button" data-engine="bing" aria-pressed="false">Bing</button></div>
-<div class="section"><h2 id="favoritesTitle">Favorites</h2><span id="favoritesHint">Your everyday places</span></div>
-<nav class="favorites" aria-label="Favorite websites">
-<a class="favorite" href="https://www.google.com"><span class="fav-icon">G</span><b>Google</b></a>
-<a class="favorite" href="https://www.youtube.com"><span class="fav-icon">▶</span><b>YouTube</b></a>
-<a class="favorite" href="https://www.wikipedia.org"><span class="fav-icon">W</span><b>Wikipedia</b></a>
-<a class="favorite" href="https://www.instagram.com"><span class="fav-icon">◎</span><b>Instagram</b></a>
-<a class="favorite" href="https://www.facebook.com"><span class="fav-icon">f</span><b>Facebook</b></a>
-<a class="favorite" href="https://www.reddit.com"><span class="fav-icon">r</span><b>Reddit</b></a>
-<a class="favorite" href="https://www.amazon.com"><span class="fav-icon">a</span><b>Amazon</b></a>
-<a class="favorite" href="https://chatgpt.com"><span class="fav-icon">✳</span><b>ChatGPT</b></a>
-</nav>
-<section class="panel">
- <div class="panel-head"><b id="privacyTitle">A calmer way to browse</b><span id="privacyHint">BrowseX tools</span></div>
- <div class="privacy-row"><div class="privacy-icon">🛡</div><div><strong id="privacyStrong">Your browsing, your choice</strong><small id="privacySmall">Privacy and ad-blocking controls live in the browser menu.</small></div></div>
+<section class="greeting"><h1>A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
+<section aria-labelledby="everyday-title">
+ <div class="section-head"><h2 id="everyday-title">Your everyday</h2><button class="text-action" id="edit">Edit</button></div>
+ <nav class="shortcuts" id="shortcuts" aria-label="Favorite websites">
+  <a class="shortcut" href="https://fieldnotes.design"><span class="shortcut-icon">F</span><span>Fieldnotes</span></a>
+  <a class="shortcut" href="https://www.are.na"><span class="shortcut-icon">A</span><span>Are.na</span></a>
+  <a class="shortcut" href="https://www.wikipedia.org"><span class="shortcut-icon">W</span><span>Wikipedia</span></a>
+  <a class="shortcut" href="https://linear.app"><span class="shortcut-icon">L</span><span>Linear</span></a>
+ </nav>
 </section>
-<footer>BrowseX · Powered by GeckoView</footer>
+<section aria-labelledby="reading-title">
+ <div class="section-head reading-head"><h2 id="reading-title">Pick up a good read</h2><button class="text-action" id="view-all">View all</button></div>
+ <a class="reading-card" href="https://fieldnotes.design">
+  <div class="editorial-art" role="img" aria-label="Soft editorial still life"></div>
+  <div class="article-info"><div class="kicker">FIELDNOTES&nbsp; / &nbsp;DESIGN &amp; LIVING</div><h3 class="article-title">The art of doing less</h3><div class="article-meta">6 min read · Saved yesterday</div></div>
+ </a>
+</section>
+<p class="search-hint">Search or enter an address in the Browse X toolbar above.</p>
 </main>
 <script>
-(()=>{
-let engine='google',arabic=false;
-const engines={google:'https://www.google.com/search?q=',duck:'https://html.duckduckgo.com/html/?q=',bing:'https://www.bing.com/search?q='};
-document.querySelectorAll('[data-engine]').forEach(button=>button.addEventListener('click',()=>{
- engine=button.dataset.engine;document.querySelectorAll('[data-engine]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
-}));
-document.getElementById('search').addEventListener('submit',event=>{
- event.preventDefault();const raw=document.getElementById('query').value.trim();if(!raw)return;
- const isUrl=/^(https?:\/\/)|^([\w-]+\.)+[a-z]{2,}([/:?#]|$)/i.test(raw);
- location.href=isUrl?(raw.startsWith('http')?raw:'https://'+raw):engines[engine]+encodeURIComponent(raw);
-});
-document.getElementById('theme').addEventListener('click',event=>{
- document.body.classList.toggle('dark');event.currentTarget.textContent=document.body.classList.contains('dark')?'☀':'☾';
-});
-document.getElementById('language').addEventListener('click',()=>{
- arabic=!arabic;document.documentElement.lang=arabic?'ar':'en';document.documentElement.dir=arabic?'rtl':'ltr';
- const values=arabic?['EN','مساحتك على الإنترنت','إلى أين تريد الذهاب؟','ابحث في الويب أو تابع من حيث توقفت.','ابحث أو أدخل عنوان موقع','المفضلة','مواقعك اليومية','تصفح براحة أكبر','أدوات BrowseX','تصفحك، خياراتك','إعدادات الخصوصية ومنع الإعلانات تجدها في قائمة المتصفح.']:['文','YOUR SPACE ON THE WEB','Where would you like to go?','Search the web, or pick up where you left off.','Search or enter website','Favorites','Your everyday places','A calmer way to browse','BrowseX tools','Your browsing, your choice','Privacy and ad-blocking controls live in the browser menu.'];
- ['language','eyebrow','headline','subline','query','favoritesTitle','favoritesHint','privacyTitle','privacyHint','privacyStrong','privacySmall'].forEach((id,i)=>{const el=document.getElementById(id);if(id==='query')el.placeholder=values[i];else el.textContent=values[i];});
-});
+(()=> {
+ const $=id=>document.getElementById(id);
+ $('settings').addEventListener('click',()=>location.href='https://browsex.local/settings');
+ $('edit').addEventListener('click',()=>{
+   const current=[...document.querySelectorAll('.shortcut span:last-child')].map(x=>x.textContent).join(', ');
+   const value=prompt('Edit your four favorite labels (separate with commas):',current);
+   if(!value)return;
+   const names=value.split(',').map(x=>x.trim()).filter(Boolean).slice(0,4);
+   const links=[...document.querySelectorAll('.shortcut')];
+   names.forEach((name,i)=>{if(links[i]){links[i].querySelector('span:last-child').textContent=name;links[i].querySelector('.shortcut-icon').textContent=name.charAt(0).toUpperCase();}});
+ });
+ $('view-all').addEventListener('click',()=>location.href='https://fieldnotes.design');
+ const hour=new Date().getHours();
+ $('greeting').textContent=hour<12?'Good morning. Where to next?':hour<18?'Good afternoon. Where to next?':'Good evening. Where to next?';
 })();
 </script>
 </body>
