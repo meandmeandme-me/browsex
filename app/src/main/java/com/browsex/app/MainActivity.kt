@@ -930,6 +930,84 @@ class MainActivity : AppCompatActivity() {
         header.addView(add)
         page.addView(header)
 
+        val sessionActions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(12), 0, dp(2))
+        }
+        fun sessionAction(label: String, action: () -> Unit) {
+            val button = TextView(this).apply {
+                text = tr(label)
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setTextColor(colors.accent)
+                background = rounded(colors.card, 14)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                minHeight = dp(42)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { action() }
+            }
+            sessionActions.addView(button, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                marginEnd = dp(6)
+            })
+        }
+        sessionAction("Save session") {
+            val regularTabs = tabs.filterNot { it.privateMode }
+            if (regularTabs.isEmpty()) {
+                toast("No regular tabs to save")
+            } else {
+                val field = EditText(this).apply {
+                    hint = tr("Session name")
+                    maxLines = 1
+                }
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Save browsing session"))
+                    .setView(field)
+                    .setNegativeButton(tr("Cancel"), null)
+                    .setPositiveButton(tr("Save")) { _, _ ->
+                        val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+                        if (store.saveNamedSession(field.text?.toString().orEmpty(), regularTabs.map { it.url }, activeIndex)) {
+                            toast("Session saved")
+                        } else {
+                            toast("Session name is invalid or the session limit was reached")
+                        }
+                    }
+                    .show()
+            }
+        }
+        sessionAction("Saved sessions") {
+            val sessions = store.savedSessions()
+            if (sessions.isEmpty()) {
+                toast("No saved sessions")
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Saved sessions"))
+                    .setItems(sessions.map { "${it.name} · ${it.urls.size}" }.toTypedArray()) { _, index ->
+                        val selected = sessions[index]
+                        AlertDialog.Builder(this)
+                            .setTitle(selected.name)
+                            .setItems(arrayOf(tr("Open session"), tr("Delete session"))) { _, action ->
+                                if (action == 0) {
+                                    val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                                    val toOpen = selected.urls.take(available)
+                                    toOpen.forEach(::createTab)
+                                    if (toOpen.isEmpty()) toast("Tab limit reached")
+                                    else if (toOpen.size < selected.urls.size) toast("Some tabs were skipped because the tab limit was reached")
+                                } else {
+                                    store.removeNamedSession(selected.id)
+                                    toast("Session deleted")
+                                }
+                            }
+                            .setNegativeButton(tr("Cancel"), null)
+                            .show()
+                    }
+                    .setNegativeButton(tr("Close"), null)
+                    .show()
+            }
+        }
+        page.addView(sessionActions)
+
         val hint = TextView(this).apply {
             text = tr("Tap a card to return to it")
             textSize = 12f
