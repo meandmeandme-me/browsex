@@ -94,7 +94,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  const $=id=>document.getElementById(id);
  const params=new URLSearchParams(location.search);
  const selectedLanguage=params.get('bxlang')||'system';
- const language=selectedLanguage==='system'?(navigator.language.toLowerCase().startsWith('ar')?'ar':'en'):selectedLanguage;
+ const language=selectedLanguage==='system'?(navigator.language||'en'):selectedLanguage;
  const languageCode=language.toLowerCase().split('-')[0];
  const arabic=languageCode==='ar';
  const rtlLanguages=new Set(['ar','fa','ur','ps','he','yi','sd','ug','ku']);
