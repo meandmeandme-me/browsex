@@ -270,21 +270,8 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         })
 
         val snapshot = store.restoreOpenTabs()
-        snapshot.urls.forEach { savedUrl -> tabRegistry.add(BrowserTab(url = savedUrl)) }
-        val restoredActive = tabs.getOrNull(snapshot.activeIndex)
         val externalUrl = intent?.data?.let(::safeExternalUrl)
-        if (externalUrl != null) {
-            if (tabs.size >= TabSessionState.MAX_TABS) {
-                val discardIndex = tabs.indices.firstOrNull { tabs[it] !== restoredActive } ?: 0
-                tabRegistry.removeAt(discardIndex)
-            }
-            val externalTab = BrowserTab(url = externalUrl)
-            tabRegistry.add(externalTab)
-            activateTab(externalTab)
-        } else {
-            val initialTab = restoredActive ?: BrowserTab(url = homePageUrl()).also(tabRegistry::add)
-            activateTab(initialTab)
-        }
+        tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
         handleSiteNotificationIntent(intent)
     }
 
@@ -365,7 +352,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         browserRuntime?.setWebNotificationDelegate(null)
         if (::browserView.isInitialized) browserView.releaseSession()
         sessionLifecycleCoordinator.closeAllSessions()
-        tabRegistry.clear()
+        tabController.clear()
         super.onDestroy()
     }
 
@@ -1024,9 +1011,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         }
         if (::browserView.isInitialized) browserView.releaseSession()
         tabs.toList().forEach(sessionLifecycleCoordinator::resetSession)
-        tabRegistry.clear()
-        tabRegistry.addAll(tabsToRestore)
-        tabRegistry.select(tabsToRestore.getOrNull(snapshot.activeIndex))
+        tabController.replaceTabs(tabsToRestore, snapshot.activeIndex)
         clearingBrowsingData = flags != 0L
         if (clearingBrowsingData) {
             dataClearDialog = AlertDialog.Builder(this)
@@ -1053,9 +1038,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
                             store.clearAllSiteMediaDecisions()
                     }
                 }
-                if (tabs.isEmpty()) tabRegistry.add(BrowserTab(url = homePageUrl()))
-                val restored = tabs.getOrNull(snapshot.activeIndex) ?: tabs.first()
-                activateTab(restored)
+                tabController.activateRestoredSelection(snapshot.activeIndex)
                 persistTabs()
                 toast(if (success) "Selected browsing data cleared" else "Could not clear browsing data")
             }
