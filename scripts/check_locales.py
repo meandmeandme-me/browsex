@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
 LOCALE_CONFIG = RES / "xml" / "locales_config.xml"
-PLACEHOLDER = re.compile(r"%(?!%)(?:[0-9]+\\$)?[-#+ 0,(<]*[0-9]*(?:\\.[0-9]+)?[a-zA-Z]")
+PLACEHOLDER = re.compile(r"%(?!%)(?:[0-9]+\$)?[-#+ 0,(<]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]")
 
 
 def resources(path: Path):
@@ -40,7 +40,7 @@ def locale_name(directory: str) -> str:
     qualifier = directory.removeprefix("values-")
     if qualifier.startswith("b+"):
         return qualifier[2:].replace("+", "-")
-    return re.sub(r"-r([A-Z]{2})$", r"-\\1", qualifier)
+    return re.sub(r"-r([A-Z]{2})$", r"-\1", qualifier)
 
 
 def main() -> int:
