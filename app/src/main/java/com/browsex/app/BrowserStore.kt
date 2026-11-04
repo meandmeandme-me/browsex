@@ -296,6 +296,88 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
+    @Synchronized
+    fun beginStreamDownload(
+        displayName: String,
+        mimeType: String,
+        totalBytes: Long = -1L
+    ): String {
+        val id = "stream_download_${UUID.randomUUID()}"
+        val records = streamDownloads().toMutableList()
+        records.add(0, StreamDownloadRecord(
+            id = id,
+            displayName = displayName.take(140),
+            uri = "",
+            mimeType = mimeType.take(120),
+            bytesWritten = 0L,
+            createdAt = System.currentTimeMillis(),
+            status = "queued",
+            totalBytes = totalBytes.coerceAtLeast(-1L)
+        ))
+        writeStreamDownloads(records)
+        return id
+    }
+
+    @Synchronized
+    fun updateStreamDownloadProgress(id: String, bytesWritten: Long) {
+        updateStreamDownload(id) { it.copy(
+            bytesWritten = bytesWritten.coerceAtLeast(it.bytesWritten),
+            status = "running"
+        ) }
+    }
+
+    @Synchronized
+    fun completeStreamDownload(id: String, uri: String, bytesWritten: Long) {
+        updateStreamDownload(id) { it.copy(
+            uri = uri.take(2048),
+            bytesWritten = bytesWritten.coerceAtLeast(0L),
+            failed = false,
+            error = "",
+            status = "completed"
+        ) }
+    }
+
+    @Synchronized
+    fun failStreamDownload(id: String, error: String, cancelled: Boolean = false, bytesWritten: Long? = null) {
+        updateStreamDownload(id) { it.copy(
+            uri = "",
+            bytesWritten = (bytesWritten ?: it.bytesWritten).coerceAtLeast(0L),
+            failed = !cancelled,
+            error = error.take(240),
+            status = if (cancelled) "cancelled" else "failed"
+        ) }
+    }
+
+    @Synchronized
+    fun recoverInterruptedStreamDownloads() {
+        val records = streamDownloads()
+        var changed = false
+        val recovered = records.map { item ->
+            if (item.isActive) {
+                changed = true
+                item.copy(
+                    uri = "",
+                    failed = true,
+                    status = "failed",
+                    error = "Download interrupted when BrowseX was closed"
+                )
+            } else item
+        }
+        if (changed) writeStreamDownloads(recovered)
+    }
+
+    private fun updateStreamDownload(
+        id: String,
+        transform: (StreamDownloadRecord) -> StreamDownloadRecord
+    ) {
+        val records = streamDownloads().toMutableList()
+        val index = records.indexOfFirst { it.id == id }
+        if (index < 0) return
+        records[index] = transform(records[index])
+        writeStreamDownloads(records)
+    }
+
+    /** Backward-compatible helper for callers that already have a terminal result. */
     fun addStreamDownload(
         displayName: String,
         uri: String,
@@ -304,19 +386,9 @@ class BrowserStore(context: Context) {
         failed: Boolean = false,
         error: String = ""
     ): String {
-        val id = "stream_download_${UUID.randomUUID()}"
-        val records = streamDownloads().toMutableList()
-        records.add(0, StreamDownloadRecord(
-            id = id,
-            displayName = displayName.take(140),
-            uri = uri.take(2048),
-            mimeType = mimeType.take(120),
-            bytesWritten = bytesWritten.coerceAtLeast(0L),
-            createdAt = System.currentTimeMillis(),
-            failed = failed,
-            error = error.take(240)
-        ))
-        writeStreamDownloads(records)
+        val id = beginStreamDownload(displayName, mimeType)
+        if (failed) failStreamDownload(id, error, bytesWritten = bytesWritten)
+        else completeStreamDownload(id, uri, bytesWritten)
         return id
     }
 
@@ -329,19 +401,30 @@ class BrowserStore(context: Context) {
                 val id = item.optString("id").take(100)
                 val name = item.optString("displayName").take(140)
                 val uri = item.optString("uri").take(2048)
-                if (id.isBlank() || name.isBlank() || (uri.isBlank() && !item.optBoolean("failed", false))) return@mapNotNull null
+                val status = item.optString(
+                    "status",
+                    if (item.optBoolean("failed", false)) "failed" else "completed"
+                ).takeIf { it in setOf("queued", "running", "completed", "failed", "cancelled") } ?: "failed"
+                if (id.isBlank() || name.isBlank() ||
+                    (uri.isBlank() && status !in setOf("queued", "running", "failed", "cancelled"))
+                ) return@mapNotNull null
                 StreamDownloadRecord(
-                    id, name, uri,
-                    item.optString("mimeType", "application/octet-stream").take(120),
-                    item.optLong("bytesWritten", 0L).coerceAtLeast(0L),
-                    item.optLong("createdAt", 0L).coerceAtLeast(0L),
-                    item.optBoolean("failed", false),
-                    item.optString("error").take(240)
+                    id = id,
+                    displayName = name,
+                    uri = uri,
+                    mimeType = item.optString("mimeType", "application/octet-stream").take(120),
+                    bytesWritten = item.optLong("bytesWritten", 0L).coerceAtLeast(0L),
+                    createdAt = item.optLong("createdAt", 0L).coerceAtLeast(0L),
+                    failed = status == "failed",
+                    error = item.optString("error").take(240),
+                    status = status,
+                    totalBytes = item.optLong("totalBytes", -1L).coerceAtLeast(-1L)
                 )
             }
         }
     } catch (_: Exception) { emptyList() }
 
+    @Synchronized
     fun removeStreamDownload(id: String) {
         writeStreamDownloads(streamDownloads().filterNot { it.id == id })
     }
@@ -357,7 +440,9 @@ class BrowserStore(context: Context) {
                 .put("bytesWritten", item.bytesWritten)
                 .put("createdAt", item.createdAt)
                 .put("failed", item.failed)
-                .put("error", item.error))
+                .put("error", item.error)
+                .put("status", item.status)
+                .put("totalBytes", item.totalBytes))
         }
         prefs.edit().putString("stream_downloads_v1", array.toString()).apply()
     }
