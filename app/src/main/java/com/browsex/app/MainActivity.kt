@@ -5,7 +5,6 @@ import android.app.DownloadManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.webkit.CookieManager
-import android.webkit.URLUtil
 import android.os.Environment
 
 import android.content.Intent
@@ -67,7 +66,6 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private val tabs: List<BrowserTab> get() = tabRegistry.tabs
     private val activeTab: BrowserTab? get() = tabRegistry.activeTab
     private lateinit var store: BrowserStore
-    private lateinit var downloadResponseWriter: DownloadResponseWriter
     private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText
@@ -97,8 +95,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
         store.recoverInterruptedStreamDownloads()
-        downloadResponseWriter = DownloadResponseWriter(applicationContext)
-        streamDownloadCoordinator = StreamDownloadCoordinator(store, downloadResponseWriter)
+        streamDownloadCoordinator = StreamDownloadCoordinator(store, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             if (uri != null) runCatching {
                 contentResolver.openOutputStream(uri)?.use { output ->
