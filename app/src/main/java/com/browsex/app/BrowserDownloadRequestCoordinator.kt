@@ -27,6 +27,10 @@ internal class BrowserDownloadRequestCoordinator(
     }
 
     fun enqueue(response: WebResponse) {
+        if (!isHostAvailable()) {
+            response.body?.close()
+            return
+        }
         if (!isSupported(response)) {
             response.body?.close()
             showIfAvailable("This download response is not supported")
