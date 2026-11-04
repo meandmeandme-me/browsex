@@ -302,7 +302,7 @@ class BrowserStore(context: Context) {
     }
 
     fun removeBookmark(url: String) {
-        writeList("bookmarks", bookmarks().filterNot { it == url })
+        writeBookmarkLibrary(readBookmarkFolders(), readBookmarkItems().filterNot { it.url == url })
     }
 
     fun removeHistory(url: String) {
