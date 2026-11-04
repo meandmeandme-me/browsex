@@ -12,6 +12,9 @@ BrowseX/
 │   │   ├── java/com/browsex/app/
 │   │   │   ├── BrowseXApplication.kt     # process-wide setup (when needed)
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
+│   │   │   ├── TabLifecyclePolicy.kt     # pure Gecko session budget/memory policy
+│   │   │   ├── BrowserPreferencesStore.kt # settings and site-permission persistence
+│   │   │   ├── BrowserPreferencePolicy.kt # pure preference normalization
 │   │   │   ├── TabLifecyclePolicy.kt     # pure live-session budget and memory-pressure policy
 │   │   │   ├── di/                       # dependency wiring; introduce only when useful
 │   │   │   ├── core/
