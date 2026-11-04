@@ -113,8 +113,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private var dataClearDialog: AlertDialog? = null
     private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
-    private val queuedPlatformPermissions = java.util.ArrayDeque<PendingPlatformPermission>()
-    private var activePlatformPermission: PendingPlatformPermission? = null
+    private val platformPermissionQueue = BrowserAndroidPermissionQueue()
     private val notificationPermissionCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var notificationPermissionInFlight = false
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
@@ -201,17 +200,13 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         platformPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { grants ->
-            val pending = activePlatformPermission
-            activePlatformPermission = null
-            if (pending != null && !pending.completed) {
-                val granted = pending.permissions.all { grants[it] == true } &&
-                    pending.session === activeTab?.session && tabs.any { it.session === pending.session }
-                pending.permissions.forEach { permission ->
-                    if (grants[permission] == true) store.clearPlatformPermissionDenial(permission)
-                    else store.markPlatformPermissionDenied(permission)
-                }
-                if (granted) pending.callback.grant() else pending.callback.reject()
-            }
+            platformPermissionQueue.completeActive(
+                grants = grants,
+                activeSession = activeTab?.session,
+                containsSession = { session -> tabs.any { it.session === session } },
+                clearDenial = store::clearPlatformPermissionDenial,
+                markDenied = store::markPlatformPermissionDenied
+            )
             launchNextPlatformPermission()
         }
         legacyDownloadPermissionLauncher = registerForActivityResult(
@@ -335,16 +330,10 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     override fun onDestroy() {
         persistTabs()
         shuttingDown = true
-        queuedPlatformPermissions.toList().forEach { it.callback.reject() }
-        queuedPlatformPermissions.clear()
+        platformPermissionQueue.rejectAll()
         waitingForLegacyDownloads.toList().forEach { it.body?.close() }
         waitingForLegacyDownloads.clear()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
-        activePlatformPermission?.let { pending ->
-            if (!pending.completed) pending.callback.reject()
-            pending.completed = true
-        }
-        activePlatformPermission = null
         notificationPermissionCallbacks.toList().forEach { it(false) }
         notificationPermissionCallbacks.clear()
         dataClearDialog?.dismiss()
@@ -388,42 +377,22 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
             callback.reject()
             return
         }
-        queuedPlatformPermissions.add(PendingPlatformPermission(session, missing, callback))
+        platformPermissionQueue.enqueue(PendingPlatformPermission(session, missing, callback))
         launchNextPlatformPermission()
     }
 
     private fun launchNextPlatformPermission() {
-        if (notificationPermissionInFlight || activePlatformPermission != null ||
+        if (notificationPermissionInFlight || platformPermissionQueue.hasActiveRequest ||
             !::platformPermissionLauncher.isInitialized || isFinishing || isDestroyed
         ) return
-        while (queuedPlatformPermissions.isNotEmpty()) {
-            val next = queuedPlatformPermissions.removeFirst()
-            if (next.completed || next.session !== activeTab?.session ||
-                tabs.none { it.session === next.session }
-            ) {
-                if (!next.completed) next.callback.reject()
-                continue
-            }
-            activePlatformPermission = next
-            platformPermissionLauncher.launch(next.permissions.toTypedArray())
-            return
-        }
+        val next = platformPermissionQueue.takeNext(activeTab?.session) { session ->
+            tabs.any { it.session === session }
+        } ?: return
+        platformPermissionLauncher.launch(next.permissions.toTypedArray())
     }
 
     private fun cancelPlatformPermissionRequests(session: GeckoSession) {
-        val iterator = queuedPlatformPermissions.iterator()
-        while (iterator.hasNext()) {
-            val pending = iterator.next()
-            if (pending.session === session) {
-                pending.completed = true
-                pending.callback.reject()
-                iterator.remove()
-            }
-        }
-        activePlatformPermission?.takeIf { it.session === session && !it.completed }?.let {
-            it.completed = true
-            it.callback.reject()
-        }
+        platformPermissionQueue.cancelSession(session)
     }
 
     fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) {
