@@ -24,7 +24,7 @@ This file is the source of truth for feature sequencing. Keep each task small an
 - [ ] Implement real GeckoView download interception and a BrowseX downloads screen.
 - [x] Implement initial reader mode with GeckoView page extraction and accessible native typography.\n- [ ] Add readerability/boilerplate-removal tuning when supported by the pinned GeckoView API.
 - [ ] Implement bookmarks/history empty states, search and deletion confirmation.
-- [ ] Add site permission and notification flows with Android-version-aware behavior.
+- [x] Add read-only site information and current GeckoView permission visibility.\n- [ ] Add site permission grant/revoke flows and Android-version-aware notification permission handling.
 
 ## Phase 3 — design coverage
 
