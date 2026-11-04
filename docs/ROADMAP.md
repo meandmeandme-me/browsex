@@ -10,7 +10,8 @@ This file records implementation state separately from device verification. A ch
 - [x] Add CI gates for unit tests, lint, APK verification and checksums.
 - [x] Add pure tests for persisted URL validation, duplicate tabs, storage limits and search-engine fallback.
 - [ ] Add Android-backed persistence tests for BrowserStore.
-- [ ] Establish a stable release signing/update strategy; debug signatures are not a release strategy.
+- [x] Add environment-based release signing and an optional CI path that verifies/uploads signed release APKs when secrets are configured.
+- [ ] Configure protected release-signing secrets, define update publication/recovery policy and validate signed upgrades on devices.
 - [x] Add a locale-resource integrity validator to CI for missing keys, placeholder parity and Android locale-config registration.
 - [ ] Expand reviewed locale packs beyond English and Arabic; validate mixed-direction, plural, date/number, TalkBack and font-fallback behavior for each pack.
 
