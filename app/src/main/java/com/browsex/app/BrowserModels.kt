@@ -18,13 +18,29 @@ internal object BrowserRuntimeOwner {
     }
 }
 
-/** Every regular and private session enables GeckoView's built-in tracking protection.
- * This blocks known trackers; it is not represented as a full advertisement blocker. */
+/**
+ * Keeps GeckoView's built-in tracker protection from overlapping with uBlock Origin.
+ * Private sessions retain Gecko tracking protection unless the user explicitly allows
+ * uBlock Origin to run in private browsing.
+ */
+internal object BrowserContentProtectionPolicy {
+    @Volatile private var uBlockEnabled: Boolean = false
+    @Volatile private var uBlockPrivateAllowed: Boolean = false
+
+    fun configure(enabled: Boolean, privateAllowed: Boolean) {
+        uBlockEnabled = enabled
+        uBlockPrivateAllowed = enabled && privateAllowed
+    }
+
+    fun useGeckoTrackingProtection(privateMode: Boolean): Boolean =
+        !uBlockEnabled || (privateMode && !uBlockPrivateAllowed)
+}
+
 internal fun newBrowserSession(privateMode: Boolean): GeckoSession =
     GeckoSession(
         GeckoSessionSettings.Builder()
             .usePrivateMode(privateMode)
-            .useTrackingProtection(true)
+            .useTrackingProtection(BrowserContentProtectionPolicy.useGeckoTrackingProtection(privateMode))
             .build()
     )
 

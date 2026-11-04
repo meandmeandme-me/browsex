@@ -26,6 +26,7 @@ internal class BrowserTabController(
     private val showMessage: (String) -> Unit,
     private val recordRecentlyClosed: (BrowserTab) -> Unit,
     private val dispatchToMain: (() -> Unit) -> Unit,
+    private val setExtensionTabActive: (GeckoSession, Boolean) -> Unit = { _, _ -> },
     private val maxTabs: Int = TabSessionState.MAX_TABS
 ) {
     val tabs: List<BrowserTab> get() = registry.tabs
@@ -80,7 +81,11 @@ internal class BrowserTabController(
         val previous = activeTab
         if (previous !== tab) {
             previous?.takeIf { it.sessionOpened }?.let {
-                runCatching { it.session.setFocused(false); it.session.setActive(false) }
+                runCatching {
+                    it.session.setFocused(false)
+                    it.session.setActive(false)
+                    setExtensionTabActive(it.session, false)
+                }
             }
         }
         registry.select(tab)
@@ -99,6 +104,7 @@ internal class BrowserTabController(
             }
             tab.session.setActive(true)
             tab.session.setFocused(true)
+            setExtensionTabActive(tab.session, true)
             attachSessionToView(tab.session)
             enforceSessionBudget()
             updateChrome()
@@ -120,6 +126,7 @@ internal class BrowserTabController(
         if (index < 0) return
         val wasActive = activeTab === tab
         if (!tab.privateMode) recordRecentlyClosed(tab)
+        if (tab.sessionOpened) setExtensionTabActive(tab.session, false)
         if (wasActive) releaseViewSession()
         sessionLifecycle.closeAndDiscard(tab)
         registry.removeAt(index)
