@@ -1,65 +1,75 @@
 # BrowseX — account and sync foundation
 
-Status: design contract only. No provider sign-in, account UI, token storage or cloud synchronization is implemented.
+Status: provider-neutral contract plus initial pure domain models. No real provider sign-in, token vault, account UI, backend or cloud synchronization is implemented yet.
+
+Domain models: app/src/main/java/com/browsex/app/AccountDomainModels.kt. They contain no Android, GeckoView, OAuth SDK, database or network types and are intended for later extraction into a shared domain module.
 
 ## Product rules
+- Local browsing remains fully usable without an account.
+- Identity provider authentication, BrowseX profile and sync consent are separate.
+- Provider adapters support Google, Microsoft personal/work-school, Apple and standards-based OIDC when actually implemented.
+- Provider login never silently enables browser-data sync.
+- Each signed-in device has a revocable device registration.
 
-- Local browsing works without an account and remains the default.
-- Identity provider authentication is separate from BrowseX profile data and from sync consent.
-- Support providers through adapters, not provider-specific types in browser features.
-- Initial providers to evaluate: Google, Microsoft (personal and work/school where appropriate), Apple, and later OIDC-compatible providers.
-- A provider login must never silently enable browser-data sync.
+## Boundaries
+- IdentityProviderAdapter: official authorization flow and short-lived authorization result.
+- AccountIdentity: provider plus stable subject; email/name are optional profile claims, never the identity key.
+- AccountSessionRepository: account state and revocation metadata; no raw tokens in SharedPreferences.
+- SecureCredentialVault: platform adapter (Android Keystore, Windows Credential Manager/DPAPI, macOS Keychain, Linux Secret Service/libsecret).
+- SyncConsentRepository: versioned and timestamped choice per category.
+- SyncRepository: transfers versioned encrypted records; browser features never call provider SDKs or backend APIs directly.
+- SyncConflictResolver: deterministic merge and user-visible conflict handling.
+- DeviceRegistryRepository: lists and revokes signed-in devices.
+- AccountDataLifecycle: export, cloud deletion, disconnect and local-data retention are distinct operations.
 
-## Target boundaries
+## Data categories and defaults
 
-- `IdentityProviderAdapter`: starts a provider-approved authorization flow and returns a short-lived authorization result.
-- `AccountIdentity`: provider, stable subject identifier, display name/email only when the provider grants the relevant scope.
-- `AccountSessionRepository`: persists account state and revocation metadata; never stores raw access/refresh tokens in SharedPreferences.
-- `SecureCredentialVault`: Android Keystore-backed encryption for secrets, with rotation and invalidation behavior documented.
-- `SyncConsent`: explicit booleans for each data category, with timestamps and a versioned consent record.
-- `SyncRepository`: uploads/downloads versioned encrypted records; browser features do not call provider SDKs or backend APIs directly.
-- `SyncConflictResolver`: deterministic merge rules and user-visible conflict behavior for concurrent edits.
-- `DeviceRegistry`: list and revoke signed-in devices; revocation invalidates credentials and stops sync.
-
-## Data categories
-
-| Category | Default | Notes |
+| Category | Default | Policy |
 |---|---|---|
-| Bookmarks and folders | Off | User can opt in; merge/replace and duplicate rules must be visible. |
-| Reading list / collections | Off | Sync metadata and URLs only; avoid silently uploading page contents. |
-| Theme, language and UI preferences | Off | Low sensitivity but still user-controlled. |
-| Open tabs / named sessions | Off | Exclude private tabs; allow per-device opt-in and bounded history. |
-| Browsing history | Off | Highly sensitive; separate consent, retention and delete controls. |
-| Passwords / passkeys | Not in first sync release | Requires a dedicated threat model, secure autofill integration and recovery design. |
-| Cookies, website permissions, form contents | Never sync by default | These are device/site security state, not ordinary browser preferences. |
-| Private tabs and private history | Never sync | Must never enter durable sync queues or telemetry. |
+| Bookmarks and folders | Off | First candidate; stable IDs and merge preview. |
+| Reading list / collections | Off | URLs/metadata only; never silently upload page contents. |
+| Theme, language and UI preferences | Off | User-controlled. |
+| Open tabs / named sessions | Off | Separate opt-in; regular tabs only. |
+| Browsing history | Off | Defer until retention/deletion are proven. |
+| Passwords / passkeys | Not in first sync release | Separate threat model, autofill and recovery design. |
+| Cookies, site grants, form contents | Never sync by default | Device/site security state. |
+| Private tabs and private history | Never sync | Excluded before persistence/serialization. |
+| Downloaded file bytes | Never sync | Files remain local. |
 
-## Required security and lifecycle behavior
+## Authentication requirements
+1. Use OIDC Authorization Code + PKCE; validate issuer, audience, signature, state, nonce and exact redirect URI.
+2. Use official provider flows and minimum scopes. Never ship client secrets in an app.
+3. Keep access tokens short-lived; refresh credentials only in platform secure vaults with rotation/invalidation.
+4. Never log tokens, codes, cookies, private URLs or secrets.
+5. Handle account removal, provider revocation, expiry, device loss, clock skew, offline mode and interrupted sign-in.
+6. Define account-linking collision and recovery rules before supporting multiple linked identities.
 
-1. Use OAuth 2.0 Authorization Code with PKCE / OIDC where supported; validate issuer, audience, state, nonce and redirect URI.
-2. Request minimum scopes and explain why each scope is needed.
-3. Keep provider access tokens short-lived; store refresh credentials only in an encrypted vault protected by Android Keystore.
-4. Never log tokens, authorization codes, cookies, URLs containing credentials or private browsing state.
-5. Handle account removal, provider revocation, token expiry, device loss, clock skew, offline mode and interrupted sign-in.
-6. Encrypt sync payloads in transit and at rest; document who controls encryption keys and whether the service operator can decrypt data.
-7. Provide export and deletion of cloud data; local sign-out must clearly distinguish “remove account” from “delete local data.”
-8. Make sync idempotent, versioned, bounded and resilient to duplicate delivery and partial network failures.
-9. Resolve concurrent bookmark/folder edits deterministically; never silently overwrite a newer user change.
-10. Keep private mode outside repositories and sync serializers at the type boundary, not merely by filtering at the UI.
+## Sync protocol requirements
+- TLS for transport. Decide end-to-end encryption before selecting the backend; do not claim E2EE if the service can decrypt user data.
+- Version every record; use stable IDs, revisions, tombstones and idempotency keys.
+- Keep a bounded offline queue with exponential backoff and jitter.
+- Make sync idempotent across duplicate delivery, partial writes and device clock skew.
+- Resolve concurrent bookmark/folder changes deterministically; preserve both or ask when safe merge is impossible.
+- Define key creation, device enrollment, recovery, rotation and lost-device revocation before shipping.
+- Provide export and cloud deletion; distinguish disconnecting identity, deleting local data and deleting cloud data.
 
-## Rollout sequence
+## Device and consent UX
+- Show current device, last-seen time and a clear revoke action for other devices.
+- Revocation invalidates future sync access; define offline-device behavior on reconnect.
+- Each category has its own opt-in, description, last-sync state and pause behavior.
+- Pausing sync never erases local data. New categories default off.
 
-1. Define account/profile models and provider adapter contracts.
-2. Implement one provider with official SDK/OIDC flow, PKCE and security review.
-3. Add account state UI with explicit sign-in/out and local-data retention choices.
-4. Implement encrypted sync for bookmarks only, behind a separate opt-in.
-5. Add settings and tab/session sync only after conflict handling and device revocation are proven.
-6. Consider history sync only after privacy review; password/passkey sync is a separate product project.
+## Rollout
+1. [x] Define provider-neutral account and sync domain models without platform dependencies.
+2. [ ] Define backend API, retention, threat model and encryption/key ownership.
+3. [ ] Implement secure platform credential vault and provider authorization adapter.
+4. [ ] Implement one verified provider end-to-end; Google is a candidate, not a promise.
+5. [ ] Add real account center and provider connection UI; unsupported providers are never shown as active.
+6. [ ] Add device registration/revocation and account export/deletion.
+7. [ ] Implement encrypted bookmark sync behind explicit opt-in.
+8. [ ] Add offline queue, conflict resolution, schema migration and recovery.
+9. [ ] Add other providers/categories after security and interoperability tests.
+10. [ ] Extract stable domain/sync code into KMP shared modules for desktop and TV.
 
-## Explicit non-goals for the first release
-
-- No forced account creation.
-- No account-based paywall for local browsing.
-- No background collection of browsing history.
-- No syncing private tabs, cookies, form data, site grants or raw browser credentials.
-- No provider-branded sign-in button that does not complete a verified real flow.
+## First-release non-goals
+No forced account/paywall, background history collection, sync of private tabs/cookies/form data/site grants/raw credentials/downloaded file bytes, fake provider buttons or unsupported end-to-end encryption claims.
