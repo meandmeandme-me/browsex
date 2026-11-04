@@ -58,3 +58,13 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - ABI packaging includes `armeabi-v7a`, `arm64-v8a`, plus a universal APK.
 - GeckoView is a native, relatively large dependency. Verify APK size and ABI contents on every release build.
 - Android 10 / API 29 is an explicit compatibility test target. Public Downloads on API 26–28 use a runtime storage permission; API 29+ does not request that legacy permission.
+
+## Cross-platform and account foundations
+
+- Current product delivery is Android-only. Windows, macOS, Linux and Android TV are planned targets, not implemented clients.
+- Account domain models live in AccountDomainModels.kt and intentionally avoid Android/GeckoView/OAuth SDK dependencies. They are initial pure models, not a functioning account feature.
+- Account sign-in, BrowseX profile, sync consent, device registry and encrypted sync are separate boundaries. Local browsing never requires an account.
+- Future shared code should be extracted gradually, with Kotlin Multiplatform evaluated for pure domain and sync logic. Do not move GeckoView, Android permissions, native UI or platform storage into common code.
+- Desktop browser engines must be selected per OS after compatibility, security, sandbox, extension, accessibility, performance, licensing and update evaluation. GeckoView remains the Android engine.
+- Android TV requires a remote-first focus-navigation design, not a scaled phone layout.
+- See MULTIPLATFORM_ARCHITECTURE.md, ACCOUNT_SYNC_FOUNDATION.md and ACCOUNT_SYNC_UX_MAP.md.
