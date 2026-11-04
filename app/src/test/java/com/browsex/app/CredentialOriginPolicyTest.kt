@@ -16,7 +16,9 @@ class CredentialOriginPolicyTest {
             "https://user@example.com",
             "https://example.com/path",
             "https://example.com?next=other",
-            "https://example.com#fragment"
+            "https://example.com#fragment",
+            "https://example.com:",
+            "https://example.com:65536"
         ).forEach { assertNull(it, CredentialOriginPolicy.canonicalHttpsOrigin(it)) }
     }
 
