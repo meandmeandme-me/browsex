@@ -319,15 +319,20 @@ class BrowserStore(context: Context) {
     }
 
     /** Reorders a bookmark without changing its stable identity or folder. */
-    fun reorderBookmark(url: String, offset: Int): Boolean {
+    fun reorderBookmark(url: String, offset: Int, folderId: String? = null): Boolean {
         if (offset !in -1..1 || offset == 0) return false
         val items = readBookmarkItems().toMutableList()
         val index = items.indexOfFirst { it.url == url }
         if (index < 0) return false
-        val destination = (index + offset).coerceIn(0, items.lastIndex)
-        if (destination == index) return false
-        val item = items.removeAt(index)
-        items.add(destination, item)
+        val groupIndices = items.indices.filter { folderId == null || items[it].folderId == folderId }
+        val position = groupIndices.indexOf(index)
+        if (position < 0) return false
+        val targetPosition = (position + offset).coerceIn(0, groupIndices.lastIndex)
+        if (targetPosition == position) return false
+        val destination = groupIndices[targetPosition]
+        val current = items[index]
+        items[index] = items[destination]
+        items[destination] = current
         writeBookmarkLibrary(readBookmarkFolders(), items)
         return true
     }
