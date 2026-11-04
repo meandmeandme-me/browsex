@@ -26,7 +26,7 @@ internal interface BrowserSessionDelegateCallbacks {
 
 /**
  * Adapts GeckoView callbacks into BrowseX-owned events.
- * No Activity, UI widget or persistence dependency is held by this adapter.
+ * The adapter has no direct Activity, widget or persistence API dependency; the host owns side effects.
  */
 internal class BrowserSessionDelegateFactory(
     private val callbacks: BrowserSessionDelegateCallbacks
