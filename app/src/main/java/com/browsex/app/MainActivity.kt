@@ -567,6 +567,7 @@ class MainActivity : AppCompatActivity() {
 
 
     /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
+    @ExperimentalGeckoViewApi
     @OptIn(ExperimentalGeckoViewApi::class)
     private fun openReaderMode() {
         val tab = activeTab ?: return
