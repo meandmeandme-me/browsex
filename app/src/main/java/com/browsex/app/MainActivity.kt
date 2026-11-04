@@ -664,6 +664,7 @@ class MainActivity : AppCompatActivity() {
         val index = tabs.indexOf(tab)
         if (index < 0) return
         val wasActive = activeTab === tab
+        if (!tab.privateMode) store.recordRecentlyClosedTab(tab.url, tab.title)
         tab.permissionDelegate?.cancelPending()
         cancelPlatformPermissionRequests(tab.session)
         if (tab.sessionOpened) {
@@ -935,6 +936,24 @@ class MainActivity : AppCompatActivity() {
                             }
                             .setNegativeButton(tr("Cancel"), null)
                             .show()
+                    }
+                    .setNegativeButton(tr("Close"), null)
+                    .show()
+            }
+        }
+        sessionAction("Recently closed") {
+            val recentlyClosed = store.recentlyClosedTabs()
+            if (recentlyClosed.isEmpty()) {
+                toast("No recently closed tabs")
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Recently closed"))
+                    .setItems(recentlyClosed.map { "${it.title} · ${Uri.parse(it.url).host.orEmpty()}" }.toTypedArray()) { _, index ->
+                        if (tabs.size >= TabSessionState.MAX_TABS) {
+                            toast("Tab limit reached")
+                        } else {
+                            store.consumeRecentlyClosedTab(recentlyClosed[index].id)?.let { createTab(it.url) }
+                        }
                     }
                     .setNegativeButton(tr("Close"), null)
                     .show()
