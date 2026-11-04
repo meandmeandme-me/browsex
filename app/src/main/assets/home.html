@@ -3,74 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-<meta name="color-scheme" content="dark">
-<title>BrowseX — Explore more</title>
+<meta name="theme-color" content="#edf2fa">
+<title>BrowseX</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#111a2e;--card:#15213a;--line:#263653;--accent:#8b5cf6;--cyan:#22d3ee;--text:#f7f8ff;--muted:#a7b3ca}
+:root{color-scheme:light;--ink:#17233b;--muted:#71809a;--accent:#3868c8;--line:#ffffffa8;--glass:#ffffffa6;--glass2:#ffffff78;--shadow:0 18px 55px #31476b18;--bg1:#f4f7fc;--bg2:#e7eef9}
 *{box-sizing:border-box}
-html{min-height:100%;background:var(--bg)}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#22204d 0%,#101a32 38%,var(--bg) 78%);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center}
-main{width:min(760px,100%);padding:clamp(28px,8vh,76px) clamp(18px,5vw,34px) 34px}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(32px,8vh,70px)}
-.logo{font-size:clamp(36px,9vw,54px);font-weight:850;letter-spacing:-2.8px;line-height:1}
-.logo span{color:var(--accent);text-shadow:0 0 28px #8b5cf677}
-.tag{color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:8px}
-.lang{border:1px solid var(--line);background:#ffffff0b;color:var(--text);border-radius:999px;padding:9px 13px;font:inherit}
-.hero{text-align:center;margin-bottom:28px}
-.hero h1{font-size:clamp(22px,5vw,32px);margin:0 0 7px;letter-spacing:-.7px}
-.hero p{color:var(--muted);margin:0}
-.search{display:flex;gap:8px;width:100%;padding:7px;background:#ffffff0d;border:1px solid #ffffff20;border-radius:20px;box-shadow:0 16px 50px #0005;backdrop-filter:blur(12px)}
-.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--text);padding:12px 13px;font:inherit}
-.search input::placeholder{color:#94a3b8}
-.search button{border:0;border-radius:14px;background:linear-gradient(135deg,var(--accent),#5b6cff);color:white;padding:0 20px;font-weight:750;font:inherit}
-.engines{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:13px 0 30px}
-.engines button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 13px;border-radius:999px;font:inherit;font-size:12px}
-.engines button[aria-pressed=true]{border-color:var(--accent);background:#8b5cf622;color:#fff}
-.section{display:flex;align-items:center;justify-content:space-between;margin:26px 2px 12px}
-.section h2{font-size:14px;letter-spacing:.5px;margin:0}
-.section span{font-size:12px;color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
-.tile{min-width:0;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;padding:16px 6px;background:linear-gradient(155deg,#ffffff0d,#ffffff05);border:1px solid var(--line);border-radius:18px;color:var(--text);text-decoration:none;transition:transform .16s,border-color .16s}
-.tile:active{transform:scale(.96);border-color:var(--accent)}
-.icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#8b5cf633,#22d3ee22);font-size:19px;font-weight:800}
-.tile b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.feature{display:flex;align-items:center;gap:11px;padding:13px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff12}
-.feature i{font-style:normal;font-size:20px}
-.feature b{display:block;font-size:12px}.feature small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-footer{text-align:center;color:#71809a;font-size:11px;margin-top:36px}
-[dir=rtl] .section{flex-direction:row-reverse}
-[dir=rtl] header{flex-direction:row}
-@media(max-width:420px){main{padding-top:28px}.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tile{padding:13px 4px}.features{grid-template-columns:1fr}.search button{padding:0 15px}}
-@media(min-width:650px){.tile{padding:20px 10px}.icon{width:48px;height:48px}}
+html{min-height:100%;background:var(--bg1)}
+body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;background:radial-gradient(ellipse at 12% 8%,#dce8ff 0,transparent 34%),radial-gradient(ellipse at 90% 22%,#e8ddff 0,transparent 32%),linear-gradient(150deg,var(--bg1),var(--bg2));}
+main{width:min(760px,100%);margin:auto;padding:clamp(28px,7vh,72px) clamp(18px,5vw,38px) 38px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(38px,8vh,74px)}
+.brand{font-size:29px;font-weight:780;letter-spacing:-1.5px}.brand span{color:var(--accent)}
+.subbrand{font-size:11px;letter-spacing:2.2px;color:var(--muted);text-transform:uppercase;margin-top:2px}
+.head-actions{display:flex;gap:8px}
+.round{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;background:var(--glass);color:var(--ink);font-size:17px;box-shadow:0 6px 20px #31476b12;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.intro{margin-bottom:24px}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+h1{font-size:clamp(27px,6vw,39px);line-height:1.12;letter-spacing:-1.3px;margin:0 0 8px;font-weight:760}
+.intro p{color:var(--muted);font-size:14px;margin:0}
+.search-shell{display:flex;align-items:center;gap:10px;padding:8px 9px 8px 17px;border:1px solid #ffffffd9;border-radius:23px;background:#ffffffbd;box-shadow:0 14px 42px #405b8520,inset 0 1px 0 #fff;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.search-icon{font-size:19px;color:#8190a9}
+.search-shell input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:15px;padding:11px 0}
+.search-shell input::placeholder{color:#8794a9}
+.search-shell button{width:44px;height:44px;border:0;border-radius:16px;background:linear-gradient(145deg,#477bd9,#315bb2);color:white;font-size:20px;box-shadow:0 6px 14px #3868c844}
+.engines{display:flex;gap:8px;justify-content:center;margin:13px 0 34px;flex-wrap:wrap}
+.engines button{border:1px solid #ffffffbd;background:#ffffff64;color:#65738c;padding:7px 13px;border-radius:99px;font:inherit;font-size:11px}
+.engines button[aria-pressed=true]{background:#ffffffd9;color:#2f5eae;border-color:#ffffff;box-shadow:0 4px 15px #385b9020}
+.section{display:flex;justify-content:space-between;align-items:center;margin:0 2px 14px}
+.section h2{font-size:13px;letter-spacing:1.3px;text-transform:uppercase;margin:0;font-weight:750}
+.section span{font-size:11px;color:var(--muted)}
+.favorites{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.favorite{display:flex;flex-direction:column;align-items:center;gap:9px;padding:15px 6px 13px;min-width:0;border:1px solid var(--line);border-radius:20px;background:var(--glass2);box-shadow:0 7px 24px #31476b0b;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-decoration:none;color:var(--ink);transition:transform .15s,background .15s}
+.favorite:active{transform:scale(.96);background:#fff}
+.fav-icon{display:grid;place-items:center;width:45px;height:45px;border-radius:15px;background:linear-gradient(145deg,#ffffff,#e9effa);box-shadow:0 4px 12px #31476b18;font-size:20px;font-weight:750;color:#4168b2}
+.favorite b{font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.panel{margin-top:28px;padding:18px;border:1px solid var(--line);border-radius:23px;background:var(--glass2);box-shadow:var(--shadow);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
+.panel-head b{font-size:13px}.panel-head span{font-size:11px;color:var(--muted)}
+.privacy-row{display:flex;align-items:center;gap:13px}
+.privacy-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#e2ecff,#f2edff);font-size:19px}
+.privacy-row strong{display:block;font-size:12px}.privacy-row small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+footer{text-align:center;margin-top:30px;color:#8b98ad;font-size:10px;letter-spacing:.3px}
+[dir=rtl] header,[dir=rtl] .section,[dir=rtl] .panel-head{flex-direction:row}
+body.dark{--ink:#f0f4ff;--muted:#a3b0c6;--accent:#a9bfff;--line:#ffffff20;--glass:#1c2946c9;--glass2:#1b2944a8;--bg1:#10182a;--bg2:#19243b;background:radial-gradient(ellipse at 12% 8%,#293a60 0,transparent 34%),radial-gradient(ellipse at 90% 22%,#34284e 0,transparent 32%),linear-gradient(150deg,var(--bg1),var(--bg2))}
+body.dark .round,body.dark .search-shell{background:#1c2946d9;color:var(--ink);border-color:#ffffff25}
+body.dark .search-shell input{color:var(--ink)}
+body.dark .search-shell input::placeholder{color:#a3b0c6}
+body.dark .fav-icon{background:linear-gradient(145deg,#334567,#263650);color:#dbe6ff}
+body.dark .engines button{background:#1c2946aa;color:#b7c5dc;border-color:#ffffff20}
+body.dark .engines button[aria-pressed=true]{background:#3a527d;color:#fff}
+@media(max-width:410px){main{padding-top:24px}.favorites{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.favorite{padding:12px 3px}.fav-icon{width:40px;height:40px}.favorite b{font-size:10px}.panel{padding:15px}}
+@media(min-width:620px){.favorites{gap:15px}.favorite{padding:20px 8px}.fav-icon{width:52px;height:52px}}
 </style>
 </head>
 <body>
 <main>
-<header><div><div class="logo">Browse<span>X</span></div><div class="tag">Fast · Private · Yours</div></div><button class="lang" id="lang" type="button">العربية</button></header>
-<section class="hero"><h1 id="headline">Explore more. Worry less.</h1><p id="subline">A calmer, smarter way to browse the web.</p></section>
-<form class="search" id="search"><input id="query" type="search" placeholder="Search or enter a website" autocomplete="off" aria-label="Search or enter a website"><button id="go" type="submit">Search</button></form>
-<div class="engines" aria-label="Search engine">
-<button type="button" data-engine="google" aria-pressed="true">Google</button><button type="button" data-engine="duck" aria-pressed="false">DuckDuckGo</button><button type="button" data-engine="bing" aria-pressed="false">Bing</button>
-</div>
-<div class="section"><h2 id="quickTitle">QUICK ACCESS</h2><span id="editHint">Your web, one tap away</span></div>
-<nav class="grid" aria-label="Quick links">
-<a class="tile" href="https://www.google.com"><span class="icon">G</span><b>Google</b></a>
-<a class="tile" href="https://www.youtube.com"><span class="icon">▶</span><b>YouTube</b></a>
-<a class="tile" href="https://www.wikipedia.org"><span class="icon">W</span><b>Wikipedia</b></a>
-<a class="tile" href="https://www.facebook.com"><span class="icon">f</span><b>Facebook</b></a>
-<a class="tile" href="https://www.instagram.com"><span class="icon">◎</span><b>Instagram</b></a>
-<a class="tile" href="https://www.reddit.com"><span class="icon">r</span><b>Reddit</b></a>
-<a class="tile" href="https://www.amazon.com"><span class="icon">a</span><b>Amazon</b></a>
-<a class="tile" href="https://chatgpt.com"><span class="icon">✳</span><b>ChatGPT</b></a>
+<header>
+ <div><div class="brand">Browse<span>X</span></div><div class="subbrand">A little more room to explore</div></div>
+ <div class="head-actions"><button class="round" id="theme" aria-label="Toggle appearance" type="button">☾</button><button class="round" id="language" aria-label="Change language" type="button">文</button></div>
+</header>
+<section class="intro"><div class="eyebrow" id="eyebrow">YOUR SPACE ON THE WEB</div><h1 id="headline">Where would you<br>like to go?</h1><p id="subline">Search the web, or pick up where you left off.</p></section>
+<form class="search-shell" id="search">
+ <span class="search-icon">⌕</span><input id="query" type="search" placeholder="Search or enter website" autocomplete="off" aria-label="Search or enter website"><button type="submit" aria-label="Search">↑</button>
+</form>
+<div class="engines"><button type="button" data-engine="google" aria-pressed="true">Google</button><button type="button" data-engine="duck" aria-pressed="false">DuckDuckGo</button><button type="button" data-engine="bing" aria-pressed="false">Bing</button></div>
+<div class="section"><h2 id="favoritesTitle">Favorites</h2><span id="favoritesHint">Your everyday places</span></div>
+<nav class="favorites" aria-label="Favorite websites">
+<a class="favorite" href="https://www.google.com"><span class="fav-icon">G</span><b>Google</b></a>
+<a class="favorite" href="https://www.youtube.com"><span class="fav-icon">▶</span><b>YouTube</b></a>
+<a class="favorite" href="https://www.wikipedia.org"><span class="fav-icon">W</span><b>Wikipedia</b></a>
+<a class="favorite" href="https://www.instagram.com"><span class="fav-icon">◎</span><b>Instagram</b></a>
+<a class="favorite" href="https://www.facebook.com"><span class="fav-icon">f</span><b>Facebook</b></a>
+<a class="favorite" href="https://www.reddit.com"><span class="fav-icon">r</span><b>Reddit</b></a>
+<a class="favorite" href="https://www.amazon.com"><span class="fav-icon">a</span><b>Amazon</b></a>
+<a class="favorite" href="https://chatgpt.com"><span class="fav-icon">✳</span><b>ChatGPT</b></a>
 </nav>
-<div class="section"><h2 id="featureTitle">MADE FOR YOUR EVERYDAY</h2><span id="featureHint">Simple by design</span></div>
-<section class="features">
-<div class="feature"><i>⚡</i><div><b id="f1">Fast browsing</b><small id="d1">Smooth pages, less waiting</small></div></div>
-<div class="feature"><i>🛡️</i><div><b id="f2">Privacy first</b><small id="d2">Browse with more control</small></div></div>
-<div class="feature"><i>🌙</i><div><b id="f3">Comfortable design</b><small id="d3">Easy on your eyes</small></div></div>
-<div class="feature"><i>📱</i><div><b id="f4">Made for every screen</b><small id="d4">Phones and tablets</small></div></div>
+<section class="panel">
+ <div class="panel-head"><b id="privacyTitle">A calmer way to browse</b><span id="privacyHint">BrowseX tools</span></div>
+ <div class="privacy-row"><div class="privacy-icon">🛡</div><div><strong id="privacyStrong">Your browsing, your choice</strong><small id="privacySmall">Privacy and ad-blocking controls live in the browser menu.</small></div></div>
 </section>
 <footer>BrowseX · Powered by GeckoView</footer>
 </main>
@@ -79,17 +87,20 @@ footer{text-align:center;color:#71809a;font-size:11px;margin-top:36px}
 let engine='google',arabic=false;
 const engines={google:'https://www.google.com/search?q=',duck:'https://html.duckduckgo.com/html/?q=',bing:'https://www.bing.com/search?q='};
 document.querySelectorAll('[data-engine]').forEach(button=>button.addEventListener('click',()=>{
-engine=button.dataset.engine;document.querySelectorAll('[data-engine]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+ engine=button.dataset.engine;document.querySelectorAll('[data-engine]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
 }));
 document.getElementById('search').addEventListener('submit',event=>{
-event.preventDefault();const raw=document.getElementById('query').value.trim();if(!raw)return;
-const looksLikeUrl=/^(https?:\/\/)|^([\w-]+\.)+[a-z]{2,}([/:?#]|$)/i.test(raw);
-location.href=looksLikeUrl?(raw.startsWith('http')?raw:'https://'+raw):engines[engine]+encodeURIComponent(raw);
+ event.preventDefault();const raw=document.getElementById('query').value.trim();if(!raw)return;
+ const isUrl=/^(https?:\/\/)|^([\w-]+\.)+[a-z]{2,}([/:?#]|$)/i.test(raw);
+ location.href=isUrl?(raw.startsWith('http')?raw:'https://'+raw):engines[engine]+encodeURIComponent(raw);
 });
-document.getElementById('lang').addEventListener('click',()=>{
-arabic=!arabic;document.documentElement.lang=arabic?'ar':'en';document.documentElement.dir=arabic?'rtl':'ltr';
-const t=arabic?['English','اكتشف المزيد. براحة أكبر.','تصفح أذكى وأسهل للإنترنت.','بحث أو اكتب عنوان موقع','بحث','الوصول السريع','كل مواقعك بلمسة واحدة','مصمم ليومك','البساطة في التصميم','تصفح سريع','صفحات سلسة وانتظار أقل','الخصوصية أولاً','تحكم أكبر أثناء التصفح','تصميم مريح','راحة أكبر لعينيك','لكل الشاشات','هواتف وأجهزة لوحية']:['العربية','Explore more. Worry less.','A calmer, smarter way to browse the web.','Search or enter a website','Search','QUICK ACCESS','Your web, one tap away','MADE FOR YOUR EVERYDAY','Simple by design','Fast browsing','Smooth pages, less waiting','Privacy first','Browse with more control','Comfortable design','Easy on your eyes','Made for every screen','Phones and tablets'];
-['lang','headline','subline','query','go','quickTitle','editHint','featureTitle','featureHint','f1','d1','f2','d2','f3','d3','f4','d4'].forEach((id,i)=>{const el=document.getElementById(id);if(id==='query')el.placeholder=t[i];else el.textContent=t[i];});
+document.getElementById('theme').addEventListener('click',event=>{
+ document.body.classList.toggle('dark');event.currentTarget.textContent=document.body.classList.contains('dark')?'☀':'☾';
+});
+document.getElementById('language').addEventListener('click',()=>{
+ arabic=!arabic;document.documentElement.lang=arabic?'ar':'en';document.documentElement.dir=arabic?'rtl':'ltr';
+ const values=arabic?['EN','مساحتك على الإنترنت','إلى أين تريد الذهاب؟','ابحث في الويب أو تابع من حيث توقفت.','ابحث أو أدخل عنوان موقع','المفضلة','مواقعك اليومية','تصفح براحة أكبر','أدوات BrowseX','تصفحك، خياراتك','إعدادات الخصوصية ومنع الإعلانات تجدها في قائمة المتصفح.']:['文','YOUR SPACE ON THE WEB','Where would you like to go?','Search the web, or pick up where you left off.','Search or enter website','Favorites','Your everyday places','A calmer way to browse','BrowseX tools','Your browsing, your choice','Privacy and ad-blocking controls live in the browser menu.'];
+ ['language','eyebrow','headline','subline','query','favoritesTitle','favoritesHint','privacyTitle','privacyHint','privacyStrong','privacySmall'].forEach((id,i)=>{const el=document.getElementById(id);if(id==='query')el.placeholder=values[i];else el.textContent=values[i];});
 });
 })();
 </script>
