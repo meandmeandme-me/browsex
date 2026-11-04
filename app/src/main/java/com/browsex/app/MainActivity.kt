@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
     private fun createBrowserUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(COLOR_BG)
+            setBackgroundColor(Color.rgb(239, 243, 251))
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -126,7 +126,7 @@ class MainActivity : AppCompatActivity() {
 
         topBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(COLOR_BG)
+            setBackgroundColor(Color.TRANSPARENT)
         }
         val addressRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -196,7 +196,7 @@ class MainActivity : AppCompatActivity() {
             contentDescription = description
             textSize = 22f
             gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
+            setTextColor(Color.rgb(48, 61, 88))
             setOnClickListener { action() }
         }
 
