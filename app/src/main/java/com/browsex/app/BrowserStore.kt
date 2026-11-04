@@ -499,6 +499,34 @@ class BrowserStore(context: Context) {
     }
 
     /** Validates the complete backup before committing; returns the number of accepted bookmarks. */
+    fun previewBookmarkImport(payload: String): BookmarkImportPreview {
+        require(payload.length <= 1_000_000) { "Backup file is too large" }
+        val root = JSONObject(payload)
+        require(root.optString("format") == "browsex-bookmarks" && root.optInt("version") == 1) {
+            "Unsupported bookmark backup"
+        }
+        val folders = root.optJSONArray("folders") ?: JSONArray()
+        val bookmarks = root.optJSONArray("bookmarks") ?: JSONArray()
+        require(folders.length() <= 50) { "Too many folders" }
+        require(bookmarks.length() <= 1000) { "Too many bookmarks" }
+        val validUrls = mutableListOf<String>()
+        for (index in 0 until bookmarks.length()) {
+            val item = bookmarks.optJSONObject(index) ?: continue
+            val url = item.optString("url").trim()
+            if (url.length <= 4096 && NavigationInput.isValidWebUrl(url)) validUrls.add(url)
+        }
+        val uniqueUrls = validUrls.distinct()
+        val existingUrls = bookmarkItems().map { it.url }.toSet()
+        return BookmarkImportPreview(
+            totalItems = bookmarks.length(),
+            validItems = uniqueUrls.size,
+            skippedItems = bookmarks.length() - validUrls.size,
+            duplicateIncomingItems = validUrls.size - uniqueUrls.size,
+            existingUrlConflicts = uniqueUrls.count(existingUrls::contains),
+            incomingFolders = folders.length()
+        )
+    }
+
     fun importBookmarks(payload: String, merge: Boolean = true): Int {
         require(payload.length <= 1_000_000) { "Backup file is too large" }
         val root = JSONObject(payload)
