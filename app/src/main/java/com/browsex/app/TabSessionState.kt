@@ -15,9 +15,13 @@ object TabSessionState {
                     val value = part.substringAfter('=', "")
                     key.takeIf { it.isNotBlank() }?.let { it to value }
                 }.toMap()
-                params.keys == setOf("bxlang", "bxtheme") &&
+                params.keys.containsAll(setOf("bxlang", "bxtheme")) &&
+                    params.keys.all { it in setOf("bxlang", "bxtheme", "bxquick", "bxdiscovery", "bxlayout") } &&
                     params["bxlang"]?.let { it in setOf("system", "ar", "en") } == true &&
-                    params["bxtheme"]?.let { it in setOf("system", "light", "dark") } == true
+                    params["bxtheme"]?.let { it in setOf("system", "light", "dark") } == true &&
+                    params["bxquick"]?.let { it in setOf("true", "false") } != false &&
+                    params["bxdiscovery"]?.let { it in setOf("true", "false") } != false &&
+                    params["bxlayout"]?.let { it in setOf("grid", "list") } != false
             }
             if (url == homeUrl || isConfiguredHome || url == "about:blank" || NavigationInput.isValidWebUrl(url)) {
                 index to url
