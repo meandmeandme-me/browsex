@@ -3,42 +3,95 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
 <meta name="color-scheme" content="dark">
-<title>BrowseX</title>
+<title>BrowseX — Explore more</title>
 <style>
-:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--field:#212832;--line:#303a48;--blue:#4184f5;--muted:#9aa7b8}
+:root{color-scheme:dark;--bg:#0b1020;--panel:#111a2e;--card:#15213a;--line:#263653;--accent:#8b5cf6;--cyan:#22d3ee;--text:#f7f8ff;--muted:#a7b3ca}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 20%,#17243a 0%,var(--bg) 55%);color:#f4f7fb;font:16px system-ui,-apple-system,sans-serif;display:flex;justify-content:center}
-main{width:min(680px,100%);padding:clamp(56px,14vh,130px) 22px 40px;text-align:center}
-.brand{font-size:clamp(42px,10vw,64px);font-weight:800;letter-spacing:-3px;margin:0 0 10px}
-.brand span{color:var(--blue)}
-.tagline{color:var(--muted);margin:0 0 34px}
-.search{display:flex;gap:10px;width:100%;padding:7px;background:var(--field);border:1px solid var(--line);border-radius:18px}
-.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:white;padding:10px 12px;font:inherit}
-.search button{border:0;border-radius:12px;background:var(--blue);color:white;padding:0 18px;font-weight:650}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
-a{color:inherit;text-decoration:none}
-.tile{display:block;background:rgba(33,40,50,.85);border:1px solid var(--line);border-radius:16px;padding:20px 8px;transition:transform .15s,border-color .15s}
-.tile:active{transform:scale(.97);border-color:var(--blue)}
-.tile b{display:block;font-size:15px}.tile small{display:block;color:var(--muted);margin-top:5px}
-footer{margin-top:54px;color:#68778a;font-size:12px}
-@media(max-width:420px){.grid{gap:8px}.tile{padding:16px 4px}}
+html{min-height:100%;background:var(--bg)}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#22204d 0%,#101a32 38%,var(--bg) 78%);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center}
+main{width:min(760px,100%);padding:clamp(28px,8vh,76px) clamp(18px,5vw,34px) 34px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(32px,8vh,70px)}
+.logo{font-size:clamp(36px,9vw,54px);font-weight:850;letter-spacing:-2.8px;line-height:1}
+.logo span{color:var(--accent);text-shadow:0 0 28px #8b5cf677}
+.tag{color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:8px}
+.lang{border:1px solid var(--line);background:#ffffff0b;color:var(--text);border-radius:999px;padding:9px 13px;font:inherit}
+.hero{text-align:center;margin-bottom:28px}
+.hero h1{font-size:clamp(22px,5vw,32px);margin:0 0 7px;letter-spacing:-.7px}
+.hero p{color:var(--muted);margin:0}
+.search{display:flex;gap:8px;width:100%;padding:7px;background:#ffffff0d;border:1px solid #ffffff20;border-radius:20px;box-shadow:0 16px 50px #0005;backdrop-filter:blur(12px)}
+.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--text);padding:12px 13px;font:inherit}
+.search input::placeholder{color:#94a3b8}
+.search button{border:0;border-radius:14px;background:linear-gradient(135deg,var(--accent),#5b6cff);color:white;padding:0 20px;font-weight:750;font:inherit}
+.engines{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:13px 0 30px}
+.engines button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 13px;border-radius:999px;font:inherit;font-size:12px}
+.engines button[aria-pressed=true]{border-color:var(--accent);background:#8b5cf622;color:#fff}
+.section{display:flex;align-items:center;justify-content:space-between;margin:26px 2px 12px}
+.section h2{font-size:14px;letter-spacing:.5px;margin:0}
+.section span{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.tile{min-width:0;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;padding:16px 6px;background:linear-gradient(155deg,#ffffff0d,#ffffff05);border:1px solid var(--line);border-radius:18px;color:var(--text);text-decoration:none;transition:transform .16s,border-color .16s}
+.tile:active{transform:scale(.96);border-color:var(--accent)}
+.icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#8b5cf633,#22d3ee22);font-size:19px;font-weight:800}
+.tile b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.feature{display:flex;align-items:center;gap:11px;padding:13px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff12}
+.feature i{font-style:normal;font-size:20px}
+.feature b{display:block;font-size:12px}.feature small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+footer{text-align:center;color:#71809a;font-size:11px;margin-top:36px}
+[dir=rtl] .section{flex-direction:row-reverse}
+[dir=rtl] header{flex-direction:row}
+@media(max-width:420px){main{padding-top:28px}.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tile{padding:13px 4px}.features{grid-template-columns:1fr}.search button{padding:0 15px}}
+@media(min-width:650px){.tile{padding:20px 10px}.icon{width:48px;height:48px}}
 </style>
 </head>
 <body>
 <main>
-  <h1 class="brand">Browse<span>X</span></h1>
-  <p class="tagline">A faster, calmer way to explore the web.</p>
-  <form class="search" action="https://www.google.com/search" method="get">
-    <input type="search" name="q" placeholder="Search or enter a website" autocomplete="off" autofocus>
-    <button type="submit">Go</button>
-  </form>
-  <nav class="grid" aria-label="Quick links">
-    <a class="tile" href="https://www.google.com"><b>Google</b><small>Search</small></a>
-    <a class="tile" href="https://www.youtube.com"><b>YouTube</b><small>Watch</small></a>
-    <a class="tile" href="https://www.wikipedia.org"><b>Wikipedia</b><small>Learn</small></a>
-  </nav>
-  <footer>BrowseX · Powered by GeckoView</footer>
+<header><div><div class="logo">Browse<span>X</span></div><div class="tag">Fast · Private · Yours</div></div><button class="lang" id="lang" type="button">العربية</button></header>
+<section class="hero"><h1 id="headline">Explore more. Worry less.</h1><p id="subline">A calmer, smarter way to browse the web.</p></section>
+<form class="search" id="search"><input id="query" type="search" placeholder="Search or enter a website" autocomplete="off" aria-label="Search or enter a website"><button id="go" type="submit">Search</button></form>
+<div class="engines" aria-label="Search engine">
+<button type="button" data-engine="google" aria-pressed="true">Google</button><button type="button" data-engine="duck" aria-pressed="false">DuckDuckGo</button><button type="button" data-engine="bing" aria-pressed="false">Bing</button>
+</div>
+<div class="section"><h2 id="quickTitle">QUICK ACCESS</h2><span id="editHint">Your web, one tap away</span></div>
+<nav class="grid" aria-label="Quick links">
+<a class="tile" href="https://www.google.com"><span class="icon">G</span><b>Google</b></a>
+<a class="tile" href="https://www.youtube.com"><span class="icon">▶</span><b>YouTube</b></a>
+<a class="tile" href="https://www.wikipedia.org"><span class="icon">W</span><b>Wikipedia</b></a>
+<a class="tile" href="https://www.facebook.com"><span class="icon">f</span><b>Facebook</b></a>
+<a class="tile" href="https://www.instagram.com"><span class="icon">◎</span><b>Instagram</b></a>
+<a class="tile" href="https://www.reddit.com"><span class="icon">r</span><b>Reddit</b></a>
+<a class="tile" href="https://www.amazon.com"><span class="icon">a</span><b>Amazon</b></a>
+<a class="tile" href="https://chatgpt.com"><span class="icon">✳</span><b>ChatGPT</b></a>
+</nav>
+<div class="section"><h2 id="featureTitle">MADE FOR YOUR EVERYDAY</h2><span id="featureHint">Simple by design</span></div>
+<section class="features">
+<div class="feature"><i>⚡</i><div><b id="f1">Fast browsing</b><small id="d1">Smooth pages, less waiting</small></div></div>
+<div class="feature"><i>🛡️</i><div><b id="f2">Privacy first</b><small id="d2">Browse with more control</small></div></div>
+<div class="feature"><i>🌙</i><div><b id="f3">Comfortable design</b><small id="d3">Easy on your eyes</small></div></div>
+<div class="feature"><i>📱</i><div><b id="f4">Made for every screen</b><small id="d4">Phones and tablets</small></div></div>
+</section>
+<footer>BrowseX · Powered by GeckoView</footer>
 </main>
+<script>
+(()=>{
+let engine='google',arabic=false;
+const engines={google:'https://www.google.com/search?q=',duck:'https://html.duckduckgo.com/html/?q=',bing:'https://www.bing.com/search?q='};
+document.querySelectorAll('[data-engine]').forEach(button=>button.addEventListener('click',()=>{
+engine=button.dataset.engine;document.querySelectorAll('[data-engine]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+}));
+document.getElementById('search').addEventListener('submit',event=>{
+event.preventDefault();const raw=document.getElementById('query').value.trim();if(!raw)return;
+const looksLikeUrl=/^(https?:\/\/)|^([\w-]+\.)+[a-z]{2,}([/:?#]|$)/i.test(raw);
+location.href=looksLikeUrl?(raw.startsWith('http')?raw:'https://'+raw):engines[engine]+encodeURIComponent(raw);
+});
+document.getElementById('lang').addEventListener('click',()=>{
+arabic=!arabic;document.documentElement.lang=arabic?'ar':'en';document.documentElement.dir=arabic?'rtl':'ltr';
+const t=arabic?['English','اكتشف المزيد. براحة أكبر.','تصفح أذكى وأسهل للإنترنت.','بحث أو اكتب عنوان موقع','بحث','الوصول السريع','كل مواقعك بلمسة واحدة','مصمم ليومك','البساطة في التصميم','تصفح سريع','صفحات سلسة وانتظار أقل','الخصوصية أولاً','تحكم أكبر أثناء التصفح','تصميم مريح','راحة أكبر لعينيك','لكل الشاشات','هواتف وأجهزة لوحية']:['العربية','Explore more. Worry less.','A calmer, smarter way to browse the web.','Search or enter a website','Search','QUICK ACCESS','Your web, one tap away','MADE FOR YOUR EVERYDAY','Simple by design','Fast browsing','Smooth pages, less waiting','Privacy first','Browse with more control','Comfortable design','Easy on your eyes','Made for every screen','Phones and tablets'];
+['lang','headline','subline','query','go','quickTitle','editHint','featureTitle','featureHint','f1','d1','f2','d2','f3','d3','f4','d4'].forEach((id,i)=>{const el=document.getElementById(id);if(id==='query')el.placeholder=t[i];else el.textContent=t[i];});
+});
+})();
+</script>
 </body>
 </html>
