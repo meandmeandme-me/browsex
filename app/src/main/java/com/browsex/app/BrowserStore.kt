@@ -203,6 +203,56 @@ class BrowserStore(context: Context) {
         return true
     }
 
+    fun recordRecentlyClosedTab(url: String, title: String) {
+        if (!NavigationInput.isValidWebUrl(url) || url == HOME_URL_FOR_STORE) return
+        val tabs = recentlyClosedTabs().toMutableList()
+        tabs.removeAll { it.url == url }
+        tabs.add(0, RecentlyClosedTab(
+            id = "closed_${UUID.randomUUID()}",
+            url = url.take(2048),
+            title = title.trim().take(180).ifBlank { android.net.Uri.parse(url).host.orEmpty() },
+            closedAt = System.currentTimeMillis()
+        ))
+        writeRecentlyClosedTabs(tabs)
+    }
+
+    fun recentlyClosedTabs(): List<RecentlyClosedTab> = try {
+        val stored = prefs.getString("recently_closed_tabs_v1", "[]") ?: "[]"
+        if (stored.length > 100_000) emptyList() else {
+            val array = JSONArray(stored)
+            (0 until minOf(array.length(), 10)).mapNotNull { index ->
+                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id").take(100)
+                val url = item.optString("url").take(2048)
+                if (id.isBlank() || !NavigationInput.isValidWebUrl(url)) return@mapNotNull null
+                RecentlyClosedTab(
+                    id, url,
+                    item.optString("title").take(180).ifBlank { android.net.Uri.parse(url).host.orEmpty() },
+                    item.optLong("closedAt", 0L).coerceAtLeast(0L)
+                )
+            }
+        }
+    } catch (_: Exception) { emptyList() }
+
+    fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? {
+        val tabs = recentlyClosedTabs()
+        val selected = tabs.firstOrNull { it.id == id } ?: return null
+        writeRecentlyClosedTabs(tabs.filterNot { it.id == id })
+        return selected
+    }
+
+    private fun writeRecentlyClosedTabs(tabs: List<RecentlyClosedTab>) {
+        val array = JSONArray()
+        tabs.take(10).forEach { tab ->
+            array.put(JSONObject()
+                .put("id", tab.id)
+                .put("url", tab.url)
+                .put("title", tab.title)
+                .put("closedAt", tab.closedAt))
+        }
+        prefs.edit().putString("recently_closed_tabs_v1", array.toString()).apply()
+    }
+
     private fun writeNamedSessions(sessions: List<SavedBrowserSession>) {
         val array = JSONArray()
         sessions.take(10).forEach { session ->
