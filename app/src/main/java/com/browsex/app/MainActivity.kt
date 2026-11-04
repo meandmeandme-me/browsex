@@ -185,13 +185,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
         credentialVault = BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
-            BrowserDeviceAuthenticator.authenticate(
-                activity = this,
-                title = "Unlock saved passwords",
-                subtitle = "Verify your identity to use saved passwords",
-                onAuthenticated = onAuthenticated,
-                onRejected = onRejected
-            )
+            runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    onRejected()
+                } else {
+                    BrowserDeviceAuthenticator.authenticate(
+                        activity = this,
+                        title = "Unlock saved passwords",
+                        subtitle = "Verify your identity to use saved passwords",
+                        onAuthenticated = onAuthenticated,
+                        onRejected = onRejected
+                    )
+                }
+            }
         }
         store.recoverInterruptedStreamDownloads()
         streamDownloadCoordinator = StreamDownloadCoordinator(store, DownloadResponseWriter(applicationContext))
