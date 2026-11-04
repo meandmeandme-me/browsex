@@ -467,6 +467,8 @@ class MainActivity : AppCompatActivity() {
             "Save" -> "حفظ"
             "Save browsing session" -> "حفظ جلسة التصفح"
             "Session saved" -> "تم حفظ الجلسة"
+            "A session with this name already exists. Replace it?" -> "توجد جلسة بهذا الاسم بالفعل. هل تريد استبدالها؟"
+            "Replace" -> "استبدال"
             "No regular tabs to save" -> "لا توجد تبويبات عادية لحفظها"
             "Session name is invalid or the session limit was reached" -> "اسم الجلسة غير صالح أو تم بلوغ الحد الأقصى"
             "No saved sessions" -> "لا توجد جلسات محفوظة"
@@ -980,12 +982,23 @@ class MainActivity : AppCompatActivity() {
                     .setView(field)
                     .setNegativeButton(tr("Cancel"), null)
                     .setPositiveButton(tr("Save")) { _, _ ->
-                        val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
-                        if (store.saveNamedSession(field.text?.toString().orEmpty(), regularTabs.map { it.url }, activeIndex)) {
-                            toast("Session saved")
-                        } else {
-                            toast("Session name is invalid or the session limit was reached")
+                        val name = field.text?.toString().orEmpty().trim()
+                        val save = {
+                            val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+                            if (store.saveNamedSession(name, regularTabs.map { it.url }, activeIndex)) {
+                                toast("Session saved")
+                            } else {
+                                toast("Session name is invalid or the session limit was reached")
+                            }
                         }
+                        val replacesExisting = store.savedSessions().any { it.name.equals(name, ignoreCase = true) }
+                        if (replacesExisting) {
+                            AlertDialog.Builder(this)
+                                .setMessage(tr("A session with this name already exists. Replace it?"))
+                                .setNegativeButton(tr("Cancel"), null)
+                                .setPositiveButton(tr("Replace")) { _, _ -> save() }
+                                .show()
+                        } else save()
                     }
                     .show()
             }
