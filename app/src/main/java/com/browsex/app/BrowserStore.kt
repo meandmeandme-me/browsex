@@ -7,6 +7,10 @@ import org.json.JSONArray
 class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
 
+    var adBlockEnabled: Boolean
+        get() = prefs.getBoolean("ad_block_enabled", true)
+        set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
+
     var searchEngine: String
         get() = prefs.getString("search_engine", "Google") ?: "Google"
         set(value) { prefs.edit().putString("search_engine", value).apply() }
