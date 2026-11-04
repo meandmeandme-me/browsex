@@ -61,6 +61,8 @@ private data class BrowserTab(
 
 @ExperimentalGeckoViewApi
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
+@ExperimentalGeckoViewApi
+@OptIn(ExperimentalGeckoViewApi::class)
 class MainActivity : AppCompatActivity() {
     private val tabs = mutableListOf<BrowserTab>()
     private var activeTab: BrowserTab? = null
