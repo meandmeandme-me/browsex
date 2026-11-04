@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: browsex-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,9 +52,18 @@ jobs:
           mapfile -t APKS < <(find "$APK_DIR" -type f -name '*.apk' | sort)
           test "${#APKS[@]}" -ge 3
           printf '%s\n' "${APKS[@]}"
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
           for apk in "${APKS[@]}"; do
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk"
+            BADGING="$("$AAPT" dump badging "$apk")"
+            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "sdkVersion:'26'" <<< "$BADGING"
+            unzip -l "$apk" | grep -q 'lib/.*libxul.so'
           done
+          UNIVERSAL="$(printf '%s\n' "${APKS[@]}" | grep 'universal' | head -n 1)"
+          test -n "$UNIVERSAL"
+          unzip -l "$UNIVERSAL" | grep -q 'lib/armeabi-v7a/libxul.so'
+          unzip -l "$UNIVERSAL" | grep -q 'lib/arm64-v8a/libxul.so'
           printf '%s\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
 
       - name: Upload verified debug APKs
