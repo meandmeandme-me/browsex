@@ -19,7 +19,8 @@ class SiteInfoPage(
     private val title: String,
     private val permissions: List<GeckoSession.PermissionDelegate.ContentPermission>,
     private val store: BrowserStore,
-    private val onPermissionChange: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit
+    private val onPermissionChange: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
+    private val onResetPermissions: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val localPermissionValues = mutableMapOf<Pair<Int, String>, Int>()
@@ -178,6 +179,32 @@ class SiteInfoPage(
             setTextColor(colors.muted)
             setPadding(0, dp(12), 0, dp(8))
         })
+        val reset = TextView(activity).apply {
+            text = t("Reset site permissions", "إعادة ضبط أذونات الموقع")
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(colors.danger)
+            setPadding(dp(12), dp(14), dp(12), dp(14))
+            background = cardBackground()
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                AlertDialog.Builder(activity)
+                    .setTitle(t("Reset permissions?", "إعادة ضبط الأذونات؟"))
+                    .setMessage(t(
+                        "This returns revocable site permissions to Ask. Persistent storage grants cannot be revoked by GeckoView.",
+                        "سيعيد هذا الأذونات القابلة للإلغاء إلى حالة السؤال. لا يمكن إلغاء إذن التخزين الدائم بواسطة GeckoView."
+                    ))
+                    .setNegativeButton(t("Cancel", "إلغاء"), null)
+                    .setPositiveButton(t("Reset", "إعادة ضبط")) { _, _ ->
+                        onResetPermissions()
+                        activePageDialog?.dismiss()
+                    }
+                    .show()
+            }
+        }
+        root.addView(reset, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
         val scroll = ScrollView(activity).apply { addView(root) }
         val dialog = AlertDialog.Builder(activity).setView(scroll)
             .setNegativeButton(t("Close", "إغلاق"), null).create()
