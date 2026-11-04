@@ -15,7 +15,7 @@ This file is the source of truth for feature sequencing. Keep each task small an
 
 - [x] Extract URL parsing/validation from MainActivity into a pure tested policy.
 - [x] Add tests for URL schemes, search queries and malformed URLs.\n- [ ] Add external-intent validation tests.
-- [ ] Verify tab lifecycle, process recreation and session switching.
+- [x] Persist and restore a bounded, URL-validated open-tab snapshot.\n- [ ] Verify tab lifecycle, process recreation and session switching.
 - [ ] Verify back/forward, fullscreen, popup/new-session and share flows.
 
 ## Phase 2 — core product screens
