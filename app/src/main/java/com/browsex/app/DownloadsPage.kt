@@ -157,7 +157,7 @@ internal class DownloadsPage(
                     record.isActive && record.status == "queued" -> t("Waiting in queue", "بانتظار دوره")
                     record.isActive -> t("Downloading", "جارٍ التنزيل")
                     record.isCancelled -> t("Cancelled", "تم الإلغاء")
-                    record.failed -> t("Failed: ", "فشل: ") + record.error
+                    record.isFailed -> t("Failed: ", "فشل: ") + record.error
                     else -> t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة")
                 }
                 val progressText = if (record.totalBytes > 0L) {
@@ -167,12 +167,12 @@ internal class DownloadsPage(
                 } else {
                     " · ${record.bytesWritten / 1024} KB"
                 }
-                val detail = statusLabel + if (record.isActive || !record.failed) progressText + " · " + date else ""
+                val detail = statusLabel + if (record.isActive || !record.isFailed) progressText + " · " + date else ""
                 labels.addView(TextView(activity).apply {
                     text = detail
                     textSize = 10f
                     setTextColor(when {
-                        record.failed -> colors.danger
+                        record.isFailed -> colors.danger
                         record.isCancelled -> colors.muted
                         record.isActive -> colors.accent
                         else -> colors.muted
@@ -193,12 +193,12 @@ internal class DownloadsPage(
                 val action = TextView(activity).apply {
                     text = when {
                         record.isActive -> t("Cancel", "إلغاء")
-                        record.failed || record.isCancelled -> t("Remove", "حذف")
+                        record.isFailed || record.isCancelled -> t("Remove", "حذف")
                         else -> t("Open", "فتح")
                     }
                     textSize = 13f
                     gravity = Gravity.CENTER
-                    setTextColor(if (record.failed || record.isCancelled) colors.danger else colors.accent)
+                    setTextColor(if (record.isFailed || record.isCancelled) colors.danger else colors.accent)
                     setPadding(dp(10), dp(8), dp(6), dp(8))
                     minimumWidth = dp(48)
                     minimumHeight = dp(48)
@@ -206,7 +206,7 @@ internal class DownloadsPage(
                     isFocusable = true
                     contentDescription = when {
                         record.isActive -> t("Cancel download", "إلغاء التنزيل")
-                        record.failed || record.isCancelled -> t("Remove download record", "حذف سجل التنزيل")
+                        record.isFailed || record.isCancelled -> t("Remove download record", "حذف سجل التنزيل")
                         else -> t("Open downloaded file", "فتح الملف المنزّل")
                     }
                     setOnClickListener {
@@ -219,7 +219,7 @@ internal class DownloadsPage(
                                         android.widget.Toast.makeText(activity, t("This download can no longer be cancelled", "لم يعد بالإمكان إلغاء هذا التنزيل"), android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 }.show()
-                            record.failed || record.isCancelled -> {
+                            record.isFailed || record.isCancelled -> {
                                 store.removeStreamDownload(record.id)
                                 render()
                             }
