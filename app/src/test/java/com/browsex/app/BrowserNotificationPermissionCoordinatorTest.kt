@@ -9,8 +9,8 @@ class BrowserNotificationPermissionCoordinatorTest {
         var cleared = 0
         val results = mutableListOf<Boolean>()
         val coordinator = coordinator(launch = { launched++ }, clear = { cleared++ })
-        coordinator.request(results::add)
-        coordinator.request(results::add)
+        coordinator.request({ value -> results.add(value) })
+        coordinator.request({ value -> results.add(value) })
         assertEquals(1, launched)
         assertTrue(coordinator.isInFlight)
         coordinator.onResult(true)
@@ -24,9 +24,9 @@ class BrowserNotificationPermissionCoordinatorTest {
         var launches = 0
         val results = mutableListOf<Boolean>()
         val coordinator = coordinator(previouslyDenied = { denied }, mark = { denied = true }, launch = { launches++ })
-        coordinator.request(results::add)
+        coordinator.request({ value -> results.add(value) })
         coordinator.onResult(false)
-        coordinator.request(results::add)
+        coordinator.request({ value -> results.add(value) })
         assertEquals(listOf(false, false), results)
         assertEquals(1, launches)
     }
@@ -34,7 +34,7 @@ class BrowserNotificationPermissionCoordinatorTest {
     @Test fun olderAndroidChecksSystemNotificationStateWithoutLaunching() {
         var launches = 0
         val results = mutableListOf<Boolean>()
-        coordinator(api = 32, systemEnabled = { false }, launch = { launches++ }).request(results::add)
+        coordinator(api = 32, systemEnabled = { false }, launch = { launches++ }).request({ value -> results.add(value) })
         assertEquals(listOf(false), results)
         assertEquals(0, launches)
     }
@@ -42,7 +42,7 @@ class BrowserNotificationPermissionCoordinatorTest {
     @Test fun disabledFeatureRejectsWithoutLaunching() {
         var launches = 0
         val results = mutableListOf<Boolean>()
-        coordinator(enabled = { false }, launch = { launches++ }).request(results::add)
+        coordinator(enabled = { false }, launch = { launches++ }).request({ value -> results.add(value) })
         assertEquals(listOf(false), results)
         assertEquals(0, launches)
     }
@@ -50,7 +50,7 @@ class BrowserNotificationPermissionCoordinatorTest {
     @Test fun teardownRejectsAllPendingCallbacks() {
         val results = mutableListOf<Boolean>()
         val coordinator = coordinator()
-        coordinator.request(results::add)
+        coordinator.request({ value -> results.add(value) })
         coordinator.rejectAll()
         assertEquals(listOf(false), results)
         assertFalse(coordinator.isInFlight)
