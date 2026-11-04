@@ -64,8 +64,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
-    private lateinit var backButton: TextView
-    private lateinit var forwardButton: TextView
     private lateinit var tabsButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
@@ -116,7 +114,7 @@ class MainActivity : AppCompatActivity() {
     private fun createBrowserUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(239, 243, 251))
+            setBackgroundColor(Color.rgb(239, 245, 250))
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -125,25 +123,31 @@ class MainActivity : AppCompatActivity() {
         }
 
         topBar = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-        val addressRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(6))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setBackgroundColor(Color.rgb(239, 245, 250))
         }
+        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }.apply {
+            background = rounded(Color.WHITE, 10)
+            textSize = 22f
+        }
+        topBar.addView(home, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            marginEnd = dp(4)
+        })
+
         address = EditText(this).apply {
-            hint = "Search or enter website"
-            setHintTextColor(Color.rgb(145, 155, 168))
-            setTextColor(Color.WHITE)
-            textSize = 15f
+            hint = "Search or enter URL"
+            setHintTextColor(Color.rgb(83, 105, 123))
+            setTextColor(Color.rgb(19, 43, 64))
+            textSize = 14f
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
-            setPadding(dp(16), 0, dp(12), 0)
-            background = rounded(COLOR_FIELD, 24)
+            setPadding(dp(14), 0, dp(12), 0)
+            background = rounded(Color.WHITE, 24)
+            elevation = dp(3).toFloat()
             setOnEditorActionListener { _, action, _ ->
                 if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
                     navigate(address.text.toString())
@@ -152,36 +156,34 @@ class MainActivity : AppCompatActivity() {
             }
             setOnFocusChangeListener { _, focused -> if (!focused) updateAddress() }
         }
-        address.background = rounded(Color.argb(225, 247, 248, 255), 24)
-        address.setTextColor(Color.rgb(34, 42, 62))
-        addressRow.addView(address, LinearLayout.LayoutParams(0, dp(46), 1f))
-        addressRow.addView(actionButton("⋮", "Browser menu") { showBrowserMenu() }, LinearLayout.LayoutParams(dp(44), dp(46)))
+        topBar.addView(address, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+            marginEnd = dp(4)
+        })
+
+        tabsButton = actionButton("▢", "Open tabs") { showTabs() }.apply {
+            background = rounded(Color.WHITE, 10)
+            textSize = 20f
+        }
+        topBar.addView(tabsButton, LinearLayout.LayoutParams(dp(44), dp(48)).apply {
+            marginEnd = dp(4)
+        })
+        val menu = actionButton("⋮", "Browser menu") { showBrowserMenu() }.apply {
+            background = rounded(Color.WHITE, 10)
+            textSize = 22f
+        }
+        topBar.addView(menu, LinearLayout.LayoutParams(dp(44), dp(48)))
+
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(COLOR_ACCENT)
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.rgb(8, 102, 217))
             visibility = View.GONE
         }
-        topBar.addView(addressRow)
-        topBar.addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
-
         browserView = GeckoView(this).apply { setBackgroundColor(Color.WHITE) }
-        bottomBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            background = rounded(Color.argb(232, 248, 249, 255), 28)
-            elevation = dp(10).toFloat()
-            setPadding(dp(5), 0, dp(5), 0)
-        }
-        backButton = bottomButton("‹", "Back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
-        forwardButton = bottomButton("›", "Forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
-        bottomButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }
-        bottomButton("+", "New tab") { createTab(HOME_URL) }
-        tabsButton = bottomButton("1", "Tabs") { showTabs() }
-        listOf(backButton, forwardButton).forEach { it.alpha = 0.45f }
+        bottomBar = LinearLayout(this)
 
         root.addView(topBar)
+        root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(58)).apply { setMargins(dp(14), dp(5), dp(14), dp(9)) })
         return root
     }
 
@@ -214,7 +216,7 @@ class MainActivity : AppCompatActivity() {
         progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
         backButton.alpha = if (tab.canGoBack) 1f else 0.4f
         forwardButton.alpha = if (tab.canGoForward) 1f else 0.4f
-        tabsButton.text = tabs.size.toString()
+        tabsButton.text = "▢ ${tabs.size}"
     }
 
     private fun updateAddress() {
