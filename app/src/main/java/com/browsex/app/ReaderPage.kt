@@ -101,7 +101,7 @@ class ReaderPage(
                 textSize = 17f
                 gravity = Gravity.CENTER
                 setTextColor(ink)
-                background = GradientDrawable().apply {
+                this.background = GradientDrawable().apply {
                     setColor(Color.WHITE)
                     cornerRadius = dp(12).toFloat()
                 }
