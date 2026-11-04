@@ -9,6 +9,7 @@ import java.util.UUID
 class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
     private val preferences = BrowserPreferencesStore(prefs)
+    private val sessions = BrowserSessionStore(prefs)
 
     private companion object {
         const val HOME_URL_FOR_STORE = "resource://android/assets/home.html"
@@ -85,132 +86,25 @@ class BrowserStore(context: Context) {
         return result
     }
 
-    fun saveOpenTabs(urls: List<String>, activeIndex: Int) {
-        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
-        writeList("open_tabs", snapshot.urls)
-        prefs.edit().putInt("active_tab_index", snapshot.activeIndex).apply()
-    }
+    fun saveOpenTabs(urls: List<String>, activeIndex: Int) =
+        sessions.saveOpenTabs(urls, activeIndex)
 
-    fun restoreOpenTabs(): TabSessionState.Snapshot = TabSessionState.normalize(
-        readList("open_tabs"),
-        prefs.getInt("active_tab_index", 0),
-        HOME_URL_FOR_STORE
-    )
+    fun restoreOpenTabs(): TabSessionState.Snapshot = sessions.restoreOpenTabs()
 
-    /** Saves a named, regular-tab-only session. Private tabs must never be passed here. */
-    fun saveNamedSession(rawName: String, urls: List<String>, activeIndex: Int): Boolean {
-        val name = rawName.trim().take(40)
-        if (name.isBlank() || urls.isEmpty()) return false
-        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
-        val sessions = savedSessions().toMutableList()
-        val existingIndex = sessions.indexOfFirst { it.name.equals(name, ignoreCase = true) }
-        if (existingIndex < 0 && sessions.size >= 10) return false
-        val previous = sessions.getOrNull(existingIndex)
-        val saved = SavedBrowserSession(
-            id = previous?.id ?: "session_${UUID.randomUUID()}",
-            name = name,
-            urls = snapshot.urls,
-            activeIndex = snapshot.activeIndex,
-            savedAt = System.currentTimeMillis()
-        )
-        if (existingIndex >= 0) sessions[existingIndex] = saved else sessions.add(0, saved)
-        writeNamedSessions(sessions)
-        return true
-    }
+    fun saveNamedSession(rawName: String, urls: List<String>, activeIndex: Int): Boolean =
+        sessions.saveNamedSession(rawName, urls, activeIndex)
 
-    internal fun savedSessions(): List<SavedBrowserSession> = try {
-        val stored = prefs.getString("named_sessions_v1", "[]") ?: "[]"
-        if (stored.length > 1_000_000) {
-            emptyList()
-        } else {
-            val array = JSONArray(stored)
-            (0 until minOf(array.length(), 10)).mapNotNull { index ->
-                val item = array.optJSONObject(index) ?: return@mapNotNull null
-                val id = item.optString("id").take(100)
-                val name = item.optString("name").trim().take(40)
-                val rawUrls = item.optJSONArray("urls") ?: JSONArray()
-                val urls = (0 until minOf(rawUrls.length(), TabSessionState.MAX_TABS))
-                    .mapNotNull { rawUrls.optString(it).takeIf(String::isNotBlank) }
-                if (id.isBlank() || name.isBlank() || urls.isEmpty()) return@mapNotNull null
-                val snapshot = TabSessionState.normalize(urls, item.optInt("activeIndex", 0), HOME_URL_FOR_STORE)
-                SavedBrowserSession(id, name, snapshot.urls, snapshot.activeIndex, item.optLong("savedAt", 0L).coerceAtLeast(0L))
-            }
-        }
-    } catch (_: Exception) { emptyList() }
+    internal fun savedSessions(): List<SavedBrowserSession> = sessions.savedSessions()
 
-    fun removeNamedSession(id: String): Boolean {
-        val sessions = savedSessions()
-        val updated = sessions.filterNot { it.id == id }
-        if (updated.size == sessions.size) return false
-        writeNamedSessions(updated)
-        return true
-    }
+    fun removeNamedSession(id: String): Boolean = sessions.removeNamedSession(id)
 
-    fun recordRecentlyClosedTab(url: String, title: String) {
-        if (!NavigationInput.isValidWebUrl(url) || url == HOME_URL_FOR_STORE) return
-        val tabs = recentlyClosedTabs().toMutableList()
-        tabs.removeAll { it.url == url }
-        tabs.add(0, RecentlyClosedTab(
-            id = "closed_${UUID.randomUUID()}",
-            url = url.take(2048),
-            title = title.trim().take(180).ifBlank { android.net.Uri.parse(url).host.orEmpty() },
-            closedAt = System.currentTimeMillis()
-        ))
-        writeRecentlyClosedTabs(tabs)
-    }
+    fun recordRecentlyClosedTab(url: String, title: String) =
+        sessions.recordRecentlyClosedTab(url, title)
 
-    fun recentlyClosedTabs(): List<RecentlyClosedTab> = try {
-        val stored = prefs.getString("recently_closed_tabs_v1", "[]") ?: "[]"
-        if (stored.length > 100_000) emptyList() else {
-            val array = JSONArray(stored)
-            (0 until minOf(array.length(), 10)).mapNotNull { index ->
-                val item = array.optJSONObject(index) ?: return@mapNotNull null
-                val id = item.optString("id").take(100)
-                val url = item.optString("url").take(2048)
-                if (id.isBlank() || !NavigationInput.isValidWebUrl(url)) return@mapNotNull null
-                RecentlyClosedTab(
-                    id, url,
-                    item.optString("title").take(180).ifBlank { android.net.Uri.parse(url).host.orEmpty() },
-                    item.optLong("closedAt", 0L).coerceAtLeast(0L)
-                )
-            }
-        }
-    } catch (_: Exception) { emptyList() }
+    fun recentlyClosedTabs(): List<RecentlyClosedTab> = sessions.recentlyClosedTabs()
 
-    fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? {
-        val tabs = recentlyClosedTabs()
-        val selected = tabs.firstOrNull { it.id == id } ?: return null
-        writeRecentlyClosedTabs(tabs.filterNot { it.id == id })
-        return selected
-    }
-
-    private fun writeRecentlyClosedTabs(tabs: List<RecentlyClosedTab>) {
-        val array = JSONArray()
-        tabs.take(10).forEach { tab ->
-            array.put(JSONObject()
-                .put("id", tab.id)
-                .put("url", tab.url)
-                .put("title", tab.title)
-                .put("closedAt", tab.closedAt))
-        }
-        prefs.edit().putString("recently_closed_tabs_v1", array.toString()).apply()
-    }
-
-    private fun writeNamedSessions(sessions: List<SavedBrowserSession>) {
-        val array = JSONArray()
-        sessions.take(10).forEach { session ->
-            val snapshot = TabSessionState.normalize(session.urls, session.activeIndex, HOME_URL_FOR_STORE)
-            val urls = JSONArray()
-            snapshot.urls.forEach { urls.put(it) }
-            array.put(JSONObject()
-                .put("id", session.id.take(100))
-                .put("name", session.name.trim().take(40))
-                .put("urls", urls)
-                .put("activeIndex", snapshot.activeIndex)
-                .put("savedAt", session.savedAt.coerceAtLeast(0L)))
-        }
-        prefs.edit().putString("named_sessions_v1", array.toString()).apply()
-    }
+    fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? =
+        sessions.consumeRecentlyClosedTab(id)
 
     /** DownloadManager IDs explicitly enqueued by BrowseX; excludes other apps' downloads. */
     fun browseXDownloadIds(): Set<Long> = try {
