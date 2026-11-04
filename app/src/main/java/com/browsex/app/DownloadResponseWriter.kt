@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -63,7 +64,7 @@ internal class DownloadResponseWriter(context: Context) {
                     val bytes = FileOutputStream(file).use { output ->
                         body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
                     }
-                    Result(Uri.fromFile(file), file.name, bytes)
+                    Result(FileProvider.getUriForFile(appContext, appContext.packageName + ".files", file), file.name, bytes)
                 }
                 onComplete(result, null)
             } catch (error: Throwable) {
