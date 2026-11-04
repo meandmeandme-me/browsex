@@ -489,11 +489,72 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
-        if (pages.isEmpty()) { toast("Nothing saved yet"); return }
-        AlertDialog.Builder(this).setTitle(title)
-            .setItems(pages.map { it.take(80) }.toTypedArray()) { _, index ->
-                pages.getOrNull(index)?.let { createTab(it) }
-            }.setNegativeButton("Close", null).show()
+        val isHistory = title.contains("History", ignoreCase = true)
+        val currentPages = pages.toMutableList()
+        if (currentPages.isEmpty()) { toast("Nothing here yet"); return }
+        val scroll = ScrollView(this)
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+        }
+        scroll.addView(list)
+        lateinit var dialog: AlertDialog
+        fun render() {
+            list.removeAllViews()
+            if (currentPages.isEmpty()) {
+                list.addView(TextView(this).apply {
+                    text = "Nothing here yet"
+                    setTextColor(Color.rgb(83, 105, 123))
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(24), 0, dp(24))
+                })
+                return
+            }
+            currentPages.forEach { page ->
+                val item = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(10), dp(9), dp(6), dp(9))
+                    background = rounded(Color.WHITE, 13)
+                }
+                val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                details.addView(TextView(this).apply {
+                    text = Uri.parse(page).host ?: page
+                    textSize = 14f
+                    setTextColor(Color.rgb(19, 43, 64))
+                    maxLines = 1
+                })
+                details.addView(TextView(this).apply {
+                    text = page
+                    textSize = 10f
+                    setTextColor(Color.rgb(83, 105, 123))
+                    maxLines = 2
+                })
+                item.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
+                val remove = TextView(this).apply {
+                    text = "×"
+                    textSize = 23f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.rgb(190, 65, 75))
+                    contentDescription = "Remove saved page"
+                    setPadding(dp(12), dp(4), dp(12), dp(4))
+                    setOnClickListener {
+                        if (isHistory) store.removeHistory(page) else store.removeBookmark(page)
+                        currentPages.remove(page)
+                        render()
+                    }
+                }
+                item.addView(remove)
+                item.setOnClickListener { createTab(page); dialog.dismiss() }
+                list.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
+                    bottomMargin = dp(7)
+                })
+            }
+        }
+        render()
+        dialog = AlertDialog.Builder(this).setTitle(title).setView(scroll)
+            .setNegativeButton("Close", null).create()
+        dialog.show()
     }
 
     private fun chooseSearchEngine() {
