@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private val tabs = mutableListOf<BrowserTab>()
     private var activeTab: BrowserTab? = null
     private lateinit var store: BrowserStore
+    private lateinit var downloadResponseWriter: DownloadResponseWriter
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
@@ -80,6 +81,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        downloadResponseWriter = DownloadResponseWriter(applicationContext)
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             if (uri != null) runCatching {
                 contentResolver.openOutputStream(uri)?.use { output ->
@@ -302,6 +304,7 @@ class MainActivity : AppCompatActivity() {
         queuedPlatformPermissions.clear()
         waitingForLegacyDownloads.toList().forEach { it.body?.close() }
         waitingForLegacyDownloads.clear()
+        if (::downloadResponseWriter.isInitialized) downloadResponseWriter.shutdown()
         activePlatformPermission?.let { pending ->
             if (!pending.completed) pending.callback.reject()
             pending.completed = true
@@ -1521,22 +1524,25 @@ class MainActivity : AppCompatActivity() {
     /** Routes GeckoView's external responses through Android's supported download service. */
     private fun enqueueDownload(response: WebResponse) {
         val url = response.uri
-        val uri = try { Uri.parse(url) } catch (_: Exception) { null }
+        val uri = runCatching { Uri.parse(url) }.getOrNull()
+        val body = response.body
         if (uri == null || (uri.scheme != "https" && uri.scheme != "http") ||
-            uri.host.isNullOrBlank() || uri.userInfo != null
+            uri.host.isNullOrBlank() || uri.userInfo != null || body == null ||
+            response.statusCode !in 200..299
         ) {
-            response.body?.close()
-            toast("This download link is not supported")
+            body?.close()
+            toast("This download response is not supported")
             return
         }
         if (Build.VERSION.SDK_INT <= 28 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         ) {
-            response.body?.close()
             if (!::legacyDownloadPermissionLauncher.isInitialized || isFinishing || isDestroyed) {
+                body.close()
                 toast("Storage permission is unavailable")
                 return
             }
+            // Keep the original response stream alive while Android asks for permission.
             waitingForLegacyDownloads.add(response)
             if (!legacyDownloadPermissionInFlight) {
                 legacyDownloadPermissionInFlight = true
@@ -1553,35 +1559,35 @@ class MainActivity : AppCompatActivity() {
         val candidate = URLUtil.guessFileName(url, disposition, mime)
             .replace(Regex("[\\\\/:*?\"<>|]"), "_")
             .filterNot { it.isISOControl() }
-            .trim()
-            .trim('.')
-            .take(140)
-            .ifBlank { "download" }
+            .trim().trim('.').take(140).ifBlank { "download" }
         val filename = store.reserveDownloadFileName(candidate)
-        try {
-            val request = DownloadManager.Request(uri)
-                .setTitle(filename)
-                .setDescription("Downloading with BrowseX")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
-            if (!mime.isNullOrBlank()) request.setMimeType(mime)
-            CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }?.let {
-                request.addRequestHeader("Cookie", it)
+        runCatching { response.setReadTimeoutMillis(120_000L) }
+        downloadResponseWriter.write(body, filename, mime) { result, error ->
+            if (result != null) {
+                store.addStreamDownload(
+                    displayName = result.displayName,
+                    uri = result.uri.toString(),
+                    mimeType = mime ?: "application/octet-stream",
+                    bytesWritten = result.bytesWritten
+                )
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast("Downloaded: ${result.displayName}")
+                }
+                android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
+            } else {
+                store.addStreamDownload(
+                    displayName = filename,
+                    uri = "",
+                    mimeType = mime ?: "application/octet-stream",
+                    bytesWritten = 0L,
+                    failed = true,
+                    error = error?.message ?: "Download failed"
+                )
+                android.util.Log.e("BrowseX", "Response stream download failed", error)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast("Could not save download: ${error?.message ?: "unknown error"}")
+                }
             }
-            request.addRequestHeader("User-Agent", GeckoSession.getDefaultUserAgent())
-            val id = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-            store.addBrowseXDownload(id)
-            response.body?.close()
-            toast("Download queued: $filename. Protected or POST requests may not transfer exactly.")
-            android.util.Log.i("BrowseX", "Download queued with id=$id")
-        } catch (error: SecurityException) {
-            response.body?.close()
-            android.util.Log.e("BrowseX", "Download destination permission denied", error)
-            toast("Android denied access to the Downloads folder")
-        } catch (error: Exception) {
-            response.body?.close()
-            android.util.Log.e("BrowseX", "Unable to queue download", error)
-            toast("Could not start download")
         }
     }
 
