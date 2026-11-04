@@ -67,7 +67,8 @@ private data class BrowserTab(
     var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList(),
     var permissionDelegate: BrowseXPermissionDelegate? = null,
     var recoveryAttempts: Int = 0,
-    var crashed: Boolean = false
+    var crashed: Boolean = false,
+    var lastActiveAt: Long = 0L
 )
 
 private data class PendingPlatformPermission(
@@ -274,13 +275,44 @@ class MainActivity : AppCompatActivity() {
                 runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
             }
         }
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+            // Keep the visible tab alive; inactive tabs retain their URL and reopen lazily.
+            tabs.filter { it !== activeTab && it.sessionOpened }
+                .sortedBy { it.lastActiveAt }
+                .forEach(::releaseInactiveSession)
+        }
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         persistTabs()
-        tabs.filter { it !== activeTab && it.sessionOpened }.forEach { tab ->
-            runCatching { tab.session.setActive(false) }
+        tabs.filter { it !== activeTab && it.sessionOpened }
+            .sortedBy { it.lastActiveAt }
+            .forEach(::releaseInactiveSession)
+    }
+
+    private fun releaseInactiveSession(tab: BrowserTab) {
+        if (tab === activeTab || !tab.sessionOpened) return
+        tab.permissionDelegate?.cancelPending()
+        cancelPlatformPermissionRequests(tab.session)
+        runCatching {
+            tab.session.setFocused(false)
+            tab.session.setActive(false)
+            tab.session.close()
+        }
+        tab.session = GeckoSession()
+        tab.sessionOpened = false
+        tab.permissionDelegate = null
+        tab.sitePermissions = emptyList()
+    }
+
+    /** Bound live Gecko sessions to the visible tab plus two warm background tabs. */
+    private fun enforceLiveSessionBudget() {
+        val maxLiveSessions = 3
+        while (tabs.count { it.sessionOpened } > maxLiveSessions) {
+            val oldest = tabs.filter { it !== activeTab && it.sessionOpened }
+                .minByOrNull { it.lastActiveAt } ?: return
+            releaseInactiveSession(oldest)
         }
     }
 
@@ -678,6 +710,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         activeTab = tab
+        tab.lastActiveAt = android.os.SystemClock.elapsedRealtime()
         try {
             if (tab.crashed) {
                 tab.recoveryAttempts = 0
@@ -692,6 +725,7 @@ class MainActivity : AppCompatActivity() {
             tab.session.setActive(true)
             tab.session.setFocused(true)
             browserView.setSession(tab.session)
+            enforceLiveSessionBudget()
             updateChrome()
         } catch (error: RuntimeException) {
             tab.sessionOpened = false
