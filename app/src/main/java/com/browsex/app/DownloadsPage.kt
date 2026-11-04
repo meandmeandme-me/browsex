@@ -44,7 +44,7 @@ internal class DownloadsPage(private val activity: MainActivity) {
             setTextColor(Color.rgb(19, 43, 64))
         })
         heading.addView(TextView(activity).apply {
-            text = "Downloads managed by Android"
+            text = "Your Browse X downloads"
             textSize = 12f
             setTextColor(Color.rgb(83, 105, 123))
         })
@@ -76,6 +76,7 @@ internal class DownloadsPage(private val activity: MainActivity) {
 
         fun render() {
             list.removeAllViews()
+            val ownedIds = activity.browserStoreForDownloads().browseXDownloadIds()
             val cursor = manager.query(DownloadManager.Query())
             var count = 0
             cursor?.use { c ->
@@ -86,8 +87,10 @@ internal class DownloadsPage(private val activity: MainActivity) {
                 val soFarCol = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
                 val dateCol = c.getColumnIndex(DownloadManager.COLUMN_LAST_MODIFIED_TIMESTAMP)
                 while (c.moveToNext()) {
-                    count++
+                    if (idCol < 0) continue
                     val id = c.getLong(idCol)
+                    if (id !in ownedIds) continue
+                    count++
                     val title = c.getString(titleCol) ?: "Downloaded file"
                     val status = c.getInt(statusCol)
                     val total = if (totalCol >= 0) c.getLong(totalCol) else -1L
@@ -136,7 +139,11 @@ internal class DownloadsPage(private val activity: MainActivity) {
                             } else {
                                 AlertDialog.Builder(activity).setMessage("Remove this download?")
                                     .setNegativeButton("Cancel", null)
-                                    .setPositiveButton("Remove") { _, _ -> manager.remove(id); render() }.show()
+                                    .setPositiveButton("Remove") { _, _ ->
+                                        manager.remove(id)
+                                        activity.browserStoreForDownloads().removeBrowseXDownload(id)
+                                        render()
+                                    }.show()
                             }
                         }
                     }
@@ -145,7 +152,7 @@ internal class DownloadsPage(private val activity: MainActivity) {
                 }
             }
             if (count == 0) list.addView(TextView(activity).apply {
-                text = "No downloads yet. Files you download from websites will appear here."
+                text = "No Browse X downloads yet. Files you download from websites will appear here."
                 textSize = 13f
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(83, 105, 123))
