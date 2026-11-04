@@ -15,3 +15,11 @@ internal data class BookmarkItem(
     val folderId: String,
     val createdAt: Long
 )
+
+
+/** Bounded local history metadata; never includes cookies, credentials or page contents. */
+internal data class BrowserHistoryEntry(
+    val url: String,
+    val title: String,
+    val visitedAt: Long
+)

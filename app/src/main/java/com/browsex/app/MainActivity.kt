@@ -780,7 +780,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.progress = 100
                 if (success) {
-                    if (!tab.privateMode) store.addHistory(tab.url)
+                    if (!tab.privateMode) store.addHistory(tab.url, tab.title)
                     tab.recoveryAttempts = 0
                     tab.crashed = false
                 }

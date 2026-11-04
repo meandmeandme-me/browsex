@@ -130,7 +130,7 @@ internal class RecallPage(
         fun render(raw: String) {
             content.removeAllViews()
             val query = raw.trim()
-            val history = store.history().take(30).map { it to it }
+            val history = store.historyEntries().take(30).map { it.title to it.url }
             val bookmarks = store.bookmarks().take(30).map { it to it }
             section(t("Open tabs", "التبويبات المفتوحة"), openTabs, query)
             section(t("Bookmarks", "المفضلة"), bookmarks, query)

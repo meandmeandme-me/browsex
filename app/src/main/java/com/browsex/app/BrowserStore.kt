@@ -172,7 +172,32 @@ class BrowserStore(context: Context) {
     }
 
     fun bookmarks(): List<String> = bookmarkItems().map { it.url }
-    fun history(): List<String> = readList("history")
+    fun history(): List<String> = historyEntries().map { it.url }
+
+    /** Title and visit time make history useful for recall while preserving legacy URL access. */
+    fun historyEntries(): List<BrowserHistoryEntry> {
+        val stored = prefs.getString("history_entries_v1", null)
+        if (stored == null) {
+            val migrated = readList("history").map { url ->
+                BrowserHistoryEntry(url, android.net.Uri.parse(url).host.orEmpty().ifBlank { url }.take(160), 0L)
+            }
+            writeHistoryEntries(migrated)
+            return migrated
+        }
+        return try {
+            val array = JSONArray(stored)
+            (0 until minOf(array.length(), BrowserStorePolicy.MAX_HISTORY)).mapNotNull { index ->
+                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                val url = item.optString("url").trim()
+                if (!NavigationInput.isValidWebUrl(url) || url.length > 4096) return@mapNotNull null
+                BrowserHistoryEntry(
+                    url,
+                    item.optString("title").take(160).ifBlank { android.net.Uri.parse(url).host.orEmpty() },
+                    item.optLong("visitedAt", 0L).coerceAtLeast(0L)
+                )
+            }.distinctBy { it.url }
+        } catch (_: Exception) { emptyList() }
+    }
 
     internal fun bookmarkFolders(): List<BookmarkFolder> = readBookmarkFolders()
     internal fun bookmarkItems(): List<BookmarkItem> = readBookmarkItems()
@@ -299,11 +324,17 @@ class BrowserStore(context: Context) {
     }
 
     fun addHistory(url: String) {
+        addHistory(url, android.net.Uri.parse(url).host.orEmpty().ifBlank { url })
+    }
+
+    fun addHistory(url: String, title: String) {
         if (!NavigationInput.isValidWebUrl(url)) return
-        val values = history().toMutableList()
-        values.remove(url)
-        values.add(0, url)
-        writeList("history", values)
+        val entry = BrowserHistoryEntry(
+            url = url,
+            title = title.trim().take(160).ifBlank { android.net.Uri.parse(url).host.orEmpty().ifBlank { url } },
+            visitedAt = System.currentTimeMillis()
+        )
+        writeHistoryEntries(listOf(entry) + historyEntries().filterNot { it.url == url })
     }
 
     fun removeBookmark(url: String) {
@@ -311,10 +342,28 @@ class BrowserStore(context: Context) {
     }
 
     fun removeHistory(url: String) {
-        writeList("history", history().filterNot { it == url })
+        writeHistoryEntries(historyEntries().filterNot { it.url == url })
     }
 
-    fun clearHistory() = prefs.edit().remove("history").apply()
+    fun clearHistory() = prefs.edit().remove("history").remove("history_entries_v1").apply()
+
+    private fun writeHistoryEntries(entries: List<BrowserHistoryEntry>) {
+        val safe = entries.filter { NavigationInput.isValidWebUrl(it.url) }
+            .distinctBy { it.url }.take(BrowserStorePolicy.MAX_HISTORY)
+        val detailed = JSONArray()
+        val legacy = JSONArray()
+        safe.forEach { entry ->
+            detailed.put(JSONObject()
+                .put("url", entry.url)
+                .put("title", entry.title.take(160))
+                .put("visitedAt", entry.visitedAt.coerceAtLeast(0L)))
+            legacy.put(entry.url)
+        }
+        prefs.edit()
+            .putString("history_entries_v1", detailed.toString())
+            .putString("history", legacy.toString())
+            .apply()
+    }
 
     private fun readBookmarkFolders(): List<BookmarkFolder> {
         val stored = prefs.getString("bookmark_folders_v1", null)
