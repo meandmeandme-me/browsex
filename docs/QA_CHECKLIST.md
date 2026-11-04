@@ -71,6 +71,11 @@ Implementation and verification are tracked separately. Items under “implement
 
 Never call a build successful until its workflow conclusion is `success` and the artifact is attached to that exact commit. Never claim physical-device validation unless it was performed on a device. Do not overwrite or ask the user to uninstall an existing install as a troubleshooting shortcut.
 
+## Extracted browser storage boundaries
+
+- [x] Open-tab snapshots, named sessions and recently-closed entries are delegated to BrowserSessionStore using the existing persisted keys and validation rules.
+- [ ] Verify legacy saved tabs, named sessions and recently-closed entries survive upgrade and process restart.
+
 ## Extracted browser policy coverage
 
 - [x] Browser theme, language and home-layout normalization is isolated as pure policy with JVM tests added (not run in this implementation pass).
