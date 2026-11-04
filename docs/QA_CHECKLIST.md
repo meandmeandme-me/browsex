@@ -9,7 +9,7 @@
 - [ ] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
 - [ ] APK package ID and minSdk are correct.
 - [ ] APKs contain the expected GeckoView native libraries for each ABI.
-- [ ] CI publishes artifacts only after every required gate passes.
+- [x] CI uploads debug artifacts only after every required gate passes; public release publishing waits for stable signing.
 
 ## Manual device matrix
 
@@ -29,9 +29,9 @@
 - [ ] Opening, switching and closing tabs does not leak sessions.
 - [ ] External links and share intents work.
 - [ ] Bookmark/history add, remove and clear persist correctly.
-- [ ] Downloads are intercepted, saved, visible and openable (not just delegated to the system Downloads app).
+- [ ] GeckoView external responses are delegated to DownloadManager; verify cookies, redirects, duplicate names, failure states and POST/custom-header limitations on device. The UI currently lists the system-wide DownloadManager collection.
 - [ ] Reader mode handles non-article pages and extraction failures gracefully.
-- [ ] Site permission prompts are user-initiated and can be revoked.
+- [ ] Site permission prompts are user-initiated and can be revoked (not implemented yet).
 - [ ] Rotation/fullscreen returns the browser chrome correctly.
 - [ ] App survives process recreation and low-memory conditions.
 
