@@ -24,6 +24,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Login save/selection requires explicit prompts; private tabs reject credential save/selection; reveal/copy/fill requires AndroidX BiometricPrompt or supported device-credential verification.
 - [x] Android media/location permission lifecycle and Android notification permission lifecycle are extracted into separate coordinators with JVM policy/coalescing tests.
 - [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
+- [x] CredentialAccessPolicy has JVM tests for locked-by-default state, timed unlock expiry, private-tab override and explicit lock.
 
 ## Release signing coverage
 
@@ -55,9 +56,11 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] Bookmark/history add, remove and clear persist correctly.
 - [ ] Site permission prompt appears only after a site request; Android deny, app settings re-grant, per-origin allow/block/ask and dialog cancellation behave correctly.
 - [ ] Verify Safe Browsing blocks known phishing, malware and unwanted-software test pages; confirm ordinary sites still load and behavior when offline is clearly understood.
-- [ ] Save a login on an HTTPS site, restart BrowseX, select the saved account and verify biometric/device-credential confirmation occurs before fill.
+- [ ] Save a login on HTTPS, restart BrowseX, verify the vault is locked, authenticate from the password manager, reload the form and verify one matching account autofills only within the 60-second unlock window.
+- [ ] Verify multiple matching accounts show a selection prompt and require fresh device authentication before filling; verify onStop immediately locks the vault.
 - [ ] Verify HTTP forms, cross-origin form actions, subdomains, alternate ports and malformed origins never receive saved credentials.
-- [ ] Verify private tabs neither save credentials nor offer saved-account selection; regular tabs continue to work after private tabs close.
+- [ ] Verify any open private tab blocks credential fetch/save across all tabs; private tabs never offer saved-account selection, and regular autofill works again only after all private tabs close and the user unlocks.
+- [ ] Verify the password manager exposes only username/origin metadata before authentication; reveal, copy and delete require authentication.
 - [ ] Verify the password manager lists entries, requires device authentication before reveal/copy, deletes selected entries and never exports/syncs them.
 - [ ] Verify corrupted/unreadable encrypted credential data is not silently overwritten and the app fails closed for autofill.
 - [ ] Verify Android 8–10 biometric/device-credential fallback and Android 11+ biometric plus device-credential behavior on physical devices.
