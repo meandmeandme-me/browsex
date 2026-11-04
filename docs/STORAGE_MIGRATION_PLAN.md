@@ -19,6 +19,46 @@ All focused stores currently share the legacy SharedPreferences file named brows
 
 Key names are a migration contract. Do not rename or delete them before a verified migration is complete.
 
+
+## Verified legacy key contract (source-level inventory)
+
+The following details were checked against the four focused store implementations at the time of this plan. They describe the current format, not the future Room/DataStore API.
+
+| Key | Stored type / default | Current behavior and migration notes |
+|---|---|---|
+| `theme_mode` | String / `system` | Normalized through `BrowserPreferencePolicy.normalizeTheme`. |
+| `language_mode` | String / `system` | Normalized BCP-47 tag; preserve `system` as a special value. |
+| `site_notifications_enabled` | Boolean / `true` | App-level website-notification switch; separate from Android POST_NOTIFICATIONS grant state. |
+| `home_show_quick_links` | Boolean / `true` | Missing means default enabled. |
+| `home_show_discovery` | Boolean / `true` | Missing means default enabled. |
+| `home_layout` | String / `grid` | Normalized to supported layouts. |
+| `search_engine` | String / `Google` | Normalized by `BrowserStorePolicy`. |
+| `ad_block_enabled` | Boolean / `false` | Preference flag only; do not interpret as proof that a complete network/content blocker is implemented. |
+| `denied_platform_permissions` | StringSet / empty | Supplemental denial history; Android runtime permission state is authoritative. Copy the set defensively. |
+| `site_media_permissions` | JSON object string / `{}` | Keys are `origin|feature`; only camera/microphone and allow/deny are retained. `ask` removes the entry. Maximum 100 decisions. |
+| `open_tabs` | JSON string array / `[]` | Regular-tab URL snapshot only; raw reader accepts at most 500 entries before normalization. |
+| `active_tab_index` | Int / `0` | Index into the normalized regular-tab snapshot, not the all-tabs list. |
+| `named_sessions_v1` | JSON array string / `[]` | Up to 10 sessions; each has id, name, urls, activeIndex, savedAt. Names max 40 chars; URLs bounded by tab normalization. |
+| `recently_closed_tabs_v1` | JSON array string / `[]` | Up to 10 entries with id, url, title, closedAt. Only validated HTTP(S) URLs; HOME_URL excluded on write. |
+| `bookmark_folders_v1` | JSON array string / absent | Absent means the built-in Unfiled folder. At most 50 stored non-default folders are read; writes include Unfiled. |
+| `bookmark_items_v1` | JSON array string / absent | Absent triggers one-time import from legacy `bookmarks`; records carry id, url, title, folderId, createdAt. |
+| `bookmarks` | Legacy JSON string array / `[]` | Compatibility mirror of bookmark URLs, rewritten alongside `bookmark_items_v1`; preserve until old-format fallback is no longer needed. |
+| `history_entries_v1` | JSON array string / absent | Absent triggers import from legacy `history`; records carry url, title, visitedAt. |
+| `history` | Legacy JSON string array / `[]` | Compatibility mirror of history URLs, rewritten alongside `history_entries_v1`; fallback used if detailed history JSON is corrupt. |
+| `browsex_download_names` | JSON string array / `[]` | Case-insensitive filename collision reservations; bounded to the latest 300 names. |
+| `browsex_download_ids` | JSON numeric array / `[]` | IDs of DownloadManager items enqueued by BrowseX only; bounded to 300. The actual downloaded files/status remain owned by Android DownloadManager. |
+| `stream_downloads_v1` | JSON array string / `[]` | Up to 300 records with id, displayName, uri, mimeType, bytesWritten, createdAt, failed, error, status, totalBytes. Active queued/running records are converted to failed on recovery after interruption. |
+
+### Compatibility and side-effect constraints
+
+- All keys above live in the single `browsex.browser` SharedPreferences file. A migration must snapshot this file consistently and must not clear it as part of import.
+- Bookmark and history URL-only keys are compatibility mirrors, not independent collections. Import detailed records first when present; use the legacy URL-only key only when the detailed key is absent or damaged, matching current fallback behavior.
+- Current reads of absent detailed bookmark/history keys may write migrated detailed data and mirrors back to SharedPreferences. The migration implementation must avoid accidentally invoking these mutating read paths before its immutable legacy snapshot is captured.
+- Clearing history currently also removes `recently_closed_tabs_v1`. Preserve this observable behavior only if product requirements confirm it is intentional; otherwise make the behavior change separately from storage migration and cover it with a regression test.
+- DownloadManager IDs are references to Android-owned records, not complete download records. Do not attempt to recreate or claim ownership of those downloads from Room alone.
+- The current download-name reservation and stream-download JSON lists are bounded and ordered. Preserve ordering/retention semantics or document an explicit product-level change.
+- The migration must never include private-tab URLs, GeckoSession state, cookies, credentials, notification payloads, or raw form data.
+
 ## Proposed Room schema
 
 Use stable primary keys already present in domain records where available. Foreign keys should use explicit ON DELETE behavior.
