@@ -132,3 +132,5 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [ ] Verify Unicode NFKC search using full-width Latin, Arabic, CJK and mixed-script page titles/URLs.
 - [ ] Add, edit, remove and reorder home shortcuts; verify order persists after reload and reset restores defaults.
 - [ ] Add reviewed translations and plural/date/number tests for each locale pack before advertising that locale as fully supported.
+- [x] GeckoSession open/close, memory-pressure release, live-session budget and session reset are delegated to BrowserSessionLifecycleCoordinator; behavior still requires runtime verification.
+- [ ] Verify session release/reopen, permission cancellation, tab close, privacy-data clearing and activity destruction on Android API 26, 29, 33 and current API.
