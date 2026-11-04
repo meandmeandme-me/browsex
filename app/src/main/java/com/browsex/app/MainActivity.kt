@@ -63,6 +63,8 @@ class MainActivity : AppCompatActivity() {
     private var shuttingDown = false
     private var browserRuntime: GeckoRuntime? = null
     private var notificationBridge: BrowseXNotificationBridge? = null
+    private var clearingBrowsingData = false
+    private var dataClearDialog: AlertDialog? = null
     private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
     private val queuedPlatformPermissions = java.util.ArrayDeque<PendingPlatformPermission>()
@@ -307,6 +309,8 @@ class MainActivity : AppCompatActivity() {
         activePlatformPermission = null
         notificationPermissionCallbacks.toList().forEach { it(false) }
         notificationPermissionCallbacks.clear()
+        dataClearDialog?.dismiss()
+        dataClearDialog = null
         tabs.toList().forEach { tab ->
             tab.permissionDelegate?.cancelPending()
             cancelPlatformPermissionRequests(tab.session)
@@ -498,6 +502,9 @@ class MainActivity : AppCompatActivity() {
             "Close tab" -> "إغلاق التبويب"
             "Open a website first" -> "افتح موقعًا أولًا"
             "History cleared" -> "تم مسح السجل"
+            "Clearing selected browsing data…" -> "جارٍ مسح بيانات التصفح المحددة…"
+            "Selected browsing data cleared" -> "تم مسح بيانات التصفح المحددة"
+            "Could not clear browsing data" -> "تعذر مسح بيانات التصفح"
             "Page bookmarked" -> "تمت إضافة الصفحة للمفضلة"
             "Bookmark removed" -> "تمت إزالة الصفحة من المفضلة"
             "This download link is not supported" -> "رابط التنزيل غير مدعوم"
@@ -1244,6 +1251,7 @@ class MainActivity : AppCompatActivity() {
      * Keep only validated tab URLs, close the sessions, clear data, then recreate the tabs lazily.
      */
     private fun clearBrowsingData(flags: Long, clearHistory: Boolean) {
+        if (clearingBrowsingData) return
         val regularTabs = tabs.filterNot { it.privateMode }
         val snapshot = TabSessionState.normalize(
             regularTabs.map { it.url },
@@ -1270,10 +1278,23 @@ class MainActivity : AppCompatActivity() {
         }
         tabs.clear()
         activeTab = null
+        clearingBrowsingData = flags != 0L
+        if (clearingBrowsingData) {
+            dataClearDialog = AlertDialog.Builder(this)
+                .setTitle(tr("Privacy center"))
+                .setMessage(tr("Clearing selected browsing data…"))
+                .setView(ProgressBar(this))
+                .setCancelable(false)
+                .create()
+            dataClearDialog?.show()
+        }
 
         fun restoreAfterClear(success: Boolean) {
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
+                dataClearDialog?.dismiss()
+                dataClearDialog = null
+                clearingBrowsingData = false
                 if (success) {
                     if (clearHistory) store.clearHistory()
                     if ((flags and org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS) != 0L) {
