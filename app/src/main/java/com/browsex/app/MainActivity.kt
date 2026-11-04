@@ -1277,6 +1277,15 @@ class MainActivity : AppCompatActivity() {
         mediaOrigin: String?
     ) {
         if (clearingBrowsingData) return
+        if (flags == 0L) {
+            if (clearHistory) store.clearHistory()
+            toast("Selected browsing data cleared")
+            return
+        }
+        if (host != null && host.isBlank()) {
+            toast("Could not clear browsing data")
+            return
+        }
         val regularTabs = tabs.filterNot { it.privateMode }
         val snapshot = TabSessionState.normalize(
             regularTabs.map { it.url },
@@ -1338,10 +1347,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (flags == 0L) {
-            restoreAfterClear(true)
-            return
-        }
         val storage = browserRuntime?.storageController
         if (storage == null) {
             restoreAfterClear(false)
