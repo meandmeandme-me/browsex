@@ -24,6 +24,7 @@ internal class SavedPagesPage(
     private val onOpen: (String) -> Unit
 ) {
     private val pages = initialPages.toMutableList()
+    private var dismissDialog: (() -> Unit)? = null
     private val ink = Color.rgb(19, 43, 64)
     private val muted = Color.rgb(83, 105, 123)
     private val accent = Color.rgb(8, 102, 217)
@@ -73,7 +74,7 @@ internal class SavedPagesPage(
         val search = EditText(activity).apply {
             hint = if (isHistory) "Search browsing history" else "Search bookmarks"
             textSize = 14f
-            singleLine = true
+            isSingleLine = true
             setTextColor(ink)
             setHintTextColor(muted)
             setPadding(dp(15), 0, dp(15), 0)
@@ -82,6 +83,20 @@ internal class SavedPagesPage(
         root.addView(search, LinearLayout.LayoutParams(-1, dp(48)).apply {
             topMargin = dp(17)
         })
+
+        val scroll = ScrollView(activity).apply { clipToPadding = false }
+        val list = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(4), 0, dp(8))
+        }
+        scroll.addView(list)
+        val empty = TextView(activity).apply {
+            gravity = Gravity.CENTER
+            textSize = 13f
+            setTextColor(muted)
+            setPadding(dp(22), dp(38), dp(22), dp(38))
+            background = rounded(Color.WHITE, 16)
+        }
 
         val tools = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -122,19 +137,6 @@ internal class SavedPagesPage(
         }
         root.addView(tools)
 
-        val scroll = ScrollView(activity).apply { clipToPadding = false }
-        val list = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(4), 0, dp(8))
-        }
-        scroll.addView(list)
-        val empty = TextView(activity).apply {
-            gravity = Gravity.CENTER
-            textSize = 13f
-            setTextColor(muted)
-            setPadding(dp(22), dp(38), dp(22), dp(38))
-            background = rounded(Color.WHITE, 16)
-        }
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         fun refresh(query: String) = render(query, list, count, empty)
@@ -151,6 +153,7 @@ internal class SavedPagesPage(
             dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         }
+        dismissDialog = { dialog.dismiss() }
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
@@ -219,7 +222,7 @@ internal class SavedPagesPage(
                 }
             }
             item.addView(remove)
-            item.setOnClickListener { onOpen(page) }
+            item.setOnClickListener { onOpen(page); dismissDialog?.invoke() }
             list.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(8)
             })
