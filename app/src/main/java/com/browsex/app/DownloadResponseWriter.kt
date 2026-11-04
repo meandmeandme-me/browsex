@@ -130,6 +130,7 @@ internal class DownloadResponseWriter(context: Context) {
     private fun copyBody(job: Job, output: java.io.OutputStream): Long {
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         var total = 0L
+        var lastReported = 0L
         while (true) {
             checkNotCancelled(job)
             val count = job.body.read(buffer)
@@ -137,10 +138,14 @@ internal class DownloadResponseWriter(context: Context) {
             if (count == 0) continue
             output.write(buffer, 0, count)
             total += count
-            job.onProgress(total)
+            if (total - lastReported >= PROGRESS_INTERVAL_BYTES) {
+                lastReported = total
+                job.onProgress(total)
+            }
         }
         checkNotCancelled(job)
         output.flush()
+        if (total != lastReported) job.onProgress(total)
         return total
     }
 
@@ -168,5 +173,6 @@ internal class DownloadResponseWriter(context: Context) {
 
     private companion object {
         const val DEFAULT_BUFFER_SIZE = 64 * 1024
+        const val PROGRESS_INTERVAL_BYTES = 256 * 1024
     }
 }
