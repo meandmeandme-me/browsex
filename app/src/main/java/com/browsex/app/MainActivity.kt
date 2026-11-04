@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private val activeTab: BrowserTab? get() = tabRegistry.activeTab
     private lateinit var store: BrowserStore
     private lateinit var downloadResponseWriter: DownloadResponseWriter
+    private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
@@ -97,6 +98,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         store = BrowserStore(this)
         store.recoverInterruptedStreamDownloads()
         downloadResponseWriter = DownloadResponseWriter(applicationContext)
+        streamDownloadCoordinator = StreamDownloadCoordinator(store, downloadResponseWriter)
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             if (uri != null) runCatching {
                 contentResolver.openOutputStream(uri)?.use { output ->
@@ -321,7 +323,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         queuedPlatformPermissions.clear()
         waitingForLegacyDownloads.toList().forEach { it.body?.close() }
         waitingForLegacyDownloads.clear()
-        if (::downloadResponseWriter.isInitialized) downloadResponseWriter.shutdown()
+        if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         activePlatformPermission?.let { pending ->
             if (!pending.completed) pending.callback.reject()
             pending.completed = true
@@ -1185,9 +1187,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
         DownloadsPage(this, store) { downloadId ->
-            val cancelled = downloadResponseWriter.cancel(downloadId)
-            if (cancelled) store.failStreamDownload(downloadId, "Cancelled by user", cancelled = true)
-            cancelled
+            streamDownloadCoordinator.cancel(downloadId)
         }.show()
     }
 
@@ -1225,52 +1225,26 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
             }
             return
         }
-        val disposition = response.headers.entries.firstOrNull {
-            it.key.equals("content-disposition", ignoreCase = true)
-        }?.value
-        val mime = response.headers.entries.firstOrNull {
-            it.key.equals("content-type", ignoreCase = true)
-        }?.value?.substringBefore(';')
-        val candidate = DownloadFileNamePolicy.sanitize(URLUtil.guessFileName(url, disposition, mime))
-        val filename = store.reserveDownloadFileName(candidate)
-        val totalBytes = response.headers.entries.firstOrNull {
-            it.key.equals("content-length", ignoreCase = true)
-        }?.value?.toLongOrNull()?.takeIf { it >= 0L } ?: -1L
-        val downloadId = store.beginStreamDownload(
-            displayName = filename,
-            mimeType = mime ?: "application/octet-stream",
-            totalBytes = totalBytes
-        )
-        runCatching { response.setReadTimeoutMillis(120_000L) }
-        downloadResponseWriter.write(
-            id = downloadId,
-            body = body,
-            displayName = filename,
-            mimeType = mime,
-            onProgress = { bytes -> store.updateStreamDownloadProgress(downloadId, bytes) }
-        ) { result, error, cancelled ->
-            when {
-                result != null -> {
-                    store.completeStreamDownload(downloadId, result.uri.toString(), result.bytesWritten)
-                    runOnUiThread {
-                        if (!isFinishing && !isDestroyed) toast("Downloaded: ${result.displayName}")
-                    }
-                    android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
+        val started = streamDownloadCoordinator.start(
+            response = response,
+            onCompleted = { result ->
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast("Downloaded: ${result.displayName}")
                 }
-                else -> {
-                    store.failStreamDownload(
-                        downloadId,
-                        if (cancelled) "Cancelled by user" else error?.message ?: "Download failed",
-                        cancelled = cancelled
-                    )
-                    if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
-                    runOnUiThread {
-                        if (!cancelled && !isFinishing && !isDestroyed) {
-                            toast("Could not save download: ${error?.message ?: "unknown error"}")
-                        }
+                android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
+            },
+            onFailed = { error, cancelled ->
+                if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
+                runOnUiThread {
+                    if (!cancelled && !isFinishing && !isDestroyed) {
+                        toast("Could not save download: ${error?.message ?: "unknown error"}")
                     }
                 }
             }
+        )
+        if (!started) {
+            body.close()
+            toast("This download response is not supported")
         }
     }
 
