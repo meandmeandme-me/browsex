@@ -75,17 +75,20 @@ internal data class OAuthPkceTransaction private constructor(
             return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         }
 
-        private fun parseRedirect(raw: String): URI? = try {
-            val uri = URI(raw)
-            val scheme = uri.scheme ?: return null
-            if (!scheme.startsWith("https", ignoreCase = true) &&
-                !scheme.startsWith("browsex", ignoreCase = true)
-            ) return null
-            if (uri.rawAuthority.isNullOrBlank() || uri.rawUserInfo != null ||
-                uri.rawFragment != null || uri.rawPath.isNullOrBlank()
-            ) return null
-            uri
-        } catch (_: Exception) { null }
+        private fun parseRedirect(raw: String): URI? {
+            return try {
+                val uri = URI(raw)
+                val scheme = uri.scheme ?: return null
+                val isHttps = scheme.equals("https", ignoreCase = true)
+                val isAppScheme = !scheme.equals("http", ignoreCase = true) &&
+                    scheme.matches(Regex("[A-Za-z][A-Za-z0-9+.-]{2,63}"))
+                if (!isHttps && !isAppScheme) return null
+                if ((isHttps && uri.host.isNullOrBlank()) || uri.rawUserInfo != null ||
+                    uri.rawFragment != null || uri.rawPath.isNullOrBlank()
+                ) return null
+                uri
+            } catch (_: Exception) { null }
+        }
 
         private fun sameRedirectTarget(expected: URI, actual: URI): Boolean =
             expected.scheme.equals(actual.scheme, ignoreCase = true) &&
