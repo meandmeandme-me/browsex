@@ -25,6 +25,12 @@ class TabSessionStateTest {
         )
     }
 
+    @Test fun acceptsOnlyKnownHomeCustomizationParameters() {
+        val customized = "$home?bxlang=ar&bxtheme=dark&bxquick=false&bxdiscovery=true&bxlayout=list"
+        val invalid = "$home?bxlang=ar&bxtheme=dark&bxdebug=true"
+        assertEquals(listOf(customized), TabSessionState.normalize(listOf(customized, invalid), 0, home).urls)
+    }
+
     @Test fun invalidAndEmptySnapshotsFallBackToHome() {
         assertEquals(TabSessionState.Snapshot(listOf(home), 0),
             TabSessionState.normalize(listOf("file:///etc/passwd"), 99, home))
