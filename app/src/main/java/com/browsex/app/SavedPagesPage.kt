@@ -108,7 +108,13 @@ internal class SavedPagesPage(
                         .setPositiveButton("Clear") { _, _ ->
                             store.clearHistory()
                             pages.clear()
-                            render(search.text.toString(), list, count, empty)
+                            search.text?.clear()
+                            if (search.text.isNullOrEmpty()) {
+                                list.removeAllViews()
+                                count.text = "0 of 0 ${if (isHistory) "pages" else "saved sites"}"
+                                empty.text = if (isHistory) "Your browsing history is empty." else "No bookmarks yet. Save a page to find it here."
+                                list.addView(empty, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+                            }
                         }.show()
                 }
             }
