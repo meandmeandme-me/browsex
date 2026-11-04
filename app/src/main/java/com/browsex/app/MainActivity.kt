@@ -536,7 +536,7 @@ class MainActivity : AppCompatActivity() {
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
-            "Bookmarks", "History", "Downloads", "Share page", "Copy page address",
+            "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page",
             "Search engine", "Clear browsing history", "Settings"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
@@ -550,11 +550,12 @@ class MainActivity : AppCompatActivity() {
                 3 -> openDownloads()
                 4 -> shareCurrentPage()
                 5 -> copyCurrentAddress()
-                6 -> chooseSearchEngine()
-                7 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                6 -> findInPage()
+                7 -> chooseSearchEngine()
+                8 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                8 -> showSettings()
+                9 -> showSettings()
             }
         }.show()
     }
@@ -706,6 +707,58 @@ class MainActivity : AppCompatActivity() {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
         }, "Share page"))
+    }
+
+    /** Uses GeckoView's native finder so matches are highlighted in page content. */
+    private fun findInPage() {
+        val session = activeTab?.session ?: return
+        val field = EditText(this).apply {
+            hint = "Find text on this page"
+            setSingleLine(true)
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        val count = TextView(this).apply {
+            text = "Type to search"
+            setTextColor(Color.rgb(83, 105, 123))
+            setPadding(dp(4), dp(8), dp(4), dp(4))
+        }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(field)
+            addView(count)
+        }
+        lateinit var dialog: AlertDialog
+        field.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, countBefore: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, countAfter: Int) {
+                val query = s?.toString().orEmpty()
+                if (query.isBlank()) {
+                    session.getFinder().clear()
+                    count.text = "Type to search"
+                } else {
+                    session.getFinder().find(query, GeckoSession.FINDER_FIND_FORWARD)
+                    count.text = "Searching page…"
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) = Unit
+        })
+        dialog = AlertDialog.Builder(this).setTitle("Find in page").setView(panel)
+            .setNegativeButton("Close") { _, _ -> session.getFinder().clear() }
+            .setNeutralButton("Next", null)
+            .setPositiveButton("Previous", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                session.getFinder().find(null, GeckoSession.FINDER_FIND_FORWARD)
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                session.getFinder().find(null, GeckoSession.FINDER_FIND_BACKWARDS)
+            }
+        }
+        dialog.show()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        field.requestFocus()
     }
 
     private fun copyCurrentAddress() {
