@@ -36,6 +36,13 @@ def resources(path: Path):
     return found, duplicates
 
 
+def is_locale_directory(directory: str) -> bool:
+    qualifier = directory.removeprefix("values-")
+    return qualifier.startswith("b+") or bool(
+        re.fullmatch(r"[a-z]{2,3}(?:-r[A-Z]{2})?", qualifier)
+    )
+
+
 def locale_name(directory: str) -> str:
     qualifier = directory.removeprefix("values-")
     if qualifier.startswith("b+"):
@@ -59,7 +66,16 @@ def main() -> int:
     if "en" not in configured_normalized:
         errors.append(f"{LOCALE_CONFIG}: default English locale 'en' is missing")
 
-    locale_files = sorted(RES.glob("values-*/strings.xml"))
+    locale_files = sorted(
+        path for path in RES.glob("values-*/strings.xml")
+        if is_locale_directory(path.parent.name)
+    )
+    available_locales = {locale_name(path.parent.name).lower() for path in locale_files}
+    missing_packs = sorted(configured_normalized - available_locales - {"en"})
+    if missing_packs:
+        errors.append(
+            f"{LOCALE_CONFIG}: configured locales have no strings.xml pack: {', '.join(missing_packs)}"
+        )
     for path in locale_files:
         locale = locale_name(path.parent.name)
         if locale.lower() not in configured_normalized:
