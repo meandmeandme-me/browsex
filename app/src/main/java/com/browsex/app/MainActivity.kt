@@ -220,7 +220,7 @@ class MainActivity : AppCompatActivity() {
         if (intent.action == BrowseXNotificationBridge.ACTION_SITE_NOTIFICATION_CLICK) {
             handleSiteNotificationIntent(intent)
         } else {
-            intent.data?.let(::safeExternalUrl)?.let(::createTab)
+            intent.data?.let(::safeExternalUrl)?.let { url -> createTab(url) }
         }
     }
 
