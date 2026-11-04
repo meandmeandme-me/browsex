@@ -59,10 +59,7 @@ private data class BrowserTab(
     var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList()
 )
 
-@ExperimentalGeckoViewApi
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
-@ExperimentalGeckoViewApi
-@OptIn(ExperimentalGeckoViewApi::class)
 class MainActivity : AppCompatActivity() {
     private val tabs = mutableListOf<BrowserTab>()
     private var activeTab: BrowserTab? = null
@@ -521,8 +518,6 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
-    @ExperimentalGeckoViewApi
-    @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
@@ -554,8 +549,6 @@ class MainActivity : AppCompatActivity() {
 
 
     /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
-    @ExperimentalGeckoViewApi
-    @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
     private fun openReaderMode() {
         val tab = activeTab ?: return
         if (!tab.url.startsWith("http://") && !tab.url.startsWith("https://")) {
