@@ -20,8 +20,15 @@ BrowseX/
 │   │   │   ├── BrowserContentProcessRecoveryCoordinator.kt # bounded Gecko crash recovery
 │   │   │   ├── BrowserBrowsingDataCoordinator.kt # clear-data transaction and tab restore
 │   │   │   ├── BrowserTabPersistenceCoordinator.kt # regular-tab snapshot persistence
+│   │   │   ├── BrowserTabPersistencePolicy.kt # private-tab exclusion and active-index remapping
 │   │   │   ├── BrowserSessionDelegateFactory.kt # GeckoView callbacks -> BrowseX event contract
-│   │   │   ├── BrowserAndroidPermissionQueue.kt # serialized Android runtime permission requests
+│   │   │   ├── BrowserAndroidPermissionCoordinator.kt # validation and lifecycle around runtime permissions
+│   │   │   ├── BrowserAndroidPermissionQueue.kt # serialized Gecko-originated Android permissions
+│   │   │   ├── BrowserNotificationPermissionCoordinator.kt # POST_NOTIFICATIONS callback lifecycle
+│   │   │   ├── BrowserCredentialVault.kt # encrypted GeckoView login storage
+│   │   │   ├── BrowserCredentialPromptDelegate.kt # explicit save/select prompts
+│   │   │   ├── BrowserDeviceAuthenticator.kt # biometric/device-credential confirmation
+│   │   │   ├── CredentialOriginPolicy.kt # exact HTTPS-origin policy
 │   │   │   ├── TabsPage.kt                # responsive tab workspace UI with injected actions
 │   │   │   ├── TabLifecyclePolicy.kt     # pure Gecko session budget/memory policy
 │   │   │   ├── BrowserPreferencesStore.kt # settings and site-permission persistence
@@ -98,7 +105,7 @@ BrowseX/
 
 ## Current implementation files
 
-The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `BrowserSessionDelegateFactory`, `BrowserAndroidPermissionQueue`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `BrowserSessionDelegateFactory`, `BrowserAndroidPermissionCoordinator`, `BrowserAndroidPermissionQueue`, `BrowserNotificationPermissionCoordinator`, `BrowserCredentialVault`, `BrowserCredentialPromptDelegate`, `BrowserDeviceAuthenticator`, `CredentialOriginPolicy`, `BrowserTabPersistencePolicy`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
 
 ## Dependency direction
 
@@ -151,7 +158,9 @@ Accessibility and font scaling; RTL/localization; responsive layouts; offline/er
 The current shipping target remains Android in the single :app module. Future Windows, macOS, Linux and Android TV clients are product targets, not implemented apps. The intended shared extraction is gradual: pure domain/account/sync models first, then repository contracts and deterministic sync rules; platform UI, browser engines, secure storage and OS integration stay native adapters. See MULTIPLATFORM_ARCHITECTURE.md and ACCOUNT_SYNC_UX_MAP.md. Do not create empty platform modules before a real implementation is ready.
 
 Current account foundation file: app/src/main/java/com/browsex/app/AccountDomainModels.kt. It defines provider-neutral identity, connection state, sync consent, device, platform and record metadata types only. It does not authenticate users, store tokens or synchronize data.
-- `BrowserSessionLifecycleCoordinator.kt`: owns GeckoSession release/reset/close policy for the tab registry; Activity retains view attachment and permission-request queue ownership.
+- `BrowserSessionLifecycleCoordinator.kt`: owns GeckoSession release/reset/close policy for the tab registry; Activity retains view attachment and platform launchers.
+- `BrowserCredentialVault.kt`: encrypted, HTTPS-origin-scoped GeckoView login storage; no account sync or system-wide AutofillService.
+- `BrowserNotificationPermissionCoordinator.kt`: serializes/coalesces Android notification permission requests separately from Gecko media/location permissions.
 - `StreamDownloadCoordinator.kt`: owns stream-download record creation, progress/terminal persistence and cancellation; Activity owns Android permission prompts and user notifications.
 - `STORAGE_MIGRATION_PLAN.md`: concrete legacy key inventory, proposed Room/DataStore schema and idempotent migration/rollback requirements; no backend migration yet.
 
