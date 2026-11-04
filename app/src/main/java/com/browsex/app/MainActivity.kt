@@ -992,12 +992,17 @@ class MainActivity : AppCompatActivity() {
                 onAuthenticated = {
                     if (isFinishing || isDestroyed) return@authenticate
                     credentialVault.unlockForSession()
-                    toast(if (credentialVault.privateBrowsingActive) "Close private tabs to enable autofill" else "Autofill unlocked for 60 seconds. Reload the sign-in page.")
+                    val secret = credentialVault.passwordFor(item.id)
+                    if (secret == null) {
+                        toast(if (credentialVault.privateBrowsingActive) "Close private tabs to view saved entries" else "Saved entry unavailable")
+                        return@authenticate
+                    }
+                    toast("Autofill unlocked for 60 seconds. Reload the sign-in page.")
                     val dialog = AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
-                        .setMessage("Username: " + item.username + "\\nPassword: " + item.password)
+                        .setMessage("Username: " + item.username + "\\nPassword: " + secret)
                         .setPositiveButton(tr("Copy password")) { _, _ ->
                             val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", item.password))
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", secret))
                             toast("Password copied")
                         }
                         .setNegativeButton(tr("Close"), null)
