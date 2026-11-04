@@ -11,6 +11,7 @@ class BrowserStore(context: Context) {
         const val HOME_URL_FOR_STORE = "resource://android/assets/home.html"
         // Bound legacy/corrupt session payloads before the pure session validator processes them.
         const val MAX_RAW_STORED_TABS = 500
+        const val MAX_TRACKED_DOWNLOADS = 300
     }
 
     var adBlockEnabled: Boolean
@@ -38,9 +39,12 @@ class BrowserStore(context: Context) {
     /** DownloadManager IDs explicitly enqueued by BrowseX; excludes other apps' downloads. */
     fun browseXDownloadIds(): Set<Long> = try {
         val array = JSONArray(prefs.getString("browsex_download_ids", "[]"))
-        (0 until array.length()).mapNotNull { index ->
-            array.optLong(index, -1L).takeIf { it > 0L }
-        }.toSet()
+        val firstIndex = (array.length() - MAX_TRACKED_DOWNLOADS).coerceAtLeast(0)
+        buildSet {
+            for (index in firstIndex until array.length()) {
+                array.optLong(index, -1L).takeIf { it > 0L }?.let(::add)
+            }
+        }
     } catch (_: Exception) { emptySet() }
 
     fun addBrowseXDownload(id: Long) {
@@ -49,7 +53,7 @@ class BrowserStore(context: Context) {
         ids.remove(id)
         ids.add(id)
         val array = JSONArray()
-        ids.takeLast(300).forEach { array.put(it) }
+        ids.takeLast(MAX_TRACKED_DOWNLOADS).forEach { array.put(it) }
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
