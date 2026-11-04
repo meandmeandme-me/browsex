@@ -1,9 +1,6 @@
 package com.browsex.app
 
 import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
-import java.util.UUID
 
 /** Compatibility facade over focused preference, session, download and library stores. */
 class BrowserStore(context: Context) {
@@ -11,12 +8,7 @@ class BrowserStore(context: Context) {
     private val preferences = BrowserPreferencesStore(prefs)
     private val sessions = BrowserSessionStore(prefs)
     private val library = BrowserLibraryStore(prefs)
-
-    private companion object {
-        // Bound legacy/corrupt session payloads before the pure session validator processes them.
-        const val MAX_RAW_STORED_TABS = 500
-        const val MAX_TRACKED_DOWNLOADS = 300
-    }
+    private val downloads = BrowserDownloadStore(prefs)
 
     var adBlockEnabled: Boolean
         get() = preferences.adBlockEnabled
@@ -64,27 +56,42 @@ class BrowserStore(context: Context) {
     fun clearSiteMediaDecisions(origin: String) = preferences.clearSiteMediaDecisions(origin)
     fun clearAllSiteMediaDecisions() = preferences.clearAllSiteMediaDecisions()
 
-    @Synchronized
-    fun reserveDownloadFileName(candidate: String): String {
-        val names = try {
-            val array = JSONArray(prefs.getString("browsex_download_names", "[]"))
-            (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }.toMutableSet()
-        } catch (_: Exception) { mutableSetOf() }
-        val dot = candidate.lastIndexOf('.').takeIf { it > 0 } ?: candidate.length
-        val stem = candidate.substring(0, dot)
-        val extension = candidate.substring(dot)
-        var result = candidate
-        var suffix = 1
-        while (names.any { it.equals(result, ignoreCase = true) }) {
-            result = "$stem ($suffix)$extension"
-            suffix++
-        }
-        names.add(result)
-        val array = JSONArray()
-        names.toList().takeLast(MAX_TRACKED_DOWNLOADS).forEach { array.put(it) }
-        prefs.edit().putString("browsex_download_names", array.toString()).apply()
-        return result
-    }
+    fun reserveDownloadFileName(candidate: String): String =
+        downloads.reserveDownloadFileName(candidate)
+
+    fun browseXDownloadIds(): Set<Long> = downloads.browseXDownloadIds()
+    fun addBrowseXDownload(id: Long) = downloads.addBrowseXDownload(id)
+    fun removeBrowseXDownload(id: Long) = downloads.removeBrowseXDownload(id)
+
+    fun beginStreamDownload(displayName: String, mimeType: String, totalBytes: Long = -1L): String =
+        downloads.beginStreamDownload(displayName, mimeType, totalBytes)
+
+    fun updateStreamDownloadProgress(id: String, bytesWritten: Long) =
+        downloads.updateStreamDownloadProgress(id, bytesWritten)
+
+    fun completeStreamDownload(id: String, uri: String, bytesWritten: Long) =
+        downloads.completeStreamDownload(id, uri, bytesWritten)
+
+    fun failStreamDownload(
+        id: String,
+        error: String,
+        cancelled: Boolean = false,
+        bytesWritten: Long? = null
+    ) = downloads.failStreamDownload(id, error, cancelled, bytesWritten)
+
+    fun recoverInterruptedStreamDownloads() = downloads.recoverInterruptedStreamDownloads()
+
+    fun addStreamDownload(
+        displayName: String,
+        uri: String,
+        mimeType: String,
+        bytesWritten: Long,
+        failed: Boolean = false,
+        error: String = ""
+    ): String = downloads.addStreamDownload(displayName, uri, mimeType, bytesWritten, failed, error)
+
+    fun streamDownloads(): List<StreamDownloadRecord> = downloads.streamDownloads()
+    fun removeStreamDownload(id: String) = downloads.removeStreamDownload(id)
 
     fun saveOpenTabs(urls: List<String>, activeIndex: Int) =
         sessions.saveOpenTabs(urls, activeIndex)
