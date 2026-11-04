@@ -73,6 +73,9 @@ Never call a build successful until its workflow conclusion is `success` and the
 
 ## Extracted browser storage boundaries
 
+- [x] Bookmark folders/items, history, legacy bookmark migration and JSON backup/import are delegated to BrowserLibraryStore without changing existing persisted keys.
+- [ ] Verify bookmark/folder ordering, legacy migration, history and backup/import on an upgraded installation.
+
 - [x] Open-tab snapshots, named sessions and recently-closed entries are delegated to BrowserSessionStore using the existing persisted keys and validation rules.
 - [ ] Verify legacy saved tabs, named sessions and recently-closed entries survive upgrade and process restart.
 
