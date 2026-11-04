@@ -132,8 +132,30 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private var shuttingDown = false
     private var browserRuntime: GeckoRuntime? = null
     private var notificationBridge: BrowseXNotificationBridge? = null
-    private var clearingBrowsingData = false
     private var dataClearDialog: AlertDialog? = null
+    private val browsingDataCoordinator by lazy {
+        BrowserBrowsingDataCoordinator(
+            tabs = { tabs },
+            activeTab = { activeTab },
+            sessionLifecycle = sessionLifecycleCoordinator,
+            releaseViewSession = { if (::browserView.isInitialized) browserView.releaseSession() },
+            replaceTabs = tabController::replaceTabs,
+            activateRestoredSelection = tabController::activateRestoredSelection,
+            persistTabs = ::persistTabs,
+            storageController = { browserRuntime?.storageController },
+            clearHistory = store::clearHistory,
+            clearSiteMediaDecisions = { origin ->
+                if (origin == null) store.clearAllSiteMediaDecisions()
+                else store.clearSiteMediaDecisions(origin)
+            },
+            dispatchToMain = { action -> runOnUiThread(action) },
+            isHostUnavailable = { isFinishing || isDestroyed },
+            onBusyChanged = ::setBrowsingDataBusy,
+            onFinished = { success ->
+                toast(if (success) "Selected browsing data cleared" else "Could not clear browsing data")
+            }
+        )
+    }
     private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
     private val platformPermissionQueue = BrowserAndroidPermissionQueue()
@@ -941,17 +963,13 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         ).show()
     }
 
-    /**
-     * GeckoView requires every open session to be closed before persistent site data is cleared.
-     * Keep only validated tab URLs, close the sessions, clear data, then recreate the tabs lazily.
-     */
     private fun clearBrowsingData(flags: Long, clearHistory: Boolean) =
-        clearBrowsingDataInternal(flags, clearHistory, host = null, mediaOrigin = null)
+        browsingDataCoordinator.clear(flags, clearHistory, host = null, mediaOrigin = null)
 
     private fun clearBrowsingDataForHost(host: String, mediaOrigin: String) {
         val canonicalHost = if (host.contains(':')) host else
             runCatching { java.net.IDN.toASCII(host, java.net.IDN.USE_STD3_ASCII_RULES) }.getOrDefault(host)
-        clearBrowsingDataInternal(
+        browsingDataCoordinator.clear(
             org.mozilla.geckoview.StorageController.ClearFlags.SITE_DATA,
             clearHistory = false,
             host = canonicalHost,
@@ -959,36 +977,8 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         )
     }
 
-    private fun clearBrowsingDataInternal(
-        flags: Long,
-        clearHistory: Boolean,
-        host: String?,
-        mediaOrigin: String?
-    ) {
-        if (clearingBrowsingData) return
-        if (flags == 0L) {
-            if (clearHistory) store.clearHistory()
-            toast("Selected browsing data cleared")
-            return
-        }
-        if (host != null && host.isBlank()) {
-            toast("Could not clear browsing data")
-            return
-        }
-        val regularTabs = tabs.filterNot { it.privateMode }
-        val snapshot = TabSessionState.normalize(
-            regularTabs.map { it.url },
-            regularTabs.indexOfFirst { it === activeTab }.takeIf { it >= 0 } ?: 0,
-            HOME_URL
-        )
-        val tabsToRestore = snapshot.urls.mapIndexed { index, url ->
-            regularTabs.getOrNull(index)?.also { it.url = url } ?: BrowserTab(url = url)
-        }
-        if (::browserView.isInitialized) browserView.releaseSession()
-        tabs.toList().forEach(sessionLifecycleCoordinator::resetSession)
-        tabController.replaceTabs(tabsToRestore, snapshot.activeIndex)
-        clearingBrowsingData = flags != 0L
-        if (clearingBrowsingData) {
+    private fun setBrowsingDataBusy(busy: Boolean) {
+        if (busy) {
             dataClearDialog = AlertDialog.Builder(this)
                 .setTitle(tr("Privacy center"))
                 .setMessage(tr("Clearing selected browsing data…"))
@@ -996,47 +986,9 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
                 .setCancelable(false)
                 .create()
             dataClearDialog?.show()
-        }
-
-        fun restoreAfterClear(success: Boolean) {
-            runOnUiThread {
-                if (isFinishing || isDestroyed) return@runOnUiThread
-                dataClearDialog?.dismiss()
-                dataClearDialog = null
-                clearingBrowsingData = false
-                if (success) {
-                    if (clearHistory) store.clearHistory()
-                    when {
-                        mediaOrigin != null -> store.clearSiteMediaDecisions(mediaOrigin)
-                        (flags and org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS) != 0L ||
-                            (flags and org.mozilla.geckoview.StorageController.ClearFlags.SITE_DATA) != 0L ->
-                            store.clearAllSiteMediaDecisions()
-                    }
-                }
-                tabController.activateRestoredSelection(snapshot.activeIndex)
-                persistTabs()
-                toast(if (success) "Selected browsing data cleared" else "Could not clear browsing data")
-            }
-        }
-
-        val storage = browserRuntime?.storageController
-        if (storage == null) {
-            restoreAfterClear(false)
-            return
-        }
-        try {
-            val operation = if (host.isNullOrBlank()) storage.clearData(flags)
-                else storage.clearDataFromHost(host, flags)
-            operation.accept(
-                { restoreAfterClear(true) },
-                { error ->
-                    android.util.Log.e("BrowseX", "Browsing data clearing failed", error)
-                    restoreAfterClear(false)
-                }
-            )
-        } catch (error: RuntimeException) {
-            android.util.Log.e("BrowseX", "Could not start browsing data clearing", error)
-            restoreAfterClear(false)
+        } else {
+            dataClearDialog?.dismiss()
+            dataClearDialog = null
         }
     }
 
