@@ -35,3 +35,4 @@ Never store GeckoSession, cookies, credentials or private-tab URLs in this migra
 ## Consequences
 
 The current storage backend remains unchanged, reducing immediate risk. Feature code can migrate incrementally. There is temporary duplication of facade methods and additional store objects, which should be removed only after callers depend on domain repositories directly.
+Detailed concrete key mapping, proposed Room tables, DataStore preferences, retry/rollback protocol and required tests are maintained in STORAGE_MIGRATION_PLAN.md. This remains a proposal until Android-backed migration tests are implemented.
