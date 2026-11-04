@@ -69,7 +69,8 @@ Never call a build successful until its workflow conclusion is `success` and the
 
 - [ ] Save a named session, close/reopen BrowseX, and verify the saved session remains available.
 - [ ] Open a saved session and verify its active tab is selected; verify the 20-tab cap and partial-open warning.
-- [ ] Verify private tabs are never included in a named session or normal restore.
+- [ ] Verify private tabs are never included in a named session, recently-closed list or normal restore.
+- [ ] Close a regular tab, restore it from Recently closed, and verify the entry is consumed; verify the ten-entry cap.
 - [ ] Save a session using an existing name and verify replacement requires confirmation.
 - [ ] Import backups with colliding folder IDs and duplicate folder names; verify bookmarks map to the intended folder.
 - [ ] Import malformed, oversized, unsupported-version and non-HTTP(S) bookmark data; verify no partial writes occur.
@@ -77,4 +78,5 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [ ] Search bookmarks/history by page title, domain and URL.
 - [ ] Trigger Android memory pressure with multiple tabs; verify active tab remains usable and inactive tabs reopen from validated URLs.
 - [ ] Verify response-stream writer cleanup on process death, MediaStore pending-row cleanup, FileProvider access on Android 8/9, and large-file behavior.
-- [ ] Verify all target locales, mixed RTL/LTR text, screen readers, large font scale, landscape and tablet layouts.
+- [ ] Verify English/Arabic resources, device-locale fallback, mixed RTL/LTR text, screen readers, large font scale, landscape and tablet layouts.
+- [ ] Add reviewed translations and plural/date/number tests for each locale pack before advertising that locale as fully supported.
