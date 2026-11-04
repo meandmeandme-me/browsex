@@ -27,6 +27,11 @@ internal class BrowserContentProcessRecoveryCoordinator(
             if (isHostUnavailable() || !containsTab(tab) || tab.session !== session) return@dispatchToMain
 
             if (tab.recoveryAttempts >= MAX_AUTOMATIC_RECOVERY_ATTEMPTS) {
+                tab.permissionDelegate?.cancelPending()
+                cancelPlatformPermissions(session)
+                runCatching { session.close() }
+                    .onFailure { android.util.Log.w("BrowseX", "Could not close repeatedly crashed session", it) }
+                tab.sessionOpened = false
                 tab.crashed = true
                 tab.progress = 0
                 if (isActiveTab(tab)) showMessage("This tab crashed again. Reopen it to continue.")
