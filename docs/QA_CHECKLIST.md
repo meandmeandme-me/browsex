@@ -45,7 +45,10 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] Site Info refreshes stored Gecko permissions after every Allow/Block/Ask change; permission rows are keyboard/TalkBack accessible; persistent storage explains its non-revocable grant.
 - [ ] API 33+ notification permission prompt appears on first eligible request; app toggle, OS-level disable, tap, dismiss and private browsing are correct.
 - [ ] BrowseX downloads list includes only IDs registered by BrowseX.
-- [ ] Downloads complete, open, cancel, remove and survive process restart; missing Android records are clearable.
+- [ ] DownloadManager downloads complete, open, cancel, remove and survive process restart; missing Android records are clearable.
+- [ ] Response-stream downloads show queued/running/terminal states, determinate progress when Content-Length exists, indeterminate progress otherwise, and update without losing the current scroll position.
+- [ ] Cancelling a queued or active response-stream download closes its source stream, removes partial MediaStore/filesystem output, persists a cancelled state and never exposes an incomplete file as complete.
+- [ ] Unfinished response-stream records are marked interrupted after a forced process stop; inspect and clean any orphaned pending MediaStore rows before release.
 - [ ] Verify Android 8–9 legacy storage permission and Android 10+ scoped-storage behavior.
 - [ ] Verify direct response-stream downloads for GET, POST, authenticated responses, cookies, one-time URLs, redirects, duplicate names, storage-full and network loss; verify the exact received bytes and no second network request.
 - [ ] Reader mode handles non-article pages, large font and extraction failures gracefully.
