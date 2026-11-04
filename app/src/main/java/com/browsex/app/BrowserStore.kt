@@ -85,6 +85,14 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("site_media_permissions", json.toString()).apply()
     }
 
+    fun clearSiteMediaDecisions(origin: String) {
+        if (!isSafePermissionOrigin(origin)) return
+        val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
+        catch (_: Exception) { return }
+        json.keys().asSequence().filter { it.startsWith("$origin|") }.toList().forEach(json::remove)
+        prefs.edit().putString("site_media_permissions", json.toString()).apply()
+    }
+
     @Synchronized
     fun reserveDownloadFileName(candidate: String): String {
         val names = try {
