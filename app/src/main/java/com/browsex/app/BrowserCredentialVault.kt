@@ -75,20 +75,15 @@ internal class BrowserCredentialVault(
         // Authorize the Keystore key before decrypting anything for that form.
         val result = GeckoResult<Array<Autocomplete.LoginEntry>>()
         requestAuthentication(
-            onAuthenticated = {
+            {
                 unlockForSession()
                 val entries = synchronized(this) {
-                    if (privateTabsOpen && accessPolicy.canFetchCredentials(privateTabsOpen)) {
-                        emptyArray()
-                    } else if (accessPolicy.canFetchCredentials(privateTabsOpen)) {
-                        loadEntriesForDomain(domain)
-                    } else {
-                        emptyArray()
-                    }
+                    if (accessPolicy.canFetchCredentials(privateTabsOpen)) loadEntriesForDomain(domain)
+                    else emptyArray()
                 }
                 result.complete(entries)
             },
-            onRejected = { result.complete(emptyArray()) }
+            { result.complete(emptyArray()) }
         )
         return result
     }
