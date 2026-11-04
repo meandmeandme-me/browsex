@@ -68,8 +68,8 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
         root.addView(header)
         root.addView(TextView(activity).apply {
             text = t(
-                "Android manages transfers. Some POST downloads or protected requests may not resume exactly; retry and pause are not available for every web request.",
-                "يتولى أندرويد إدارة التنزيل. قد لا تُستأنف بعض تنزيلات POST أو الطلبات المحمية بالطريقة نفسها، كما أن الإيقاف المؤقت والاستئناف غير متاحين لكل الطلبات."
+                "BrowseX saves the response received from the website directly. Older Android-managed downloads may have different retry and resume limits.",
+                "يحفظ BrowseX الاستجابة التي استلمها من الموقع مباشرة. قد تختلف حدود إعادة المحاولة والاستكمال في التنزيلات القديمة التي يديرها أندرويد."
             )
             textSize = 11f
             setTextColor(colors.muted)
