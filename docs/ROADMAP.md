@@ -30,6 +30,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Extract tab membership/selection into BrowserTabRegistry and isolate pure GeckoSession budget/memory-pressure policy.
 - [x] Move tab workspace UI and saved/recent session actions into TabsPage with injected browser callbacks.
 - [x] Centralize tab close cleanup (pending site/Android permission rejection, session deactivation and close) in BrowserSessionLifecycleCoordinator.
+- [x] Use one deterministic GeckoSession teardown path for tab close, session reset, inactive-session release and Activity shutdown; clear per-session delegates/permissions even when cleanup callbacks fail.
 - [x] Extract GeckoSession progress/navigation/content delegate wiring behind a BrowseX-owned callback contract.
 - [ ] Move tab open/close/recovery orchestration and Activity-hosted GeckoSession event handling into a lifecycle-aware coordinator.
 - [x] Split BrowserStore responsibilities into preference, session, library and download stores while preserving existing SharedPreferences keys and the feature-facing facade.
