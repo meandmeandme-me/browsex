@@ -4,7 +4,8 @@
 
 BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX AppCompat/Core and Mozilla GeckoView.
 
-- `MainActivity`: application shell for browser chrome, a process-wide GeckoRuntime reference, tab/session ownership, navigation, delegates, settings entry points, sharing and fullscreen behavior.
+- `MainActivity`: application shell for browser chrome, tab/session coordination, navigation, delegates, settings entry points, sharing and fullscreen behavior.
+- `BrowserRuntimeOwner` and `BrowserTab`: isolated ownership of the process-wide GeckoRuntime and serializable-per-tab UI/session state; private mode is selected before opening each GeckoSession.
 - `BrowserStore`: SharedPreferences persistence for bookmarks, history, validated search-engine preference, open-tab snapshots, permission decisions and BrowseX-owned DownloadManager IDs / filename reservations.
 - `BrowserPalette`: shared light/dark/system color tokens and direction helpers for Android screens.
 - `BrowseXPermissionDelegate`: separates Android runtime permission requests from Gecko content and media permission decisions.

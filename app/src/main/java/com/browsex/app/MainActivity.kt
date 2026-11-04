@@ -8,7 +8,6 @@ import android.webkit.CookieManager
 import android.webkit.URLUtil
 import android.os.Environment
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -48,39 +47,6 @@ import org.mozilla.geckoview.WebNotification
 
 private const val HOME_URL = "resource://android/assets/home.html"
 
-/** GeckoRuntime is process-wide. Sessions are owned by MainActivity and always closed there. */
-private object BrowserEngine {
-    @Volatile private var instance: GeckoRuntime? = null
-    fun runtime(context: Context): GeckoRuntime = instance ?: synchronized(this) {
-        instance ?: GeckoRuntime.create(context.applicationContext).also { instance = it }
-    }
-}
-
-private fun newBrowserSession(privateMode: Boolean): GeckoSession =
-    GeckoSession(GeckoSessionSettings.Builder().usePrivateMode(privateMode).build())
-
-private data class BrowserTab(
-    val privateMode: Boolean = false,
-    var session: GeckoSession = newBrowserSession(privateMode),
-    var sessionOpened: Boolean = false,
-    var title: String = "New tab",
-    var url: String = HOME_URL,
-    var progress: Int = 0,
-    var canGoBack: Boolean = false,
-    var canGoForward: Boolean = false,
-    var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList(),
-    var permissionDelegate: BrowseXPermissionDelegate? = null,
-    var recoveryAttempts: Int = 0,
-    var crashed: Boolean = false,
-    var lastActiveAt: Long = 0L
-)
-
-private data class PendingPlatformPermission(
-    val session: GeckoSession,
-    val permissions: List<String>,
-    val callback: GeckoSession.PermissionDelegate.Callback,
-    var completed: Boolean = false
-)
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
 class MainActivity : AppCompatActivity() {
@@ -195,7 +161,7 @@ class MainActivity : AppCompatActivity() {
             callbacks.forEach { callback -> callback(granted && NotificationManagerCompat.from(this).areNotificationsEnabled()) }
             launchNextPlatformPermission()
         }
-        browserRuntime = BrowserEngine.runtime(applicationContext)
+        browserRuntime = BrowserRuntimeOwner.runtime(applicationContext)
         browserRuntime?.settings?.setPreferredColorScheme(when (store.themeMode) {
             "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
             "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
@@ -747,7 +713,7 @@ class MainActivity : AppCompatActivity() {
             }
             if (!tab.sessionOpened) {
                 attachDelegates(tab)
-                tab.session.open(BrowserEngine.runtime(this))
+                tab.session.open(BrowserRuntimeOwner.runtime(this))
                 tab.sessionOpened = true
                 tab.session.loadUri(tab.url.ifBlank { homePageUrl() })
             }
@@ -839,7 +805,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 val child = BrowserTab(privateMode = tab.privateMode)
                 attachDelegates(child)
-                child.session.open(BrowserEngine.runtime(this@MainActivity))
+                child.session.open(BrowserRuntimeOwner.runtime(this@MainActivity))
                 child.sessionOpened = true
                 tabs.add(child)
                 runOnUiThread {
@@ -880,7 +846,7 @@ class MainActivity : AppCompatActivity() {
                     cancelPlatformPermissionRequests(session)
                     attachDelegates(tab)
                     try {
-                        session.open(BrowserEngine.runtime(this@MainActivity))
+                        session.open(BrowserRuntimeOwner.runtime(this@MainActivity))
                         tab.sessionOpened = true
                         if (wasActive) {
                             activateTab(tab)

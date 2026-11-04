@@ -20,6 +20,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Restore tab metadata without opening every saved tab at startup; open only the active session and load background tabs on demand.
 - [x] Add Gecko private-mode tabs; exclude their URLs from persisted sessions and history, inherit private mode for popup tabs, and close their session data with the tab.
 - [x] Add BrowseX Recall to search regular open tabs, bookmarks and recent history from one surface; private tabs are intentionally excluded.
+- [x] Extract process-wide GeckoRuntime ownership and the tab/session state model from MainActivity into a dedicated browser-core file.
 - [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
 - [x] Add one automatic recovery attempt for crashed content sessions and a manual retry path after repeated crashes.
