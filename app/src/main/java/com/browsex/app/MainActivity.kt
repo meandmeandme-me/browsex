@@ -51,8 +51,9 @@ private const val MAX_LIVE_GECKO_SESSIONS = 3
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
 class MainActivity : AppCompatActivity() {
-    private val tabs = mutableListOf<BrowserTab>()
-    private var activeTab: BrowserTab? = null
+    private val tabRegistry = BrowserTabRegistry<BrowserTab>()
+    private val tabs: List<BrowserTab> get() = tabRegistry.tabs
+    private val activeTab: BrowserTab? get() = tabRegistry.activeTab
     private lateinit var store: BrowserStore
     private lateinit var downloadResponseWriter: DownloadResponseWriter
     private lateinit var browserView: GeckoView
@@ -226,19 +227,19 @@ class MainActivity : AppCompatActivity() {
         })
 
         val snapshot = store.restoreOpenTabs()
-        snapshot.urls.forEach { savedUrl -> tabs.add(BrowserTab(url = savedUrl)) }
+        snapshot.urls.forEach { savedUrl -> tabRegistry.add(BrowserTab(url = savedUrl)) }
         val restoredActive = tabs.getOrNull(snapshot.activeIndex)
         val externalUrl = intent?.data?.let(::safeExternalUrl)
         if (externalUrl != null) {
             if (tabs.size >= TabSessionState.MAX_TABS) {
                 val discardIndex = tabs.indices.firstOrNull { tabs[it] !== restoredActive } ?: 0
-                tabs.removeAt(discardIndex)
+                tabRegistry.removeAt(discardIndex)
             }
             val externalTab = BrowserTab(url = externalUrl)
-            tabs.add(externalTab)
+            tabRegistry.add(externalTab)
             activateTab(externalTab)
         } else {
-            val initialTab = restoredActive ?: BrowserTab(url = homePageUrl()).also(tabs::add)
+            val initialTab = restoredActive ?: BrowserTab(url = homePageUrl()).also(tabRegistry::add)
             activateTab(initialTab)
         }
         handleSiteNotificationIntent(intent)
@@ -361,8 +362,8 @@ class MainActivity : AppCompatActivity() {
             }
             tab.sessionOpened = false
         }
-        tabs.clear()
-        activeTab = null
+        tabRegistry.clear()
+        tabRegistry.select(null)
         super.onDestroy()
     }
 
@@ -656,7 +657,7 @@ class MainActivity : AppCompatActivity() {
         }
         val targetUrl = if (url == HOME_URL) homePageUrl() else url
         val tab = BrowserTab(privateMode = privateMode, url = targetUrl)
-        tabs.add(tab)
+        tabRegistry.add(tab)
         activateTab(tab)
     }
 
@@ -668,7 +669,7 @@ class MainActivity : AppCompatActivity() {
                 runCatching { it.session.setFocused(false); it.session.setActive(false) }
             }
         }
-        activeTab = tab
+        tabRegistry.select(tab)
         tab.lastActiveAt = android.os.SystemClock.elapsedRealtime()
         try {
             if (tab.crashed) {
@@ -706,7 +707,7 @@ class MainActivity : AppCompatActivity() {
             runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
         }
         if (wasActive) browserView.releaseSession()
-        tabs.removeAt(index)
+        tabRegistry.removeAt(index)
         if (tab.sessionOpened) runCatching { tab.session.close() }
         tab.sessionOpened = false
         if (tabs.isEmpty()) createTab(homePageUrl())
@@ -776,7 +777,7 @@ class MainActivity : AppCompatActivity() {
                 attachDelegates(child)
                 child.session.open(BrowserRuntimeOwner.runtime(this@MainActivity))
                 child.sessionOpened = true
-                tabs.add(child)
+                tabRegistry.add(child)
                 runOnUiThread {
                     if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
                     else if (tabs.contains(child)) closeTab(child)
@@ -1388,9 +1389,9 @@ class MainActivity : AppCompatActivity() {
             tab.permissionDelegate = null
             tab.sitePermissions = emptyList()
         }
-        tabs.clear()
-        tabs.addAll(tabsToRestore)
-        activeTab = tabsToRestore.getOrNull(snapshot.activeIndex)
+        tabRegistry.clear()
+        tabRegistry.addAll(tabsToRestore)
+        tabRegistry.select(tabsToRestore.getOrNull(snapshot.activeIndex))
         clearingBrowsingData = flags != 0L
         if (clearingBrowsingData) {
             dataClearDialog = AlertDialog.Builder(this)
@@ -1417,7 +1418,7 @@ class MainActivity : AppCompatActivity() {
                             store.clearAllSiteMediaDecisions()
                     }
                 }
-                if (tabs.isEmpty()) tabs.add(BrowserTab(url = homePageUrl()))
+                if (tabs.isEmpty()) tabRegistry.add(BrowserTab(url = homePageUrl()))
                 val restored = tabs.getOrNull(snapshot.activeIndex) ?: tabs.first()
                 activateTab(restored)
                 persistTabs()
