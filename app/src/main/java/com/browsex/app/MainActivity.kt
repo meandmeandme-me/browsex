@@ -553,27 +553,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
-        val items = arrayOf(
-            "Default search engine · ${store.searchEngine}",
-            "Saved pages",
-            "Browsing history",
-            "Clear browsing history",
-            "About Browse X"
-        )
-        AlertDialog.Builder(this).setTitle("Settings").setItems(items) { _, which ->
-            when (which) {
-                0 -> chooseSearchEngine()
-                1 -> showSavedPages("Saved pages", store.bookmarks())
-                2 -> showSavedPages("Browsing history", store.history())
-                3 -> AlertDialog.Builder(this).setMessage("Clear all browsing history?")
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                4 -> AlertDialog.Builder(this)
-                    .setTitle("Browse X")
-                    .setMessage("A quieter, more considered way to explore the web. Powered by GeckoView.")
-                    .setPositiveButton("Done", null).show()
+        SettingsPage(
+            activity = this,
+            store = store,
+            openBookmarks = { showSavedPages("Bookmarks", store.bookmarks()) },
+            openHistory = { showSavedPages("History", store.history()) },
+            openDownloads = { openDownloads() },
+            clearHistory = {
+                store.clearHistory()
+                toast("History cleared")
             }
-        }.show()
+        ).show()
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
