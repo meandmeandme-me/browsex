@@ -461,6 +461,19 @@ class MainActivity : AppCompatActivity() {
             "tab" -> "تبويب"
             "tabs" -> "تبويبات"
             "Tap a card to return to it" -> "اضغط على بطاقة للعودة إلى التبويب"
+            "Save session" -> "حفظ الجلسة"
+            "Saved sessions" -> "الجلسات المحفوظة"
+            "Session name" -> "اسم الجلسة"
+            "Save browsing session" -> "حفظ جلسة التصفح"
+            "Session saved" -> "تم حفظ الجلسة"
+            "No regular tabs to save" -> "لا توجد تبويبات عادية لحفظها"
+            "Session name is invalid or the session limit was reached" -> "اسم الجلسة غير صالح أو تم بلوغ الحد الأقصى"
+            "No saved sessions" -> "لا توجد جلسات محفوظة"
+            "Open session" -> "فتح الجلسة"
+            "Delete session" -> "حذف الجلسة"
+            "Session deleted" -> "تم حذف الجلسة"
+            "Some tabs were skipped because the tab limit was reached" -> "تم تخطي بعض التبويبات بسبب بلوغ الحد الأقصى"
+            "Tab limit reached" -> "تم بلوغ الحد الأقصى للتبويبات"
             "New tab" -> "تبويب جديد"
             "Remove bookmark" -> "إزالة من المفضلة"
             "Add bookmark" -> "إضافة للمفضلة"
@@ -991,9 +1004,13 @@ class MainActivity : AppCompatActivity() {
                                 if (action == 0) {
                                     val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
                                     val toOpen = selected.urls.take(available)
-                                    toOpen.forEach(::createTab)
+                                    val firstOpenedIndex = tabs.size
+                                    toOpen.forEach { createTab(it) }
                                     if (toOpen.isEmpty()) toast("Tab limit reached")
-                                    else if (toOpen.size < selected.urls.size) toast("Some tabs were skipped because the tab limit was reached")
+                                    else {
+                                        activateTab(tabs[firstOpenedIndex + selected.activeIndex.coerceIn(0, toOpen.lastIndex)])
+                                        if (toOpen.size < selected.urls.size) toast("Some tabs were skipped because the tab limit was reached")
+                                    }
                                 } else {
                                     store.removeNamedSession(selected.id)
                                     toast("Session deleted")
