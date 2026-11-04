@@ -237,6 +237,72 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
+    fun addStreamDownload(
+        displayName: String,
+        uri: String,
+        mimeType: String,
+        bytesWritten: Long,
+        failed: Boolean = false,
+        error: String = ""
+    ): String {
+        val id = "stream_download_${UUID.randomUUID()}"
+        val records = streamDownloads().toMutableList()
+        records.add(0, StreamDownloadRecord(
+            id = id,
+            displayName = displayName.take(140),
+            uri = uri.take(2048),
+            mimeType = mimeType.take(120),
+            bytesWritten = bytesWritten.coerceAtLeast(0L),
+            createdAt = System.currentTimeMillis(),
+            failed = failed,
+            error = error.take(240)
+        ))
+        writeStreamDownloads(records)
+        return id
+    }
+
+    fun streamDownloads(): List<StreamDownloadRecord> = try {
+        val stored = prefs.getString("stream_downloads_v1", "[]") ?: "[]"
+        if (stored.length > 500_000) emptyList() else {
+            val array = JSONArray(stored)
+            (0 until minOf(array.length(), MAX_TRACKED_DOWNLOADS)).mapNotNull { index ->
+                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id").take(100)
+                val name = item.optString("displayName").take(140)
+                val uri = item.optString("uri").take(2048)
+                if (id.isBlank() || name.isBlank() || uri.isBlank()) return@mapNotNull null
+                StreamDownloadRecord(
+                    id, name, uri,
+                    item.optString("mimeType", "application/octet-stream").take(120),
+                    item.optLong("bytesWritten", 0L).coerceAtLeast(0L),
+                    item.optLong("createdAt", 0L).coerceAtLeast(0L),
+                    item.optBoolean("failed", false),
+                    item.optString("error").take(240)
+                )
+            }
+        }
+    } catch (_: Exception) { emptyList() }
+
+    fun removeStreamDownload(id: String) {
+        writeStreamDownloads(streamDownloads().filterNot { it.id == id })
+    }
+
+    private fun writeStreamDownloads(records: List<StreamDownloadRecord>) {
+        val array = JSONArray()
+        records.take(MAX_TRACKED_DOWNLOADS).forEach { item ->
+            array.put(JSONObject()
+                .put("id", item.id)
+                .put("displayName", item.displayName)
+                .put("uri", item.uri)
+                .put("mimeType", item.mimeType)
+                .put("bytesWritten", item.bytesWritten)
+                .put("createdAt", item.createdAt)
+                .put("failed", item.failed)
+                .put("error", item.error))
+        }
+        prefs.edit().putString("stream_downloads_v1", array.toString()).apply()
+    }
+
     fun bookmarks(): List<String> = bookmarkItems().map { it.url }
     fun history(): List<String> = historyEntries().map { it.url }
 
