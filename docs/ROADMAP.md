@@ -7,14 +7,14 @@ This file is the source of truth for feature sequencing. Keep each task small an
 - [x] Keep all work on `rewrite-v2`; protect `main` from experimental changes.
 - [x] Record architecture, lifecycle rules, compatibility targets and feature contracts.
 - [x] Record known incomplete features and test gates.
-- [ ] Add automated unit tests for URL normalization and BrowserStore.
-- [ ] Add CI checks for unit tests, lint and APK outputs.
+- [x] Add JVM unit tests for URL normalization, malformed URLs and unsafe schemes.\n- [ ] Add BrowserStore persistence tests (requires Android test doubles or instrumentation).
+- [x] Add CI checks for unit tests, lint, APK signature verification and checksums.
 - [ ] Verify APK signing/update strategy for repeat installs.
 
 ## Phase 1 — browser foundation
 
-- [ ] Extract URL parsing/validation from MainActivity.
-- [ ] Add tests for URL schemes, search queries, malformed URLs and external intents.
+- [x] Extract URL parsing/validation from MainActivity into a pure tested policy.
+- [x] Add tests for URL schemes, search queries and malformed URLs.\n- [ ] Add external-intent validation tests.
 - [ ] Verify tab lifecycle, process recreation and session switching.
 - [ ] Verify back/forward, fullscreen, popup/new-session and share flows.
 
