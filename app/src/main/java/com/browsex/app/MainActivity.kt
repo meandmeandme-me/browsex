@@ -1,6 +1,9 @@
 package com.browsex.app
 
+import android.Manifest
 import android.app.DownloadManager
+import android.content.pm.PackageManager
+import android.os.Build
 import android.webkit.CookieManager
 import android.webkit.URLUtil
 import android.os.Environment
@@ -23,7 +26,13 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -34,6 +43,7 @@ import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.WebResponse
+import org.mozilla.geckoview.WebNotification
 
 private const val HOME_URL = "resource://android/assets/home.html"
 private val COLOR_BG = Color.rgb(13, 17, 23)
@@ -50,13 +60,23 @@ private object BrowserEngine {
 }
 
 private data class BrowserTab(
-    val session: GeckoSession = GeckoSession(),
+    var session: GeckoSession = GeckoSession(),
     var title: String = "New tab",
     var url: String = HOME_URL,
     var progress: Int = 0,
     var canGoBack: Boolean = false,
     var canGoForward: Boolean = false,
-    var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList()
+    var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList(),
+    var permissionDelegate: BrowseXPermissionDelegate? = null,
+    var recoveryAttempts: Int = 0,
+    var crashed: Boolean = false
+)
+
+private data class PendingPlatformPermission(
+    val session: GeckoSession,
+    val permissions: List<String>,
+    val callback: GeckoSession.PermissionDelegate.Callback,
+    var completed: Boolean = false
 )
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
@@ -72,10 +92,50 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabsButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
+    private var browserRuntime: GeckoRuntime? = null
+    private var notificationBridge: BrowseXNotificationBridge? = null
+    private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
+    private val queuedPlatformPermissions = java.util.ArrayDeque<PendingPlatformPermission>()
+    private var activePlatformPermission: PendingPlatformPermission? = null
+    private val notificationPermissionCallbacks = mutableListOf<(Boolean) -> Unit>()
+    private var notificationPermissionInFlight = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        AppCompatDelegate.setApplicationLocales(
+            LocaleListCompat.forLanguageTags(if (store.languageMode == "system") "" else store.languageMode)
+        )
+        platformPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { grants ->
+            val pending = activePlatformPermission
+            activePlatformPermission = null
+            if (pending != null && !pending.completed) {
+                val granted = pending.permissions.all { grants[it] == true } &&
+                    pending.session === activeTab?.session && tabs.any { it.session === pending.session }
+                pending.permissions.forEach { permission ->
+                    if (grants[permission] == true) store.clearPlatformPermissionDenial(permission)
+                    else store.markPlatformPermissionDenied(permission)
+                }
+                if (granted) pending.callback.grant() else pending.callback.reject()
+            }
+            launchNextPlatformPermission()
+        }
+        notificationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            notificationPermissionInFlight = false
+            if (granted) store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS)
+            else store.markPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS)
+            val callbacks = notificationPermissionCallbacks.toList()
+            notificationPermissionCallbacks.clear()
+            callbacks.forEach { callback -> callback(granted && NotificationManagerCompat.from(this).areNotificationsEnabled()) }
+        }
+        browserRuntime = BrowserEngine.runtime(applicationContext)
+        notificationBridge = BrowseXNotificationBridge(this, store, ::requestSiteNotificationPermission)
+        browserRuntime?.setWebNotificationDelegate(notificationBridge)
         window.statusBarColor = Color.rgb(239, 245, 250)
         window.navigationBarColor = Color.rgb(239, 245, 250)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
@@ -102,17 +162,50 @@ class MainActivity : AppCompatActivity() {
             snapshot.urls.forEach(::createTab)
             tabs.getOrNull(snapshot.activeIndex)?.let(::activateTab)
         }
+        handleSiteNotificationIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        intent.data?.let(::safeExternalUrl)?.let(::createTab)
+        if (intent.action == BrowseXNotificationBridge.ACTION_SITE_NOTIFICATION_CLICK) {
+            handleSiteNotificationIntent(intent)
+        } else {
+            intent.data?.let(::safeExternalUrl)?.let(::createTab)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        activeTab?.session?.let {
+            runCatching { it.setActive(true); it.setFocused(true) }
+        }
     }
 
     override fun onStop() {
         persistTabs()
+        tabs.forEach { tab ->
+            runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
+        }
         super.onStop()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            persistTabs()
+            tabs.filter { it !== activeTab }.forEach { tab ->
+                runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
+            }
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        persistTabs()
+        tabs.filter { it !== activeTab }.forEach { tab ->
+            runCatching { tab.session.setActive(false) }
+        }
     }
 
     private fun persistTabs() {
@@ -123,11 +216,144 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         persistTabs()
         shuttingDown = true
+        queuedPlatformPermissions.toList().forEach { it.callback.reject() }
+        queuedPlatformPermissions.clear()
+        activePlatformPermission?.let { pending ->
+            if (!pending.completed) pending.callback.reject()
+            pending.completed = true
+        }
+        activePlatformPermission = null
+        notificationPermissionCallbacks.toList().forEach { it(false) }
+        notificationPermissionCallbacks.clear()
+        tabs.toList().forEach { tab ->
+            tab.permissionDelegate?.cancelPending()
+            cancelPlatformPermissionRequests(tab.session)
+        }
+        browserRuntime?.setWebNotificationDelegate(null)
         if (::browserView.isInitialized) browserView.releaseSession()
-        tabs.toList().forEach { it.session.close() }
+        tabs.toList().forEach { tab ->
+            runCatching { tab.session.setFocused(false); tab.session.setActive(false); tab.session.close() }
+        }
         tabs.clear()
         activeTab = null
         super.onDestroy()
+    }
+
+    fun requestAndroidPermissions(
+        session: GeckoSession,
+        requested: Array<String>,
+        callback: GeckoSession.PermissionDelegate.Callback
+    ) {
+        if (shuttingDown || session !== activeTab?.session) {
+            callback.reject()
+            return
+        }
+        val supported = setOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        )
+        val permissions = requested.distinct()
+        if (permissions.isEmpty() || permissions.any { it !in supported }) {
+            callback.reject()
+            return
+        }
+        val missing = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isEmpty()) {
+            permissions.forEach(store::clearPlatformPermissionDenial)
+            callback.grant()
+            return
+        }
+        if (missing.any(store::wasPlatformPermissionDenied)) {
+            callback.reject()
+            return
+        }
+        queuedPlatformPermissions.add(PendingPlatformPermission(session, missing, callback))
+        launchNextPlatformPermission()
+    }
+
+    private fun launchNextPlatformPermission() {
+        if (notificationPermissionInFlight || activePlatformPermission != null ||
+            !::platformPermissionLauncher.isInitialized || isFinishing || isDestroyed
+        ) return
+        while (queuedPlatformPermissions.isNotEmpty()) {
+            val next = queuedPlatformPermissions.removeFirst()
+            if (next.completed || next.session !== activeTab?.session ||
+                tabs.none { it.session === next.session }
+            ) {
+                if (!next.completed) next.callback.reject()
+                continue
+            }
+            activePlatformPermission = next
+            platformPermissionLauncher.launch(next.permissions.toTypedArray())
+            return
+        }
+    }
+
+    private fun cancelPlatformPermissionRequests(session: GeckoSession) {
+        val iterator = queuedPlatformPermissions.iterator()
+        while (iterator.hasNext()) {
+            val pending = iterator.next()
+            if (pending.session === session) {
+                pending.completed = true
+                pending.callback.reject()
+                iterator.remove()
+            }
+        }
+        activePlatformPermission?.takeIf { it.session === session && !it.completed }?.let {
+            it.completed = true
+            it.callback.reject()
+        }
+    }
+
+    fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) {
+        if (!store.siteNotificationsEnabled || !NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            callback(false)
+            return
+        }
+        if (Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        ) {
+            store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS)
+            callback(true)
+            return
+        }
+        if (store.wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) ||
+            !::notificationPermissionLauncher.isInitialized || isFinishing || isDestroyed
+        ) {
+            callback(false)
+            return
+        }
+        notificationPermissionCallbacks.add(callback)
+        if (!notificationPermissionInFlight) {
+            notificationPermissionInFlight = true
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun handleSiteNotificationIntent(intent: Intent?) {
+        if (intent?.action != BrowseXNotificationBridge.ACTION_SITE_NOTIFICATION_CLICK) return
+        val notification = intent.getParcelableExtra<WebNotification>(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
+        if (notification != null) {
+            runCatching { notification.click(); notification.dismiss() }
+            val source = notification.source?.let { safeExternalUrl(Uri.parse(it)) }
+            if (source != null && !isFinishing && !isDestroyed) {
+                val sourceUri = Uri.parse(source)
+                val existing = tabs.firstOrNull { tab ->
+                    val tabUri = Uri.parse(tab.url)
+                    tabUri.scheme.equals(sourceUri.scheme, true) &&
+                        tabUri.host.equals(sourceUri.host, true) &&
+                        tabUri.port == sourceUri.port
+                }
+                if (existing != null) activateTab(existing) else createTab(source)
+            }
+        }
+        intent.action = null
+        intent.removeExtra(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -293,7 +519,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateTab(tab: BrowserTab) {
         if (!tabs.contains(tab)) return
+        val previous = activeTab
+        if (previous !== tab) {
+            previous?.let {
+                it.session.setFocused(false)
+                it.session.setActive(false)
+            }
+        }
         activeTab = tab
+        tab.crashed = false
+        tab.session.setActive(true)
+        tab.session.setFocused(true)
         browserView.setSession(tab.session)
         updateChrome()
     }
@@ -302,6 +538,9 @@ class MainActivity : AppCompatActivity() {
         val index = tabs.indexOf(tab)
         if (index < 0) return
         val wasActive = activeTab === tab
+        tab.permissionDelegate?.cancelPending()
+        cancelPlatformPermissionRequests(tab.session)
+        runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
         if (wasActive) browserView.releaseSession()
         tabs.removeAt(index)
         tab.session.close()
@@ -312,6 +551,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun attachDelegates(tab: BrowserTab) {
         val session = tab.session
+        tab.permissionDelegate = BrowseXPermissionDelegate(this, store) { requested ->
+            requested === activeTab?.session && tabs.any { it.session === requested } && !shuttingDown
+        }
+        session.permissionDelegate = tab.permissionDelegate
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
                 tab.progress = 1
@@ -323,7 +566,11 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.progress = 100
-                if (success) store.addHistory(tab.url)
+                if (success) {
+                    store.addHistory(tab.url)
+                    tab.recoveryAttempts = 0
+                    tab.crashed = false
+                }
                 if (tab === activeTab) updateChrome()
             }
         }
@@ -373,6 +620,35 @@ class MainActivity : AppCompatActivity() {
             override fun onCloseRequest(session: GeckoSession) { closeTab(tab) }
             override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
                 enqueueDownload(response)
+            }
+            override fun onCrash(session: GeckoSession) {
+                runOnUiThread {
+                    if (shuttingDown || isFinishing || isDestroyed ||
+                        !tabs.contains(tab) || tab.session !== session
+                    ) return@runOnUiThread
+                    if (tab.recoveryAttempts >= 1) {
+                        tab.crashed = true
+                        tab.progress = 0
+                        if (tab === activeTab) toast("This tab crashed again. Reopen it to continue.")
+                        updateChrome()
+                        return@runOnUiThread
+                    }
+                    tab.recoveryAttempts += 1
+                    val restoreUrl = tab.url.ifBlank { HOME_URL }
+                    val wasActive = tab === activeTab
+                    tab.permissionDelegate?.cancelPending()
+                    cancelPlatformPermissionRequests(session)
+                    attachDelegates(tab)
+                    try {
+                        session.open(BrowserEngine.runtime(this@MainActivity))
+                        if (wasActive) activateTab(tab)
+                        session.loadUri(restoreUrl)
+                    } catch (error: RuntimeException) {
+                        tab.crashed = true
+                        android.util.Log.e("BrowseX", "Tab recovery failed", error)
+                        if (wasActive) toast("Could not restore this tab. Open a new tab.")
+                    }
+                }
             }
         }
     }
