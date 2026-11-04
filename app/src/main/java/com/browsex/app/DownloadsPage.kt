@@ -58,6 +58,10 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
             gravity = Gravity.CENTER
             setTextColor(colors.accent)
             background = rounded(colors.card, 13)
+            minimumWidth = dp(48)
+            minimumHeight = dp(48)
+            isClickable = true
+            isFocusable = true
             contentDescription = t("Refresh downloads", "تحديث التنزيلات")
         }
         header.addView(refresh, LinearLayout.LayoutParams(dp(44), dp(44)))
@@ -111,11 +115,12 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
             list.removeAllViews()
             val ownedIds = store.browseXDownloadIds()
             val seenIds = mutableSetOf<Long>()
+            var querySucceeded = ownedIds.isEmpty()
             // Query only IDs registered by BrowseX; never enumerate other apps' downloads.
             val cursor = try {
                 if (ownedIds.isEmpty()) null else manager.query(
                     DownloadManager.Query().setFilterById(*ownedIds.toLongArray())
-                )
+                ).also { querySucceeded = it != null }
             } catch (error: SecurityException) {
                 android.util.Log.w("BrowseX", "Downloads query permission failure", error)
                 null
@@ -175,6 +180,11 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                         gravity = Gravity.CENTER
                         setTextColor(if (status == DownloadManager.STATUS_SUCCESSFUL) colors.accent else colors.danger)
                         setPadding(dp(10), dp(8), dp(6), dp(8))
+                        minimumWidth = dp(48)
+                        minimumHeight = dp(48)
+                        isClickable = true
+                        isFocusable = true
+                        contentDescription = if (status == DownloadManager.STATUS_SUCCESSFUL) t("Open downloaded file", "فتح الملف المنزّل") else t("Manage download", "إدارة التنزيل")
                         setOnClickListener {
                             if (status == DownloadManager.STATUS_SUCCESSFUL) {
                                 val uri = manager.getUriForDownloadedFile(id)
@@ -202,6 +212,18 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                     item.addView(action)
                     list.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
                 }
+            }
+            if (!querySucceeded) {
+                list.addView(TextView(activity).apply {
+                    text = t(
+                        "Android could not read the download list. Check app access and refresh; existing downloads were not removed.",
+                        "تعذّر على أندرويد قراءة قائمة التنزيلات. تحقق من صلاحيات التطبيق ثم حدّث القائمة؛ لم تُحذف سجلات التنزيل."
+                    )
+                    textSize = 12f
+                    setTextColor(colors.danger)
+                    setPadding(dp(14), dp(18), dp(14), dp(18))
+                })
+                return
             }
             val missing = ownedIds - seenIds
             missing.forEach { id ->

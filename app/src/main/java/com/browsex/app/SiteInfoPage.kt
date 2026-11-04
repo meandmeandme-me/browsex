@@ -12,7 +12,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import org.mozilla.geckoview.GeckoSession
 
-/** Read-only site identity and the content permissions GeckoView reports for the current origin. */
+/** Site identity, live GeckoView content permission controls and per-origin media decisions. */
 class SiteInfoPage(
     private val activity: MainActivity,
     private val url: String,
@@ -63,7 +63,7 @@ class SiteInfoPage(
         root.addView(TextView(activity).apply {
             text = title.ifBlank { t("Untitled page", "صفحة بلا عنوان") }
             textSize = 14f
-            setTextColor(Color.rgb(42, 57, 72))
+            setTextColor(colors.ink)
             setPadding(0, 0, 0, dp(8))
         })
         root.addView(TextView(activity).apply {
@@ -78,7 +78,7 @@ class SiteInfoPage(
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.06f
-            setTextColor(Color.rgb(83, 105, 123))
+            setTextColor(colors.muted)
             setPadding(0, dp(4), 0, dp(8))
         })
 
@@ -98,7 +98,7 @@ class SiteInfoPage(
             root.addView(TextView(activity).apply {
                 text = t("No site permissions have been requested on this page.", "لم يطلب هذا الموقع أي أذونات حتى الآن.")
                 textSize = 13f
-                setTextColor(Color.rgb(83, 105, 123))
+                setTextColor(colors.muted)
                 setPadding(dp(12), dp(14), dp(12), dp(14))
                 background = cardBackground()
             })
@@ -108,9 +108,12 @@ class SiteInfoPage(
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(12), dp(11), dp(12), dp(11))
+                    minimumHeight = dp(54)
                     background = cardBackground()
+                    isClickable = true
+                    isFocusable = true
                 }
-                val name = permissionNames[permission.permission] ?: "Website permission"
+                val name = permissionNames[permission.permission] ?: t("Website permission", "إذن الموقع")
                 row.addView(TextView(activity).apply {
                     text = name
                     textSize = 14f
@@ -123,14 +126,16 @@ class SiteInfoPage(
                     else -> t("Ask", "اسأل في كل مرة")
                 }
                 row.addView(TextView(activity).apply {
-                    text = status
+                    text = "$status  ›"
                     textSize = 12f
                     setTextColor(when (effectiveValue) {
                         GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW -> colors.success
                         GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY -> colors.danger
-                        else -> Color.rgb(83, 105, 123)
+                        else -> colors.muted
                     })
                 })
+                row.contentDescription = t("Change ", "تغيير إذن ") + name + ", " + status
+                row.setOnClickListener { showPermissionChoices(permission, name) }
                 root.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
             }
         }
