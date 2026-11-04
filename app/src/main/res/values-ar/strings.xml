@@ -243,4 +243,9 @@
     <string name="ui_replace_all_current_bookmarks_and_folders">استبدال جميع المفضلة والمجلدات الحالية؟</string>
     <string name="ui_import_preview_message">العناصر: %1$d\nالصالح: %2$d\nالمتجاهل: %3$d\nالمكرر في النسخة: %4$d\nالموجود مسبقًا: %5$d\nالمجلدات: %6$d</string>
     <string name="ui_tabs_title">علامات التبويب</string>
+    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">هذا يحذف سجل التصفح المحفوظ في BrowseX. لا يحذف الملفات التي تم تنزيلها أو المفضلة.</string>
+    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">يعمل BrowseX بمحرك Mozilla GeckoView. لا تزال بعض ميزات المتصفح قيد التطوير.</string>
+    <string name="ui_browsex_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">يحفظ BrowseX الاستجابة التي استلمها من الموقع مباشرة. قد تختلف حدود إعادة المحاولة والاستكمال في التنزيلات القديمة التي يديرها أندرويد.</string>
+    <string name="ui_remove_download_record">حذف سجل التنزيل</string>
+    <string name="ui_remove_this_download_from_browsex_the_saved_file_will_remain_on_your_device">إزالة هذا التنزيل من BrowseX؟ سيبقى الملف محفوظًا على جهازك.</string>
 </resources>
