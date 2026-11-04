@@ -194,7 +194,7 @@ class BrowserStore(context: Context) {
         sessions.take(10).forEach { session ->
             val snapshot = TabSessionState.normalize(session.urls, session.activeIndex, HOME_URL_FOR_STORE)
             val urls = JSONArray()
-            snapshot.urls.forEach(urls::put)
+            snapshot.urls.forEach { urls.put(it) }
             array.put(JSONObject()
                 .put("id", session.id.take(100))
                 .put("name", session.name.trim().take(40))
