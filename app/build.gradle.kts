@@ -56,4 +56,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("org.mozilla.geckoview:geckoview-omni:150.0.20260511200624")
+    testImplementation("junit:junit:4.13.2")
 }
