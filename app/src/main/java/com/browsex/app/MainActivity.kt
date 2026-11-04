@@ -671,15 +671,9 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         if (index < 0) return
         val wasActive = activeTab === tab
         if (!tab.privateMode) store.recordRecentlyClosedTab(tab.url, tab.title)
-        tab.permissionDelegate?.cancelPending()
-        cancelPlatformPermissionRequests(tab.session)
-        if (tab.sessionOpened) {
-            runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
-        }
         if (wasActive) browserView.releaseSession()
+        sessionLifecycleCoordinator.closeAndDiscard(tab)
         tabRegistry.removeAt(index)
-        if (tab.sessionOpened) runCatching { tab.session.close() }
-        tab.sessionOpened = false
         if (tabs.isEmpty()) createTab(homePageUrl())
         else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
         else updateChrome()
