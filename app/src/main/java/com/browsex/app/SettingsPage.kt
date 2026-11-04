@@ -27,7 +27,10 @@ internal class SettingsPage(
     private val openHistory: () -> Unit,
     private val openDownloads: () -> Unit,
     private val clearHistory: () -> Unit,
-    private val setWebsiteNotifications: (Boolean) -> Unit
+    private val setWebsiteNotifications: (Boolean) -> Unit,
+    private val importBookmarks: () -> Unit,
+    private val exportBookmarks: () -> Unit,
+    private val showHomePreferences: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val ink get() = colors.ink
@@ -73,6 +76,11 @@ internal class SettingsPage(
             "Browsing history" to "سجل التصفح",
             "Review or remove visited pages" to "عرض الصفحات التي زرتها أو حذفها",
             "Downloads" to "التنزيلات",
+            "Import bookmarks" to "استيراد المفضلة",
+            "Export bookmarks" to "تصدير المفضلة",
+            "Back up or restore your saved websites" to "نسخ المواقع المحفوظة احتياطيًا أو استعادتها",
+            "Home page" to "الصفحة الرئيسية",
+            "Customize shortcuts and sections" to "تخصيص الاختصارات والأقسام",
             "Open downloaded files" to "فتح الملفات التي تم تنزيلها",
             "Privacy & data" to "الخصوصية والبيانات",
             "Clear browsing history" to "مسح سجل التصفح",
@@ -290,6 +298,20 @@ internal class SettingsPage(
         row("Downloads", "Open downloaded files", action = {
             dialog.dismiss()
             openDownloads()
+        })
+        row("Import bookmarks", "Back up or restore your saved websites", action = {
+            dialog.dismiss()
+            importBookmarks()
+        })
+        row("Export bookmarks", "Back up or restore your saved websites", action = {
+            dialog.dismiss()
+            exportBookmarks()
+        })
+
+        section("Home page")
+        row("Home page", "Customize shortcuts and sections", action = {
+            dialog.dismiss()
+            showHomePreferences()
         })
 
         section("Privacy & data")
