@@ -73,7 +73,8 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [ ] Close a regular tab, restore it from Recently closed, and verify the entry is consumed; verify the ten-entry cap.
 - [ ] Save a session using an existing name and verify replacement requires confirmation.
 - [ ] Import backups with colliding folder IDs and duplicate folder names; verify bookmarks map to the intended folder.
-- [ ] Import malformed, oversized, unsupported-version and non-HTTP(S) bookmark data; verify no partial writes occur.
+- [ ] Import malformed, oversized, unsupported-version and non-HTTP(S) bookmark data; verify preview counts invalid rows and no partial writes occur.
+- [ ] Import duplicates already on device and duplicates inside the backup; verify preview counts conflicts and merge/replace behavior is explicit.
 - [ ] Reorder bookmarks within a folder and verify items in other folders retain their order.
 - [ ] Search bookmarks/history by page title, domain and URL.
 - [ ] Trigger Android memory pressure with multiple tabs; verify active tab remains usable and inactive tabs reopen from validated URLs.
