@@ -13,5 +13,6 @@ internal data class StreamDownloadRecord(
     val totalBytes: Long = -1L
 ) {
     val isActive: Boolean get() = status == "queued" || status == "running"
+    val isFailed: Boolean get() = failed || status == "failed"
     val isCancelled: Boolean get() = status == "cancelled"
 }
