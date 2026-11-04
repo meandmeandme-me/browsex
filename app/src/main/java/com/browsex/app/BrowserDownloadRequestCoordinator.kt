@@ -85,16 +85,26 @@ internal class BrowserDownloadRequestCoordinator(
         }
     }
 
-    private fun isSupported(response: WebResponse): Boolean {
-        val bodyPresent = response.body != null
-        val uri = runCatching { URI(response.uri) }.getOrNull() ?: return false
-        val scheme = uri.scheme?.lowercase()
-        return bodyPresent && (scheme == "https" || scheme == "http") &&
-            !uri.host.isNullOrBlank() && uri.rawUserInfo == null &&
-            response.statusCode in 200..299
-    }
+    private fun isSupported(response: WebResponse): Boolean =
+        BrowserDownloadResponsePolicy.isSupported(
+            rawUrl = response.uri,
+            statusCode = response.statusCode,
+            hasBody = response.body != null
+        )
 
     private fun showIfAvailable(message: String) {
         if (isHostAvailable()) showMessage(message)
+    }
+}
+
+
+/** Pure validation policy for external Gecko download responses. */
+internal object BrowserDownloadResponsePolicy {
+    fun isSupported(rawUrl: String, statusCode: Int, hasBody: Boolean): Boolean {
+        if (!hasBody || statusCode !in 200..299) return false
+        val uri = runCatching { URI(rawUrl) }.getOrNull() ?: return false
+        val scheme = uri.scheme?.lowercase()
+        return (scheme == "https" || scheme == "http") &&
+            !uri.host.isNullOrBlank() && uri.rawUserInfo == null
     }
 }
