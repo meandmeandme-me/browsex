@@ -62,6 +62,8 @@ private data class BrowserTab(
     var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList()
 )
 
+@ExperimentalGeckoViewApi
+@OptIn(ExperimentalGeckoViewApi::class)
 class MainActivity : AppCompatActivity() {
     private val tabs = mutableListOf<BrowserTab>()
     private var activeTab: BrowserTab? = null
