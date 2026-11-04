@@ -44,7 +44,8 @@ This file records implementation state separately from device verification. A ch
 - [x] Report missing DownloadManager records and allow their BrowseX registry entries to be removed.
 - [x] Sanitize and reserve collision-safe filenames for downloads started by BrowseX.
 - [x] Request legacy external-storage permission only on Android API 26–28.
-- [ ] Replace URL re-fetch for Gecko external responses with a response-stream transfer path that writes the received response body (including POST/authenticated responses) without replaying the request; persist transfer state, cancellation and recoverable errors. Do not claim POST/auth support until this is implemented and covered by Android-backed tests.
+- [x] Add a dedicated response-stream writer for Gecko external responses; save the received response body directly without re-fetching, including POST/authenticated/one-time URL responses; persist completed/failed records and expose them in Downloads.
+- [ ] Add live byte progress, cancellation, recoverable interrupted state and safe retry/resume only when the original response can be continued; add Android-backed tests for GET, POST and authenticated responses.
 - [ ] Add Android-backed tests for notification callbacks, permission callbacks, privacy clearing callbacks and download registry behavior.
 
 ## Phase 3 — design coverage and accessibility
@@ -70,12 +71,13 @@ This file records implementation state separately from device verification. A ch
 
 - [x] Add bounded bookmark folders, safe legacy migration, validated JSON import/export, title-aware search and manual ordering.
 - [x] Persist home section visibility and shortcut layout preferences with reset behavior.
-- [ ] Replace the Arabic/English-only UI translation layer with resource-based localization and plural/number/date formatting across supported locales.
+- [ ] Expand Android string resources beyond the initial English/Arabic browser-chrome migration; add locale packs and resource-based translation for Settings, Downloads and Library screens, plus plural/number/date formatting.
 - [ ] Complete locale-aware mixed RTL/LTR rendering, font fallback, Unicode search normalization and accessibility verification.
 - [ ] Define provider-neutral account identity and consent boundaries before adding Google, Microsoft, Apple or other identity providers.
 - [ ] Define opt-in, per-data-type sync contracts, encryption/key ownership, conflict resolution, offline queue and account deletion/export before any cloud sync.
 - [ ] Research and prioritize user-facing capabilities using `WORLD_BROWSER_PRODUCT_REQUIREMENTS.md`; do not clone feature lists without validating value, cost and privacy.
-- [ ] Extract MainActivity responsibilities incrementally into tab, privacy, download, library and preference coordinators.
+- [x] Extract the response-stream download writer and its persistence model from MainActivity.
+- [ ] Continue extracting tab/session, privacy, library and preference coordinators; reduce MainActivity's remaining orchestration responsibilities.
 - [x] Add a basic lifecycle-aware inactive-tab policy: keep the active tab, bound warm sessions, and close/recreate inactive sessions under memory pressure.
 - [ ] Measure cold start, tab switching, peak memory and recovery on low-RAM devices; tune the policy from measurements.
 
