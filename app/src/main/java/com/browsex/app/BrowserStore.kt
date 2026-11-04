@@ -468,7 +468,7 @@ class BrowserStore(context: Context) {
             .let { items ->
                 val seenIds = mutableSetOf<String>()
                 items.map { item ->
-                    val safeId = item.id.takeIf { it.isNotBlank() && seenIds.add(it) } ?: newBookmarkId().also(seenIds::add)
+                    val safeId = item.id.takeIf { it.isNotBlank() && seenIds.add(it) } ?: newBookmarkId().also { seenIds.add(it) }
                     item.copy(id = safeId)
                 }
             }
