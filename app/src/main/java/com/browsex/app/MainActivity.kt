@@ -781,9 +781,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun attachDelegates(tab: BrowserTab) {
         val session = tab.session
-        tab.permissionDelegate = BrowseXPermissionDelegate(this, store) { requested ->
-            requested === activeTab?.session && tabs.any { it.session === requested } && !shuttingDown
-        }
+        tab.permissionDelegate = BrowseXPermissionDelegate(
+            this,
+            store,
+            { requested ->
+                requested === activeTab?.session && tabs.any { it.session === requested } && !shuttingDown
+            },
+            tab.privateMode
+        )
         session.permissionDelegate = tab.permissionDelegate
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {

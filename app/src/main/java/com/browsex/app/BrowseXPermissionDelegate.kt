@@ -12,7 +12,8 @@ import org.mozilla.geckoview.GeckoSession
 internal class BrowseXPermissionDelegate(
     private val activity: MainActivity,
     private val store: BrowserStore,
-    private val isActiveSession: (GeckoSession) -> Boolean
+    private val isActiveSession: (GeckoSession) -> Boolean,
+    private val privateMode: Boolean = false
 ) : GeckoSession.PermissionDelegate {
     private val dialogs = linkedSetOf<AlertDialog>()
 
@@ -119,8 +120,9 @@ internal class BrowseXPermissionDelegate(
             callback.reject()
             return
         }
-        val camera = if (wantsCamera) store.siteMediaDecision(origin, "camera") else "allow"
-        val microphone = if (wantsMicrophone) store.siteMediaDecision(origin, "microphone") else "allow"
+        // Private sessions never read or persist BrowseX's per-origin media decisions.
+        val camera = if (!wantsCamera) "allow" else if (privateMode) null else store.siteMediaDecision(origin, "camera")
+        val microphone = if (!wantsMicrophone) "allow" else if (privateMode) null else store.siteMediaDecision(origin, "microphone")
         if (camera == "deny" || microphone == "deny") {
             callback.reject()
             return
@@ -142,14 +144,14 @@ internal class BrowseXPermissionDelegate(
                 .setTitle("Allow device access?")
                 .setMessage("$origin wants to use your $features.")
                 .setPositiveButton("Allow") { _, _ ->
-                    if (wantsCamera) store.setSiteMediaDecision(origin, "camera", "allow")
-                    if (wantsMicrophone) store.setSiteMediaDecision(origin, "microphone", "allow")
+                    if (!privateMode && wantsCamera) store.setSiteMediaDecision(origin, "camera", "allow")
+                    if (!privateMode && wantsMicrophone) store.setSiteMediaDecision(origin, "microphone", "allow")
                     if (isActiveSession(session)) callback.grant(video?.firstOrNull(), audio?.firstOrNull())
                     else callback.reject()
                 }
                 .setNegativeButton("Block") { _, _ ->
-                    if (wantsCamera) store.setSiteMediaDecision(origin, "camera", "deny")
-                    if (wantsMicrophone) store.setSiteMediaDecision(origin, "microphone", "deny")
+                    if (!privateMode && wantsCamera) store.setSiteMediaDecision(origin, "camera", "deny")
+                    if (!privateMode && wantsMicrophone) store.setSiteMediaDecision(origin, "microphone", "deny")
                     callback.reject()
                 }
                 .setNeutralButton("Not now") { _, _ -> callback.reject() }
