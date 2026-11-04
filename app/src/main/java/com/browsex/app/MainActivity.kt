@@ -453,13 +453,7 @@ class MainActivity : AppCompatActivity() {
 
     private val colors get() = BrowseXColors.resolve(this, store)
 
-    private fun tr(value: String): String {
-        val key = "ui_" + value.lowercase(java.util.Locale.ROOT)
-            .replace(Regex("[^a-z0-9]+"), "_")
-            .trim('_')
-        val resourceId = resources.getIdentifier(key, "string", packageName)
-        return if (resourceId != 0) getString(resourceId) else value
-    }
+    private fun tr(value: String): String = BrowseXStrings.text(this, value)
 
     private fun homePageUrl(): String =
         "$HOME_URL?bxlang=${store.languageMode}&bxtheme=${store.themeMode}" +
