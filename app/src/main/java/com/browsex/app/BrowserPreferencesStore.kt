@@ -3,7 +3,6 @@ package com.browsex.app
 import android.content.SharedPreferences
 import android.net.Uri
 import org.json.JSONObject
-import java.util.Locale
 
 /**
  * Owns browser-wide preferences and persisted per-origin permission decisions.
@@ -17,13 +16,13 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
 
     var themeMode: String
-        get() = prefs.getString("theme_mode", "system")?.takeIf { it in THEMES } ?: "system"
-        set(value) { prefs.edit().putString("theme_mode", value.takeIf { it in THEMES } ?: "system").apply() }
+        get() = BrowserPreferencePolicy.normalizeTheme(prefs.getString("theme_mode", "system"))
+        set(value) { prefs.edit().putString("theme_mode", BrowserPreferencePolicy.normalizeTheme(value)).apply() }
 
     /** BCP 47 app language tag, or system to follow the device locale. */
     var languageMode: String
-        get() = normalizeLanguageTag(prefs.getString("language_mode", "system"))
-        set(value) { prefs.edit().putString("language_mode", normalizeLanguageTag(value)).apply() }
+        get() = BrowserPreferencePolicy.normalizeLanguageTag(prefs.getString("language_mode", "system"))
+        set(value) { prefs.edit().putString("language_mode", BrowserPreferencePolicy.normalizeLanguageTag(value)).apply() }
 
     var siteNotificationsEnabled: Boolean
         get() = prefs.getBoolean("site_notifications_enabled", true)
@@ -38,8 +37,8 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         set(value) { prefs.edit().putBoolean("home_show_discovery", value).apply() }
 
     var homeLayout: String
-        get() = prefs.getString("home_layout", "grid")?.takeIf { it in HOME_LAYOUTS } ?: "grid"
-        set(value) { prefs.edit().putString("home_layout", value.takeIf { it in HOME_LAYOUTS } ?: "grid").apply() }
+        get() = BrowserPreferencePolicy.normalizeHomeLayout(prefs.getString("home_layout", "grid"))
+        set(value) { prefs.edit().putString("home_layout", BrowserPreferencePolicy.normalizeHomeLayout(value)).apply() }
 
     var searchEngine: String
         get() = BrowserStorePolicy.normalizeSearchEngine(prefs.getString("search_engine", "Google"))
@@ -97,14 +96,6 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         prefs.edit().remove("site_media_permissions").apply()
     }
 
-    private fun normalizeLanguageTag(value: String?): String {
-        val raw = value?.trim().orEmpty()
-        if (raw.equals("system", ignoreCase = true)) return "system"
-        if (raw.length !in 2..35 || !raw.matches(Regex("[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"))) return "system"
-        val tag = Locale.forLanguageTag(raw).toLanguageTag()
-        return tag.takeIf { it.isNotBlank() && it != "und" } ?: "system"
-    }
-
     private fun isSafePermissionOrigin(origin: String): Boolean = try {
         val uri = Uri.parse(origin)
         (uri.scheme == "https" || uri.scheme == "http") &&
@@ -112,8 +103,6 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
     } catch (_: Exception) { false }
 
     private companion object {
-        val THEMES = setOf("system", "light", "dark")
-        val HOME_LAYOUTS = setOf("grid", "list")
         val MEDIA_FEATURES = setOf("camera", "microphone")
         val PERMISSION_DECISIONS = setOf("allow", "deny", "ask")
         const val MAX_ORIGIN_MEDIA_DECISIONS = 100
