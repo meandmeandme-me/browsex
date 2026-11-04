@@ -46,6 +46,7 @@ import org.mozilla.geckoview.WebResponse
 import org.mozilla.geckoview.WebNotification
 
 private const val HOME_URL = "resource://android/assets/home.html"
+private const val MAX_LIVE_GECKO_SESSIONS = 3
 
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
@@ -278,18 +279,16 @@ class MainActivity : AppCompatActivity() {
         }
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             // Keep the visible tab alive; inactive tabs retain their URL and reopen lazily.
-            tabs.filter { it !== activeTab && it.sessionOpened }
-                .sortedBy { it.lastActiveAt }
-                .forEach(::releaseInactiveSession)
+            TabLifecyclePolicy.sessionsToReleaseForMemoryPressure(lifecycleCandidates())
+                .forEach { index -> tabs.getOrNull(index)?.let(::releaseInactiveSession) }
         }
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         persistTabs()
-        tabs.filter { it !== activeTab && it.sessionOpened }
-            .sortedBy { it.lastActiveAt }
-            .forEach(::releaseInactiveSession)
+        TabLifecyclePolicy.sessionsToReleaseForMemoryPressure(lifecycleCandidates())
+            .forEach { index -> tabs.getOrNull(index)?.let(::releaseInactiveSession) }
     }
 
     private fun releaseInactiveSession(tab: BrowserTab) {
@@ -307,14 +306,23 @@ class MainActivity : AppCompatActivity() {
         tab.sitePermissions = emptyList()
     }
 
+    /** Snapshot the tab list before applying a pure lifecycle decision. */
+    private fun lifecycleCandidates(): List<TabLifecyclePolicy.Candidate> =
+        tabs.mapIndexed { index, tab ->
+            TabLifecyclePolicy.Candidate(
+                index = index,
+                active = tab === activeTab,
+                opened = tab.sessionOpened,
+                lastActiveAt = tab.lastActiveAt
+            )
+        }
+
     /** Bound live Gecko sessions to the visible tab plus two warm background tabs. */
     private fun enforceLiveSessionBudget() {
-        val maxLiveSessions = 3
-        while (tabs.count { it.sessionOpened } > maxLiveSessions) {
-            val oldest = tabs.filter { it !== activeTab && it.sessionOpened }
-                .minByOrNull { it.lastActiveAt } ?: return
-            releaseInactiveSession(oldest)
-        }
+        TabLifecyclePolicy.sessionsToReleaseForBudget(
+            candidates = lifecycleCandidates(),
+            maxLiveSessions = MAX_LIVE_GECKO_SESSIONS
+        ).forEach { index -> tabs.getOrNull(index)?.let(::releaseInactiveSession) }
     }
 
     private fun persistTabs() {
