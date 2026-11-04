@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-/** Small durable store for browser preferences, bookmarks and recent history. */
+/** Compatibility facade over focused preference, session, download and library stores. */
 class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
     private val preferences = BrowserPreferencesStore(prefs)
