@@ -20,6 +20,21 @@ if (stableDebugSigningValues.any { !it.isNullOrBlank() } && !stableDebugSigningC
     error("Stable debug signing is partially configured. Set all BROWSEX_DEBUG_* secrets or none.")
 }
 
+val releaseKeystorePath = System.getenv("BROWSEX_RELEASE_KEYSTORE_PATH")
+val releaseStorePassword = System.getenv("BROWSEX_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("BROWSEX_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("BROWSEX_RELEASE_KEY_PASSWORD")
+val releaseSigningValues = listOf(
+    releaseKeystorePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+)
+val releaseSigningConfigured = releaseSigningValues.all { !it.isNullOrBlank() }
+if (releaseSigningValues.any { !it.isNullOrBlank() } && !releaseSigningConfigured) {
+    error("Release signing is partially configured. Set all BROWSEX_RELEASE_* secrets or none.")
+}
+
 android {
     namespace = "com.browsex.app"
     compileSdk = 36
@@ -52,6 +67,14 @@ android {
                 keyPassword = stableDebugKeyPassword
             }
         }
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -62,6 +85,11 @@ android {
         }
         release {
             isMinifyEnabled = false
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                logger.warn("BrowseX release APK will be unsigned: configure all BROWSEX_RELEASE_* secrets for a distributable build.")
+            }
         }
     }
 
