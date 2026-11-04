@@ -199,7 +199,7 @@ internal class SavedPagesPage(
                         .setNegativeButton(t("Cancel", "إلغاء"), null)
                         .setPositiveButton(t("Create", "إنشاء")) { _, _ ->
                             val created = store.createBookmarkFolder(field.text?.toString().orEmpty())
-                            if (created == null) toast(t("Folder name is invalid or already used", "اسم المجلد غير صالح أو مستخدم"))
+                            if (created == null) android.widget.Toast.makeText(activity, t("Folder name is invalid or already used", "اسم المجلد غير صالح أو مستخدم"), android.widget.Toast.LENGTH_SHORT).show()
                             else { selectedFolderId = created.id; drawFolders(); refresh(search.text?.toString().orEmpty()) }
                         }.show()
                 }
