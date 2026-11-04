@@ -47,7 +47,14 @@ internal class BrowserContentProcessRecoveryCoordinator(
                 session.open(runtime())
                 if (wasActive) {
                     activateTab(tab)
-                    session.loadUri(restoreUrl)
+                    // Activation may replace a session after a view/focus failure.
+                    // Never continue recovery against the stale pre-replacement session.
+                    if (tab.session === session && tab.sessionOpened) {
+                        session.loadUri(restoreUrl)
+                    } else {
+                        tab.crashed = true
+                        updateUi()
+                    }
                 } else {
                     session.setFocused(false)
                     session.setActive(false)
