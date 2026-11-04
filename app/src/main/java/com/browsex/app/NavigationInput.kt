@@ -40,7 +40,8 @@ internal object NavigationInput {
      * Accepts Unicode domain names while rejecting credentials, malformed authorities and
      * invalid ports. The original URL is retained; Gecko handles IDN navigation/display.
      */
-    fun isValidWebUrl(value: String): Boolean = try {
+    fun isValidWebUrl(value: String): Boolean {
+        return try {
         val uri = URI(value)
         val scheme = uri.scheme?.lowercase()
         if (scheme != "http" && scheme != "https") return false
@@ -76,8 +77,9 @@ internal object NavigationInput {
             ascii.length <= 254 && labels.isNotEmpty() &&
                 labels.all { it.isNotBlank() && it.length <= 63 }
         }
-    } catch (_: Exception) {
-        false
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun looksLikeHost(value: String): Boolean =
