@@ -8,6 +8,7 @@ This file is the source of truth for feature sequencing. Keep each task small, t
 - [x] Record architecture, lifecycle rules, compatibility targets and feature contracts.
 - [x] Extract URL parsing/validation into a pure policy with unit tests.
 - [x] Add CI gates for unit tests, lint, APK verification and checksums.
+- [x] Add pure tests for persisted URL validation, duplicate removal, storage limits and search-engine fallback.
 - [ ] Add Android-backed persistence tests for BrowserStore.
 - [ ] Establish a stable release signing/update strategy; debug signatures are not a release strategy.
 
@@ -41,7 +42,7 @@ This file is the source of truth for feature sequencing. Keep each task small, t
 
 ## Phase 4 — release hardening
 
-- [x] CI builds debug APK outputs for ARM32, ARM64 and universal output and verifies package ID, minSdk, native libraries, signatures and checksums.
+- [x] CI builds debug APK outputs for `armeabi-v7a`, `arm64-v8a` and universal output and verifies package ID, minSdk, native libraries, signatures and checksums.
 - [ ] Run Android 10/API 29 smoke tests and current Android smoke tests.
 - [ ] Verify cold start, offline/error page, downloads, external links and rotation.
 - [ ] Configure stable release signing and version/update policy.

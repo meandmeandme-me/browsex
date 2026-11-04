@@ -16,8 +16,10 @@ class BrowserStore(context: Context) {
         set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
 
     var searchEngine: String
-        get() = prefs.getString("search_engine", "Google") ?: "Google"
-        set(value) { prefs.edit().putString("search_engine", value).apply() }
+        get() = BrowserStorePolicy.normalizeSearchEngine(prefs.getString("search_engine", "Google"))
+        set(value) {
+            prefs.edit().putString("search_engine", BrowserStorePolicy.normalizeSearchEngine(value)).apply()
+        }
 
     fun saveOpenTabs(urls: List<String>, activeIndex: Int) {
         val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
@@ -61,18 +63,19 @@ class BrowserStore(context: Context) {
     fun isBookmarked(url: String): Boolean = bookmarks().contains(url)
 
     fun toggleBookmark(url: String): Boolean {
+        if (!NavigationInput.isValidWebUrl(url)) return false
         val values = bookmarks().toMutableList()
         val added = if (values.contains(url)) { values.remove(url); false } else { values.add(0, url); true }
-        writeList("bookmarks", values.take(200))
+        writeList("bookmarks", values)
         return added
     }
 
     fun addHistory(url: String) {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return
+        if (!NavigationInput.isValidWebUrl(url)) return
         val values = history().toMutableList()
         values.remove(url)
         values.add(0, url)
-        writeList("history", values.take(300))
+        writeList("history", values)
     }
 
     fun removeBookmark(url: String) {
@@ -87,12 +90,21 @@ class BrowserStore(context: Context) {
 
     private fun readList(key: String): List<String> = try {
         val array = JSONArray(prefs.getString(key, "[]"))
-        (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }
+        val values = (0 until array.length()).mapNotNull { index ->
+            array.optString(index).takeIf(String::isNotBlank)
+        }
+        BrowserStorePolicy.normalizeUrls(values, limitFor(key))
     } catch (_: Exception) { emptyList() }
 
     private fun writeList(key: String, values: List<String>) {
         val array = JSONArray()
-        values.forEach { array.put(it) }
+        BrowserStorePolicy.normalizeUrls(values, limitFor(key)).forEach { array.put(it) }
         prefs.edit().putString(key, array.toString()).apply()
+    }
+
+    private fun limitFor(key: String): Int = when (key) {
+        "bookmarks" -> BrowserStorePolicy.MAX_BOOKMARKS
+        "history" -> BrowserStorePolicy.MAX_HISTORY
+        else -> TabSessionState.MAX_TABS
     }
 }
