@@ -75,7 +75,7 @@ body.dark .editorial-art{filter:brightness(.8)}
 <script>
 (()=> {
  const $=id=>document.getElementById(id);
- $('settings').addEventListener('click',()=>location.href='https://browsex.local/settings');
+ $('settings').addEventListener('click',()=>alert('Open the Browse X menu above to access browser settings.'));
  $('edit').addEventListener('click',()=>{
    const current=[...document.querySelectorAll('.shortcut span:last-child')].map(x=>x.textContent).join(', ');
    const value=prompt('Edit your four favorite labels (separate with commas):',current);
