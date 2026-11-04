@@ -621,7 +621,7 @@ class MainActivity : AppCompatActivity() {
         bottomButton("＋", "New tab") { createTab(homePageUrl()) }
         bottomButton("☆", "Bookmark page") {
             activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                val added = store.toggleBookmark(it, activeTab?.title.orEmpty())
+                val added = store.toggleBookmark(it, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
                 toast(if (added) "Saved to favorites" else "Removed from favorites")
             }
         }
@@ -780,7 +780,11 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.progress = 100
                 if (success) {
-                    if (!tab.privateMode) store.addHistory(tab.url, tab.title)
+                    if (!tab.privateMode) {
+                        val historyTitle = tab.title.takeIf { it.isNotBlank() && it != "New tab" }
+                            ?: Uri.parse(tab.url).host.orEmpty()
+                        store.addHistory(tab.url, historyTitle)
+                    }
                     tab.recoveryAttempts = 0
                     tab.crashed = false
                 }
@@ -1050,7 +1054,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
                 0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                    val added = store.toggleBookmark(it, activeTab?.title.orEmpty())
+                    val added = store.toggleBookmark(it, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
                     toast(if (added) "Bookmark saved" else "Bookmark removed")
                 }
                 1 -> showSavedPages("Bookmarks", store.bookmarks())
