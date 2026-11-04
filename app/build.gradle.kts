@@ -19,6 +19,15 @@ android {
         // supported by the device. A forced arm64-only APK rejects 32-bit devices.
     }
 
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
