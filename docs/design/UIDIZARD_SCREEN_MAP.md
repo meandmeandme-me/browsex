@@ -94,6 +94,7 @@ Components:
 - New tab and close-tab actions.
 - Save current regular tabs as a named session.
 - Browse saved sessions.
+- Restore recently closed regular tabs (private tabs never appear here).
 
 States:
 - 0 / 1 / many tabs.
@@ -204,9 +205,9 @@ Components:
 - Remove stale record.
 - Clear failure reason and retry only when safe.
 
-Important implementation constraint:
-- Current implementation uses Android DownloadManager, which re-fetches a URL. It cannot guarantee original POST body, one-time URLs or arbitrary authorization headers.
-- Target design must support a Gecko response-stream writer that saves the received response body, reports progress and survives process death.
+Implementation status and constraints:
+- Gecko external responses are now written from the received response stream without replaying the URL, preserving the original POST/authenticated response body as delivered by Gecko.
+- The current writer records final success/failure but does not yet provide live progress, cancellation, resumable transfer or process-death continuation.
 - Do not display a false “resume” action for transfers that cannot be resumed safely.
 
 ### 9. BrowseX Recall / quick find
