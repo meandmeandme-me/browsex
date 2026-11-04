@@ -223,7 +223,7 @@
     <string name="ui_reset_site_permissions">Reset site permissions</string>
     <string name="ui_reset_permissions">Reset permissions?</string>
     <string name="ui_this_returns_revocable_site_permissions_to_ask_persistent_storage_grants_cannot_be_revoked_by_geckoview">This returns revocable site permissions to Ask. Persistent storage grants cannot be revoked by GeckoView.</string>
-    <string name="ui_clear_this_site_s_data">Clear this site's data</string>
+    <string name="ui_clear_this_site_s_data">Clear data for this site</string>
     <string name="ui_clear_site_data">Clear site data?</string>
     <string name="ui_this_removes_cookies_site_storage_cache_and_permissions_for_this_host_it_may_sign_you_out_data_owned_by_other_third_party_hosts_is_not_included">This removes cookies, site storage, cache and permissions for this host. It may sign you out. Data owned by other third-party hosts is not included.</string>
     <string name="ui_clear_data">Clear data</string>
