@@ -71,6 +71,11 @@ Implementation and verification are tracked separately. Items under “implement
 
 Never call a build successful until its workflow conclusion is `success` and the artifact is attached to that exact commit. Never claim physical-device validation unless it was performed on a device. Do not overwrite or ask the user to uninstall an existing install as a troubleshooting shortcut.
 
+## Extracted browser policy coverage
+
+- [x] Browser theme, language and home-layout normalization is isolated as pure policy with JVM tests added (not run in this implementation pass).
+- [x] Browser-wide preferences and per-origin media/platform permission decisions are delegated from BrowserStore without changing the existing SharedPreferences keys.
+
 ## Tab lifecycle policy coverage
 
 - [x] Pure session-budget selection preserves the active tab and releases least-recently-used inactive sessions.
