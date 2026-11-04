@@ -493,6 +493,7 @@ class MainActivity : AppCompatActivity() {
             "Settings" -> "الإعدادات"
             "Privacy center" -> "مركز الخصوصية"
             "Find anything" -> "اعثر على أي شيء"
+            "Private" -> "خاص"
             "New private tab" -> "تبويب خاص جديد"
             "Close private tabs" -> "إغلاق التبويبات الخاصة"
             "No private tabs are open" -> "لا توجد تبويبات خاصة مفتوحة"
@@ -965,7 +966,7 @@ class MainActivity : AppCompatActivity() {
                     setTextColor(colors.accent)
                 })
                 preview.addView(TextView(this).apply {
-                    text = (if (tab.privateMode) "Private · " else "") + tab.title.ifBlank { "New tab" }
+                    text = (if (tab.privateMode) "${tr("Private")} · " else "") + tab.title.ifBlank { "New tab" }
                     textSize = 13f
                     setTextColor(colors.ink)
                     maxLines = 2
@@ -974,7 +975,7 @@ class MainActivity : AppCompatActivity() {
                 })
                 card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
                 card.addView(TextView(this).apply {
-                    text = (if (tab.privateMode) "Private · " else "") + tab.title.ifBlank { "New tab" }
+                    text = (if (tab.privateMode) "${tr("Private")} · " else "") + tab.title.ifBlank { "New tab" }
                     textSize = 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(colors.ink)
