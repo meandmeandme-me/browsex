@@ -251,10 +251,7 @@ class MainActivity : AppCompatActivity() {
     private fun normalizeInput(raw: String): String =
         NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
 
-    private fun safeExternalUrl(uri: Uri): String? {
-        val scheme = uri.scheme?.lowercase()
-        return if ((scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()) uri.toString() else null
-    }
+    private fun safeExternalUrl(uri: Uri): String? = NavigationInput.externalWebUrl(uri.toString())
 
     private fun navigate(raw: String) {
         val tab = activeTab ?: return
