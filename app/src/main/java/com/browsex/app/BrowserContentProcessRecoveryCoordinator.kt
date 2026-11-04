@@ -42,8 +42,9 @@ internal class BrowserContentProcessRecoveryCoordinator(
             attachDelegates(tab)
 
             try {
-                session.open(runtime())
+                // Treat the session as owned before open: Gecko may partially initialize before throwing.
                 tab.sessionOpened = true
+                session.open(runtime())
                 if (wasActive) {
                     activateTab(tab)
                     session.loadUri(restoreUrl)
@@ -53,6 +54,8 @@ internal class BrowserContentProcessRecoveryCoordinator(
                     session.loadUri(restoreUrl)
                 }
             } catch (error: RuntimeException) {
+                runCatching { session.close() }
+                    .onFailure { cleanupError -> error.addSuppressed(cleanupError) }
                 tab.sessionOpened = false
                 tab.crashed = true
                 android.util.Log.e("BrowseX", "Tab recovery failed", error)
