@@ -146,3 +146,5 @@ Current account foundation file: app/src/main/java/com/browsex/app/AccountDomain
 - `BrowserSessionLifecycleCoordinator.kt`: owns GeckoSession release/reset/close policy for the tab registry; Activity retains view attachment and permission-request queue ownership.
 - `StreamDownloadCoordinator.kt`: owns stream-download record creation, progress/terminal persistence and cancellation; Activity owns Android permission prompts and user notifications.
 - `STORAGE_MIGRATION_PLAN.md`: concrete legacy key inventory, proposed Room/DataStore schema and idempotent migration/rollback requirements; no backend migration yet.
+
+- `AccountSyncContracts.kt`: platform-neutral repository/gateway interfaces for provider auth, account session, consent, devices, encrypted sync transport/cipher, sync status and account export/deletion; interfaces only, no live integration.
