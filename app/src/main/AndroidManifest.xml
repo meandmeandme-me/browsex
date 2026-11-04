@@ -15,7 +15,6 @@
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:extractNativeLibs="true"
         android:icon="@drawable/ic_browsex"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
