@@ -145,6 +145,66 @@ class BrowserStore(context: Context) {
         HOME_URL_FOR_STORE
     )
 
+    /** Saves a named, regular-tab-only session. Private tabs must never be passed here. */
+    fun saveNamedSession(rawName: String, urls: List<String>, activeIndex: Int): Boolean {
+        val name = rawName.trim().take(40)
+        if (name.isBlank() || urls.isEmpty()) return false
+        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
+        val sessions = savedSessions().toMutableList()
+        val existingIndex = sessions.indexOfFirst { it.name.equals(name, ignoreCase = true) }
+        if (existingIndex < 0 && sessions.size >= 10) return false
+        val previous = sessions.getOrNull(existingIndex)
+        val saved = SavedBrowserSession(
+            id = previous?.id ?: "session_${UUID.randomUUID()}",
+            name = name,
+            urls = snapshot.urls,
+            activeIndex = snapshot.activeIndex,
+            savedAt = System.currentTimeMillis()
+        )
+        if (existingIndex >= 0) sessions[existingIndex] = saved else sessions.add(0, saved)
+        writeNamedSessions(sessions)
+        return true
+    }
+
+    fun savedSessions(): List<SavedBrowserSession> = try {
+        val array = JSONArray(prefs.getString("named_sessions_v1", "[]"))
+        (0 until minOf(array.length(), 10)).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val id = item.optString("id").take(100)
+            val name = item.optString("name").trim().take(40)
+            val rawUrls = item.optJSONArray("urls") ?: JSONArray()
+            val urls = (0 until minOf(rawUrls.length(), TabSessionState.MAX_TABS))
+                .mapNotNull { rawUrls.optString(it).takeIf(String::isNotBlank) }
+            if (id.isBlank() || name.isBlank() || urls.isEmpty()) return@mapNotNull null
+            val snapshot = TabSessionState.normalize(urls, item.optInt("activeIndex", 0), HOME_URL_FOR_STORE)
+            SavedBrowserSession(id, name, snapshot.urls, snapshot.activeIndex, item.optLong("savedAt", 0L).coerceAtLeast(0L))
+        }
+    } catch (_: Exception) { emptyList() }
+
+    fun removeNamedSession(id: String): Boolean {
+        val sessions = savedSessions()
+        val updated = sessions.filterNot { it.id == id }
+        if (updated.size == sessions.size) return false
+        writeNamedSessions(updated)
+        return true
+    }
+
+    private fun writeNamedSessions(sessions: List<SavedBrowserSession>) {
+        val array = JSONArray()
+        sessions.take(10).forEach { session ->
+            val snapshot = TabSessionState.normalize(session.urls, session.activeIndex, HOME_URL_FOR_STORE)
+            val urls = JSONArray()
+            snapshot.urls.forEach(urls::put)
+            array.put(JSONObject()
+                .put("id", session.id.take(100))
+                .put("name", session.name.trim().take(40))
+                .put("urls", urls)
+                .put("activeIndex", snapshot.activeIndex)
+                .put("savedAt", session.savedAt.coerceAtLeast(0L)))
+        }
+        prefs.edit().putString("named_sessions_v1", array.toString()).apply()
+    }
+
     /** DownloadManager IDs explicitly enqueued by BrowseX; excludes other apps' downloads. */
     fun browseXDownloadIds(): Set<Long> = try {
         val array = JSONArray(prefs.getString("browsex_download_ids", "[]"))
