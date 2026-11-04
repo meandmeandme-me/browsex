@@ -144,3 +144,4 @@ The current shipping target remains Android in the single :app module. Future Wi
 
 Current account foundation file: app/src/main/java/com/browsex/app/AccountDomainModels.kt. It defines provider-neutral identity, connection state, sync consent, device, platform and record metadata types only. It does not authenticate users, store tokens or synchronize data.
 - `BrowserSessionLifecycleCoordinator.kt`: owns GeckoSession release/reset/close policy for the tab registry; Activity retains view attachment and permission-request queue ownership.
+- `StreamDownloadCoordinator.kt`: owns stream-download record creation, progress/terminal persistence and cancellation; Activity owns Android permission prompts and user notifications.
