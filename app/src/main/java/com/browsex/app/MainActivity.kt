@@ -264,7 +264,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
             }
         })
 
-        val snapshot = store.restoreOpenTabs()
+        val snapshot = tabPersistenceCoordinator.restoreOpenTabs()
         val externalUrl = intent?.data?.let(::safeExternalUrl)
         tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
         handleSiteNotificationIntent(intent)
@@ -322,9 +322,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
 
     private fun persistTabs() {
         if (!::store.isInitialized) return
-        val regularTabs = tabs.filterNot { it.privateMode }
-        val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
-        store.saveOpenTabs(regularTabs.map { it.url }, activeIndex)
+        tabPersistenceCoordinator.persistOpenTabs()
     }
 
     override fun onDestroy() {
