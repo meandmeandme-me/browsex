@@ -34,18 +34,23 @@ internal class BrowseXPermissionDelegate(
     ): GeckoResult<Int> {
         val result = GeckoResult<Int>()
         val origin = safeOrigin(perm.uri)
-        if (origin == null || !isActiveSession(session) || perm.privateMode) {
+        if (origin == null || !isActiveSession(session)) {
+            result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
+            return result
+        }
+        // The global site-notification switch overrides previously persisted site grants.
+        if (perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION &&
+            !store.siteNotificationsEnabled) {
+            result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+            return result
+        }
+        if (perm.privateMode) {
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
             return result
         }
         if (perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW ||
             perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY) {
             result.complete(perm.value)
-            return result
-        }
-        if (perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION &&
-            !store.siteNotificationsEnabled) {
-            result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
             return result
         }
         val feature = when (perm.permission) {
