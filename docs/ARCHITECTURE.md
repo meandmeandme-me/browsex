@@ -6,8 +6,9 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 
 - `MainActivity`: application shell for browser chrome and platform wiring. Tab/session budget and memory-pressure selection is delegated to the pure `TabLifecyclePolicy`; tab creation, activation, GeckoSession callbacks and UI presentation are still Activity-owned and remain extraction work.
 - `BrowserRuntimeOwner` and `BrowserTab`: isolated ownership of the process-wide GeckoRuntime and serializable-per-tab UI/session state; private mode is selected before opening each GeckoSession.
-- `BrowserStore`: compatibility facade for tab/session snapshots, download records, bookmark folders/items, title-aware history and validated JSON backup/import.
-- `BrowserPreferencesStore` + `BrowserPreferencePolicy`: isolated browser-wide settings and per-origin media/platform permission decisions; pure BCP 47, theme and home-layout normalization is separately testable. Both currently use the existing SharedPreferences file to preserve user data; a future DataStore migration can now happen behind this boundary.
+- `BrowserStore`: compatibility facade for download records, bookmark folders/items, title-aware history and validated JSON backup/import.
+- `BrowserSessionStore`: owns regular-tab snapshots, named sessions and recently-closed tab persistence; private tabs remain excluded and existing SharedPreferences keys are preserved.
+- `BrowserPreferencesStore` + `BrowserPreferencePolicy`: isolated browser-wide settings and per-origin media/platform permission decisions; pure BCP 47, theme and home-layout normalization is separately testable. `BrowserSessionStore` and these preference stores currently use the existing SharedPreferences file to preserve user data; a future DataStore/Room migration can now happen behind these boundaries.
 - `BrowserPalette`: shared light/dark/system color tokens and direction helpers for Android screens.
 - `BrowseXPermissionDelegate`: separates Android runtime permission requests from Gecko content and media permission decisions.
 - `BrowseXNotificationBridge` + `SiteNotificationActionReceiver`: WebNotificationDelegate adapter, Android notification channel, click and dismiss actions.
