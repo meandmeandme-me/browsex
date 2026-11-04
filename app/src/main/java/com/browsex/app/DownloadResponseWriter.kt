@@ -66,10 +66,7 @@ internal class DownloadResponseWriter(context: Context) {
                 var failure: Throwable? = null
                 try {
                     checkNotCancelled(job)
-                    val safeName = displayName
-                        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-                        .filterNot { it.isISOControl() }
-                        .trim().trim('.').take(140).ifBlank { "download" }
+                    val safeName = DownloadFileNamePolicy.sanitize(displayName)
                     val mime = mimeType?.takeIf { it.contains('/') && it.length <= 120 }
                         ?: "application/octet-stream"
                     completed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
