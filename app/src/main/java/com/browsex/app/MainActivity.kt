@@ -49,9 +49,25 @@ private const val MAX_LIVE_GECKO_SESSIONS = 3
 
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
-class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
+class MainActivity : AppCompatActivity() {
     private val tabRegistry = BrowserTabRegistry<BrowserTab>()
-    private val sessionDelegateFactory by lazy { BrowserSessionDelegateFactory(this) }
+    private val tabEventCoordinator by lazy {
+        BrowserTabEventCoordinator(
+            isActiveTab = { tab -> tab === activeTab },
+            updateChrome = ::updateChrome,
+            recordHistory = { url, title -> store.addHistory(url, title) },
+            openPopupTab = { parent -> tabController.onNewSession(parent) },
+            setFullscreen = ::setFullscreen,
+            closeTab = ::closeTab,
+            enqueueDownload = ::enqueueDownload,
+            recoverContentProcess = { tab, session ->
+                contentProcessRecoveryCoordinator.onContentProcessCrash(tab, session)
+            }
+        )
+    }
+    private val sessionDelegateFactory by lazy {
+        BrowserSessionDelegateFactory(tabEventCoordinator)
+    }
     private val sessionLifecycleCoordinator by lazy {
         BrowserSessionLifecycleCoordinator(
             registry = tabRegistry,
@@ -653,74 +669,6 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         )
         tab.session.permissionDelegate = tab.permissionDelegate
         sessionDelegateFactory.attach(tab)
-    }
-
-    override fun onPageStart(tab: BrowserTab) {
-        tab.progress = 1
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onProgressChange(tab: BrowserTab, progress: Int) {
-        tab.progress = progress
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onPageStop(tab: BrowserTab, success: Boolean) {
-        tab.progress = 100
-        if (success) {
-            if (!tab.privateMode) {
-                val historyTitle = tab.title.takeIf { it.isNotBlank() && it != "New tab" }
-                    ?: Uri.parse(tab.url).host.orEmpty()
-                store.addHistory(tab.url, historyTitle)
-            }
-            tab.recoveryAttempts = 0
-            tab.crashed = false
-        }
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onLocationChange(
-        tab: BrowserTab,
-        url: String?,
-        permissions: List<GeckoSession.PermissionDelegate.ContentPermission>
-    ) {
-        tab.url = url.orEmpty()
-        tab.sitePermissions = permissions.toList()
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onCanGoBack(tab: BrowserTab, canGoBack: Boolean) {
-        tab.canGoBack = canGoBack
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onCanGoForward(tab: BrowserTab, canGoForward: Boolean) {
-        tab.canGoForward = canGoForward
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onNewSession(parent: BrowserTab, uri: String): GeckoResult<GeckoSession>? =
-        tabController.onNewSession(parent)
-
-    override fun onTitleChange(tab: BrowserTab, title: String?) {
-        tab.title = title?.takeIf { it.isNotBlank() } ?: "New tab"
-        if (tab === activeTab) updateChrome()
-    }
-
-    override fun onFullscreen(tab: BrowserTab, enabled: Boolean) {
-        if (tab === activeTab) setFullscreen(enabled)
-    }
-
-    override fun onCloseRequest(tab: BrowserTab) {
-        closeTab(tab)
-    }
-
-    override fun onExternalResponse(response: WebResponse) {
-        enqueueDownload(response)
-    }
-
-    override fun onContentProcessCrash(tab: BrowserTab, session: GeckoSession) {
-        contentProcessRecoveryCoordinator.onContentProcessCrash(tab, session)
     }
 
     private fun setFullscreen(enabled: Boolean) {
