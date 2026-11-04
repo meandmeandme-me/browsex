@@ -49,6 +49,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] DownloadManager downloads complete, open, cancel, remove and survive process restart; missing Android records are clearable.
 - [ ] Response-stream downloads show queued/running/terminal states, determinate progress when Content-Length exists, indeterminate progress otherwise, and update without losing the current scroll position.
 - [ ] Cancelling a queued or active response-stream download closes its source stream, removes partial MediaStore/filesystem output, persists a cancelled state and never exposes an incomplete file as complete.
+- [ ] Stress the cancel-versus-finalize race on Android 8–9 and Android 10+; each attempt must end as either a cancelled record with no visible partial file or a completed record with a valid file.
 - [ ] Unfinished response-stream records are marked interrupted after a forced process stop; inspect and clean any orphaned pending MediaStore rows before release.
 - [ ] Verify Android 8–9 legacy storage permission and Android 10+ scoped-storage behavior.
 - [ ] Verify direct response-stream downloads for GET, POST, authenticated responses, cookies, one-time URLs, redirects, duplicate names, storage-full and network loss; verify the exact received bytes and no second network request.
