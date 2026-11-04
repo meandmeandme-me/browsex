@@ -435,6 +435,7 @@ class MainActivity : AppCompatActivity() {
             if (source != null && !isFinishing && !isDestroyed) {
                 val sourceUri = Uri.parse(source)
                 val existing = tabs.firstOrNull { tab ->
+                    if (tab.privateMode) return@firstOrNull false
                     val tabUri = Uri.parse(tab.url)
                     tabUri.scheme.equals(sourceUri.scheme, true) &&
                         tabUri.host.equals(sourceUri.host, true) &&
