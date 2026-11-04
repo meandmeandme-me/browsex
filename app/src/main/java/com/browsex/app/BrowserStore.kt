@@ -31,6 +31,30 @@ class BrowserStore(context: Context) {
         HOME_URL_FOR_STORE
     )
 
+    /** DownloadManager IDs explicitly enqueued by BrowseX; excludes other apps' downloads. */
+    fun browseXDownloadIds(): Set<Long> = try {
+        val array = JSONArray(prefs.getString("browsex_download_ids", "[]"))
+        (0 until array.length()).mapNotNull { index ->
+            array.optLong(index, -1L).takeIf { it > 0L }
+        }.toSet()
+    } catch (_: Exception) { emptySet() }
+
+    fun addBrowseXDownload(id: Long) {
+        if (id <= 0L) return
+        val ids = browseXDownloadIds().toMutableList()
+        ids.remove(id)
+        ids.add(id)
+        val array = JSONArray()
+        ids.takeLast(300).forEach(array::put)
+        prefs.edit().putString("browsex_download_ids", array.toString()).apply()
+    }
+
+    fun removeBrowseXDownload(id: Long) {
+        val array = JSONArray()
+        browseXDownloadIds().filterNot { it == id }.forEach(array::put)
+        prefs.edit().putString("browsex_download_ids", array.toString()).apply()
+    }
+
     fun bookmarks(): List<String> = readList("bookmarks")
     fun history(): List<String> = readList("history")
 
