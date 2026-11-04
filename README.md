@@ -78,3 +78,6 @@ gradle testDebugUnitTest lintDebug assembleDebug
 - [أساس الحسابات والمزامنة](docs/ACCOUNT_SYNC_FOUNDATION.md) يحدد الموافقات المنفصلة والتشفير وإدارة الأجهزة وحذف البيانات.
 - [خريطة واجهات الحساب والمزامنة](docs/ACCOUNT_SYNC_UX_MAP.md) جاهزة كمرجع لتصميم الشاشات.
 - [معمارية المنصات المستقبلية](docs/MULTIPLATFORM_ARCHITECTURE.md) تحدد مسار Windows وmacOS وLinux وAndroid TV مع إبقاء محرك كل منصة خلف adapter.
+## دراسة المتصفحات مفتوحة المصدر
+
+- [نتائج دراسة Firefox وBrave وCromite وDuckDuckGo وقرارات الاستفادة والتراخيص](docs/OPEN_SOURCE_BROWSER_RESEARCH.md).
