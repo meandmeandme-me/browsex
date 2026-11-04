@@ -536,6 +536,8 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
+    @ExperimentalGeckoViewApi
+    @OptIn(ExperimentalGeckoViewApi::class)
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
