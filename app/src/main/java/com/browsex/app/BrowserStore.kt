@@ -93,6 +93,11 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("site_media_permissions", json.toString()).apply()
     }
 
+    /** Clears BrowseX's supplemental per-origin media decisions after Gecko site permissions are cleared. */
+    fun clearAllSiteMediaDecisions() {
+        prefs.edit().remove("site_media_permissions").apply()
+    }
+
     @Synchronized
     fun reserveDownloadFileName(candidate: String): String {
         val names = try {

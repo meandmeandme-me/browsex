@@ -1199,7 +1199,8 @@ class MainActivity : AppCompatActivity() {
             },
             importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
             exportBookmarks = { bookmarkExportLauncher.launch("browsex-bookmarks.json") },
-            showHomePreferences = { showHomePreferences() }
+            showHomePreferences = { showHomePreferences() },
+            openPrivacyCenter = { showPrivacyCenter() }
         ).show()
     }
 
@@ -1230,6 +1231,87 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(tr("Cancel"), null)
             .show()
+    }
+
+
+    private fun showPrivacyCenter() {
+        PrivacyPage(
+            activity = this,
+            store = store,
+            clearData = ::clearBrowsingData
+        ).show()
+    }
+
+    /**
+     * GeckoView requires every open session to be closed before persistent site data is cleared.
+     * Keep only validated tab URLs, close the sessions, clear data, then recreate the tabs lazily.
+     */
+    private fun clearBrowsingData(flags: Long, clearHistory: Boolean) {
+        val snapshot = TabSessionState.normalize(
+            tabs.map { it.url },
+            activeTab?.let(tabs::indexOf)?.coerceAtLeast(0) ?: 0,
+            HOME_URL
+        )
+        tabs.toList().forEach { tab ->
+            tab.permissionDelegate?.cancelPending()
+            cancelPlatformPermissionRequests(tab.session)
+        }
+        if (::browserView.isInitialized) browserView.releaseSession()
+        tabs.toList().forEach { tab ->
+            if (tab.sessionOpened) {
+                runCatching {
+                    tab.session.setFocused(false)
+                    tab.session.setActive(false)
+                    tab.session.close()
+                }
+            }
+            tab.session = GeckoSession()
+            tab.sessionOpened = false
+            tab.permissionDelegate = null
+            tab.sitePermissions = emptyList()
+        }
+        tabs.clear()
+        activeTab = null
+
+        fun restoreAfterClear(success: Boolean) {
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (success) {
+                    if (clearHistory) store.clearHistory()
+                    if ((flags and org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS) != 0L) {
+                        store.clearAllSiteMediaDecisions()
+                    }
+                }
+                snapshot.urls.forEach { tabs.add(BrowserTab(url = it)) }
+                val restored = tabs.getOrNull(snapshot.activeIndex)
+                    ?: BrowserTab(url = homePageUrl()).also(tabs::add)
+                activateTab(restored)
+                persistTabs()
+                toast(if (success) "Selected browsing data cleared" else "Could not clear browsing data")
+            }
+        }
+
+        if (flags == 0L) {
+            restoreAfterClear(true)
+            return
+        }
+        val storage = browserRuntime?.storageController
+        if (storage == null) {
+            restoreAfterClear(false)
+            return
+        }
+        try {
+            storage.clearData(flags).accept(
+                { restoreAfterClear(true) },
+                { error ->
+                    android.util.Log.e("BrowseX", "Browsing data clearing failed", error)
+                    restoreAfterClear(false)
+                }
+            )
+        } catch (error: RuntimeException) {
+            android.util.Log.e("BrowseX", "Could not start browsing data clearing", error)
+            restoreAfterClear(false)
+        }
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {

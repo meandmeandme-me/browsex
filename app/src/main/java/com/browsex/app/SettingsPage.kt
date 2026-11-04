@@ -30,7 +30,8 @@ internal class SettingsPage(
     private val setWebsiteNotifications: (Boolean) -> Unit,
     private val importBookmarks: () -> Unit,
     private val exportBookmarks: () -> Unit,
-    private val showHomePreferences: () -> Unit
+    private val showHomePreferences: () -> Unit,
+    private val openPrivacyCenter: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val ink get() = colors.ink
@@ -83,6 +84,8 @@ internal class SettingsPage(
             "Customize shortcuts and sections" to "تخصيص الاختصارات والأقسام",
             "Open downloaded files" to "فتح الملفات التي تم تنزيلها",
             "Privacy & data" to "الخصوصية والبيانات",
+            "Privacy center" to "مركز الخصوصية",
+            "Review and clear cookies, site data and permissions" to "مراجعة ومسح ملفات الارتباط وبيانات المواقع والأذونات",
             "Clear browsing history" to "مسح سجل التصفح",
             "Remove the browsing history stored by Browse X" to "حذف سجل التصفح المحفوظ في BrowseX",
             "Clear" to "مسح",
@@ -315,6 +318,10 @@ internal class SettingsPage(
         })
 
         section("Privacy & data")
+        row("Privacy center", "Review and clear cookies, site data and permissions", action = {
+            dialog.dismiss()
+            openPrivacyCenter()
+        })
         row("Clear browsing history", "Remove the browsing history stored by Browse X", "Clear") {
             AlertDialog.Builder(activity)
                  .setTitle(t("Clear browsing history?"))

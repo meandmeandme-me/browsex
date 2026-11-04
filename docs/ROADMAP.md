@@ -29,6 +29,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Add Android runtime permission handling for location, camera and microphone requests coming from GeckoView.
 - [x] Add per-site content permission prompts with Allow, Block and Not now outcomes.
 - [x] Add Site Info controls to change stored content permissions to Allow, Block or Ask; persistent storage has an explicit non-revocable state.
+- [x] Add a privacy center for selecting GeckoView cookies, DOM storage, cache, authentication-session and site-permission data to clear; close all sessions before clearing and restore validated tabs afterward.
 - [x] Store camera/microphone decisions by validated site origin and separately require Android runtime permission.
 - [x] Bridge Gecko web notifications to Android NotificationManager channels, including Android 13+ POST_NOTIFICATIONS and tap/dismiss callbacks.
 - [x] Suppress website notifications for private-browsing notifications and honor the app-level notification switch.
@@ -37,7 +38,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Sanitize and reserve collision-safe filenames for downloads started by BrowseX.
 - [x] Request legacy external-storage permission only on Android API 26–28.
 - [ ] Implement exact POST-body / protected request transfer, custom authorization headers and byte-for-byte download continuation; the current DownloadManager URL re-fetch cannot guarantee these semantics.
-- [ ] Add Android-backed tests for notification callbacks, permission callbacks and download registry behavior.
+- [ ] Add Android-backed tests for notification callbacks, permission callbacks, privacy clearing callbacks and download registry behavior.
 
 ## Phase 3 — design coverage and accessibility
 
