@@ -21,7 +21,7 @@ internal class RecallPage(
     private val onOpen: (String) -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
-    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
+    private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
@@ -86,9 +86,12 @@ internal class RecallPage(
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         fun matches(query: String, title: String, url: String): Boolean {
-            if (query.isBlank()) return true
+            val normalizedQuery = BrowserTextNormalizer.normalize(query)
+            if (normalizedQuery.isBlank()) return true
             val host = runCatching { Uri.parse(url).host.orEmpty() }.getOrDefault("")
-            return title.contains(query, true) || url.contains(query, true) || host.contains(query, true)
+            return listOf(title, url, host).any {
+                BrowserTextNormalizer.normalize(it).contains(normalizedQuery)
+            }
         }
         fun section(label: String, rows: List<Pair<String, String>>, query: String) {
             val filtered = rows.filter { matches(query, it.first, it.second) }.take(12)
