@@ -39,64 +39,8 @@ internal class SettingsPage(
     private val accent get() = colors.accent
     private val canvas get() = colors.canvas
 
-    private fun t(value: String): String {
-        if (!BrowseXColors.isArabic(store)) return value
-        return mapOf(
-            "Settings" to "الإعدادات",
-            "Make Browse X work the way you like" to "خصّص تجربة التصفح كما تحب",
-            "Close settings" to "إغلاق الإعدادات",
-            "General" to "عام",
-            "Choose how you browse" to "اختر طريقة التصفح",
-            "Search engine" to "محرك البحث",
-            "Default search engine" to "محرك البحث الافتراضي",
-            "Theme" to "المظهر",
-            "Choose the browser appearance" to "اختر مظهر المتصفح",
-            "System default" to "حسب النظام",
-            "Light" to "فاتح",
-            "Dark" to "داكن",
-            "Language" to "اللغة",
-            "Choose the app language" to "اختر لغة التطبيق",
-            "System language" to "لغة النظام",
-            "Arabic" to "العربية",
-            "English" to "الإنجليزية",
-            "Website notifications" to "إشعارات المواقع",
-            "Android notification permission" to "إذن إشعارات أندرويد",
-            "Android app permissions" to "أذونات تطبيق أندرويد",
-            "Manage camera, microphone and location access" to "إدارة أذونات الكاميرا والميكروفون والموقع",
-            "Manage notification permission in Android settings" to "إدارة إذن الإشعارات من إعدادات أندرويد",
-            "Enabled" to "مفعّل",
-            "Blocked" to "محظور",
-            "Manage" to "إدارة",
-            "Allow websites to send Android notifications" to "السماح للمواقع بإرسال إشعارات أندرويد",
-            "On" to "مفعّلة",
-            "Off" to "متوقفة",
-            "Your library" to "مكتبتك",
-            "Your saved pages stay on this device" to "صفحاتك المحفوظة تبقى على هذا الجهاز",
-            "Bookmarks" to "المفضلة",
-            "Open and manage saved websites" to "عرض وإدارة المواقع المحفوظة",
-            "Browsing history" to "سجل التصفح",
-            "Review or remove visited pages" to "عرض الصفحات التي زرتها أو حذفها",
-            "Downloads" to "التنزيلات",
-            "Import bookmarks" to "استيراد المفضلة",
-            "Export bookmarks" to "تصدير المفضلة",
-            "Back up or restore your saved websites" to "نسخ المواقع المحفوظة احتياطيًا أو استعادتها",
-            "Home page" to "الصفحة الرئيسية",
-            "Customize shortcuts and sections" to "تخصيص الاختصارات والأقسام",
-            "Open downloaded files" to "فتح الملفات التي تم تنزيلها",
-            "Privacy & data" to "الخصوصية والبيانات",
-            "Privacy center" to "مركز الخصوصية",
-            "Review and clear cookies, site data and permissions" to "مراجعة ومسح ملفات الارتباط وبيانات المواقع والأذونات",
-            "Clear browsing history" to "مسح سجل التصفح",
-            "Remove the browsing history stored by Browse X" to "حذف سجل التصفح المحفوظ في BrowseX",
-            "Clear" to "مسح",
-            "Cancel" to "إلغاء",
-            "About" to "حول التطبيق",
-            "About Browse X" to "حول BrowseX",
-            "A calmer way to explore the web" to "طريقة أكثر هدوءًا لاستكشاف الويب",
-            "Done" to "تم",
-            "Browse X  ·  Built for the open web" to "BrowseX · متصفح للويب المفتوح"
-        ).getOrDefault(value, value)
-    }
+    private fun t(value: String): String = BrowseXStrings.text(activity, value)
+
 
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
