@@ -71,6 +71,12 @@ Implementation and verification are tracked separately. Items under “implement
 
 Never call a build successful until its workflow conclusion is `success` and the artifact is attached to that exact commit. Never claim physical-device validation unless it was performed on a device. Do not overwrite or ask the user to uninstall an existing install as a troubleshooting shortcut.
 
+## Tab lifecycle policy coverage
+
+- [x] Pure session-budget selection preserves the active tab and releases least-recently-used inactive sessions.
+- [x] Memory-pressure selection releases inactive opened sessions in deterministic oldest-first order.
+- [x] JVM unit tests added for budget, tie-breaking, memory pressure and minimum-budget behavior (not run in this implementation pass).
+
 ## Additional coverage for the current foundation work
 
 - [ ] Save a named session, close/reopen BrowseX, and verify the saved session remains available.
