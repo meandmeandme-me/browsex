@@ -39,6 +39,9 @@ internal class DownloadResponseWriter(context: Context) {
         val onComplete: (Result?, Throwable?, Boolean) -> Unit
     ) {
         val cancelled = AtomicBoolean(false)
+        val completionLock = Any()
+        // Guarded by completionLock: once finalized, cancellation must not report success.
+        var finalized = false
     }
 
     fun write(
@@ -82,12 +85,15 @@ internal class DownloadResponseWriter(context: Context) {
                         val bytes = appContext.contentResolver.openOutputStream(uri, "w")?.use { output ->
                             copyBody(job, output)
                         } ?: error("Android could not open the download file")
-                        checkNotCancelled(job)
-                        val complete = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
-                        check(appContext.contentResolver.update(uri, complete, null, null) > 0) {
-                            "Android could not finalize the download file"
+                        synchronized(job.completionLock) {
+                            checkNotCancelled(job)
+                            val complete = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+                            check(appContext.contentResolver.update(uri, complete, null, null) > 0) {
+                                "Android could not finalize the download file"
+                            }
+                            pendingUri = null
+                            job.finalized = true
                         }
-                        pendingUri = null
                         Result(uri, safeName, bytes)
                     } else {
                         val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -95,11 +101,14 @@ internal class DownloadResponseWriter(context: Context) {
                         val file = uniqueFile(directory, safeName)
                         pendingFile = file
                         val bytes = FileOutputStream(file).use { output -> copyBody(job, output) }
-                        checkNotCancelled(job)
                         val contentUri = FileProvider.getUriForFile(
                             appContext, appContext.packageName + ".files", file
                         )
-                        pendingFile = null
+                        synchronized(job.completionLock) {
+                            checkNotCancelled(job)
+                            pendingFile = null
+                            job.finalized = true
+                        }
                         Result(contentUri, file.name, bytes)
                     }
                 } catch (error: Throwable) {
@@ -122,7 +131,10 @@ internal class DownloadResponseWriter(context: Context) {
 
     fun cancel(id: String): Boolean {
         val job = jobs[id] ?: return false
-        if (!job.cancelled.compareAndSet(false, true)) return false
+        val shouldClose = synchronized(job.completionLock) {
+            if (job.finalized || !job.cancelled.compareAndSet(false, true)) false else true
+        }
+        if (!shouldClose) return false
         runCatching { job.body.close() }
         return true
     }
