@@ -129,6 +129,68 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                 null
             }
             var count = 0
+            store.streamDownloads().forEach { record ->
+                count++
+                val item = LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(13), dp(13), dp(10), dp(13))
+                    background = rounded(colors.card, 15)
+                }
+                val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+                labels.addView(TextView(activity).apply {
+                    text = record.displayName
+                    textSize = 14f
+                    setTypeface(typeface, Typeface.BOLD)
+                    setTextColor(colors.ink)
+                    maxLines = 2
+                })
+                val date = if (record.createdAt > 0L) DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(record.createdAt)) else ""
+                val detail = if (record.failed) {
+                    t("Failed: ", "فشل: ") + record.error
+                } else {
+                    t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة") +
+                        " · ${record.bytesWritten / 1024} KB · " + date
+                }
+                labels.addView(TextView(activity).apply {
+                    text = detail
+                    textSize = 10f
+                    setTextColor(if (record.failed) colors.danger else colors.muted)
+                    setPadding(0, dp(4), 0, 0)
+                    maxLines = 3
+                })
+                item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
+                val action = TextView(activity).apply {
+                    text = if (record.failed) t("Remove", "حذف") else t("Open", "فتح")
+                    textSize = 13f
+                    gravity = Gravity.CENTER
+                    setTextColor(if (record.failed) colors.danger else colors.accent)
+                    setPadding(dp(10), dp(8), dp(6), dp(8))
+                    minimumWidth = dp(48)
+                    minimumHeight = dp(48)
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = if (record.failed) t("Remove failed download record", "حذف سجل التنزيل الفاشل") else t("Open downloaded file", "فتح الملف المنزّل")
+                    setOnClickListener {
+                        if (record.failed) {
+                            store.removeStreamDownload(record.id)
+                            render()
+                        } else {
+                            val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
+                            if (uri == null) {
+                                android.widget.Toast.makeText(activity, t("File location is unavailable", "موقع الملف غير متاح"), android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, record.mimeType.ifBlank { "*/*" })
+                                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                try { activity.startActivity(intent) }
+                                catch (_: Exception) { android.widget.Toast.makeText(activity, t("No app can open this file", "لا يوجد تطبيق لفتح هذا الملف"), android.widget.Toast.LENGTH_SHORT).show() }
+                            }
+                        }
+                    }
+                }
+                item.addView(action)
+                list.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            }
             cursor?.use { c ->
                 val idCol = c.getColumnIndex(DownloadManager.COLUMN_ID)
                 val titleCol = c.getColumnIndex(DownloadManager.COLUMN_TITLE)
