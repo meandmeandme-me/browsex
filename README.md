@@ -31,6 +31,7 @@ gradle assembleDebug
 ## توثيق التطوير
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Project tree and dependency contracts](docs/PROJECT_TREE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [QA checklist](docs/QA_CHECKLIST.md)
 
