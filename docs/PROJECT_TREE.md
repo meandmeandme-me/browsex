@@ -21,7 +21,7 @@ BrowseX/
 │   │   │   │   └── platform/             # Android capability/version wrappers
 │   │   │   ├── browser/
 │   │   │   │   ├── engine/               # GeckoRuntime, GeckoSession, GeckoView adapter
-│   │   │   │   ├── tabs/                 # tab models, lifecycle, restore, switching
+│   │   │   │   ├── tabs/                 # tab models, lifecycle, restore, switching and named sessions
 │   │   │   │   ├── navigation/           # URL parsing, search, intents, back/forward
 │   │   │   │   ├── security/             # scheme validation, safe browsing boundaries
 │   │   │   │   ├── permissions/          # site permissions and Android permission bridge
