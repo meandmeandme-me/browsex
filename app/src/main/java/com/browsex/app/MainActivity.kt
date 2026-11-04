@@ -527,7 +527,7 @@ class MainActivity : AppCompatActivity() {
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
-            "Bookmarks", "History", "Share page", "Copy page address",
+            "Bookmarks", "History", "Downloads", "Share page", "Copy page address",
             "Search engine", "Clear browsing history", "Settings"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
@@ -538,13 +538,14 @@ class MainActivity : AppCompatActivity() {
                 }
                 1 -> showSavedPages("Bookmarks", store.bookmarks())
                 2 -> showSavedPages("History", store.history())
-                3 -> shareCurrentPage()
-                4 -> copyCurrentAddress()
-                5 -> chooseSearchEngine()
-                6 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                3 -> openDownloads()
+                4 -> shareCurrentPage()
+                5 -> copyCurrentAddress()
+                6 -> chooseSearchEngine()
+                7 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                7 -> showSettings()
+                8 -> showSettings()
             }
         }.show()
     }
@@ -640,6 +641,15 @@ class MainActivity : AppCompatActivity() {
         dialog = AlertDialog.Builder(this).setTitle(title).setView(scroll)
             .setNegativeButton("Close", null).create()
         dialog.show()
+    }
+
+    /** Opens Android's real download collection; Android owns download storage and notifications. */
+    private fun openDownloads() {
+        try {
+            startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))
+        } catch (_: Exception) {
+            toast("Open the Downloads app to view downloaded files")
+        }
     }
 
     private fun chooseSearchEngine() {
