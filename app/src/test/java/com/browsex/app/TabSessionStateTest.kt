@@ -13,7 +13,7 @@ class TabSessionStateTest {
             home
         )
         assertEquals(listOf("https://example.com", home, "https://openai.com"), state.urls)
-        assertEquals(1, state.activeIndex)
+        assertEquals(2, state.activeIndex)
     }
 
     @Test fun invalidAndEmptySnapshotsFallBackToHome() {
