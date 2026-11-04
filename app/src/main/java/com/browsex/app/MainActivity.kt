@@ -15,6 +15,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -69,8 +70,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
-        window.statusBarColor = COLOR_BG
-        window.navigationBarColor = COLOR_PANEL
+        window.statusBarColor = Color.rgb(239, 245, 250)
+        window.navigationBarColor = Color.rgb(239, 245, 250)
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = true
         setContentView(createBrowserUi())
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -352,24 +355,79 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTabs() {
-        val labels = tabs.mapIndexed { index, tab ->
-            val current = if (tab === activeTab) "✓ " else ""
-            "$current${index + 1}. ${tab.title}".take(70)
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Open tabs · ${tabs.size}")
-            .setItems(labels) { _, which -> activateTab(tabs.getOrNull(which) ?: return@setItems) }
+        val scroll = ScrollView(this)
+        val grid = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+        }
+        scroll.addView(grid)
+        lateinit var dialog: AlertDialog
+
+        tabs.chunked(2).forEach { pair ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.TOP
+            }
+            pair.forEach { tab ->
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(12), dp(12), dp(12), dp(10))
+                    background = rounded(Color.WHITE, 16)
+                    elevation = dp(2).toFloat()
+                }
+                val title = TextView(this).apply {
+                    text = tab.title.ifBlank { "New tab" }
+                    textSize = 14f
+                    setTextColor(Color.rgb(19, 43, 64))
+                    maxLines = 2
+                }
+                val url = TextView(this).apply {
+                    text = tab.url.removePrefix("https://").removePrefix("http://")
+                    textSize = 11f
+                    setTextColor(Color.rgb(83, 105, 123))
+                    maxLines = 2
+                    setPadding(0, dp(5), 0, dp(10))
+                }
+                val close = TextView(this).apply {
+                    text = "×  Close tab"
+                    textSize = 12f
+                    setTextColor(Color.rgb(8, 102, 217))
+                    gravity = Gravity.END
+                    setOnClickListener {
+                        closeTab(tab)
+                        dialog.dismiss()
+                        if (tabs.isNotEmpty()) showTabs()
+                    }
+                }
+                card.addView(title)
+                card.addView(url)
+                card.addView(close)
+                card.setOnClickListener {
+                    activateTab(tab)
+                    dialog.dismiss()
+                }
+                row.addView(card, LinearLayout.LayoutParams(0, dp(116), 1f).apply {
+                    setMargins(dp(5), dp(5), dp(5), dp(5))
+                })
+            }
+            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, dp(116), 1f))
+            grid.addView(row)
+        }
+
+        dialog = AlertDialog.Builder(this)
+            .setTitle("Your tabs · ${tabs.size}")
+            .setView(scroll)
             .setPositiveButton("New tab") { _, _ -> createTab(HOME_URL) }
-            .setNegativeButton("Close current") { _, _ -> activeTab?.let(::closeTab) }
-            .setNeutralButton("Done", null)
-            .show()
+            .setNegativeButton("Done", null)
+            .create()
+        dialog.show()
     }
 
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Share page", "Copy page address",
-            "Search engine", "Clear browsing history"
+            "Search engine", "Clear browsing history", "Settings"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
@@ -385,6 +443,31 @@ class MainActivity : AppCompatActivity() {
                 6 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
+                7 -> showSettings()
+            }
+        }.show()
+    }
+
+    private fun showSettings() {
+        val items = arrayOf(
+            "Default search engine · ${store.searchEngine}",
+            "Saved pages",
+            "Browsing history",
+            "Clear browsing history",
+            "About Browse X"
+        )
+        AlertDialog.Builder(this).setTitle("Settings").setItems(items) { _, which ->
+            when (which) {
+                0 -> chooseSearchEngine()
+                1 -> showSavedPages("Saved pages", store.bookmarks())
+                2 -> showSavedPages("Browsing history", store.history())
+                3 -> AlertDialog.Builder(this).setMessage("Clear all browsing history?")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
+                4 -> AlertDialog.Builder(this)
+                    .setTitle("Browse X")
+                    .setMessage("A quieter, more considered way to explore the web. Powered by GeckoView.")
+                    .setPositiveButton("Done", null).show()
             }
         }.show()
     }
