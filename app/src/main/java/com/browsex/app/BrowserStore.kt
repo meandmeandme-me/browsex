@@ -8,7 +8,7 @@ class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
 
     var adBlockEnabled: Boolean
-        get() = prefs.getBoolean("ad_block_enabled", true)
+        get() = prefs.getBoolean("ad_block_enabled", false)
         set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
 
     var searchEngine: String
