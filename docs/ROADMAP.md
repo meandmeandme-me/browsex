@@ -45,8 +45,11 @@ This file records implementation state separately from device verification. A ch
 - [x] Report missing DownloadManager records and allow their BrowseX registry entries to be removed.
 - [x] Sanitize and reserve collision-safe filenames for downloads started by BrowseX.
 - [x] Request legacy external-storage permission only on Android API 26–28.
-- [x] Add a dedicated response-stream writer for Gecko external responses; save the received response body directly without re-fetching, including POST/authenticated/one-time URL responses; persist completed/failed records and expose them in Downloads.
-- [ ] Add live byte progress, cancellation, recoverable interrupted state and safe retry/resume only when the original response can be continued; add Android-backed tests for GET, POST and authenticated responses.
+- [x] Add a dedicated response-stream writer for Gecko external responses; save the received response body directly without re-fetching, including POST/authenticated/one-time URL responses.
+- [x] Persist queued/running/completed/failed/cancelled stream-download states, byte progress and known Content-Length; show live progress and cancellation in Downloads; delete partial output on handled cancellation/failure.
+- [x] Mark unfinished stream downloads interrupted on the next app startup; do not claim process-death continuation.
+- [ ] Add safe retry/resume only when the original response can be continued; one-shot POST/authenticated responses are not resumable by default.
+- [ ] Add Android-backed tests for GET, POST, authenticated responses, progress, cancellation, interrupted records and partial-file cleanup.
 - [ ] Add Android-backed tests for notification callbacks, permission callbacks, privacy clearing callbacks and download registry behavior.
 
 ## Phase 3 — design coverage and accessibility
