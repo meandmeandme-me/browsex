@@ -18,6 +18,20 @@ class BrowserStore(context: Context) {
         get() = prefs.getBoolean("ad_block_enabled", false)
         set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
 
+    /** Theme preference: system, light or dark. */
+    var themeMode: String
+        get() = prefs.getString("theme_mode", "system")?.takeIf { it in setOf("system", "light", "dark") } ?: "system"
+        set(value) { prefs.edit().putString("theme_mode", value.takeIf { it in setOf("system", "light", "dark") } ?: "system").apply() }
+
+    /** UI language preference: system, ar or en. */
+    var languageMode: String
+        get() = prefs.getString("language_mode", "system")?.takeIf { it in setOf("system", "ar", "en") } ?: "system"
+        set(value) { prefs.edit().putString("language_mode", value.takeIf { it in setOf("system", "ar", "en") } ?: "system").apply() }
+
+    var siteNotificationsEnabled: Boolean
+        get() = prefs.getBoolean("site_notifications_enabled", true)
+        set(value) { prefs.edit().putBoolean("site_notifications_enabled", value).apply() }
+
     var searchEngine: String
         get() = BrowserStorePolicy.normalizeSearchEngine(prefs.getString("search_engine", "Google"))
         set(value) {
