@@ -83,6 +83,11 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [x] Open-tab snapshots, named sessions and recently-closed entries are delegated to BrowserSessionStore using the existing persisted keys and validation rules.
 - [ ] Verify legacy saved tabs, named sessions and recently-closed entries survive upgrade and process restart.
 
+## Localization tooling coverage
+
+- [x] CI validates Android locale resource parity, plural categories, formatting placeholders and locale-config registration.
+- [ ] Add reviewed translations and run native-speaker, RTL/LTR, TalkBack and large-font QA before advertising each new locale.
+
 ## Extracted browser policy coverage
 
 - [x] Browser theme, language and home-layout normalization is isolated as pure policy with JVM tests added (not run in this implementation pass).
