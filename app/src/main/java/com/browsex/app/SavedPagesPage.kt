@@ -264,10 +264,16 @@ internal class SavedPagesPage(
         val normalized = query.trim()
         val folderUrls = if (isHistory || selectedFolderId == null) null else
             store.bookmarkItems().filter { it.folderId == selectedFolderId }.map { it.url }.toSet()
+        val bookmarkMetadata = if (isHistory) emptyMap() else store.bookmarkItems().associateBy { it.url }
+        val historyMetadata = if (isHistory) store.historyEntries().associateBy { it.url } else emptyMap()
+        fun pageTitle(url: String): String =
+            (if (isHistory) historyMetadata[url]?.title else bookmarkMetadata[url]?.title)
+                ?.takeIf { it.isNotBlank() } ?: Uri.parse(url).host.orEmpty().ifBlank { url }
         val filtered = pages.filter { page ->
             (folderUrls == null || page in folderUrls) &&
                 (normalized.isBlank() || page.contains(normalized, ignoreCase = true) ||
-                    Uri.parse(page).host.orEmpty().contains(normalized, ignoreCase = true))
+                    Uri.parse(page).host.orEmpty().contains(normalized, ignoreCase = true) ||
+                    pageTitle(page).contains(normalized, ignoreCase = true))
         }
         count.text = if (BrowseXColors.isArabic(store)) "${filtered.size} من ${pages.size} صفحة" else "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
         if (filtered.isEmpty()) {
@@ -293,7 +299,7 @@ internal class SavedPagesPage(
             val details = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
             val host = Uri.parse(page).host ?: page
             details.addView(TextView(activity).apply {
-                text = host
+                text = pageTitle(page)
                 textSize = 14f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(ink)
@@ -327,11 +333,26 @@ internal class SavedPagesPage(
             if (!isHistory) item.setOnLongClickListener {
                 val folders = store.bookmarkFolders()
                 val labels = folders.map { if (it.id == BookmarkFolder.DEFAULT_ID) t("Unfiled", "غير مصنف") else it.name }.toTypedArray()
+                val actions = arrayOf(
+                    t("Move to folder", "نقل إلى مجلد"),
+                    t("Move earlier", "نقل للأعلى"),
+                    t("Move later", "نقل للأسفل")
+                )
                 AlertDialog.Builder(activity)
-                    .setTitle(t("Move bookmark to folder", "نقل المفضلة إلى مجلد"))
-                    .setItems(labels) { _, index ->
-                        store.moveBookmark(page, folders[index].id)
-                        render(query, list, count, empty)
+                    .setTitle(t("Manage bookmark", "إدارة المفضلة"))
+                    .setItems(actions) { _, action ->
+                        when (action) {
+                            0 -> AlertDialog.Builder(activity)
+                                .setTitle(t("Move bookmark to folder", "نقل المفضلة إلى مجلد"))
+                                .setItems(labels) { _, index ->
+                                    store.moveBookmark(page, folders[index].id)
+                                    render(query, list, count, empty)
+                                }
+                                .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                .show()
+                            1 -> { store.reorderBookmark(page, -1); render(query, list, count, empty) }
+                            2 -> { store.reorderBookmark(page, 1); render(query, list, count, empty) }
+                        }
                     }
                     .setNegativeButton(t("Cancel", "إلغاء"), null)
                     .show()
