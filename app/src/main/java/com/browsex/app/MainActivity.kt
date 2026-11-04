@@ -703,7 +703,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
-        DownloadsPage(this).show()
+        DownloadsPage(this, store).show()
     }
 
     /** Routes GeckoView's external responses through Android's supported download service. */
