@@ -30,7 +30,8 @@ internal class SavedPagesPage(
     private val ink get() = colors.ink
     private val muted get() = colors.muted
     private val accent get() = colors.accent
-    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
+    private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
+
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
