@@ -35,6 +35,14 @@ class BrowserStore(context: Context) {
         writeList("history", values.take(300))
     }
 
+    fun removeBookmark(url: String) {
+        writeList("bookmarks", bookmarks().filterNot { it == url })
+    }
+
+    fun removeHistory(url: String) {
+        writeList("history", history().filterNot { it == url })
+    }
+
     fun clearHistory() = prefs.edit().remove("history").apply()
 
     private fun readList(key: String): List<String> = try {
