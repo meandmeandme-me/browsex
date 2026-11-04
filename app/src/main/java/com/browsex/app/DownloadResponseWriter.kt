@@ -38,47 +38,56 @@ internal class DownloadResponseWriter(context: Context) {
     ) {
         try {
             executor.execute {
-            var pendingUri: Uri? = null
-            var pendingFile: File? = null
-            try {
-                val safeName = displayName
-                    .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-                    .filterNot { it.isISOControl() }
-                    .trim().trim('.').take(140).ifBlank { "download" }
-                val mime = mimeType?.takeIf { it.contains('/') && it.length <= 120 } ?: "application/octet-stream"
-                val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val values = ContentValues().apply {
-                        put(MediaStore.Downloads.DISPLAY_NAME, safeName)
-                        put(MediaStore.Downloads.MIME_TYPE, mime)
-                        put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/BrowseX")
-                        put(MediaStore.Downloads.IS_PENDING, 1)
+                var pendingUri: Uri? = null
+                var pendingFile: File? = null
+                var completed: Result? = null
+                var failure: Throwable? = null
+                try {
+                    val safeName = displayName
+                        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                        .filterNot { it.isISOControl() }
+                        .trim().trim('.').take(140).ifBlank { "download" }
+                    val mime = mimeType?.takeIf { it.contains('/') && it.length <= 120 } ?: "application/octet-stream"
+                    completed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val values = ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, safeName)
+                            put(MediaStore.Downloads.MIME_TYPE, mime)
+                            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/BrowseX")
+                            put(MediaStore.Downloads.IS_PENDING, 1)
+                        }
+                        val uri = appContext.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                            ?: error("Android could not create the download file")
+                        pendingUri = uri
+                        val bytes = appContext.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                            body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+                        } ?: error("Android could not open the download file")
+                        val complete = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+                        check(appContext.contentResolver.update(uri, complete, null, null) > 0) {
+                            "Android could not finalize the download file"
+                        }
+                        pendingUri = null
+                        Result(uri, safeName, bytes)
+                    } else {
+                        val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                        if (!directory.exists() && !directory.mkdirs()) error("Downloads folder is unavailable")
+                        val file = uniqueFile(directory, safeName)
+                        pendingFile = file
+                        val bytes = FileOutputStream(file).use { output ->
+                            body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+                        }
+                        val contentUri = FileProvider.getUriForFile(
+                            appContext, appContext.packageName + ".files", file
+                        )
+                        pendingFile = null
+                        Result(contentUri, file.name, bytes)
                     }
-                    val uri = appContext.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                        ?: error("Android could not create the download file")
-                    pendingUri = uri
-                    val bytes = appContext.contentResolver.openOutputStream(uri, "w")?.use { output ->
-                        body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
-                    } ?: error("Android could not open the download file")
-                    val complete = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
-                    appContext.contentResolver.update(uri, complete, null, null)
-                    Result(uri, safeName, bytes)
-                } else {
-                    val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                    if (!directory.exists() && !directory.mkdirs()) error("Downloads folder is unavailable")
-                    val file = uniqueFile(directory, safeName)
-                    pendingFile = file
-                    val bytes = FileOutputStream(file).use { output ->
-                        body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
-                    }
-                    Result(FileProvider.getUriForFile(appContext, appContext.packageName + ".files", file), file.name, bytes).also { pendingFile = null }
+                } catch (error: Throwable) {
+                    failure = error
+                    runCatching { pendingUri?.let { appContext.contentResolver.delete(it, null, null) } }
+                    runCatching { pendingFile?.delete() }
+                    runCatching { body.close() }
                 }
-                onComplete(result, null)
-            } catch (error: Throwable) {
-                runCatching { pendingUri?.let { appContext.contentResolver.delete(it, null, null) } }
-                runCatching { pendingFile?.delete() }
-                runCatching { body.close() }
-                onComplete(null, error)
-            }
+                onComplete(completed, failure)
             }
         } catch (_: RejectedExecutionException) {
             runCatching { body.close() }
