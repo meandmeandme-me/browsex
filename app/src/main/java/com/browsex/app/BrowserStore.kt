@@ -247,7 +247,10 @@ class BrowserStore(context: Context) {
 
     fun isBookmarked(url: String): Boolean = bookmarkItems().any { it.url == url }
 
-    fun toggleBookmark(url: String): Boolean {
+    fun toggleBookmark(url: String): Boolean =
+        toggleBookmark(url, android.net.Uri.parse(url).host.orEmpty().ifBlank { url })
+
+    fun toggleBookmark(url: String, title: String): Boolean {
         if (!NavigationInput.isValidWebUrl(url)) return false
         val items = readBookmarkItems().toMutableList()
         val existing = items.indexOfFirst { it.url == url }
@@ -255,7 +258,7 @@ class BrowserStore(context: Context) {
         if (added) items.add(0, BookmarkItem(
             id = "bookmark_${url.hashCode().toUInt().toString(16)}",
             url = url,
-            title = android.net.Uri.parse(url).host.orEmpty().ifBlank { url }.take(160),
+            title = title.trim().take(160).ifBlank { android.net.Uri.parse(url).host.orEmpty().ifBlank { url } },
             folderId = BookmarkFolder.DEFAULT_ID,
             createdAt = System.currentTimeMillis()
         )) else items.removeAt(existing)

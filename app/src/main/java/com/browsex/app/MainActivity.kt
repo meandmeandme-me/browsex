@@ -621,7 +621,7 @@ class MainActivity : AppCompatActivity() {
         bottomButton("＋", "New tab") { createTab(homePageUrl()) }
         bottomButton("☆", "Bookmark page") {
             activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                val added = store.toggleBookmark(it)
+                val added = store.toggleBookmark(it, activeTab?.title.orEmpty())
                 toast(if (added) "Saved to favorites" else "Removed from favorites")
             }
         }
@@ -1050,7 +1050,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
                 0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                    val added = store.toggleBookmark(it)
+                    val added = store.toggleBookmark(it, activeTab?.title.orEmpty())
                     toast(if (added) "Bookmark saved" else "Bookmark removed")
                 }
                 1 -> showSavedPages("Bookmarks", store.bookmarks())
