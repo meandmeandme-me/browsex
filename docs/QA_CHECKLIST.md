@@ -20,16 +20,16 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] A failed DownloadManager query is shown as a read error, not misreported as deleted downloads.
 - [x] Launching an external URL preserves saved tabs and opens the new link as the active tab.
 
-## Final automated CI gates (run once after implementation is complete)
+## Final automated CI gates (required; not verified for the current HEAD)
 
-- [x] Gradle configuration resolves reproducibly.
-- [x] Kotlin compilation succeeds.
-- [x] Unit tests pass, including the configured-home-URL snapshot test.
-- [x] Android lint completes with no new errors.
-- [x] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
-- [x] APK package ID and minSdk are correct.
-- [x] APKs contain the expected GeckoView native libraries for each ABI.
-- [x] CI uploads debug artifacts only after every required gate passes; public release publishing waits for stable signing.
+- [ ] Gradle configuration resolves reproducibly.
+- [ ] Kotlin compilation succeeds.
+- [ ] Unit tests pass, including the configured-home-URL snapshot test.
+- [ ] Android lint completes with no new errors.
+- [ ] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
+- [ ] APK package ID and minSdk are correct.
+- [ ] APKs contain the expected GeckoView native libraries for each ABI.
+- [ ] CI uploads debug artifacts only after every required gate passes; public release publishing waits for stable signing.
 
 ## Functional checks (physical-device validation still required)
 
