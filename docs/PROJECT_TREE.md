@@ -29,6 +29,7 @@ BrowseX/
 │   │   │   ├── BrowserCredentialPromptDelegate.kt # explicit save/select prompts
 │   │   │   ├── BrowserDeviceAuthenticator.kt # biometric/device-credential confirmation
 │   │   │   ├── CredentialOriginPolicy.kt # exact HTTPS-origin policy
+│   │   │   ├── CredentialAccessPolicy.kt # authenticated short-lived credential access
 │   │   │   ├── TabsPage.kt                # responsive tab workspace UI with injected actions
 │   │   │   ├── TabLifecyclePolicy.kt     # pure Gecko session budget/memory policy
 │   │   │   ├── BrowserPreferencesStore.kt # settings and site-permission persistence
@@ -105,7 +106,7 @@ BrowseX/
 
 ## Current implementation files
 
-The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `BrowserSessionDelegateFactory`, `BrowserAndroidPermissionCoordinator`, `BrowserAndroidPermissionQueue`, `BrowserNotificationPermissionCoordinator`, `BrowserCredentialVault`, `BrowserCredentialPromptDelegate`, `BrowserDeviceAuthenticator`, `CredentialOriginPolicy`, `BrowserTabPersistencePolicy`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `BrowserSessionDelegateFactory`, `BrowserAndroidPermissionCoordinator`, `BrowserAndroidPermissionQueue`, `BrowserNotificationPermissionCoordinator`, `BrowserCredentialVault`, `BrowserCredentialPromptDelegate`, `BrowserDeviceAuthenticator`, `CredentialOriginPolicy`, `CredentialAccessPolicy`, `BrowserTabPersistencePolicy`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
 
 ## Dependency direction
 
