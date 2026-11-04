@@ -83,6 +83,8 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   <label for="shortcut-name" id="name-label">Name</label><input id="shortcut-name" maxlength="24" placeholder="My favorite site" required>
   <label for="shortcut-url" id="site-label">Website address</label><input id="shortcut-url" type="url" inputmode="url" placeholder="https://example.com" required>
   <div class="dialog-actions">
+   <button class="secondary" id="move-up" type="button" hidden>Move earlier</button>
+   <button class="secondary" id="move-down" type="button" hidden>Move later</button>
    <button class="secondary" id="cancel" type="button">Cancel</button>
    <button class="danger" id="delete" type="button" hidden>Delete</button>
    <button class="primary" type="submit">Save</button>
@@ -111,7 +113,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   dialogAdd:'إضافة اختصار',dialogEdit:'تعديل الاختصار',
   dialogDesc:'احفظ موقعًا في صفحة البداية. أدخل عنوان موقع كاملًا.',
   name:'الاسم',site:'عنوان الموقع',placeholderName:'موقعي المفضل',
-  cancel:'إلغاء',save:'حفظ',invalid:'أدخل عنوان موقع صحيحًا يبدأ بـ http أو https.',
+  cancel:'إلغاء',save:'حفظ',moveUp:'تحريك للأعلى',moveDown:'تحريك للأسفل',invalid:'أدخل عنوان موقع صحيحًا يبدأ بـ http أو https.',
   morning:'صباح الخير. إلى أين نذهب؟',afternoon:'نهارك سعيد. إلى أين نذهب؟',evening:'مساء الخير. إلى أين نذهب؟'
  }:{
   greeting:['Good morning. Where to next?','Good evening. Where to next?'],
@@ -124,7 +126,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   dialogAdd:'Add a shortcut',dialogEdit:'Edit shortcut',
   dialogDesc:'Save a website to your start page. Use a full website address.',
   name:'Name',site:'Website address',placeholderName:'My favorite site',
-  cancel:'Cancel',save:'Save',invalid:'Enter a valid http or https website address.',
+  cancel:'Cancel',save:'Save',moveUp:'Move earlier',moveDown:'Move later',invalid:'Enter a valid http or https website address.',
   morning:'Good morning. Where to next?',afternoon:'Good afternoon. Where to next?',evening:'Good evening. Where to next?'
  };
 
@@ -164,9 +166,11 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   $('name-label').textContent=copy.name;$('site-label').textContent=copy.site;
   $('shortcut-name').placeholder=copy.placeholderName;
   $('cancel').textContent=copy.cancel;$('delete').textContent=copy.delete;
+  $('move-up').textContent=copy.moveUp;$('move-down').textContent=copy.moveDown;
   $('shortcut-form').querySelector('button[type="submit"]').textContent=copy.save;
   $('shortcut-name').value=item.name;$('shortcut-url').value=item.url;
-  $('delete').hidden=index<0;dialog.showModal();$('shortcut-name').focus();
+  $('delete').hidden=index<0;$('move-up').hidden=index<=0;$('move-down').hidden=index<0||index>=shortcuts.length-1;
+  dialog.showModal();$('shortcut-name').focus();
  };
  $('shortcut-form').addEventListener('submit',event=>{
   event.preventDefault();const name=$('shortcut-name').value.trim(),url=$('shortcut-url').value.trim();
@@ -176,6 +180,14 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   save();render();dialog.close();
  });
  $('cancel').addEventListener('click',()=>dialog.close());
+ const moveShortcut=offset=>{
+  const target=editing+offset;if(editing<0||target<0||target>=shortcuts.length)return;
+  [shortcuts[editing],shortcuts[target]]=[shortcuts[target],shortcuts[editing]];
+  editing=target;save();render();
+  $('move-up').hidden=editing<=0;$('move-down').hidden=editing>=shortcuts.length-1;
+ };
+ $('move-up').addEventListener('click',()=>moveShortcut(-1));
+ $('move-down').addEventListener('click',()=>moveShortcut(1));
  $('delete').addEventListener('click',()=>{if(editing>=0){shortcuts.splice(editing,1);save();render()}dialog.close()});
  $('reset').addEventListener('click',()=>{shortcuts=defaults.map(x=>({...x}));save();render()});
  const quickVisible=params.get('bxquick')!=='false';
