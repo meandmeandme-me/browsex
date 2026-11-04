@@ -26,7 +26,7 @@ class SiteInfoPage(
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val localPermissionValues = mutableMapOf<Pair<Int, String>, Int>()
     private var activePageDialog: AlertDialog? = null
-    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
+    private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun valueOf(permission: GeckoSession.PermissionDelegate.ContentPermission): Int =
         localPermissionValues[permission.permission to permission.uri] ?: permission.value
     private val density = activity.resources.displayMetrics.density
