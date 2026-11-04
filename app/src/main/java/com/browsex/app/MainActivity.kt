@@ -65,6 +65,21 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     }
     private val tabs: List<BrowserTab> get() = tabRegistry.tabs
     private val activeTab: BrowserTab? get() = tabRegistry.activeTab
+    private val contentProcessRecoveryCoordinator by lazy {
+        BrowserContentProcessRecoveryCoordinator(
+            dispatchToMain = { action -> runOnUiThread(action) },
+            isHostUnavailable = { shuttingDown || isFinishing || isDestroyed },
+            containsTab = { tab -> tabs.contains(tab) },
+            isActiveTab = { tab -> tab === activeTab },
+            homeUrl = ::homePageUrl,
+            runtime = { BrowserRuntimeOwner.runtime(this) },
+            cancelPlatformPermissions = ::cancelPlatformPermissionRequests,
+            attachDelegates = ::attachDelegates,
+            activateTab = ::activateTab,
+            updateUi = ::updateChrome,
+            showMessage = ::toast
+        )
+    }
     private lateinit var store: BrowserStore
     private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
     private lateinit var browserView: GeckoView
@@ -771,41 +786,7 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     }
 
     override fun onContentProcessCrash(tab: BrowserTab, session: GeckoSession) {
-        runOnUiThread {
-            if (shuttingDown || isFinishing || isDestroyed ||
-                !tabs.contains(tab) || tab.session !== session
-            ) return@runOnUiThread
-            if (tab.recoveryAttempts >= 1) {
-                tab.crashed = true
-                tab.progress = 0
-                if (tab === activeTab) toast("This tab crashed again. Reopen it to continue.")
-                updateChrome()
-                return@runOnUiThread
-            }
-            tab.recoveryAttempts += 1
-            val restoreUrl = tab.url.ifBlank { homePageUrl() }
-            val wasActive = tab === activeTab
-            tab.permissionDelegate?.cancelPending()
-            cancelPlatformPermissionRequests(session)
-            attachDelegates(tab)
-            try {
-                session.open(BrowserRuntimeOwner.runtime(this))
-                tab.sessionOpened = true
-                if (wasActive) {
-                    activateTab(tab)
-                    session.loadUri(restoreUrl)
-                } else {
-                    session.setFocused(false)
-                    session.setActive(false)
-                    session.loadUri(restoreUrl)
-                }
-            } catch (error: RuntimeException) {
-                tab.sessionOpened = false
-                tab.crashed = true
-                android.util.Log.e("BrowseX", "Tab recovery failed", error)
-                if (wasActive) toast("Could not restore this tab. Open a new tab.")
-            }
-        }
+        contentProcessRecoveryCoordinator.onContentProcessCrash(tab, session)
     }
 
     private fun setFullscreen(enabled: Boolean) {
