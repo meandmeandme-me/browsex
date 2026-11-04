@@ -79,7 +79,7 @@ Sections:
 - Theme-aware background and layout.
 
 Interactions:
-- Add, edit, remove and reorder shortcuts.
+- Add, edit, remove and move shortcuts earlier/later with visible boundary states.
 - Toggle sections and reset defaults.
 - Grid/list shortcut layout.
 - Empty state with a clear add-shortcut action.
