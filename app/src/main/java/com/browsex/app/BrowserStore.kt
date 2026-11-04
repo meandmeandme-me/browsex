@@ -3,6 +3,7 @@ package com.browsex.app
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /** Small durable store for browser preferences, bookmarks and recent history. */
 class BrowserStore(context: Context) {
@@ -214,7 +215,7 @@ class BrowserStore(context: Context) {
         if (name.isBlank() || name.equals("Unfiled", true)) return null
         val folders = readBookmarkFolders().toMutableList()
         if (folders.size >= 50 || folders.any { it.name.equals(name, true) }) return null
-        val folder = BookmarkFolder("folder_${System.currentTimeMillis()}_${name.hashCode().toUInt().toString(16)}", name)
+        val folder = BookmarkFolder("folder_${UUID.randomUUID()}", name)
         folders.add(folder)
         writeBookmarkLibrary(folders, readBookmarkItems())
         return folder
@@ -252,6 +253,22 @@ class BrowserStore(context: Context) {
         return true
     }
 
+    /** Reorders a bookmark without changing its stable identity or folder. */
+    fun reorderBookmark(url: String, offset: Int): Boolean {
+        if (offset !in -1..1 || offset == 0) return false
+        val items = readBookmarkItems().toMutableList()
+        val index = items.indexOfFirst { it.url == url }
+        if (index < 0) return false
+        val destination = (index + offset).coerceIn(0, items.lastIndex)
+        if (destination == index) return false
+        val item = items.removeAt(index)
+        items.add(destination, item)
+        writeBookmarkLibrary(readBookmarkFolders(), items)
+        return true
+    }
+
+    private fun newBookmarkId(): String = "bookmark_${UUID.randomUUID()}"
+
     fun isBookmarked(url: String): Boolean = bookmarkItems().any { it.url == url }
 
     fun toggleBookmark(url: String): Boolean =
@@ -263,7 +280,7 @@ class BrowserStore(context: Context) {
         val existing = items.indexOfFirst { it.url == url }
         val added = existing < 0
         if (added) items.add(0, BookmarkItem(
-            id = "bookmark_${url.hashCode().toUInt().toString(16)}",
+            id = newBookmarkId(),
             url = url,
             title = title.trim().take(160).ifBlank { android.net.Uri.parse(url).host.orEmpty().ifBlank { url } },
             folderId = BookmarkFolder.DEFAULT_ID,
@@ -322,15 +339,36 @@ class BrowserStore(context: Context) {
                 createdAt = obj.optLong("createdAt", System.currentTimeMillis()).coerceAtLeast(0L)
             ))
         }
-        val folders = if (merge) (readBookmarkFolders() + incomingFolders.drop(1))
-            .distinctBy { it.id }.take(51) else incomingFolders
+        // Merge folders by name, not only by ID. An imported ID may collide with a
+        // different local folder; remap it so imported bookmarks never land in the wrong folder.
+        val folders = (if (merge) readBookmarkFolders() else listOf(BookmarkFolder.DEFAULT)).toMutableList()
+        val folderIdMap = mutableMapOf(BookmarkFolder.DEFAULT_ID to BookmarkFolder.DEFAULT_ID)
+        incomingFolders.drop(1).forEach { incomingFolder ->
+            val sameName = folders.firstOrNull { it.name.equals(incomingFolder.name, ignoreCase = true) }
+            if (sameName != null) {
+                folderIdMap[incomingFolder.id] = sameName.id
+            } else {
+                val safeId = if (folders.any { it.id == incomingFolder.id }) "folder_${UUID.randomUUID()}" else incomingFolder.id
+                val safeFolder = incomingFolder.copy(id = safeId)
+                if (folders.size < 51) {
+                    folders.add(safeFolder)
+                    folderIdMap[incomingFolder.id] = safeId
+                } else {
+                    folderIdMap[incomingFolder.id] = BookmarkFolder.DEFAULT_ID
+                }
+            }
+        }
         val folderIds = folders.map { it.id }.toSet()
+        val remappedIncoming = incoming.map { item ->
+            item.copy(folderId = folderIdMap[item.folderId]
+                ?.takeIf(folderIds::contains) ?: BookmarkFolder.DEFAULT_ID)
+        }
         val existing = if (merge) readBookmarkItems() else emptyList()
-        val merged = (incoming + existing).map {
+        val merged = (remappedIncoming + existing).map {
             it.copy(folderId = it.folderId.takeIf(folderIds::contains) ?: BookmarkFolder.DEFAULT_ID)
         }.distinctBy { it.url }.take(BrowserStorePolicy.MAX_BOOKMARKS)
         writeBookmarkLibrary(folders, merged)
-        return incoming.size.coerceAtMost(merged.size)
+        return remappedIncoming.map { it.url }.distinct().count { url -> merged.any { it.url == url } }
     }
 
     fun addHistory(url: String) {
@@ -396,7 +434,7 @@ class BrowserStore(context: Context) {
         val stored = prefs.getString("bookmark_items_v1", null)
         if (stored == null) {
             val migrated = readList("bookmarks").map { url ->
-                BookmarkItem("bookmark_${url.hashCode().toUInt().toString(16)}", url,
+                BookmarkItem(newBookmarkId(), url,
                     android.net.Uri.parse(url).host.orEmpty().ifBlank { url }.take(160),
                     BookmarkFolder.DEFAULT_ID, 0L)
             }
@@ -411,7 +449,7 @@ class BrowserStore(context: Context) {
                 val url = obj.optString("url").trim()
                 if (!NavigationInput.isValidWebUrl(url) || url.length > 4096) return@mapNotNull null
                 BookmarkItem(
-                    obj.optString("id").take(80).ifBlank { "bookmark_${url.hashCode().toUInt().toString(16)}" },
+                    obj.optString("id").take(80).ifBlank { newBookmarkId() },
                     url, obj.optString("title").take(160),
                     obj.optString("folderId").takeIf(folders::contains) ?: BookmarkFolder.DEFAULT_ID,
                     obj.optLong("createdAt", 0L).coerceAtLeast(0L)
@@ -427,6 +465,13 @@ class BrowserStore(context: Context) {
         val safeItems = items.filter { NavigationInput.isValidWebUrl(it.url) }
             .distinctBy { it.url }.take(BrowserStorePolicy.MAX_BOOKMARKS)
             .map { it.copy(folderId = it.folderId.takeIf(ids::contains) ?: BookmarkFolder.DEFAULT_ID) }
+            .let { items ->
+                val seenIds = mutableSetOf<String>()
+                items.map { item ->
+                    val safeId = item.id.takeIf { it.isNotBlank() && seenIds.add(it) } ?: newBookmarkId().also(seenIds::add)
+                    item.copy(id = safeId)
+                }
+            }
         val folderJson = JSONArray()
         safeFolders.forEach { folderJson.put(JSONObject().put("id", it.id).put("name", it.name)) }
         val itemJson = JSONArray()
