@@ -10,7 +10,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - `BrowserPalette`: shared light/dark/system color tokens and direction helpers for Android screens.
 - `BrowseXPermissionDelegate`: separates Android runtime permission requests from Gecko content and media permission decisions.
 - `BrowseXNotificationBridge` + `SiteNotificationActionReceiver`: WebNotificationDelegate adapter, Android notification channel, click and dismiss actions.
-- `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `ReaderPage`: feature screens; theme colors and RTL are shared through BrowserPalette.
+- `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `ReaderPage`: feature screens; theme colors and RTL are shared through BrowserPalette. `BrowseXStrings` resolves UI labels from Android locale resources.
 - `app/src/main/assets/home.html`: local start page; receives the stored language/theme selection through validated local query parameters.
 - `AndroidManifest.xml`: version-gated permissions, launcher entry point, HTTP(S) deep links and internal notification receiver.
 - `app/build.gradle.kts`: Android/Kotlin configuration, SDK levels, GeckoView and ABI split configuration.
@@ -38,8 +38,9 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - **Reader:** explicit user action -> GeckoView PageExtractionController -> native reader presentation -> preserve original URL and navigation state. No page scripts are injected. Current GeckoView extraction uses its default options.
 - **Settings:** BrowserStore is the persisted source of truth for theme, language, notifications, bookmarks, history, home visibility/layout and download metadata. Android notification permissions can be managed from the app notification settings screen.
 - **Accounts and sync (future contract):** keep identity providers behind a provider-neutral adapter; never couple browser data to Google/Microsoft/Apple SDK models. Sign-in remains optional. Sync must be separately consented per data type, use an explicit encryption/key model and exclude private tabs, cookies, passwords and site permission grants until their security and recovery requirements are designed. No sign-in or cloud sync is implemented today.
-- **Sessions:** named sessions store validated regular-tab URLs and active index only; they are capped at ten saved sessions and twenty tabs per session. Private tabs, cookies, form data and live GeckoSession objects are excluded. Opening a saved session respects the live 20-tab limit.
+- **Sessions:** named sessions store validated regular-tab URLs and active index only; they are capped at ten saved sessions and twenty tabs per session. Recently closed regular tabs are stored separately (maximum ten) and consumed on restore. Private tabs, cookies, form data and live GeckoSession objects are excluded. Opening a saved session respects the live 20-tab limit.
 - **Memory:** the app keeps the active GeckoSession and at most two warm background sessions; inactive sessions are closed and recreated from their URL under memory pressure. This preserves URL-level recovery, not in-page form/scroll state.
+- **Localization:** shared Android string resources now cover browser chrome, Settings, Downloads and Saved Pages in English and Arabic; language preference accepts validated BCP 47 tags and unknown locales fall back to English until a reviewed locale pack is added.
 - **Responsive UI:** use available width rather than device-brand checks; the existing visual tabs workspace uses a wider layout on tablet widths.
 
 ## Compatibility
