@@ -71,3 +71,6 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 ## GeckoSession lifecycle ownership
 
 `BrowserSessionLifecycleCoordinator` owns session release for memory pressure, the live-session budget, session reset and Activity teardown. `MainActivity` remains responsible for selected-tab UI, GeckoView attachment and Android permission queues, which are injected as cleanup callbacks. This is an incremental boundary extraction, not a complete separation of browser orchestration.
+## Download lifecycle ownership
+
+`StreamDownloadCoordinator` owns BrowseX stream-download metadata, progress updates, completion/failure state and cancellation around `DownloadResponseWriter`. The Activity still validates external responses, obtains legacy Android storage permission and presents user feedback. The writer continues to persist the original Gecko response body rather than re-fetching its URL.
