@@ -37,7 +37,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Extract Android runtime-permission request ordering, cancellation and teardown rejection into BrowserAndroidPermissionQueue; Activity Result launchers remain host-owned.
 - [x] Move startup restoration, external-link tab selection and post-privacy-clear tab restoration into BrowserTabController; keep persistence decoding and snapshot policy in the Activity/store boundary.
 - [x] Split BrowserStore responsibilities into preference, session, library and download stores while preserving existing SharedPreferences keys and the feature-facing facade.
-- [ ] Extract tab snapshot persistence policy and Android permission queue orchestration from MainActivity; tab membership, selection, activation, popup and restoration are isolated.
+- [ ] Extract tab snapshot persistence policy from MainActivity; tab membership, selection, activation, popup, restoration and Android permission queue orchestration are isolated.
 - [ ] Migrate the focused stores from SharedPreferences to Room/DataStore with versioned, non-destructive migrations and Android-backed upgrade tests.
 - [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
