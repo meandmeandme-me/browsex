@@ -57,7 +57,8 @@ private data class BrowserTab(
     var url: String = HOME_URL,
     var progress: Int = 0,
     var canGoBack: Boolean = false,
-    var canGoForward: Boolean = false
+    var canGoForward: Boolean = false,
+    var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList()
 )
 
 class MainActivity : AppCompatActivity() {
@@ -335,6 +336,7 @@ class MainActivity : AppCompatActivity() {
                 hasUserGesture: Boolean
             ) {
                 tab.url = url.orEmpty()
+                tab.sitePermissions = perms.toList()
                 if (tab === activeTab) updateChrome()
             }
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
@@ -537,7 +539,7 @@ class MainActivity : AppCompatActivity() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
-            "Search engine", "Clear browsing history", "Settings"
+            "Site information", "Search engine", "Clear browsing history", "Settings"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
@@ -552,11 +554,12 @@ class MainActivity : AppCompatActivity() {
                 5 -> copyCurrentAddress()
                 6 -> findInPage()
                 7 -> openReaderMode()
-                8 -> chooseSearchEngine()
-                9 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                8 -> showSiteInformation()
+                9 -> chooseSearchEngine()
+                10 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                10 -> showSettings()
+                11 -> showSettings()
             }
         }.show()
     }
@@ -597,6 +600,22 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+
+    private fun showSiteInformation() {
+        val tab = activeTab ?: return
+        val url = tab.url
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            toast("Open a website first")
+            return
+        }
+        SiteInfoPage(
+            activity = this,
+            url = url,
+            title = tab.title,
+            permissions = tab.sitePermissions
+        ).show()
     }
 
     private fun showSettings() {
