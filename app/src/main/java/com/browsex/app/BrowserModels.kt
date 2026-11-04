@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.content.Context
+import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
@@ -10,14 +11,15 @@ internal object BrowserRuntimeOwner {
     @Volatile private var instance: GeckoRuntime? = null
 
     fun runtime(context: Context): GeckoRuntime = instance ?: synchronized(this) {
-        instance ?: GeckoRuntime.create(context.applicationContext).also { instance = it }
+        instance ?: GeckoRuntime.create(context.applicationContext).also { runtime ->
+            runtime.settings.contentBlocking.setSafeBrowsing(ContentBlocking.SafeBrowsing.DEFAULT)
+            instance = runtime
+        }
     }
 }
 
-/**
- * Every regular and private session enables GeckoView's built-in tracking protection.
- * This blocks known trackers; it is not represented as a full advertisement blocker.
- */
+/** Every regular and private session enables GeckoView's built-in tracking protection.
+ * This blocks known trackers; it is not represented as a full advertisement blocker. */
 internal fun newBrowserSession(privateMode: Boolean): GeckoSession =
     GeckoSession(
         GeckoSessionSettings.Builder()
