@@ -1,6 +1,9 @@
 package com.browsex.app
 
 import android.app.DownloadManager
+import android.webkit.CookieManager
+import android.webkit.URLUtil
+import android.os.Environment
 
 import android.content.Context
 import android.content.Intent
@@ -29,6 +32,7 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.WebResponse
 
 private const val HOME_URL = "resource://android/assets/home.html"
 private const val SEARCH_GOOGLE = "https://www.google.com/search?q="
@@ -358,6 +362,9 @@ class MainActivity : AppCompatActivity() {
                 if (tab === activeTab) setFullscreen(fullScreen)
             }
             override fun onCloseRequest(session: GeckoSession) { closeTab(tab) }
+            override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
+                enqueueDownload(response)
+            }
         }
     }
 
@@ -635,12 +642,49 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    /** Opens Android's real download collection; Android owns download storage and notifications. */
+    /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
+        DownloadsPage(this).show()
+    }
+
+    /** Routes GeckoView's external responses through Android's supported download service. */
+    private fun enqueueDownload(response: WebResponse) {
+        val url = response.uri
+        val uri = Uri.parse(url)
+        if ((uri.scheme != "https" && uri.scheme != "http") || uri.host.isNullOrBlank()) {
+            response.body?.close()
+            toast("This download link is not supported")
+            return
+        }
+        val disposition = response.headers.entries.firstOrNull {
+            it.key.equals("content-disposition", ignoreCase = true)
+        }?.value
+        val mime = response.headers.entries.firstOrNull {
+            it.key.equals("content-type", ignoreCase = true)
+        }?.value?.substringBefore(';')
+        val filename = URLUtil.guessFileName(url, disposition, mime)
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .take(180)
+            .ifBlank { "download" }
         try {
-            startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))
-        } catch (_: Exception) {
-            toast("Open the Downloads app to view downloaded files")
+            val request = DownloadManager.Request(uri)
+                .setTitle(filename)
+                .setDescription("Downloading with Browse X")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+            if (!mime.isNullOrBlank()) request.setMimeType(mime)
+            CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }?.let {
+                request.addRequestHeader("Cookie", it)
+            }
+            request.addRequestHeader("User-Agent", org.mozilla.geckoview.GeckoSession.getDefaultUserAgent())
+            val id = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+            response.body?.close()
+            toast("Download added: $filename")
+            android.util.Log.i("BrowseX", "Download queued with id=$id")
+        } catch (error: Exception) {
+            response.body?.close()
+            android.util.Log.e("BrowseX", "Unable to queue download", error)
+            toast("Could not start download")
         }
     }
 
