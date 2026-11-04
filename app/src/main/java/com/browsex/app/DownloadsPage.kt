@@ -7,9 +7,12 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -17,7 +20,11 @@ import java.text.DateFormat
 import java.util.Date
 
 /** DownloadManager-backed download library; Android remains responsible for file transfer. */
-internal class DownloadsPage(private val activity: MainActivity, private val store: BrowserStore) {
+internal class DownloadsPage(
+    private val activity: MainActivity,
+    private val store: BrowserStore,
+    private val onCancelStreamDownload: (String) -> Boolean
+) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val colors get() = BrowseXColors.resolve(activity, store)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
@@ -146,50 +153,92 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                     maxLines = 2
                 })
                 val date = if (record.createdAt > 0L) DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(record.createdAt)) else ""
-                val detail = if (record.failed) {
-                    t("Failed: ", "فشل: ") + record.error
-                } else {
-                    t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة") +
-                        " · ${record.bytesWritten / 1024} KB · " + date
+                val statusLabel = when {
+                    record.isActive && record.status == "queued" -> t("Waiting in queue", "بانتظار دوره")
+                    record.isActive -> t("Downloading", "جارٍ التنزيل")
+                    record.isCancelled -> t("Cancelled", "تم الإلغاء")
+                    record.failed -> t("Failed: ", "فشل: ") + record.error
+                    else -> t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة")
                 }
+                val progressText = if (record.totalBytes > 0L) {
+                    " · ${record.bytesWritten / 1024} / ${record.totalBytes / 1024} KB"
+                } else if (record.isActive) {
+                    " · ${record.bytesWritten / 1024} KB"
+                } else {
+                    " · ${record.bytesWritten / 1024} KB"
+                }
+                val detail = statusLabel + if (record.isActive || !record.failed) progressText + " · " + date else ""
                 labels.addView(TextView(activity).apply {
                     text = detail
                     textSize = 10f
-                    setTextColor(if (record.failed) colors.danger else colors.muted)
+                    setTextColor(when {
+                        record.failed -> colors.danger
+                        record.isCancelled -> colors.muted
+                        record.isActive -> colors.accent
+                        else -> colors.muted
+                    })
                     setPadding(0, dp(4), 0, 0)
                     maxLines = 3
                 })
+                if (record.isActive) labels.addView(ProgressBar(
+                    activity, null, android.R.attr.progressBarStyleHorizontal
+                ).apply {
+                    max = 100
+                    isIndeterminate = record.totalBytes <= 0L
+                    progress = if (record.totalBytes > 0L) {
+                        ((record.bytesWritten.coerceAtMost(record.totalBytes) * 100L) / record.totalBytes).toInt()
+                    } else 0
+                }, LinearLayout.LayoutParams(-1, dp(4)).apply { topMargin = dp(7) })
                 item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
                 val action = TextView(activity).apply {
-                    text = if (record.failed) t("Remove", "حذف") else t("Open", "فتح")
+                    text = when {
+                        record.isActive -> t("Cancel", "إلغاء")
+                        record.failed || record.isCancelled -> t("Remove", "حذف")
+                        else -> t("Open", "فتح")
+                    }
                     textSize = 13f
                     gravity = Gravity.CENTER
-                    setTextColor(if (record.failed) colors.danger else colors.accent)
+                    setTextColor(if (record.failed || record.isCancelled) colors.danger else colors.accent)
                     setPadding(dp(10), dp(8), dp(6), dp(8))
                     minimumWidth = dp(48)
                     minimumHeight = dp(48)
                     isClickable = true
                     isFocusable = true
-                    contentDescription = if (record.failed) t("Remove failed download record", "حذف سجل التنزيل الفاشل") else t("Open downloaded file", "فتح الملف المنزّل")
+                    contentDescription = when {
+                        record.isActive -> t("Cancel download", "إلغاء التنزيل")
+                        record.failed || record.isCancelled -> t("Remove download record", "حذف سجل التنزيل")
+                        else -> t("Open downloaded file", "فتح الملف المنزّل")
+                    }
                     setOnClickListener {
-                        if (record.failed) {
-                            store.removeStreamDownload(record.id)
-                            render()
-                        } else {
-                            val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
-                            if (uri == null) {
-                                android.widget.Toast.makeText(activity, t("File location is unavailable", "موقع الملف غير متاح"), android.widget.Toast.LENGTH_SHORT).show()
-                            } else {
-                                val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, record.mimeType.ifBlank { "*/*" })
-                                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                try { activity.startActivity(intent) }
-                                catch (_: Exception) { android.widget.Toast.makeText(activity, t("No app can open this file", "لا يوجد تطبيق لفتح هذا الملف"), android.widget.Toast.LENGTH_SHORT).show() }
+                        when {
+                            record.isActive -> AlertDialog.Builder(activity)
+                                .setMessage(t("Cancel this download? The partial file will be discarded.", "إلغاء هذا التنزيل؟ سيتم حذف الملف غير المكتمل."))
+                                .setNegativeButton(t("Keep", "متابعة"), null)
+                                .setPositiveButton(t("Cancel download", "إلغاء التنزيل")) { _, _ ->
+                                    if (!onCancelStreamDownload(record.id)) {
+                                        android.widget.Toast.makeText(activity, t("This download can no longer be cancelled", "لم يعد بالإمكان إلغاء هذا التنزيل"), android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }.show()
+                            record.failed || record.isCancelled -> {
+                                store.removeStreamDownload(record.id)
+                                render()
+                            }
+                            else -> {
+                                val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
+                                if (uri == null) {
+                                    android.widget.Toast.makeText(activity, t("File location is unavailable", "موقع الملف غير متاح"), android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, record.mimeType.ifBlank { "*/*" })
+                                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    try { activity.startActivity(intent) }
+                                    catch (_: Exception) { android.widget.Toast.makeText(activity, t("No app can open this file", "لا يوجد تطبيق لفتح هذا الملف"), android.widget.Toast.LENGTH_SHORT).show() }
+                                }
                             }
                         }
                     }
                 }
                 item.addView(action)
-                if (!record.failed) item.addView(TextView(activity).apply {
+                if (!record.isActive) item.addView(TextView(activity).apply {
                     text = "×"
                     textSize = 20f
                     gravity = Gravity.CENTER
@@ -338,13 +387,27 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                 setPadding(dp(22), dp(40), dp(22), dp(40))
             })
         }
+        val refreshHandler = Handler(Looper.getMainLooper())
+        val refreshRunnable = object : Runnable {
+            override fun run() {
+                if (!::dialog.isInitialized || !dialog.isShowing) return
+                if (store.streamDownloads().any { it.isActive }) {
+                    val scrollY = scroll.scrollY
+                    render()
+                    scroll.post { scroll.scrollTo(0, scrollY) }
+                    refreshHandler.postDelayed(this, 900L)
+                }
+            }
+        }
         refresh.setOnClickListener { render() }
         render()
         dialog = AlertDialog.Builder(activity).setView(root).create()
         dialog.setOnShowListener {
             dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            if (store.streamDownloads().any { it.isActive }) refreshHandler.postDelayed(refreshRunnable, 900L)
         }
+        dialog.setOnDismissListener { refreshHandler.removeCallbacks(refreshRunnable) }
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
