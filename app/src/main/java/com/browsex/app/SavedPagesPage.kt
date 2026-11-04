@@ -174,6 +174,40 @@ internal class SavedPagesPage(
                     isFocusable = true
                     setOnClickListener { selectedFolderId = id; drawFolders(); refresh(search.text?.toString().orEmpty()) }
                 }
+                if (id != null && id != BookmarkFolder.DEFAULT_ID) {
+                    view.setOnLongClickListener {
+                        AlertDialog.Builder(activity)
+                            .setTitle(label)
+                            .setItems(arrayOf(t("Rename folder", "إعادة تسمية المجلد"), t("Delete folder", "حذف المجلد"))) { _, action ->
+                                if (action == 0) {
+                                    val field = EditText(activity).apply { setText(label); maxLines = 1 }
+                                    AlertDialog.Builder(activity)
+                                        .setTitle(t("Rename folder", "إعادة تسمية المجلد"))
+                                        .setView(field)
+                                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                        .setPositiveButton(t("Save", "حفظ")) { _, _ ->
+                                            if (!store.renameBookmarkFolder(id, field.text?.toString().orEmpty())) {
+                                                android.widget.Toast.makeText(activity, t("Could not rename folder", "تعذرت إعادة تسمية المجلد"), android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                            drawFolders()
+                                            refresh(search.text?.toString().orEmpty())
+                                        }.show()
+                                } else {
+                                    AlertDialog.Builder(activity)
+                                        .setMessage(t("Bookmarks in this folder will move to Unfiled.", "ستُنقل المفضلة في هذا المجلد إلى غير مصنف."))
+                                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                        .setPositiveButton(t("Delete", "حذف")) { _, _ ->
+                                            store.removeBookmarkFolder(id)
+                                            if (selectedFolderId == id) selectedFolderId = null
+                                            drawFolders()
+                                            refresh(search.text?.toString().orEmpty())
+                                        }.show()
+                                }
+                            }
+                            .show()
+                        true
+                    }
+                }
                 folderBar.addView(view, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
             }
             chip(t("All", "الكل"), null)
