@@ -42,6 +42,21 @@ internal class BrowserSessionLifecycleCoordinator(
         )
     }
 
+    /** Closes a tab session permanently before the host removes its tab record. */
+    fun closeAndDiscard(tab: BrowserTab) {
+        beforeSessionClose(tab)
+        if (tab.sessionOpened) {
+            runCatching {
+                tab.session.setFocused(false)
+                tab.session.setActive(false)
+                tab.session.close()
+            }
+        }
+        tab.sessionOpened = false
+        tab.permissionDelegate = null
+        tab.sitePermissions = emptyList()
+    }
+
     /** Closes and replaces a tab's session, preserving its URL and private-mode setting. */
     fun resetSession(tab: BrowserTab) {
         beforeSessionClose(tab)
