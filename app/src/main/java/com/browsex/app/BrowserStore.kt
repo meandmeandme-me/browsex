@@ -69,6 +69,7 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("site_media_permissions", json.toString()).apply()
     }
 
+    @Synchronized
     fun reserveDownloadFileName(candidate: String): String {
         val names = try {
             val array = JSONArray(prefs.getString("browsex_download_names", "[]"))
