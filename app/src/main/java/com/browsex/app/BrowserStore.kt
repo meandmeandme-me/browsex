@@ -7,6 +7,10 @@ import org.json.JSONArray
 class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
 
+    private companion object {
+        const val HOME_URL_FOR_STORE = "resource://android/assets/home.html"
+    }
+
     var adBlockEnabled: Boolean
         get() = prefs.getBoolean("ad_block_enabled", false)
         set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
@@ -14,6 +18,18 @@ class BrowserStore(context: Context) {
     var searchEngine: String
         get() = prefs.getString("search_engine", "Google") ?: "Google"
         set(value) { prefs.edit().putString("search_engine", value).apply() }
+
+    fun saveOpenTabs(urls: List<String>, activeIndex: Int) {
+        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
+        writeList("open_tabs", snapshot.urls)
+        prefs.edit().putInt("active_tab_index", snapshot.activeIndex).apply()
+    }
+
+    fun restoreOpenTabs(): TabSessionState.Snapshot = TabSessionState.normalize(
+        readList("open_tabs"),
+        prefs.getInt("active_tab_index", 0),
+        HOME_URL_FOR_STORE
+    )
 
     fun bookmarks(): List<String> = readList("bookmarks")
     fun history(): List<String> = readList("history")
