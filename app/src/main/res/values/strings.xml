@@ -197,4 +197,8 @@
     <string name="ui_move_bookmark_to_folder">Move bookmark to folder</string>
     <string name="ui_recently_closed">Recently closed</string>
     <string name="ui_no_recently_closed_tabs">No recently closed tabs</string>
+    <string name="ui_search_your_open_tabs_bookmarks_and_recent_history_in_one_place">Search your open tabs, bookmarks and recent history in one place.</string>
+    <string name="ui_search_pages_or_websites">Search pages or websites</string>
+    <string name="ui_recent_history">Recent history</string>
+    <string name="ui_no_matching_pages_try_another_search">No matching pages. Try another search.</string>
 </resources>
