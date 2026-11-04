@@ -243,4 +243,9 @@
     <string name="ui_replace_all_current_bookmarks_and_folders">Replace all current bookmarks and folders?</string>
     <string name="ui_import_preview_message">Items: %1$d\nValid: %2$d\nSkipped: %3$d\nDuplicates in backup: %4$d\nAlready saved here: %5$d\nFolders: %6$d</string>
     <string name="ui_tabs_title">Tabs</string>
+    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">This removes the history list saved by Browse X. It does not delete downloaded files or bookmarks.</string>
+    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">Browse X is powered by Mozilla GeckoView. Some browser features are still being built.</string>
+    <string name="ui_browsex_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">BrowseX saves the response received from the website directly. Older Android-managed downloads may have different retry and resume limits.</string>
+    <string name="ui_remove_download_record">Remove download record</string>
+    <string name="ui_remove_this_download_from_browsex_the_saved_file_will_remain_on_your_device">Remove this download from BrowseX? The saved file will remain on your device.</string>
 </resources>
