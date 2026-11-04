@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.content.Context
+import android.os.Build
 import android.os.SystemClock
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -18,7 +19,10 @@ import javax.crypto.spec.GCMParameterSpec
 
 internal data class StoredCredentialSummary(val id: String, val origin: String, val username: String)
 
-internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDelegate {
+internal class BrowserCredentialVault(
+    context: Context,
+    private val requestAuthentication: (onAuthenticated: () -> Unit, onRejected: () -> Unit) -> Unit
+) : Autocomplete.StorageDelegate {
     private val prefs = context.applicationContext.getSharedPreferences("browsex_credentials_v1", Context.MODE_PRIVATE)
     private val accessPolicy = CredentialAccessPolicy({ SystemClock.elapsedRealtime() })
     @Volatile private var privateTabsOpen = false
@@ -29,10 +33,13 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
     fun lock() = accessPolicy.lock()
 
     @Synchronized
-    fun entries(): List<StoredCredentialSummary> = runCatching {
+    fun entries(): List<StoredCredentialSummary> {
+        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return emptyList()
+        return runCatching {
         read().map { StoredCredentialSummary(it.optString("id"), it.optString("origin"),
             it.optString("username")) }
     }.getOrElse { android.util.Log.e("BrowseX", "Credential list unavailable", it); emptyList() }
+    }
 
     @Synchronized
     fun passwordFor(id: String): String? {
@@ -59,25 +66,50 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
 
     @Synchronized
     override fun onLoginFetch(domain: String): GeckoResult<Array<Autocomplete.LoginEntry>> {
-        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) {
-            return GeckoResult.fromValue(emptyArray<Autocomplete.LoginEntry>())
+        if (privateTabsOpen) return GeckoResult.fromValue(emptyArray<Autocomplete.LoginEntry>())
+        if (accessPolicy.canFetchCredentials(privateTabsOpen)) {
+            return GeckoResult.fromValue(loadEntriesForDomain(domain))
         }
+
+        // GeckoView asks for credentials when the user interacts with a login form.
+        // Authorize the Keystore key before decrypting anything for that form.
+        val result = GeckoResult<Array<Autocomplete.LoginEntry>>()
+        requestAuthentication(
+            onAuthenticated = {
+                unlockForSession()
+                val entries = synchronized(this) {
+                    if (privateTabsOpen && accessPolicy.canFetchCredentials(privateTabsOpen)) {
+                        emptyArray()
+                    } else if (accessPolicy.canFetchCredentials(privateTabsOpen)) {
+                        loadEntriesForDomain(domain)
+                    } else {
+                        emptyArray()
+                    }
+                }
+                result.complete(entries)
+            },
+            onRejected = { result.complete(emptyArray()) }
+        )
+        return result
+    }
+
+    @Synchronized
+    private fun loadEntriesForDomain(domain: String): Array<Autocomplete.LoginEntry> {
         val rows = runCatching { read() }.getOrElse {
             android.util.Log.e("BrowseX", "Credential lookup unavailable", it)
             emptyList()
         }.filter { CredentialOriginPolicy.matchesExactOrigin(it.optString("origin"), domain) }
-        val result = rows.map { row ->
+        return rows.map { row ->
             Autocomplete.LoginEntry.Builder().guid(row.optString("id")).origin(row.optString("origin"))
                 .formActionOrigin(row.optString("action").takeIf { it.isNotBlank() })
                 .httpRealm(row.optString("realm").takeIf { it.isNotBlank() })
                 .username(row.optString("username")).password(row.optString("secret")).build()
         }.toTypedArray()
-        return GeckoResult.fromValue(result)
     }
 
     @Synchronized
     override fun onLoginSave(login: Autocomplete.LoginEntry) {
-        if (privateTabsOpen) return
+        if (privateTabsOpen || !accessPolicy.canFetchCredentials(privateTabsOpen)) return
         val origin = CredentialOriginPolicy.canonicalHttpsOrigin(login.origin) ?: return
         val action = login.formActionOrigin?.takeIf { it.isNotBlank() }?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
         if (login.formActionOrigin?.isNotBlank() == true && action != origin) return
@@ -103,9 +135,18 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
             throw IllegalStateException("Credential vault payload is incomplete")
         }
         return try {
+            val version = prefs.getInt("version", 1)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(ivText, Base64.NO_WRAP)))
+            val decryptionKey = if (version == 1) legacyKey() else key()
+            cipher.init(Cipher.DECRYPT_MODE, decryptionKey, GCMParameterSpec(128, Base64.decode(ivText, Base64.NO_WRAP)))
             val json = JSONArray(String(cipher.doFinal(Base64.decode(dataText, Base64.NO_WRAP)), Charsets.UTF_8))
+            if (version == 1) {
+                // Re-encrypt existing credentials with the authentication-bound key.
+                write(json)
+                KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(LEGACY_KEY_ALIAS) }
+            } else if (version != 2) {
+                throw IllegalStateException("Unsupported credential vault version")
+            }
             (0 until json.length()).mapNotNull(json::optJSONObject)
         } catch (error: Exception) {
             android.util.Log.e("BrowseX", "Encrypted credential data unavailable", error)
@@ -118,14 +159,40 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val encrypted = cipher.doFinal(json.toString().toByteArray(Charsets.UTF_8))
         check(prefs.edit().putString("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
-            .putString("data", Base64.encodeToString(encrypted, Base64.NO_WRAP)).commit())
+            .putString("data", Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putInt("version", 2).commit())
     }
 
+    /** AES key use is authorized by Android's recent biometric/device-credential token. */
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        val builder = KeyGenParameterSpec.Builder(KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setRandomizedEncryptionRequired(true)
+            .setUserAuthenticationRequired(true)
+        if (Build.VERSION.SDK_INT >= 30) {
+            builder.setUserAuthenticationParameters(
+                60,
+                KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
+            )
+        } else {
+            builder.setUserAuthenticationValidityDurationSeconds(60)
+            builder.setInvalidatedByBiometricEnrollment(true)
+        }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        generator.init(KeyGenParameterSpec.Builder(KEY_ALIAS,
+        generator.init(builder.build())
+        return generator.generateKey()
+    }
+
+    /** Used only to migrate installations that stored data before key authentication was enforced. */
+    private fun legacyKey(): SecretKey {
+        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (store.getKey(LEGACY_KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        generator.init(KeyGenParameterSpec.Builder(LEGACY_KEY_ALIAS,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
@@ -133,5 +200,8 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
         return generator.generateKey()
     }
 
-    private companion object { const val KEY_ALIAS = "browsex.credentials.aes.v1" }
+    private companion object {
+        const val KEY_ALIAS = "browsex.credentials.aes.v2.auth"
+        const val LEGACY_KEY_ALIAS = "browsex.credentials.aes.v1"
+    }
 }

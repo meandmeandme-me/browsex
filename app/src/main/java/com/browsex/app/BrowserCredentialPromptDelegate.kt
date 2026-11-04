@@ -11,6 +11,7 @@ internal class BrowserCredentialPromptDelegate(
     private val activity: AppCompatActivity,
     private val privateMode: Boolean,
     private val hasPrivateTabsOpen: () -> Boolean,
+    private val onDeviceAuthenticated: () -> Unit,
     private val isStillValid: (GeckoSession, String) -> Boolean
 ) : GeckoSession.PromptDelegate {
 
@@ -31,7 +32,16 @@ internal class BrowserCredentialPromptDelegate(
             .setTitle("Save password?")
             .setMessage("Save the sign-in for " + origin + " under " + option.value.username + "?")
             .setPositiveButton("Save") { _, _ ->
-                result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, origin)) request.confirm(option) else request.dismiss())
+                BrowserDeviceAuthenticator.authenticate(
+                    activity = activity,
+                    title = "Save password",
+                    subtitle = "Verify your identity to encrypt this sign-in",
+                    onAuthenticated = {
+                        onDeviceAuthenticated()
+                        result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, origin)) request.confirm(option) else request.dismiss())
+                    },
+                    onRejected = { result.complete(request.dismiss()) }
+                )
             }
             .setNegativeButton("Not now") { _, _ -> result.complete(request.dismiss()) }
             .setOnCancelListener { result.complete(request.dismiss()) }
@@ -78,6 +88,7 @@ internal class BrowserCredentialPromptDelegate(
                         title = "Unlock saved passwords",
                         subtitle = "Verify your identity to fill this sign-in",
                         onAuthenticated = {
+                            onDeviceAuthenticated()
                             result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, firstOrigin)) request.confirm(selected) else request.dismiss())
                         },
                         onRejected = { result.complete(request.dismiss()) }

@@ -20,7 +20,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] A failed DownloadManager query is shown as a read error, not misreported as deleted downloads.
 - [x] Launching an external URL preserves saved tabs and opens the new link as the active tab.
 - [x] GeckoView Content Blocking Safe Browsing is enabled with the engine's default unsafe-site categories.
-- [x] Saved logins use GeckoView Autocomplete and AES-GCM encryption with an Android Keystore key; exact HTTPS-origin matching and malformed-origin rejection have JVM tests.
+- [x] Saved logins use GeckoView Autocomplete and AES-GCM encryption with an Android Keystore key requiring a 60-second recent-authentication window; exact HTTPS-origin matching and malformed-origin rejection have JVM tests.
 - [x] Login save/selection requires explicit prompts; private tabs reject credential save/selection; reveal/copy/fill requires AndroidX BiometricPrompt or supported device-credential verification.
 - [x] Android media/location permission lifecycle and Android notification permission lifecycle are extracted into separate coordinators with JVM policy/coalescing tests.
 - [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
@@ -61,9 +61,9 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] Verify HTTP forms, cross-origin form actions, subdomains, alternate ports and malformed origins never receive saved credentials.
 - [ ] Verify any open private tab blocks credential fetch/save across all tabs; private tabs never offer saved-account selection, and regular autofill works again only after all private tabs close and the user unlocks.
 - [ ] Verify the password manager exposes only username/origin metadata before authentication; reveal, copy and delete require authentication.
-- [ ] Verify the password manager lists entries, requires device authentication before reveal/copy, deletes selected entries and never exports/syncs them.
-- [ ] Verify corrupted/unreadable encrypted credential data is not silently overwritten and the app fails closed for autofill.
-- [ ] Verify Android 8–10 biometric/device-credential fallback and Android 11+ biometric plus device-credential behavior on physical devices.
+- [ ] Verify the password manager requires device authentication before listing, revealing, copying or deleting entries; verify the Keystore rejects direct decrypt/encrypt without a recent biometric/device-credential authorization and accepts it only within the configured 60-second window.
+- [ ] Verify v1-to-v2 vault migration preserves entries, re-encrypts under the auth-bound key and removes the legacy key only after a successful write; test interrupted migration and corrupted ciphertext fail closed without overwrite.
+- [ ] Verify Android 8–10 and Android 11+ authentication-bound Keystore key behavior on physical devices, including biometric enrollment changes, device-credential fallback, reboot, lockout, key invalidation and the 60-second expiry.
 - [ ] Verify concurrent site-notification permission requests produce one Android prompt and resolve every waiting Gecko callback exactly once.
 - [ ] Site Info refreshes stored Gecko permissions after every Allow/Block/Ask change; permission rows are keyboard/TalkBack accessible; persistent storage explains its non-revocable grant.
 - [ ] API 33+ notification permission prompt appears on first eligible request; app toggle, OS-level disable, tap, dismiss and private browsing are correct.

@@ -13,8 +13,8 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - `BrowserSessionDelegateFactory`: maps GeckoSession progress/navigation/content callbacks into a BrowseX-owned callback contract. It does not directly render UI or persist data.
 - `TabsPage`: renders the responsive tab workspace and named/recent session actions through injected callbacks; it does not own GeckoSession lifecycle or mutate browser state directly.
 - `BrowserRuntimeOwner` and `BrowserTab`: isolated ownership of the process-wide GeckoRuntime and serializable-per-tab UI/session state; GeckoView Safe Browsing is enabled for unsafe-site categories, and private mode is selected before opening each GeckoSession.
-- `BrowserCredentialVault`: GeckoView Autocomplete storage encrypted with AES-GCM and an Android Keystore key, restricted to exact HTTPS origins.
-- `BrowserCredentialPromptDelegate` + `BrowserDeviceAuthenticator`: explicit save/select prompts; private tabs reject save/select, and viewing/copying/filling requires system authentication.
+- `BrowserCredentialVault`: GeckoView Autocomplete storage encrypted with AES-GCM and an Android Keystore key requiring recent user authentication, restricted to exact HTTPS origins; v1 vault contents migrate to the authentication-bound v2 key after successful authentication.
+- `BrowserCredentialPromptDelegate` + `BrowserDeviceAuthenticator`: explicit save/select prompts; private tabs reject save/select, and saving, lookup, viewing/copying/filling requires system authentication that authorizes the Keystore key for 60 seconds.
 - `CredentialOriginPolicy`: pure HTTPS-origin normalization and exact-match rules, covered by JVM tests.
 - `BrowserStore`: compatibility facade preserving the existing feature-facing storage API while delegating persistence to focused stores.
 - `BrowserDownloadStore`: owns DownloadManager ID tracking, response-stream download records, filename reservations and interrupted-record recovery.

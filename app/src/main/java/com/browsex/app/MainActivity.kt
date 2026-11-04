@@ -184,7 +184,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
-        credentialVault = BrowserCredentialVault(applicationContext)
+        credentialVault = BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
+            BrowserDeviceAuthenticator.authenticate(
+                activity = this,
+                title = "Unlock saved passwords",
+                subtitle = "Verify your identity to use saved passwords",
+                onAuthenticated = onAuthenticated,
+                onRejected = onRejected
+            )
+        }
         store.recoverInterruptedStreamDownloads()
         streamDownloadCoordinator = StreamDownloadCoordinator(store, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -637,6 +645,7 @@ class MainActivity : AppCompatActivity() {
             activity = this,
             privateMode = tab.privateMode,
             hasPrivateTabsOpen = { credentialVault.privateBrowsingActive },
+            onDeviceAuthenticated = credentialVault::unlockForSession,
             isStillValid = { session, origin ->
                 !shuttingDown && tabs.any { it === tab } && tab.session === session &&
                     CredentialOriginPolicy.canonicalHttpsOrigin(tab.url) == origin
@@ -980,41 +989,53 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPasswordManager() {
-        val saved = credentialVault.entries()
-        if (saved.isEmpty()) { toast("No saved passwords yet"); return }
-        val labels = saved.map { it.username + " · " + Uri.parse(it.origin).host.orEmpty() }.toTypedArray()
-        AlertDialog.Builder(this).setTitle(tr("Saved passwords")).setItems(labels) { _, index ->
-            val item = saved.getOrNull(index) ?: return@setItems
-            BrowserDeviceAuthenticator.authenticate(
-                activity = this,
-                title = "Unlock saved passwords",
-                subtitle = "Verify your identity to view or copy this sign-in",
-                onAuthenticated = {
-                    if (isFinishing || isDestroyed) return@authenticate
-                    credentialVault.unlockForSession()
-                    val secret = credentialVault.passwordFor(item.id)
-                    if (secret == null) {
-                        toast(if (credentialVault.privateBrowsingActive) "Close private tabs to view saved entries" else "Saved entry unavailable")
-                        return@authenticate
-                    }
-                    toast("Autofill unlocked for 60 seconds. Reload the sign-in page.")
-                    val dialog = AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
-                        .setMessage("Username: " + item.username + "\\nPassword: " + secret)
-                        .setPositiveButton(tr("Copy password")) { _, _ ->
-                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", secret))
-                            toast("Password copied")
-                        }
-                        .setNegativeButton(tr("Close"), null)
-                        .setNeutralButton(tr("Delete")) { _, _ ->
-                            if (credentialVault.delete(item.id)) toast("Saved password deleted")
-                        }.create()
-                    dialog.setOnShowListener { dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
-                    dialog.show()
-                },
-                onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
-            )
-        }.setNegativeButton(tr("Close"), null).show()
+        BrowserDeviceAuthenticator.authenticate(
+            activity = this,
+            title = "Unlock saved passwords",
+            subtitle = "Verify your identity to view saved sign-ins",
+            onAuthenticated = {
+                if (isFinishing || isDestroyed) return@authenticate
+                credentialVault.unlockForSession()
+                val saved = credentialVault.entries()
+                if (saved.isEmpty()) {
+                    toast(if (credentialVault.privateBrowsingActive) "Close private tabs to view saved entries" else "No saved passwords yet")
+                    return@authenticate
+                }
+                val labels = saved.map { it.username + " · " + Uri.parse(it.origin).host.orEmpty() }.toTypedArray()
+                AlertDialog.Builder(this).setTitle(tr("Saved passwords")).setItems(labels) { _, index ->
+                    val item = saved.getOrNull(index) ?: return@setItems
+                    BrowserDeviceAuthenticator.authenticate(
+                        activity = this,
+                        title = "Reveal saved password",
+                        subtitle = "Verify your identity to reveal or copy this sign-in",
+                        onAuthenticated = {
+                            if (isFinishing || isDestroyed) return@authenticate
+                            credentialVault.unlockForSession()
+                            val secret = credentialVault.passwordFor(item.id)
+                            if (secret == null) {
+                                toast(if (credentialVault.privateBrowsingActive) "Close private tabs to view saved entries" else "Saved entry unavailable")
+                                return@authenticate
+                            }
+                            val dialog = AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
+                                .setMessage("Username: " + item.username + "\\nPassword: " + secret)
+                                .setPositiveButton(tr("Copy password")) { _, _ ->
+                                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", secret))
+                                    toast("Password copied")
+                                }
+                                .setNegativeButton(tr("Close"), null)
+                                .setNeutralButton(tr("Delete")) { _, _ ->
+                                    if (credentialVault.delete(item.id)) toast("Saved password deleted")
+                                }.create()
+                            dialog.setOnShowListener { dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+                            dialog.show()
+                        },
+                        onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
+                    )
+                }.setNegativeButton(tr("Close"), null).show()
+            },
+            onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
+        )
     }
 
     private fun chooseSearchEngine() {
