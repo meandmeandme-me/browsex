@@ -72,3 +72,9 @@ gradle testDebugUnitTest lintDebug assembleDebug
 - [Account and sync foundation](docs/ACCOUNT_SYNC_FOUNDATION.md) — provider-neutral identity, security boundaries and opt-in sync design.
 - [Uizard screen map](docs/design/UIDIZARD_SCREEN_MAP.md) — responsive screens, interaction flows and required UI states.
 - [Implementation roadmap](docs/ROADMAP.md) — verified implementation versus remaining device QA.
+## البنية المستقبلية للحسابات والمنصات
+
+- أساس نماذج محايدة لمزودي الحسابات والمزامنة في [AccountDomainModels.kt](app/src/main/java/com/browsex/app/AccountDomainModels.kt)؛ لا يوجد تسجيل دخول أو خادم مزامنة فعلي بعد.
+- [أساس الحسابات والمزامنة](docs/ACCOUNT_SYNC_FOUNDATION.md) يحدد الموافقات المنفصلة والتشفير وإدارة الأجهزة وحذف البيانات.
+- [خريطة واجهات الحساب والمزامنة](docs/ACCOUNT_SYNC_UX_MAP.md) جاهزة كمرجع لتصميم الشاشات.
+- [معمارية المنصات المستقبلية](docs/MULTIPLATFORM_ARCHITECTURE.md) تحدد مسار Windows وmacOS وLinux وAndroid TV مع إبقاء محرك كل منصة خلف adapter.
