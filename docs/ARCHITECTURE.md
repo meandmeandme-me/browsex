@@ -23,7 +23,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 4. Only the active tab is opened at startup and attached to the visible `GeckoView`; restored background tabs retain validated URLs and open only when selected. Open inactive sessions are marked unfocused/inactive on tab switch and when the Activity stops.
 5. Release the visible view session before closing sessions in `onDestroy`.
 6. Validate external intents; never load arbitrary non-HTTP(S) schemes as browser pages.
-7. Persist serializable regular-tab URLs and active index only; never persist GeckoSession objects or private-tab URLs.
+7. Persist serializable regular-tab URLs, active index and named regular-tab session snapshots only; never persist GeckoSession objects, private-tab URLs, cookies or page form data.
 8. Private tabs use GeckoSessionSettings.usePrivateMode(true), are excluded from browsing history and startup snapshots, and popup sessions inherit their parent's private mode.
 8. Preserve duplicate URLs in tab snapshots: separate tabs may intentionally display the same page.
 9. Bound persisted collections, enforce the 20-tab cap, and validate restored web/local-home URLs.
@@ -38,6 +38,8 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - **Reader:** explicit user action -> GeckoView PageExtractionController -> native reader presentation -> preserve original URL and navigation state. No page scripts are injected. Current GeckoView extraction uses its default options.
 - **Settings:** BrowserStore is the persisted source of truth for theme, language, notifications, bookmarks, history, home visibility/layout and download metadata. Android notification permissions can be managed from the app notification settings screen.
 - **Accounts and sync (future contract):** keep identity providers behind a provider-neutral adapter; never couple browser data to Google/Microsoft/Apple SDK models. Sign-in remains optional. Sync must be separately consented per data type, use an explicit encryption/key model and exclude private tabs, cookies, passwords and site permission grants until their security and recovery requirements are designed. No sign-in or cloud sync is implemented today.
+- **Sessions:** named sessions store validated regular-tab URLs and active index only; they are capped at ten saved sessions and twenty tabs per session. Private tabs, cookies, form data and live GeckoSession objects are excluded. Opening a saved session respects the live 20-tab limit.
+- **Memory:** the app keeps the active GeckoSession and at most two warm background sessions; inactive sessions are closed and recreated from their URL under memory pressure. This preserves URL-level recovery, not in-page form/scroll state.
 - **Responsive UI:** use available width rather than device-brand checks; the existing visual tabs workspace uses a wider layout on tablet widths.
 
 ## Compatibility
