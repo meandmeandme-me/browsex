@@ -19,6 +19,11 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Site Info permission rows expose Allow/Block/Ask controls.
 - [x] A failed DownloadManager query is shown as a read error, not misreported as deleted downloads.
 - [x] Launching an external URL preserves saved tabs and opens the new link as the active tab.
+- [x] GeckoView Content Blocking Safe Browsing is enabled with the engine's default unsafe-site categories.
+- [x] Saved logins use GeckoView Autocomplete and AES-GCM encryption with an Android Keystore key; exact HTTPS-origin matching and malformed-origin rejection have JVM tests.
+- [x] Login save/selection requires explicit prompts; private tabs reject credential save/selection; reveal/copy/fill requires AndroidX BiometricPrompt or supported device-credential verification.
+- [x] Android media/location permission lifecycle and Android notification permission lifecycle are extracted into separate coordinators with JVM policy/coalescing tests.
+- [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
 
 ## Release signing coverage
 
@@ -49,6 +54,14 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] External links and share intents work.
 - [ ] Bookmark/history add, remove and clear persist correctly.
 - [ ] Site permission prompt appears only after a site request; Android deny, app settings re-grant, per-origin allow/block/ask and dialog cancellation behave correctly.
+- [ ] Verify Safe Browsing blocks known phishing, malware and unwanted-software test pages; confirm ordinary sites still load and behavior when offline is clearly understood.
+- [ ] Save a login on an HTTPS site, restart BrowseX, select the saved account and verify biometric/device-credential confirmation occurs before fill.
+- [ ] Verify HTTP forms, cross-origin form actions, subdomains, alternate ports and malformed origins never receive saved credentials.
+- [ ] Verify private tabs neither save credentials nor offer saved-account selection; regular tabs continue to work after private tabs close.
+- [ ] Verify the password manager lists entries, requires device authentication before reveal/copy, deletes selected entries and never exports/syncs them.
+- [ ] Verify corrupted/unreadable encrypted credential data is not silently overwritten and the app fails closed for autofill.
+- [ ] Verify Android 8–10 biometric/device-credential fallback and Android 11+ biometric plus device-credential behavior on physical devices.
+- [ ] Verify concurrent site-notification permission requests produce one Android prompt and resolve every waiting Gecko callback exactly once.
 - [ ] Site Info refreshes stored Gecko permissions after every Allow/Block/Ask change; permission rows are keyboard/TalkBack accessible; persistent storage explains its non-revocable grant.
 - [ ] API 33+ notification permission prompt appears on first eligible request; app toggle, OS-level disable, tap, dismiss and private browsing are correct.
 - [ ] BrowseX downloads list includes only IDs registered by BrowseX.
@@ -68,6 +81,8 @@ Implementation and verification are tracked separately. Items under “implement
 | Device profile | Required checks |
 |---|---|
 | Android 10, 2 GB RAM, 720px width | install, cold start, memory stability, keyboard, navigation, permissions, downloads, tabs, rotation |
+| Android 8/API 26–29 | Keystore AES-GCM storage, biometric/device credential fallback, legacy storage permission queue |
+| Android 11+/API 30+ | BiometricPrompt device-credential combination, notification permission coalescing, Safe Browsing |
 | Android 13+ phone | notification runtime permission, channel settings, tap/dismiss, downloads, system bars, share sheet |
 | Android tablet | multi-column tabs, reader, settings, landscape |
 | Small-screen / large font / RTL | no clipped controls, scrollable screens, readable Arabic layout |
