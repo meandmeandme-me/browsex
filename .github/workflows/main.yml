@@ -109,7 +109,14 @@ jobs:
             BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk")"
             grep -F "package: name='com.browsex.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
+            unzip -Z1 "$apk" > "$RUNNER_TEMP/release-apk-files.txt"
+            grep -q 'lib/.*libxul.so' "$RUNNER_TEMP/release-apk-files.txt"
           done
+          UNIVERSAL="$(printf '%s\n' "${APKS[@]}" | grep 'universal' | head -n 1)"
+          test -n "$UNIVERSAL"
+          unzip -Z1 "$UNIVERSAL" > "$RUNNER_TEMP/release-universal-files.txt"
+          grep -q 'lib/armeabi-v7a/libxul.so' "$RUNNER_TEMP/release-universal-files.txt"
+          grep -q 'lib/arm64-v8a/libxul.so' "$RUNNER_TEMP/release-universal-files.txt"
           printf '%s\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
 
       - name: Upload signed release APKs
