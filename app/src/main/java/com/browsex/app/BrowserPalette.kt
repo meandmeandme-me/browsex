@@ -31,8 +31,15 @@ internal data class BrowseXColors(
             else -> Locale.getDefault().language.startsWith("ar")
         }
 
+        /** Layout direction follows the actual locale, independently of translation availability. */
+        fun isRtl(store: BrowserStore): Boolean {
+            val language = if (store.languageMode == "system") Locale.getDefault().language
+                else store.languageMode.substringBefore('-')
+            return language.lowercase(Locale.ROOT) in setOf("ar", "fa", "ur", "ps", "he", "yi", "sd", "ug", "ku")
+        }
+
         fun applyDirection(view: View, store: BrowserStore) {
-            view.layoutDirection = if (isArabic(store)) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+            view.layoutDirection = if (isRtl(store)) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
             view.textDirection = View.TEXT_DIRECTION_LOCALE
         }
     }
