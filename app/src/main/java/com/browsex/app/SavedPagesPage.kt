@@ -262,7 +262,7 @@ internal class SavedPagesPage(
         empty: TextView
     ) {
         list.removeAllViews()
-        val normalized = query.trim()
+        val normalized = BrowserTextNormalizer.normalize(query)
         val folderUrls = if (isHistory || selectedFolderId == null) null else
             store.bookmarkItems().filter { it.folderId == selectedFolderId }.map { it.url }.toSet()
         val bookmarkMetadata = if (isHistory) emptyMap() else store.bookmarkItems().associateBy { it.url }
@@ -272,9 +272,8 @@ internal class SavedPagesPage(
                 ?.takeIf { it.isNotBlank() } ?: Uri.parse(url).host.orEmpty().ifBlank { url }
         val filtered = pages.filter { page ->
             (folderUrls == null || page in folderUrls) &&
-                (normalized.isBlank() || page.contains(normalized, ignoreCase = true) ||
-                    Uri.parse(page).host.orEmpty().contains(normalized, ignoreCase = true) ||
-                    pageTitle(page).contains(normalized, ignoreCase = true))
+                (normalized.isBlank() || listOf(page, Uri.parse(page).host.orEmpty(), pageTitle(page))
+                    .any { BrowserTextNormalizer.normalize(it).contains(normalized) })
         }
         count.text = if (BrowseXColors.isArabic(store)) "${filtered.size} من ${pages.size} صفحة" else "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
         if (filtered.isEmpty()) {
