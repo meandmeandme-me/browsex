@@ -1322,7 +1322,7 @@ class MainActivity : AppCompatActivity() {
         }
         tabs.clear()
         tabs.addAll(tabsToRestore)
-        activeTab = null
+        activeTab = tabsToRestore.getOrNull(snapshot.activeIndex)
         clearingBrowsingData = flags != 0L
         if (clearingBrowsingData) {
             dataClearDialog = AlertDialog.Builder(this)
