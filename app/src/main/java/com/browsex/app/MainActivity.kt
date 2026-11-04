@@ -490,6 +490,7 @@ class MainActivity : AppCompatActivity() {
             "Site information" -> "معلومات الموقع"
             "Downloads" -> "التنزيلات"
             "Settings" -> "الإعدادات"
+            "Privacy center" -> "مركز الخصوصية"
             "Find anything" -> "اعثر على أي شيء"
             "New private tab" -> "تبويب خاص جديد"
             "Close private tabs" -> "إغلاق التبويبات الخاصة"
