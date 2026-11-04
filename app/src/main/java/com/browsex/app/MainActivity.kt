@@ -279,6 +279,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun createTab(url: String) {
         if (shuttingDown) return
+        if (tabs.size >= TabSessionState.MAX_TABS) {
+            toast("You can keep up to ${TabSessionState.MAX_TABS} tabs open")
+            return
+        }
         val tab = BrowserTab()
         attachDelegates(tab)
         tab.session.open(BrowserEngine.runtime(this))
@@ -343,7 +347,10 @@ class MainActivity : AppCompatActivity() {
                 if (tab === activeTab) updateChrome()
             }
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-                if (isFinishing || shuttingDown) return null
+                if (isFinishing || shuttingDown || tabs.size >= TabSessionState.MAX_TABS) {
+                    runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
+                    return null
+                }
                 val child = BrowserTab()
                 attachDelegates(child)
                 child.session.open(BrowserEngine.runtime(this@MainActivity))
