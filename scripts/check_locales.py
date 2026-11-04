@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
 LOCALE_CONFIG = RES / "xml" / "locales_config.xml"
-PLACEHOLDER = re.compile(r"%(?!%)(?:[0-9]+\$)?[-#+ 0,(<]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]")
+PLACEHOLDER = re.compile(r"(?<!%)%(?!%)(?:[0-9]+\$)?[-#+0,(]*[0-9]*(?:\.[0-9]+)?[sdif]")
 
 
 def resources(path: Path):
@@ -56,6 +56,8 @@ def main() -> int:
         if android_name in element.attrib
     }
     configured_normalized = {value.lower() for value in configured}
+    if "en" not in configured_normalized:
+        errors.append(f"{LOCALE_CONFIG}: default English locale 'en' is missing")
 
     locale_files = sorted(RES.glob("values-*/strings.xml"))
     for path in locale_files:
