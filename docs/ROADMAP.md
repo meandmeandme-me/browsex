@@ -22,7 +22,7 @@ This file is the source of truth for feature sequencing. Keep each task small an
 
 - [ ] Replace Settings AlertDialog with a full settings screen and persisted preferences.
 - [ ] Implement real GeckoView download interception and a BrowseX downloads screen.
-- [ ] Implement reader mode with safe article extraction and accessible typography.
+- [x] Implement initial reader mode with GeckoView page extraction and accessible native typography.\n- [ ] Add readerability/boilerplate-removal tuning when supported by the pinned GeckoView API.
 - [ ] Implement bookmarks/history empty states, search and deletion confirmation.
 - [ ] Add site permission and notification flows with Android-version-aware behavior.
 
