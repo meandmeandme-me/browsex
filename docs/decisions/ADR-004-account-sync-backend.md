@@ -70,3 +70,11 @@ The recommended product target is end-to-end encrypted sync for user browsing da
 - Complete a threat model for ciphertext, metadata leakage, key recovery and account deletion.
 - Confirm data export, backup, restore, incident response and service migration procedures.
 - Do not add SDK dependencies or provider buttons until the proof of concept passes review.
+
+## Source material checked
+
+- Supabase Auth provider support and RLS model: https://supabase.com/docs/guides/auth
+- Supabase Kotlin OAuth flow: https://supabase.com/docs/reference/kotlin/auth-signinwithoauth
+- Supabase Kotlin platform support and known limitations: https://github.com/supabase/supabase-kt/blob/master/Auth/README.md
+- Supabase Kotlin redirect/PKCE behavior: https://supabase.com/docs/reference/kotlin/initializing
+- Appwrite OAuth alternative: https://appwrite.io/docs/products/auth/oauth2
