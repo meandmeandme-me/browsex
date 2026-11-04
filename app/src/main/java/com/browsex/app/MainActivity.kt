@@ -1511,10 +1511,7 @@ class MainActivity : AppCompatActivity() {
         val mime = response.headers.entries.firstOrNull {
             it.key.equals("content-type", ignoreCase = true)
         }?.value?.substringBefore(';')
-        val candidate = URLUtil.guessFileName(url, disposition, mime)
-            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            .filterNot { it.isISOControl() }
-            .trim().trim('.').take(140).ifBlank { "download" }
+        val candidate = DownloadFileNamePolicy.sanitize(URLUtil.guessFileName(url, disposition, mime))
         val filename = store.reserveDownloadFileName(candidate)
         val totalBytes = response.headers.entries.firstOrNull {
             it.key.equals("content-length", ignoreCase = true)
