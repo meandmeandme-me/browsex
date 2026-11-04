@@ -26,7 +26,7 @@ class BrowserTextNormalizerTest {
         assertTrue(japanese.contains("ブラウザー"))
     }
 
-    @Test fun trimsAndCollapsesCompatibilitySpaces() {
+    @Test fun trimsSurroundingWhitespace() {
         assertEquals(
             BrowserTextNormalizer.normalize("  hello  world "),
             BrowserTextNormalizer.normalize("hello  world")
