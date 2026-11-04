@@ -16,6 +16,7 @@ BrowseX/
 │   │   │   ├── BrowserPreferencesStore.kt # settings and site-permission persistence
 │   │   │   ├── BrowserSessionStore.kt     # regular tabs, named sessions and recently closed tabs
 │   │   │   ├── BrowserLibraryStore.kt     # bookmark folders/items, history and backup/import
+│   │   │   ├── BrowserDownloadStore.kt    # download queue metadata, IDs and filename policy
 │   │   │   ├── BrowserPreferencePolicy.kt # pure preference normalization
 │   │   │   ├── TabLifecyclePolicy.kt     # pure live-session budget and memory-pressure policy
 │   │   │   ├── di/                       # dependency wiring; introduce only when useful
