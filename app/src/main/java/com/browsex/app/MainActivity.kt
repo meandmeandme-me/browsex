@@ -44,7 +44,7 @@ import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.WebResponse
 import org.mozilla.geckoview.WebNotification
 
-private const val HOME_URL = "resource://android/assets/home.html"
+internal const val HOME_URL = "resource://android/assets/home.html"
 private const val MAX_LIVE_GECKO_SESSIONS = 3
 
 
@@ -98,6 +98,9 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         )
     }
     private lateinit var store: BrowserStore
+    private val tabPersistenceCoordinator by lazy {
+        BrowserTabPersistenceCoordinator(store, { tabs }, { activeTab })
+    }
     private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText

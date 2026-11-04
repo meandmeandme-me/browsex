@@ -90,7 +90,7 @@ class BrowserStore(context: Context) {
         error: String = ""
     ): String = downloads.addStreamDownload(displayName, uri, mimeType, bytesWritten, failed, error)
 
-    fun streamDownloads(): List<StreamDownloadRecord> = downloads.streamDownloads()
+    internal fun streamDownloads(): List<StreamDownloadRecord> = downloads.streamDownloads()
     fun removeStreamDownload(id: String) = downloads.removeStreamDownload(id)
 
     fun saveOpenTabs(urls: List<String>, activeIndex: Int) =
@@ -108,9 +108,9 @@ class BrowserStore(context: Context) {
     fun recordRecentlyClosedTab(url: String, title: String) =
         sessions.recordRecentlyClosedTab(url, title)
 
-    fun recentlyClosedTabs(): List<RecentlyClosedTab> = sessions.recentlyClosedTabs()
+    internal fun recentlyClosedTabs(): List<RecentlyClosedTab> = sessions.recentlyClosedTabs()
 
-    fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? =
+    internal fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? =
         sessions.consumeRecentlyClosedTab(id)
 
     fun bookmarks(): List<String> = library.bookmarks()
@@ -129,7 +129,7 @@ class BrowserStore(context: Context) {
     fun toggleBookmark(url: String): Boolean = library.toggleBookmark(url)
     fun toggleBookmark(url: String, title: String): Boolean = library.toggleBookmark(url, title)
     fun exportBookmarks(): String = library.exportBookmarks()
-    fun previewBookmarkImport(payload: String): BookmarkImportPreview =
+    internal fun previewBookmarkImport(payload: String): BookmarkImportPreview =
         library.previewBookmarkImport(payload)
     fun importBookmarks(payload: String, merge: Boolean = true): Int =
         library.importBookmarks(payload, merge)

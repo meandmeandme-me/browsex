@@ -26,7 +26,7 @@ internal fun newBrowserSession(privateMode: Boolean): GeckoSession =
             .build()
     )
 
-internal data class BrowserTab(
+class BrowserTab internal constructor(
     val privateMode: Boolean = false,
     var session: GeckoSession = newBrowserSession(privateMode),
     var sessionOpened: Boolean = false,
@@ -36,7 +36,7 @@ internal data class BrowserTab(
     var canGoBack: Boolean = false,
     var canGoForward: Boolean = false,
     var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList(),
-    var permissionDelegate: BrowseXPermissionDelegate? = null,
+    internal var permissionDelegate: BrowseXPermissionDelegate? = null,
     var recoveryAttempts: Int = 0,
     var crashed: Boolean = false,
     var lastActiveAt: Long = 0L
