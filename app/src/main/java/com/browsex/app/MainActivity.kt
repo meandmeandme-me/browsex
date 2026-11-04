@@ -1442,7 +1442,12 @@ class MainActivity : AppCompatActivity() {
                 toast("Storage permission is unavailable")
                 return
             }
-            // Keep the original response stream alive while Android asks for permission.
+            // Keep only a small bounded queue of original response streams while permission is requested.
+            if (waitingForLegacyDownloads.size >= 5) {
+                body.close()
+                toast("Too many downloads are waiting for storage permission")
+                return
+            }
             waitingForLegacyDownloads.add(response)
             if (!legacyDownloadPermissionInFlight) {
                 legacyDownloadPermissionInFlight = true
