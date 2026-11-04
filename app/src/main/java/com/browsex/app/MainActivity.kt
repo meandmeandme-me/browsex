@@ -94,8 +94,14 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        val initial = intent?.data?.let(::safeExternalUrl) ?: HOME_URL
-        createTab(initial)
+        val externalUrl = intent?.data?.let(::safeExternalUrl)
+        if (externalUrl != null) {
+            createTab(externalUrl)
+        } else {
+            val snapshot = store.restoreOpenTabs()
+            snapshot.urls.forEach(::createTab)
+            tabs.getOrNull(snapshot.activeIndex)?.let(::activateTab)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -104,7 +110,18 @@ class MainActivity : AppCompatActivity() {
         intent.data?.let(::safeExternalUrl)?.let(::createTab)
     }
 
+    override fun onStop() {
+        persistTabs()
+        super.onStop()
+    }
+
+    private fun persistTabs() {
+        if (!::store.isInitialized || tabs.isEmpty()) return
+        store.saveOpenTabs(tabs.map { it.url }, tabs.indexOf(activeTab).coerceAtLeast(0))
+    }
+
     override fun onDestroy() {
+        persistTabs()
         shuttingDown = true
         if (::browserView.isInitialized) browserView.releaseSession()
         tabs.toList().forEach { it.session.close() }
