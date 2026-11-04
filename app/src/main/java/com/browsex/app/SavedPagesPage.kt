@@ -350,8 +350,8 @@ internal class SavedPagesPage(
                                 }
                                 .setNegativeButton(t("Cancel", "إلغاء"), null)
                                 .show()
-                            1 -> { store.reorderBookmark(page, -1); render(query, list, count, empty) }
-                            2 -> { store.reorderBookmark(page, 1); render(query, list, count, empty) }
+                            1 -> { store.reorderBookmark(page, -1, selectedFolderId); render(query, list, count, empty) }
+                            2 -> { store.reorderBookmark(page, 1, selectedFolderId); render(query, list, count, empty) }
                         }
                     }
                     .setNegativeButton(t("Cancel", "إلغاء"), null)
