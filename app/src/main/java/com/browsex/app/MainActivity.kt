@@ -175,7 +175,7 @@ class MainActivity : AppCompatActivity() {
     }
     private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
-    private val platformPermissionQueue = BrowserAndroidPermissionQueue()
+    private lateinit var platformPermissionCoordinator: BrowserAndroidPermissionCoordinator
     private val notificationPermissionCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var notificationPermissionInFlight = false
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
@@ -261,15 +261,21 @@ class MainActivity : AppCompatActivity() {
         platformPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { grants ->
-            platformPermissionQueue.completeActive(
-                grants = grants,
-                activeSession = activeTab?.session,
-                containsSession = { session -> tabs.any { it.session === session } },
-                clearDenial = store::clearPlatformPermissionDenial,
-                markDenied = store::markPlatformPermissionDenied
-            )
-            launchNextPlatformPermission()
+            platformPermissionCoordinator.onResult(grants)
         }
+        platformPermissionCoordinator = BrowserAndroidPermissionCoordinator(
+            activeSession = { activeTab?.session },
+            containsSession = { session -> tabs.any { it.session === session } },
+            isHostAvailable = { !shuttingDown && !isFinishing && !isDestroyed },
+            anotherPromptInFlight = { notificationPermissionInFlight },
+            isGranted = { permission ->
+                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+            },
+            wasDenied = store::wasPlatformPermissionDenied,
+            clearDenial = store::clearPlatformPermissionDenial,
+            markDenied = store::markPlatformPermissionDenied,
+            launchRequest = { permissions -> platformPermissionLauncher.launch(permissions) }
+        )
         legacyDownloadPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
@@ -286,7 +292,7 @@ class MainActivity : AppCompatActivity() {
             val callbacks = notificationPermissionCallbacks.toList()
             notificationPermissionCallbacks.clear()
             callbacks.forEach { callback -> callback(granted && NotificationManagerCompat.from(this).areNotificationsEnabled()) }
-            launchNextPlatformPermission()
+            platformPermissionCoordinator.launchNext()
         }
         downloadRequestCoordinator = BrowserDownloadRequestCoordinator(
             apiLevel = Build.VERSION.SDK_INT,
@@ -387,7 +393,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         persistTabs()
         shuttingDown = true
-        platformPermissionQueue.rejectAll()
+        if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         notificationPermissionCallbacks.toList().forEach { it(false) }
@@ -405,50 +411,10 @@ class MainActivity : AppCompatActivity() {
         session: GeckoSession,
         requested: Array<String>,
         callback: GeckoSession.PermissionDelegate.Callback
-    ) {
-        if (shuttingDown || session !== activeTab?.session) {
-            callback.reject()
-            return
-        }
-        val supported = setOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
-        )
-        val permissions = requested.distinct()
-        if (permissions.isEmpty() || permissions.any { it !in supported }) {
-            callback.reject()
-            return
-        }
-        val missing = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (missing.isEmpty()) {
-            permissions.forEach(store::clearPlatformPermissionDenial)
-            callback.grant()
-            return
-        }
-        if (missing.any(store::wasPlatformPermissionDenied)) {
-            callback.reject()
-            return
-        }
-        platformPermissionQueue.enqueue(PendingPlatformPermission(session, missing, callback))
-        launchNextPlatformPermission()
-    }
-
-    private fun launchNextPlatformPermission() {
-        if (notificationPermissionInFlight || platformPermissionQueue.hasActiveRequest ||
-            !::platformPermissionLauncher.isInitialized || isFinishing || isDestroyed
-        ) return
-        val next = platformPermissionQueue.takeNext(activeTab?.session) { session ->
-            tabs.any { it.session === session }
-        } ?: return
-        platformPermissionLauncher.launch(next.permissions.toTypedArray())
-    }
+    ) = platformPermissionCoordinator.request(session, requested, callback)
 
     private fun cancelPlatformPermissionRequests(session: GeckoSession) {
-        platformPermissionQueue.cancelSession(session)
+        platformPermissionCoordinator.cancelSession(session)
     }
 
     fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) {

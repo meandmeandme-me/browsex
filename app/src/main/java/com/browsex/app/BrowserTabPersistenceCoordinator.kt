@@ -14,9 +14,14 @@ internal class BrowserTabPersistenceCoordinator(
     fun restoreOpenTabs(): TabSessionState.Snapshot = store.restoreOpenTabs()
 
     fun persistOpenTabs() {
-        val regularTabs = tabs().filterNot { it.privateMode }
-        val selectedTab = activeTab()
-        val activeIndex = regularTabs.indexOfFirst { it === selectedTab }.takeIf { it >= 0 } ?: 0
-        store.saveOpenTabs(regularTabs.map { it.url }, activeIndex)
+        val currentTabs = tabs()
+        val selectedIndex = currentTabs.indexOfFirst { it === activeTab() }
+        val snapshot = BrowserTabPersistencePolicy.snapshot(
+            urls = currentTabs.map { it.url },
+            privateFlags = currentTabs.map { it.privateMode },
+            activeIndex = selectedIndex,
+            homeUrl = HOME_URL
+        )
+        store.saveOpenTabs(snapshot.urls, snapshot.activeIndex)
     }
 }
