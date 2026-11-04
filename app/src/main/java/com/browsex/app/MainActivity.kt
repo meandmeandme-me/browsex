@@ -485,6 +485,7 @@ class MainActivity : AppCompatActivity() {
             "Home" -> "الرئيسية"
             "Open tabs" -> "فتح علامات التبويب"
             "Search or enter URL" -> "ابحث أو أدخل عنوان الموقع"
+            "Private browsing · Search or enter URL" -> "التصفح الخاص · ابحث أو أدخل عنوان الموقع"
             "Your space" -> "مساحة التصفح"
             "tab" -> "تبويب"
             "tabs" -> "تبويبات"
@@ -686,6 +687,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateChrome() {
         val tab = activeTab ?: return
+        address.hint = tr(if (tab.privateMode) "Private browsing · Search or enter URL" else "Search or enter URL")
+        address.setHintTextColor(if (tab.privateMode) colors.accent else colors.muted)
         if (!address.hasFocus()) updateAddress()
         progress.progress = tab.progress
         progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
