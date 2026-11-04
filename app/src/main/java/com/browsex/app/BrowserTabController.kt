@@ -31,6 +31,38 @@ internal class BrowserTabController(
     val tabs: List<BrowserTab> get() = registry.tabs
     val activeTab: BrowserTab? get() = registry.activeTab
 
+    /** Restores validated regular tabs and opens the selected tab (or the home tab). */
+    fun restoreInitialTabs(urls: List<String>, activeIndex: Int, externalUrl: String?) {
+        registry.replaceAll(urls.map { url -> BrowserTab(url = url) })
+        val restoredActive = tabs.getOrNull(activeIndex)
+        if (externalUrl != null) {
+            if (tabs.size >= maxTabs) {
+                val discardIndex = tabs.indices.firstOrNull { tabs[it] !== restoredActive } ?: 0
+                if (tabs.isNotEmpty()) registry.removeAt(discardIndex)
+            }
+            val externalTab = BrowserTab(url = externalUrl)
+            registry.add(externalTab)
+            activateTab(externalTab)
+        } else {
+            val initialTab = restoredActive ?: BrowserTab(url = homeUrl()).also(registry::add)
+            activateTab(initialTab)
+        }
+    }
+
+    /** Replaces tab records after a storage operation while preserving the caller's selected index. */
+    fun replaceTabs(tabsToRestore: List<BrowserTab>, activeIndex: Int) {
+        registry.replaceAll(tabsToRestore)
+        registry.select(tabsToRestore.getOrNull(activeIndex))
+    }
+
+    fun activateRestoredSelection(activeIndex: Int) {
+        if (tabs.isEmpty()) registry.add(BrowserTab(url = homeUrl()))
+        val restored = tabs.getOrNull(activeIndex) ?: tabs.first()
+        activateTab(restored)
+    }
+
+    fun clear() = registry.clear()
+
     fun createTab(url: String, privateMode: Boolean = false) {
         if (isHostUnavailable()) return
         if (tabs.size >= maxTabs) {
