@@ -11,31 +11,50 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Persists the response body GeckoView already received.
+ * Persists the exact response body GeckoView already received.
  *
- * This deliberately does not make a second HTTP request: request method, POST body,
- * cookies, authorization and one-time response URLs remain those of the original
- * Gecko response. The input stream is always closed by this writer.
+ * The writer never re-fetches the URL. Cancellation closes the original stream,
+ * and partial MediaStore/filesystem output is deleted before completion is reported.
  */
 internal class DownloadResponseWriter(context: Context) {
     private val appContext = context.applicationContext
     private val executor = ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(8)
     ) { runnable -> Thread(runnable, "BrowseX-download-writer").apply { isDaemon = true } }
+    private val jobs = ConcurrentHashMap<String, Job>()
 
     data class Result(val uri: Uri, val displayName: String, val bytesWritten: Long)
 
+    private class Job(
+        val body: InputStream,
+        val onProgress: (Long) -> Unit,
+        val onComplete: (Result?, Throwable?, Boolean) -> Unit
+    ) {
+        val cancelled = AtomicBoolean(false)
+    }
+
     fun write(
+        id: String,
         body: InputStream,
         displayName: String,
         mimeType: String?,
-        onComplete: (Result?, Throwable?) -> Unit
+        onProgress: (Long) -> Unit,
+        onComplete: (Result?, Throwable?, Boolean) -> Unit
     ) {
+        val job = Job(body, onProgress, onComplete)
+        if (jobs.putIfAbsent(id, job) != null) {
+            runCatching { body.close() }
+            onComplete(null, IllegalStateException("Duplicate download identifier"), false)
+            return
+        }
         try {
             executor.execute {
                 var pendingUri: Uri? = null
@@ -43,11 +62,13 @@ internal class DownloadResponseWriter(context: Context) {
                 var completed: Result? = null
                 var failure: Throwable? = null
                 try {
+                    checkNotCancelled(job)
                     val safeName = displayName
                         .replace(Regex("[\\\\/:*?\"<>|]"), "_")
                         .filterNot { it.isISOControl() }
                         .trim().trim('.').take(140).ifBlank { "download" }
-                    val mime = mimeType?.takeIf { it.contains('/') && it.length <= 120 } ?: "application/octet-stream"
+                    val mime = mimeType?.takeIf { it.contains('/') && it.length <= 120 }
+                        ?: "application/octet-stream"
                     completed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         val values = ContentValues().apply {
                             put(MediaStore.Downloads.DISPLAY_NAME, safeName)
@@ -59,8 +80,9 @@ internal class DownloadResponseWriter(context: Context) {
                             ?: error("Android could not create the download file")
                         pendingUri = uri
                         val bytes = appContext.contentResolver.openOutputStream(uri, "w")?.use { output ->
-                            body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+                            copyBody(job, output)
                         } ?: error("Android could not open the download file")
+                        checkNotCancelled(job)
                         val complete = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
                         check(appContext.contentResolver.update(uri, complete, null, null) > 0) {
                             "Android could not finalize the download file"
@@ -72,9 +94,8 @@ internal class DownloadResponseWriter(context: Context) {
                         if (!directory.exists() && !directory.mkdirs()) error("Downloads folder is unavailable")
                         val file = uniqueFile(directory, safeName)
                         pendingFile = file
-                        val bytes = FileOutputStream(file).use { output ->
-                            body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
-                        }
+                        val bytes = FileOutputStream(file).use { output -> copyBody(job, output) }
+                        checkNotCancelled(job)
                         val contentUri = FileProvider.getUriForFile(
                             appContext, appContext.packageName + ".files", file
                         )
@@ -85,14 +106,46 @@ internal class DownloadResponseWriter(context: Context) {
                     failure = error
                     runCatching { pendingUri?.let { appContext.contentResolver.delete(it, null, null) } }
                     runCatching { pendingFile?.delete() }
+                } finally {
                     runCatching { body.close() }
+                    jobs.remove(id, job)
                 }
-                onComplete(completed, failure)
+                val cancelled = job.cancelled.get() || failure is CancellationException
+                job.onComplete(if (cancelled) null else completed, failure, cancelled)
             }
         } catch (_: RejectedExecutionException) {
+            jobs.remove(id, job)
             runCatching { body.close() }
-            onComplete(null, IllegalStateException("Too many downloads are already queued"))
+            onComplete(null, IllegalStateException("Too many downloads are already queued"), false)
         }
+    }
+
+    fun cancel(id: String): Boolean {
+        val job = jobs[id] ?: return false
+        if (!job.cancelled.compareAndSet(false, true)) return false
+        runCatching { job.body.close() }
+        return true
+    }
+
+    private fun copyBody(job: Job, output: java.io.OutputStream): Long {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0L
+        while (true) {
+            checkNotCancelled(job)
+            val count = job.body.read(buffer)
+            if (count < 0) break
+            if (count == 0) continue
+            output.write(buffer, 0, count)
+            total += count
+            job.onProgress(total)
+        }
+        checkNotCancelled(job)
+        output.flush()
+        return total
+    }
+
+    private fun checkNotCancelled(job: Job) {
+        if (job.cancelled.get()) throw CancellationException("Download cancelled")
     }
 
     private fun uniqueFile(directory: File, requestedName: String): File {
@@ -109,6 +162,7 @@ internal class DownloadResponseWriter(context: Context) {
     }
 
     fun shutdown() {
+        jobs.keys.toList().forEach(::cancel)
         executor.shutdown()
     }
 
