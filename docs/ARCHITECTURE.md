@@ -10,7 +10,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - `BrowserPalette`: shared light/dark/system color tokens and direction helpers for Android screens.
 - `BrowseXPermissionDelegate`: separates Android runtime permission requests from Gecko content and media permission decisions.
 - `BrowseXNotificationBridge` + `SiteNotificationActionReceiver`: WebNotificationDelegate adapter, Android notification channel, click and dismiss actions.
-- `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `ReaderPage`: feature screens; theme colors and RTL are shared through BrowserPalette. `BrowseXStrings` resolves UI labels from Android locale resources.
+- `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `ReaderPage`: feature screens; theme colors and RTL are shared through BrowserPalette. `BrowseXStrings` resolves UI labels from Android locale resources. `BrowserTextNormalizer` applies Unicode NFKC and locale-independent case normalization to library/Recall search.
 - `app/src/main/assets/home.html`: local start page; receives the stored language/theme selection through validated local query parameters.
 - `AndroidManifest.xml`: version-gated permissions, launcher entry point, HTTP(S) deep links and internal notification receiver.
 - `app/build.gradle.kts`: Android/Kotlin configuration, SDK levels, GeckoView and ABI split configuration.
