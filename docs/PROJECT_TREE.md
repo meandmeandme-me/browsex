@@ -67,7 +67,9 @@ BrowseX/
 │   ├── ROADMAP.md
 │   ├── QA_CHECKLIST.md
 │   ├── decisions/                        # short architecture decision records
-│   ├── design/                           # Figma frame map, tokens, deviations
+│   ├── design/                           # Uizard screen map, tokens, deviations
+│   ├── WORLD_BROWSER_PRODUCT_REQUIREMENTS.md
+│   ├── ACCOUNT_SYNC_FOUNDATION.md
 │   └── release/                          # signing, versioning, release checklist
 ├── .github/workflows/                    # test, lint, ABI build, artifact verification
 ├── gradle/                               # wrapper and dependency version catalog (future)
@@ -79,7 +81,7 @@ BrowseX/
 
 ## Current implementation files
 
-The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
 
 ## Dependency direction
 
