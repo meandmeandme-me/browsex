@@ -47,6 +47,7 @@ This file records implementation state separately from device verification. A ch
 ## Phase 2 — permissions, notifications and downloads
 
 - [x] Add Android runtime permission handling for location, camera and microphone requests coming from GeckoView.
+- [x] Enable GeckoView's built-in tracking protection for every regular and private browsing session; this is tracker protection, not a complete ad blocker.
 - [x] Add per-site content permission prompts with Allow, Block and Not now outcomes.
 - [x] Add Site Info controls to change stored content permissions to Allow, Block or Ask; persistent storage has an explicit non-revocable state.
 - [x] Add a privacy center for selecting GeckoView cookies, DOM storage, cache, authentication-session and site-permission data to clear; close all sessions before clearing and restore validated tabs afterward.

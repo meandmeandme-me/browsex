@@ -14,9 +14,17 @@ internal object BrowserRuntimeOwner {
     }
 }
 
-/** Each tab owns its GeckoSession; private mode is configured before the session is opened. */
+/**
+ * Every regular and private session enables GeckoView's built-in tracking protection.
+ * This blocks known trackers; it is not represented as a full advertisement blocker.
+ */
 internal fun newBrowserSession(privateMode: Boolean): GeckoSession =
-    GeckoSession(GeckoSessionSettings.Builder().usePrivateMode(privateMode).build())
+    GeckoSession(
+        GeckoSessionSettings.Builder()
+            .usePrivateMode(privateMode)
+            .useTrackingProtection(true)
+            .build()
+    )
 
 internal data class BrowserTab(
     val privateMode: Boolean = false,
