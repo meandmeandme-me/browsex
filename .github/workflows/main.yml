@@ -56,6 +56,32 @@ jobs:
             echo "BROWSEX_DEBUG_KEY_PASSWORD=$BROWSEX_DEBUG_KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
+      - name: Configure release signing (optional)
+        shell: bash
+        env:
+          BROWSEX_RELEASE_KEYSTORE_BASE64: ${{ secrets.BROWSEX_RELEASE_KEYSTORE_BASE64 }}
+          BROWSEX_RELEASE_STORE_PASSWORD: ${{ secrets.BROWSEX_RELEASE_STORE_PASSWORD }}
+          BROWSEX_RELEASE_KEY_ALIAS: ${{ secrets.BROWSEX_RELEASE_KEY_ALIAS }}
+          BROWSEX_RELEASE_KEY_PASSWORD: ${{ secrets.BROWSEX_RELEASE_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$BROWSEX_RELEASE_KEYSTORE_BASE64" && -z "$BROWSEX_RELEASE_STORE_PASSWORD" && -z "$BROWSEX_RELEASE_KEY_ALIAS" && -z "$BROWSEX_RELEASE_KEY_PASSWORD" ]]; then
+            echo "BROWSEX_RELEASE_SIGNING_CONFIGURED=false" >> "$GITHUB_ENV"
+            echo "::notice::Release signing is not configured; signed release artifacts will be skipped."
+            exit 0
+          fi
+          if [[ -z "$BROWSEX_RELEASE_KEYSTORE_BASE64" || -z "$BROWSEX_RELEASE_STORE_PASSWORD" || -z "$BROWSEX_RELEASE_KEY_ALIAS" || -z "$BROWSEX_RELEASE_KEY_PASSWORD" ]]; then
+            echo "::error::Configure all four BROWSEX_RELEASE_* secrets or leave all of them empty."
+            exit 1
+          fi
+          printf '%s' "$BROWSEX_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/browsex-release.keystore"
+          {
+            echo "BROWSEX_RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/browsex-release.keystore"
+            echo "BROWSEX_RELEASE_STORE_PASSWORD=$BROWSEX_RELEASE_STORE_PASSWORD"
+            echo "BROWSEX_RELEASE_KEY_ALIAS=$BROWSEX_RELEASE_KEY_ALIAS"
+            echo "BROWSEX_RELEASE_KEY_PASSWORD=$BROWSEX_RELEASE_KEY_PASSWORD"
+            echo "BROWSEX_RELEASE_SIGNING_CONFIGURED=true"
+          } >> "$GITHUB_ENV"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
@@ -65,6 +91,37 @@ jobs:
 
       - name: Run tests, lint and build APKs
         run: gradle testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
+
+      - name: Build signed release APKs
+        if: ${{ env.BROWSEX_RELEASE_SIGNING_CONFIGURED == 'true' }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Verify signed release APKs
+        if: ${{ env.BROWSEX_RELEASE_SIGNING_CONFIGURED == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_DIR="app/build/outputs/apk/release"
+          mapfile -t APKS < <(find "$APK_DIR" -type f -name '*.apk' | sort)
+          test "${#APKS[@]}" -ge 3
+          for apk in "${APKS[@]}"; do
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
+            BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk")"
+            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "sdkVersion:'26'" <<< "$BADGING"
+          done
+          printf '%s\\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
+
+      - name: Upload signed release APKs
+        if: ${{ env.BROWSEX_RELEASE_SIGNING_CONFIGURED == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsex-signed-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Verify APK outputs and checksums
         shell: bash
