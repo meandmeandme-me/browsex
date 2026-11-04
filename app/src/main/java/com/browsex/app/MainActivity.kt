@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
     private lateinit var store: BrowserStore
+    private lateinit var credentialVault: BrowserCredentialVault
     private val tabPersistenceCoordinator by lazy {
         BrowserTabPersistenceCoordinator(store, { tabs }, { activeTab })
     }
@@ -184,6 +185,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        credentialVault = BrowserCredentialVault(applicationContext)
         store.recoverInterruptedStreamDownloads()
         streamDownloadCoordinator = StreamDownloadCoordinator(store, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -303,6 +305,8 @@ class MainActivity : AppCompatActivity() {
             showMessage = ::toast
         )
         browserRuntime = BrowserRuntimeOwner.runtime(applicationContext)
+        browserRuntime?.setAutocompleteStorageDelegate(credentialVault)
+        browserRuntime?.settings?.setLoginAutofillEnabled(false)
         browserRuntime?.settings?.setPreferredColorScheme(when (store.themeMode) {
             "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
             "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
@@ -677,6 +681,14 @@ class MainActivity : AppCompatActivity() {
         )
         tab.session.permissionDelegate = tab.permissionDelegate
         sessionDelegateFactory.attach(tab)
+        tab.session.promptDelegate = BrowserCredentialPromptDelegate(
+            activity = this,
+            privateMode = tab.privateMode,
+            isStillValid = { session, origin ->
+                !shuttingDown && tabs.any { it === tab } && tab.session === session &&
+                    CredentialOriginPolicy.canonicalHttpsOrigin(tab.url) == origin
+            }
+        )
     }
 
     private fun setFullscreen(enabled: Boolean) {
@@ -709,7 +721,7 @@ class MainActivity : AppCompatActivity() {
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
             "Site information", "Search engine", "Clear browsing history", "Settings",
-            "New private tab", "Close private tabs", "Find anything"
+            "New private tab", "Close private tabs", "Find anything", "Passwords"
         ).map(::tr).toTypedArray()
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
@@ -741,6 +753,7 @@ class MainActivity : AppCompatActivity() {
                         .show()
                 }
                 14 -> showRecall()
+                15 -> showPasswordManager()
             }
         }.show()
     }
@@ -1011,6 +1024,26 @@ class MainActivity : AppCompatActivity() {
             body.close()
             toast("This download response is not supported")
         }
+    }
+
+    private fun showPasswordManager() {
+        val saved = credentialVault.entries()
+        if (saved.isEmpty()) { toast("No saved passwords yet"); return }
+        val labels = saved.map { it.username + " · " + Uri.parse(it.origin).host.orEmpty() }.toTypedArray()
+        AlertDialog.Builder(this).setTitle(tr("Saved passwords")).setItems(labels) { _, index ->
+            val item = saved.getOrNull(index) ?: return@setItems
+            AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
+                .setMessage("Username: " + item.username + "\nPassword: " + item.password)
+                .setPositiveButton(tr("Copy password")) { _, _ ->
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", item.password))
+                    toast("Password copied")
+                }
+                .setNegativeButton(tr("Close"), null)
+                .setNeutralButton(tr("Delete")) { _, _ ->
+                    if (credentialVault.delete(item.id)) toast("Saved password deleted")
+                }.show()
+        }.setNegativeButton(tr("Close"), null).show()
     }
 
     private fun chooseSearchEngine() {
