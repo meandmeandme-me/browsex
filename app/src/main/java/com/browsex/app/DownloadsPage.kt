@@ -131,6 +131,7 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                 val totalCol = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
                 val soFarCol = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
                 val dateCol = c.getColumnIndex(DownloadManager.COLUMN_LAST_MODIFIED_TIMESTAMP)
+                val reasonCol = c.getColumnIndex(DownloadManager.COLUMN_REASON)
                 while (c.moveToNext()) {
                     if (idCol < 0) continue
                     val id = c.getLong(idCol)

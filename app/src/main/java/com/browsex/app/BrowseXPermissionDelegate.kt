@@ -87,7 +87,6 @@ internal class BrowseXPermissionDelegate(
                 }
                 .create()
             dialogs.add(dialog)
-            dialog.setOnShowListener { perm.notifyShown() }
             dialog.setOnCancelListener {
                 result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
                 dialogs.remove(dialog)

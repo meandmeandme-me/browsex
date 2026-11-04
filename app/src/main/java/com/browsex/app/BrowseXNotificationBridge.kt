@@ -24,9 +24,10 @@ internal class BrowseXNotificationBridge(
 
     override fun onShowNotification(notification: WebNotification) {
         main.post {
+            val source = notification.source
             if (notification.privateBrowsing || !store.siteNotificationsEnabled ||
                 !isSafeWebOrigin(notification.origin) ||
-                (notification.source != null && !isSafeWebOrigin(notification.source))
+                (source != null && !isSafeWebOrigin(source))
             ) {
                 notification.dismiss()
                 return@post

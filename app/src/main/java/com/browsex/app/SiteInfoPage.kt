@@ -245,7 +245,7 @@ class SiteInfoPage(
     }
 
     private fun cardBackground() = GradientDrawable().apply {
-        setColor(colors.card)
+        setColor(this@SiteInfoPage.colors.card)
         cornerRadius = dp(13).toFloat()
     }
 }

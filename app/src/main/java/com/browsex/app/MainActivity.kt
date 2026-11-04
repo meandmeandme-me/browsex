@@ -1027,7 +1027,7 @@ class MainActivity : AppCompatActivity() {
                     storage?.setPermission(permission, value)
                     storage?.getPermissions(url, false)?.accept(
                         { updated -> runOnUiThread {
-                            if (tabs.contains(tab) && tab.url == url) tab.sitePermissions = updated.toList()
+                            if (tabs.contains(tab) && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
                     )
@@ -1042,7 +1042,7 @@ class MainActivity : AppCompatActivity() {
         storage.getPermissions(url, false).accept(
             { permissions -> runOnUiThread {
                 if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
-                tab.sitePermissions = permissions.toList()
+                tab.sitePermissions = permissions.orEmpty().toList()
                 showPage()
             } },
             { error -> runOnUiThread {
