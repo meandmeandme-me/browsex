@@ -33,7 +33,7 @@
 - [ ] Reader mode handles non-article pages and extraction failures gracefully.
 - [ ] Site permission prompts are user-initiated and can be revoked (not implemented yet).
 - [ ] Rotation/fullscreen returns the browser chrome correctly.
-- [ ] App survives process recreation and low-memory conditions.
+- [ ] App survives process recreation and low-memory conditions.\n- [ ] Open tabs and active selection restore from a bounded, URL-validated snapshot.
 
 ## Release rules
 
