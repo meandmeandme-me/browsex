@@ -212,8 +212,6 @@ class MainActivity : AppCompatActivity() {
         if (!address.hasFocus()) updateAddress()
         progress.progress = tab.progress
         progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
-        backButton.alpha = if (tab.canGoBack) 1f else 0.4f
-        forwardButton.alpha = if (tab.canGoForward) 1f else 0.4f
         tabsButton.text = "▢ ${tabs.size}"
     }
 
