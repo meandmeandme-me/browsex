@@ -3,94 +3,143 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-<meta name="color-scheme" content="dark">
-<title>BrowseX — Explore more</title>
+<meta name="theme-color" content="#eff5fa">
+<title>Browse X</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#111a2e;--card:#15213a;--line:#263653;--accent:#8b5cf6;--cyan:#22d3ee;--text:#f7f8ff;--muted:#a7b3ca}
+:root{color-scheme:light;--canvas:#eff5fa;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--card:#fff;--shadow:0 6px 24px rgba(38,77,108,.07)}
 *{box-sizing:border-box}
-html{min-height:100%;background:var(--bg)}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#22204d 0%,#101a32 38%,var(--bg) 78%);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center}
-main{width:min(760px,100%);padding:clamp(28px,8vh,76px) clamp(18px,5vw,34px) 34px}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(32px,8vh,70px)}
-.logo{font-size:clamp(36px,9vw,54px);font-weight:850;letter-spacing:-2.8px;line-height:1}
-.logo span{color:var(--accent);text-shadow:0 0 28px #8b5cf677}
-.tag{color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:8px}
-.lang{border:1px solid var(--line);background:#ffffff0b;color:var(--text);border-radius:999px;padding:9px 13px;font:inherit}
-.hero{text-align:center;margin-bottom:28px}
-.hero h1{font-size:clamp(22px,5vw,32px);margin:0 0 7px;letter-spacing:-.7px}
-.hero p{color:var(--muted);margin:0}
-.search{display:flex;gap:8px;width:100%;padding:7px;background:#ffffff0d;border:1px solid #ffffff20;border-radius:20px;box-shadow:0 16px 50px #0005;backdrop-filter:blur(12px)}
-.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--text);padding:12px 13px;font:inherit}
-.search input::placeholder{color:#94a3b8}
-.search button{border:0;border-radius:14px;background:linear-gradient(135deg,var(--accent),#5b6cff);color:white;padding:0 20px;font-weight:750;font:inherit}
-.engines{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:13px 0 30px}
-.engines button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 13px;border-radius:999px;font:inherit;font-size:12px}
-.engines button[aria-pressed=true]{border-color:var(--accent);background:#8b5cf622;color:#fff}
-.section{display:flex;align-items:center;justify-content:space-between;margin:26px 2px 12px}
-.section h2{font-size:14px;letter-spacing:.5px;margin:0}
-.section span{font-size:12px;color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
-.tile{min-width:0;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;padding:16px 6px;background:linear-gradient(155deg,#ffffff0d,#ffffff05);border:1px solid var(--line);border-radius:18px;color:var(--text);text-decoration:none;transition:transform .16s,border-color .16s}
-.tile:active{transform:scale(.96);border-color:var(--accent)}
-.icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#8b5cf633,#22d3ee22);font-size:19px;font-weight:800}
-.tile b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.feature{display:flex;align-items:center;gap:11px;padding:13px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff12}
-.feature i{font-style:normal;font-size:20px}
-.feature b{display:block;font-size:12px}.feature small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-footer{text-align:center;color:#71809a;font-size:11px;margin-top:36px}
-[dir=rtl] .section{flex-direction:row-reverse}
-[dir=rtl] header{flex-direction:row}
-@media(max-width:420px){main{padding-top:28px}.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tile{padding:13px 4px}.features{grid-template-columns:1fr}.search button{padding:0 15px}}
-@media(min-width:650px){.tile{padding:20px 10px}.icon{width:48px;height:48px}}
+html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+body{background:linear-gradient(112deg,#e0f6fc 0%,#f4f7fc 48%,#e6ecfc 100%);background-attachment:fixed}
+main{width:min(100%,620px);margin:auto;padding:24px 20px 36px}
+header,.section-head{display:flex;align-items:center;justify-content:space-between}
+header{margin-bottom:30px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#5fc8e9,#3b69c9 58%,#766bd1);display:grid;place-items:center;color:#fff;font-size:26px;box-shadow:0 5px 14px #477cc333}
+.brand-name{font-size:23px;font-weight:750;letter-spacing:-.7px}
+.icon-btn{width:44px;height:44px;border:0;border-radius:13px;background:var(--card);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}
+.greeting{margin:0 0 28px}
+h1{font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:760}
+.greeting p{font-size:14px;color:var(--muted);margin:0}
+.section-head{margin:0 0 14px}
+.section-head h2{font-size:17px;font-weight:550;margin:0}
+.text-action{border:0;background:transparent;color:var(--blue);font-size:13px;font-weight:650;padding:8px 0;cursor:pointer}
+.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:30px}
+.shortcut-wrap{position:relative;min-width:0}
+.shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink)}
+.shortcut-icon{width:58px;height:58px;border-radius:19px;background:var(--card);display:grid;place-items:center;font-size:25px;font-weight:650;box-shadow:var(--shadow);color:var(--blue);overflow:hidden}
+.shortcut-name{font-size:11px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.shortcut-edit{position:absolute;right:0;top:-5px;width:23px;height:23px;border:0;border-radius:50%;background:#dcecff;color:#0759bd;font-size:13px;cursor:pointer}
+.add-shortcut{width:58px;height:58px;border:1px dashed #91abc2;border-radius:19px;background:#ffffff75;color:var(--blue);font-size:26px;cursor:pointer}
+.add-label{display:block;margin-top:8px;font-size:11px;color:var(--muted)}
+.reading-card{padding:12px;border-radius:22px;background:var(--card);border:1px solid #ffffffb3;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block}
+.editorial-art{height:142px;border-radius:16px;overflow:hidden;position:relative;background:linear-gradient(130deg,#b7cbd2 0%,#d7d6c7 45%,#8da8a9 100%)}
+.editorial-art:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7e8cf,#b5a58f 65%,#7c8e8c);left:8%;top:-62px;box-shadow:100px 48px 0 -28px #ffffff59}
+.article-info{padding:11px 2px 1px}
+.kicker{font-size:11px;color:var(--blue);letter-spacing:.2px;margin-bottom:5px}
+.article-title{font-size:20px;line-height:1.2;margin:0 0 6px;font-weight:600}
+.article-meta{font-size:12px;color:var(--muted)}
+.search-hint{margin:22px 0 0;text-align:center;font-size:11px;color:var(--muted)}
+dialog{width:min(420px,calc(100% - 32px));border:0;border-radius:22px;padding:0;background:var(--card);color:var(--ink);box-shadow:0 20px 70px #0b203855}
+dialog::backdrop{background:#0c203b80;backdrop-filter:blur(3px)}
+.dialog-body{padding:21px}
+.dialog-body h2{font-size:20px;margin:0 0 6px}
+.dialog-body p{font-size:12px;color:var(--muted);margin:0 0 17px}
+label{display:block;font-size:12px;font-weight:650;margin:12px 0 6px}
+input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--canvas);color:var(--ink);font-size:14px;outline-color:var(--blue)}
+.dialog-actions{display:flex;gap:8px;margin-top:18px}
+.dialog-actions button{flex:1;min-height:44px;border:0;border-radius:12px;font-weight:650;cursor:pointer}
+.primary{background:var(--blue);color:#fff}.secondary{background:var(--canvas);color:var(--ink)}.danger{background:#fff0f0;color:#b42332}
+body.dark{color-scheme:dark;--canvas:#111d2e;--ink:#edf5ff;--muted:#aab9c9;--line:#31445a;--card:#20334a;--blue:#78b5ff;background:linear-gradient(120deg,#1c3547,#1c263e 52%,#302c4a);color:var(--ink)}
+body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}body.dark .shortcut-edit{background:#294d76;color:#cfe5ff}body.dark .danger{background:#492d38;color:#ffc5cc}
+@media(max-width:360px){main{padding:18px 14px}.shortcuts{gap:6px}.shortcut-icon,.add-shortcut{width:51px;height:51px}.shortcut-name,.add-label{font-size:10px}}
+@media(min-width:700px){main{padding-top:38px}.shortcuts{gap:18px}.shortcut-icon,.add-shortcut{width:64px;height:64px}}
 </style>
 </head>
 <body>
 <main>
-<header><div><div class="logo">Browse<span>X</span></div><div class="tag">Fast · Private · Yours</div></div><button class="lang" id="lang" type="button">العربية</button></header>
-<section class="hero"><h1 id="headline">Explore more. Worry less.</h1><p id="subline">A calmer, smarter way to browse the web.</p></section>
-<form class="search" id="search"><input id="query" type="search" placeholder="Search or enter a website" autocomplete="off" aria-label="Search or enter a website"><button id="go" type="submit">Search</button></form>
-<div class="engines" aria-label="Search engine">
-<button type="button" data-engine="google" aria-pressed="true">Google</button><button type="button" data-engine="duck" aria-pressed="false">DuckDuckGo</button><button type="button" data-engine="bing" aria-pressed="false">Bing</button>
-</div>
-<div class="section"><h2 id="quickTitle">QUICK ACCESS</h2><span id="editHint">Your web, one tap away</span></div>
-<nav class="grid" aria-label="Quick links">
-<a class="tile" href="https://www.google.com"><span class="icon">G</span><b>Google</b></a>
-<a class="tile" href="https://www.youtube.com"><span class="icon">▶</span><b>YouTube</b></a>
-<a class="tile" href="https://www.wikipedia.org"><span class="icon">W</span><b>Wikipedia</b></a>
-<a class="tile" href="https://www.facebook.com"><span class="icon">f</span><b>Facebook</b></a>
-<a class="tile" href="https://www.instagram.com"><span class="icon">◎</span><b>Instagram</b></a>
-<a class="tile" href="https://www.reddit.com"><span class="icon">r</span><b>Reddit</b></a>
-<a class="tile" href="https://www.amazon.com"><span class="icon">a</span><b>Amazon</b></a>
-<a class="tile" href="https://chatgpt.com"><span class="icon">✳</span><b>ChatGPT</b></a>
-</nav>
-<div class="section"><h2 id="featureTitle">MADE FOR YOUR EVERYDAY</h2><span id="featureHint">Simple by design</span></div>
-<section class="features">
-<div class="feature"><i>⚡</i><div><b id="f1">Fast browsing</b><small id="d1">Smooth pages, less waiting</small></div></div>
-<div class="feature"><i>🛡️</i><div><b id="f2">Privacy first</b><small id="d2">Browse with more control</small></div></div>
-<div class="feature"><i>🌙</i><div><b id="f3">Comfortable design</b><small id="d3">Easy on your eyes</small></div></div>
-<div class="feature"><i>📱</i><div><b id="f4">Made for every screen</b><small id="d4">Phones and tablets</small></div></div>
+<header>
+ <div class="brand"><div class="mark" aria-hidden="true">✳</div><div class="brand-name">Browse X</div></div>
+ <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle appearance">☾</button>
+</header>
+<section class="greeting"><h1>A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
+<section aria-labelledby="everyday-title">
+ <div class="section-head"><h2 id="everyday-title">Your everyday</h2><button class="text-action" id="reset" type="button">Reset</button></div>
+ <nav class="shortcuts" id="shortcuts" aria-label="Favorite websites"></nav>
 </section>
-<footer>BrowseX · Powered by GeckoView</footer>
+<section aria-labelledby="reading-title">
+ <div class="section-head"><h2 id="reading-title">A place to begin</h2><a class="text-action" href="https://www.wikipedia.org" aria-label="Explore Wikipedia">Explore</a></div>
+ <a class="reading-card" href="https://www.wikipedia.org">
+  <div class="editorial-art" role="img" aria-label="Abstract soft editorial artwork"></div>
+  <div class="article-info"><div class="kicker">OPEN WEB&nbsp; / &nbsp;DISCOVERY</div><h3 class="article-title">Follow your curiosity</h3><div class="article-meta">A new idea is one search away</div></div>
+ </a>
+</section>
+<p class="search-hint">Search or enter an address in the Browse X toolbar above.</p>
 </main>
+<dialog id="shortcut-dialog" aria-labelledby="dialog-title">
+ <form class="dialog-body" id="shortcut-form">
+  <h2 id="dialog-title">Add a shortcut</h2><p>Save a website to your start page. Use a full website address.</p>
+  <label for="shortcut-name">Name</label><input id="shortcut-name" maxlength="24" placeholder="My favorite site" required>
+  <label for="shortcut-url">Website address</label><input id="shortcut-url" type="url" inputmode="url" placeholder="https://example.com" required>
+  <div class="dialog-actions">
+   <button class="secondary" id="cancel" type="button">Cancel</button>
+   <button class="danger" id="delete" type="button" hidden>Delete</button>
+   <button class="primary" type="submit">Save</button>
+  </div>
+ </form>
+</dialog>
 <script>
 (()=>{
-let engine='google',arabic=false;
-const engines={google:'https://www.google.com/search?q=',duck:'https://html.duckduckgo.com/html/?q=',bing:'https://www.bing.com/search?q='};
-document.querySelectorAll('[data-engine]').forEach(button=>button.addEventListener('click',()=>{
-engine=button.dataset.engine;document.querySelectorAll('[data-engine]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
-}));
-document.getElementById('search').addEventListener('submit',event=>{
-event.preventDefault();const raw=document.getElementById('query').value.trim();if(!raw)return;
-const looksLikeUrl=/^(https?:\/\/)|^([\w-]+\.)+[a-z]{2,}([/:?#]|$)/i.test(raw);
-location.href=looksLikeUrl?(raw.startsWith('http')?raw:'https://'+raw):engines[engine]+encodeURIComponent(raw);
-});
-document.getElementById('lang').addEventListener('click',()=>{
-arabic=!arabic;document.documentElement.lang=arabic?'ar':'en';document.documentElement.dir=arabic?'rtl':'ltr';
-const t=arabic?['English','اكتشف المزيد. براحة أكبر.','تصفح أذكى وأسهل للإنترنت.','بحث أو اكتب عنوان موقع','بحث','الوصول السريع','كل مواقعك بلمسة واحدة','مصمم ليومك','البساطة في التصميم','تصفح سريع','صفحات سلسة وانتظار أقل','الخصوصية أولاً','تحكم أكبر أثناء التصفح','تصميم مريح','راحة أكبر لعينيك','لكل الشاشات','هواتف وأجهزة لوحية']:['العربية','Explore more. Worry less.','A calmer, smarter way to browse the web.','Search or enter a website','Search','QUICK ACCESS','Your web, one tap away','MADE FOR YOUR EVERYDAY','Simple by design','Fast browsing','Smooth pages, less waiting','Privacy first','Browse with more control','Comfortable design','Easy on your eyes','Made for every screen','Phones and tablets'];
-['lang','headline','subline','query','go','quickTitle','editHint','featureTitle','featureHint','f1','d1','f2','d2','f3','d3','f4','d4'].forEach((id,i)=>{const el=document.getElementById(id);if(id==='query')el.placeholder=t[i];else el.textContent=t[i];});
-});
+ const $=id=>document.getElementById(id);
+ const defaults=[
+  {name:'Wikipedia',url:'https://www.wikipedia.org'},
+  {name:'Are.na',url:'https://www.are.na'},
+  {name:'YouTube',url:'https://www.youtube.com'},
+  {name:'GitHub',url:'https://github.com'}
+ ];
+ const key='browsex.home.shortcuts',themeKey='browsex.home.dark';
+ let shortcuts=defaults,editing=-1;
+ try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(saved))shortcuts=saved.filter(x=>x&&typeof x.name==='string'&&typeof x.url==='string').slice(0,8)}catch(_){}
+ const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'||u.protocol==='http:'}catch(_){return false}};
+ const save=()=>{try{localStorage.setItem(key,JSON.stringify(shortcuts))}catch(_){}};
+ const render=()=>{
+  const nav=$('shortcuts');nav.replaceChildren();
+  shortcuts.forEach((item,index)=>{
+   const wrap=document.createElement('div');wrap.className='shortcut-wrap';
+   const link=document.createElement('a');link.className='shortcut';link.href=item.url;link.setAttribute('aria-label','Open '+item.name);
+   const mark=document.createElement('span');mark.className='shortcut-icon';mark.textContent=(item.name.trim()[0]||'↗').toUpperCase();
+   const name=document.createElement('span');name.className='shortcut-name';name.textContent=item.name;
+   link.append(mark,name);wrap.append(link);
+   const edit=document.createElement('button');edit.className='shortcut-edit';edit.type='button';edit.textContent='✎';edit.setAttribute('aria-label','Edit '+item.name);edit.addEventListener('click',()=>openEditor(index));wrap.append(edit);
+   nav.append(wrap);
+  });
+  if(shortcuts.length<8){
+   const wrap=document.createElement('div');wrap.className='shortcut-wrap';
+   const add=document.createElement('button');add.className='add-shortcut';add.type='button';add.textContent='+';add.setAttribute('aria-label','Add shortcut');add.addEventListener('click',()=>openEditor(-1));
+   wrap.append(add);const label=document.createElement('span');label.className='add-label';label.textContent='Add site';wrap.append(label);nav.append(wrap);
+  }
+ };
+ const dialog=$('shortcut-dialog');
+ const openEditor=index=>{
+  editing=index;const item=index>=0?shortcuts[index]:{name:'',url:''};
+  $('dialog-title').textContent=index>=0?'Edit shortcut':'Add a shortcut';
+  $('shortcut-name').value=item.name;$('shortcut-url').value=item.url;
+  $('delete').hidden=index<0;dialog.showModal();$('shortcut-name').focus();
+ };
+ $('shortcut-form').addEventListener('submit',event=>{
+  event.preventDefault();const name=$('shortcut-name').value.trim(),url=$('shortcut-url').value.trim();
+  if(!name||!validUrl(url)){$('shortcut-url').setCustomValidity('Enter a valid http or https website address.');$('shortcut-url').reportValidity();$('shortcut-url').setCustomValidity('');return}
+  const item={name,url};
+  if(editing>=0)shortcuts[editing]=item;else if(shortcuts.length<8)shortcuts.push(item);
+  save();render();dialog.close();
+ });
+ $('cancel').addEventListener('click',()=>dialog.close());
+ $('delete').addEventListener('click',()=>{if(editing>=0){shortcuts.splice(editing,1);save();render()}dialog.close()});
+ $('reset').addEventListener('click',()=>{shortcuts=defaults.map(x=>({...x}));save();render()});
+ const applyTheme=dark=>{document.body.classList.toggle('dark',dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');try{localStorage.setItem(themeKey,dark?'1':'0')}catch(_){}};
+ let dark=false;try{dark=localStorage.getItem(themeKey)==='1'}catch(_){}applyTheme(dark);
+ $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
+ const hour=new Date().getHours();$('greeting').textContent=hour<12?'Good morning. Where to next?':hour<18?'Good afternoon. Where to next?':'Good evening. Where to next?';
+ render();
 })();
 </script>
 </body>

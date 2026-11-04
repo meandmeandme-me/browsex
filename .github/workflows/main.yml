@@ -1,12 +1,18 @@
-name: Build and publish BrowseX APK
+name: BrowseX CI
 
 on:
   push:
     branches: [ main, rewrite-v2 ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: browsex-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -30,30 +36,42 @@ jobs:
           set -o pipefail
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Bundle uBlock Origin (Firefox extension)
-        run: |
-          mkdir -p app/src/main/assets/ublock
-          if curl -fsSL -o ubo.xpi "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"; then
-            unzip -q -o ubo.xpi -d app/src/main/assets/ublock
-            rm -rf app/src/main/assets/ublock/META-INF
-            echo "uBlock Origin bundled"
-          else
-            echo "Could not download uBlock Origin; building without it"
-          fi
-
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      - name: Build universal APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Run tests, lint and build APKs
+        run: gradle testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
 
-      - name: Publish latest APK to GitHub Releases
-        uses: softprops/action-gh-release@v2
+      - name: Verify APK outputs and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_DIR="app/build/outputs/apk/debug"
+          test -d "$APK_DIR"
+          mapfile -t APKS < <(find "$APK_DIR" -type f -name '*.apk' | sort)
+          test "${#APKS[@]}" -ge 3
+          printf '%s\n' "${APKS[@]}"
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          for apk in "${APKS[@]}"; do
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk"
+            BADGING="$("$AAPT" dump badging "$apk")"
+            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "sdkVersion:'26'" <<< "$BADGING"
+            unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-files.txt"
+            grep -q 'lib/.*libxul.so' "$RUNNER_TEMP/apk-files.txt"
+          done
+          UNIVERSAL="$(printf '%s\n' "${APKS[@]}" | grep 'universal' | head -n 1)"
+          test -n "$UNIVERSAL"
+          unzip -Z1 "$UNIVERSAL" > "$RUNNER_TEMP/universal-files.txt"
+          grep -q 'lib/armeabi-v7a/libxul.so' "$RUNNER_TEMP/universal-files.txt"
+          grep -q 'lib/arm64-v8a/libxul.so' "$RUNNER_TEMP/universal-files.txt"
+          printf '%s\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
+
+      - name: Upload verified debug APKs
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: browsex-latest
-          name: BrowseX – Latest build
-          prerelease: true
-          make_latest: false
-          overwrite_files: true
-          files: app/build/outputs/apk/debug/*.apk
+          name: browsex-debug-apks
+          path: app/build/outputs/apk/debug/
+          if-no-files-found: error
+          retention-days: 14

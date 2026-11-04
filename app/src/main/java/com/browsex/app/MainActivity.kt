@@ -1,5 +1,10 @@
 package com.browsex.app
 
+import android.app.DownloadManager
+import android.webkit.CookieManager
+import android.webkit.URLUtil
+import android.os.Environment
+
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -15,6 +20,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -26,11 +32,10 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.ExperimentalGeckoViewApi
+import org.mozilla.geckoview.WebResponse
 
 private const val HOME_URL = "resource://android/assets/home.html"
-private const val SEARCH_GOOGLE = "https://www.google.com/search?q="
-private const val SEARCH_DDG = "https://html.duckduckgo.com/html/?q="
-private const val SEARCH_BING = "https://www.bing.com/search?q="
 private val COLOR_BG = Color.rgb(13, 17, 23)
 private val COLOR_PANEL = Color.rgb(22, 27, 34)
 private val COLOR_FIELD = Color.rgb(33, 40, 50)
@@ -50,9 +55,11 @@ private data class BrowserTab(
     var url: String = HOME_URL,
     var progress: Int = 0,
     var canGoBack: Boolean = false,
-    var canGoForward: Boolean = false
+    var canGoForward: Boolean = false,
+    var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList()
 )
 
+@androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
 class MainActivity : AppCompatActivity() {
     private val tabs = mutableListOf<BrowserTab>()
     private var activeTab: BrowserTab? = null
@@ -62,8 +69,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
-    private lateinit var backButton: TextView
-    private lateinit var forwardButton: TextView
     private lateinit var tabsButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
@@ -71,8 +76,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
-        window.statusBarColor = COLOR_BG
-        window.navigationBarColor = COLOR_PANEL
+        window.statusBarColor = Color.rgb(239, 245, 250)
+        window.navigationBarColor = Color.rgb(239, 245, 250)
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = true
         setContentView(createBrowserUi())
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -87,9 +94,14 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        prepareBuiltInExtension()
-        val initial = intent?.data?.let(::safeExternalUrl) ?: HOME_URL
-        createTab(initial)
+        val externalUrl = intent?.data?.let(::safeExternalUrl)
+        if (externalUrl != null) {
+            createTab(externalUrl)
+        } else {
+            val snapshot = store.restoreOpenTabs()
+            snapshot.urls.forEach(::createTab)
+            tabs.getOrNull(snapshot.activeIndex)?.let(::activateTab)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -98,7 +110,18 @@ class MainActivity : AppCompatActivity() {
         intent.data?.let(::safeExternalUrl)?.let(::createTab)
     }
 
+    override fun onStop() {
+        persistTabs()
+        super.onStop()
+    }
+
+    private fun persistTabs() {
+        if (!::store.isInitialized || tabs.isEmpty()) return
+        store.saveOpenTabs(tabs.map { it.url }, activeTab?.let(tabs::indexOf)?.coerceAtLeast(0) ?: 0)
+    }
+
     override fun onDestroy() {
+        persistTabs()
         shuttingDown = true
         if (::browserView.isInitialized) browserView.releaseSession()
         tabs.toList().forEach { it.session.close() }
@@ -112,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     private fun createBrowserUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(COLOR_BG)
+            setBackgroundColor(Color.rgb(239, 245, 250))
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -121,25 +144,31 @@ class MainActivity : AppCompatActivity() {
         }
 
         topBar = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(COLOR_BG)
-        }
-        val addressRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(6))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setBackgroundColor(Color.rgb(239, 245, 250))
         }
+        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }.apply {
+            background = rounded(Color.WHITE, 10)
+            textSize = 22f
+        }
+        topBar.addView(home, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            marginEnd = dp(4)
+        })
+
         address = EditText(this).apply {
-            hint = "Search or enter website"
-            setHintTextColor(Color.rgb(145, 155, 168))
-            setTextColor(Color.WHITE)
-            textSize = 15f
+            hint = "Search or enter URL"
+            setHintTextColor(Color.rgb(83, 105, 123))
+            setTextColor(Color.rgb(19, 43, 64))
+            textSize = 14f
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
-            setPadding(dp(16), 0, dp(12), 0)
-            background = rounded(COLOR_FIELD, 24)
+            setPadding(dp(14), 0, dp(12), 0)
+            background = rounded(Color.WHITE, 24)
+            elevation = dp(3).toFloat()
             setOnEditorActionListener { _, action, _ ->
                 if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
                     navigate(address.text.toString())
@@ -148,32 +177,52 @@ class MainActivity : AppCompatActivity() {
             }
             setOnFocusChangeListener { _, focused -> if (!focused) updateAddress() }
         }
-        addressRow.addView(address, LinearLayout.LayoutParams(0, dp(46), 1f))
-        addressRow.addView(actionButton("⋮", "Browser menu") { showBrowserMenu() }, LinearLayout.LayoutParams(dp(44), dp(46)))
+        topBar.addView(address, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+            marginEnd = dp(4)
+        })
+
+        tabsButton = actionButton("▢", "Open tabs") { showTabs() }.apply {
+            background = rounded(Color.WHITE, 10)
+            textSize = 20f
+        }
+        topBar.addView(tabsButton, LinearLayout.LayoutParams(dp(44), dp(48)).apply {
+            marginEnd = dp(4)
+        })
+        val menu = actionButton("⋮", "Browser menu") { showBrowserMenu() }.apply {
+            background = rounded(Color.WHITE, 10)
+            textSize = 22f
+        }
+        topBar.addView(menu, LinearLayout.LayoutParams(dp(44), dp(48)))
+
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(COLOR_ACCENT)
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.rgb(8, 102, 217))
             visibility = View.GONE
         }
-        topBar.addView(addressRow)
-        topBar.addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
-
         browserView = GeckoView(this).apply { setBackgroundColor(Color.WHITE) }
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setBackgroundColor(COLOR_PANEL)
+            setPadding(dp(14), dp(5), dp(14), dp(8))
+            background = rounded(Color.WHITE, 22)
+            elevation = dp(5).toFloat()
         }
-        backButton = bottomButton("‹", "Back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
-        forwardButton = bottomButton("›", "Forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
-        bottomButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }
-        bottomButton("+", "New tab") { createTab(HOME_URL) }
-        tabsButton = bottomButton("1", "Tabs") { showTabs() }
-        listOf(backButton, forwardButton).forEach { it.alpha = 0.45f }
+        bottomButton("‹", "Go back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
+        bottomButton("›", "Go forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
+        bottomButton("＋", "New tab") { createTab(HOME_URL) }
+        bottomButton("☆", "Bookmark page") {
+            activeTab?.url?.takeIf { it.startsWith("http") }?.let {
+                val added = store.toggleBookmark(it)
+                toast(if (added) "Saved to favorites" else "Removed from favorites")
+            }
+        }
 
         root.addView(topBar)
+        root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(54)))
+        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
+            setMargins(dp(12), dp(5), dp(12), dp(8))
+        })
         return root
     }
 
@@ -188,13 +237,14 @@ class MainActivity : AppCompatActivity() {
             contentDescription = description
             textSize = 22f
             gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
+            setTextColor(Color.rgb(48, 61, 88))
             setOnClickListener { action() }
         }
 
     private fun bottomButton(label: String, description: String, action: () -> Unit) =
         actionButton(label, description, action).also {
             it.textSize = 23f
+            it.setTextColor(Color.rgb(54, 62, 86))
             bottomBar.addView(it, LinearLayout.LayoutParams(0, -1, 1f))
         }
 
@@ -203,9 +253,7 @@ class MainActivity : AppCompatActivity() {
         if (!address.hasFocus()) updateAddress()
         progress.progress = tab.progress
         progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
-        backButton.alpha = if (tab.canGoBack) 1f else 0.4f
-        forwardButton.alpha = if (tab.canGoForward) 1f else 0.4f
-        tabsButton.text = tabs.size.toString()
+        tabsButton.text = "▢ ${tabs.size}"
     }
 
     private fun updateAddress() {
@@ -214,31 +262,10 @@ class MainActivity : AppCompatActivity() {
         address.setText(if (url.startsWith("resource://")) "" else url)
     }
 
-    private fun normalizeInput(raw: String): String {
-        val value = raw.trim()
-        if (value.isEmpty()) return HOME_URL
-        if (value.startsWith("about:") || value.startsWith("resource://")) return value
-        val explicitScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(value)
-        if (explicitScheme) {
-            val scheme = Uri.parse(value).scheme?.lowercase()
-            if (scheme == "http" || scheme == "https") return value
-            return SEARCH_GOOGLE + Uri.encode(value)
-        }
-        val looksLikeHost = !value.contains(" ") &&
-            (value == "localhost" || value.contains(".") || value.startsWith("192.168."))
-        if (looksLikeHost) return "https://$value"
-        val base = when (store.searchEngine) {
-            "DuckDuckGo" -> SEARCH_DDG
-            "Bing" -> SEARCH_BING
-            else -> SEARCH_GOOGLE
-        }
-        return base + Uri.encode(value)
-    }
+    private fun normalizeInput(raw: String): String =
+        NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
 
-    private fun safeExternalUrl(uri: Uri): String? {
-        val scheme = uri.scheme?.lowercase()
-        return if ((scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()) uri.toString() else null
-    }
+    private fun safeExternalUrl(uri: Uri): String? = NavigationInput.externalWebUrl(uri.toString())
 
     private fun navigate(raw: String) {
         val tab = activeTab ?: return
@@ -252,6 +279,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun createTab(url: String) {
         if (shuttingDown) return
+        if (tabs.size >= TabSessionState.MAX_TABS) {
+            toast("You can keep up to ${TabSessionState.MAX_TABS} tabs open")
+            return
+        }
         val tab = BrowserTab()
         attachDelegates(tab)
         tab.session.open(BrowserEngine.runtime(this))
@@ -304,6 +335,7 @@ class MainActivity : AppCompatActivity() {
                 hasUserGesture: Boolean
             ) {
                 tab.url = url.orEmpty()
+                tab.sitePermissions = perms.toList()
                 if (tab === activeTab) updateChrome()
             }
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
@@ -315,10 +347,18 @@ class MainActivity : AppCompatActivity() {
                 if (tab === activeTab) updateChrome()
             }
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
+                if (isFinishing || shuttingDown || tabs.size >= TabSessionState.MAX_TABS) {
+                    runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
+                    return null
+                }
                 val child = BrowserTab()
                 attachDelegates(child)
+                child.session.open(BrowserEngine.runtime(this@MainActivity))
                 tabs.add(child)
-                runOnUiThread { if (!isFinishing && !shuttingDown) activateTab(child) }
+                runOnUiThread {
+                    if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
+                    else if (tabs.contains(child)) closeTab(child)
+                }
                 return GeckoResult.fromValue(child.session)
             }
         }
@@ -331,6 +371,9 @@ class MainActivity : AppCompatActivity() {
                 if (tab === activeTab) setFullscreen(fullScreen)
             }
             override fun onCloseRequest(session: GeckoSession) { closeTab(tab) }
+            override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
+                enqueueDownload(response)
+            }
         }
     }
 
@@ -345,25 +388,165 @@ class MainActivity : AppCompatActivity() {
         } else controller.show(WindowInsetsCompat.Type.systemBars())
     }
 
+    /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
     private fun showTabs() {
-        val labels = tabs.mapIndexed { index, tab ->
-            val current = if (tab === activeTab) "✓ " else ""
-            "$current${index + 1}. ${tab.title}".take(70)
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Open tabs · ${tabs.size}")
-            .setItems(labels) { _, which -> activateTab(tabs.getOrNull(which) ?: return@setItems) }
-            .setPositiveButton("New tab") { _, _ -> createTab(HOME_URL) }
-            .setNegativeButton("Close current") { _, _ -> activeTab?.let(::closeTab) }
-            .setNeutralButton("Done", null)
-            .show()
+        lateinit var dialog: AlertDialog
+        val page = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setBackgroundColor(Color.rgb(239, 245, 250))
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        heading.addView(TextView(this).apply {
+            text = "Your space"
+            textSize = 25f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(19, 43, 64))
+        })
+        heading.addView(TextView(this).apply {
+            text = "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
+            textSize = 13f
+            setTextColor(Color.rgb(83, 105, 123))
+            setPadding(0, dp(3), 0, 0)
+        })
+        header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
+        val add = TextView(this).apply {
+            text = "+  New tab"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(11), dp(16), dp(11))
+            background = rounded(Color.rgb(8, 102, 217), 22)
+            setOnClickListener { createTab(HOME_URL); dialog.dismiss(); showTabs() }
+        }
+        header.addView(add)
+        page.addView(header)
+
+        val hint = TextView(this).apply {
+            text = "Tap a card to return to it"
+            textSize = 12f
+            setTextColor(Color.rgb(83, 105, 123))
+            setPadding(0, dp(15), 0, dp(12))
+        }
+        page.addView(hint)
+
+        val scroll = ScrollView(this)
+        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        scroll.addView(grid)
+        val columns = if (resources.configuration.screenWidthDp >= 600) 3 else 2
+        val rows = tabs.chunked(columns)
+        rows.forEach { rowTabs ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
+            rowTabs.forEach { tab ->
+                val selected = tab === activeTab
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(13), dp(13), dp(13), dp(12))
+                    background = rounded(Color.WHITE, 18)
+                    elevation = dp(if (selected) 4 else 1).toFloat()
+                }
+                val preview = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), dp(8), dp(8), dp(8))
+                    background = rounded(if (selected) Color.rgb(225, 239, 255) else Color.rgb(243, 247, 251), 12)
+                }
+                preview.addView(TextView(this).apply {
+                    text = "Browse X"
+                    textSize = 11f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.rgb(8, 102, 217))
+                })
+                preview.addView(TextView(this).apply {
+                    text = tab.title.ifBlank { "New tab" }
+                    textSize = 13f
+                    setTextColor(Color.rgb(31, 48, 65))
+                    maxLines = 2
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(7), 0, dp(3))
+                })
+                card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
+                card.addView(TextView(this).apply {
+                    text = tab.title.ifBlank { "New tab" }
+                    textSize = 14f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.rgb(19, 43, 64))
+                    maxLines = 1
+                    setPadding(0, dp(10), 0, dp(3))
+                })
+                card.addView(TextView(this).apply {
+                    text = tab.url.removePrefix("https://").removePrefix("http://").ifBlank { "Start page" }
+                    textSize = 11f
+                    setTextColor(Color.rgb(83, 105, 123))
+                    maxLines = 2
+                })
+                val actions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(9), 0, 0)
+                }
+                actions.addView(TextView(this).apply {
+                    text = if (selected) "● Active" else "Open"
+                    textSize = 12f
+                    setTextColor(if (selected) Color.rgb(8, 102, 217) else Color.rgb(83, 105, 123))
+                }, LinearLayout.LayoutParams(0, dp(32), 1f))
+                actions.addView(TextView(this).apply {
+                    text = "×"
+                    textSize = 22f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.rgb(190, 65, 75))
+                    contentDescription = "Close tab"
+                    setPadding(dp(12), 0, dp(5), 0)
+                    setOnClickListener {
+                        closeTab(tab)
+                        dialog.dismiss()
+                        showTabs()
+                    }
+                })
+                card.addView(actions)
+                card.setOnClickListener {
+                    activateTab(tab)
+                    dialog.dismiss()
+                }
+                row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    setMargins(dp(4), dp(4), dp(4), dp(9))
+                })
+            }
+            repeat(columns - rowTabs.size) {
+                row.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
+            }
+            grid.addView(row)
+        }
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        val done = TextView(this).apply {
+            text = "Done"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(19, 43, 64), 24)
+            setPadding(dp(20), dp(13), dp(20), dp(13))
+        }
+        page.addView(done, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })
+
+        dialog = AlertDialog.Builder(this).setView(page).create()
+        done.setOnClickListener { dialog.dismiss() }
+        dialog.setOnShowListener {
+            dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        }
+        dialog.show()
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
     private fun showBrowserMenu() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
-            "Bookmarks", "History", "Share page", "Copy page address",
-            "Search engine", "Clear browsing history"
+            "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
+            "Site information", "Search engine", "Clear browsing history", "Settings"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
@@ -373,22 +556,203 @@ class MainActivity : AppCompatActivity() {
                 }
                 1 -> showSavedPages("Bookmarks", store.bookmarks())
                 2 -> showSavedPages("History", store.history())
-                3 -> shareCurrentPage()
-                4 -> copyCurrentAddress()
-                5 -> chooseSearchEngine()
-                6 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                3 -> openDownloads()
+                4 -> shareCurrentPage()
+                5 -> copyCurrentAddress()
+                6 -> findInPage()
+                7 -> openReaderMode()
+                8 -> showSiteInformation()
+                9 -> chooseSearchEngine()
+                10 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
+                11 -> showSettings()
             }
         }.show()
     }
 
+
+    /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
+    private fun openReaderMode() {
+        val tab = activeTab ?: return
+        if (!tab.url.startsWith("http://") && !tab.url.startsWith("https://")) {
+            toast("Open a webpage first")
+            return
+        }
+        val sourceUrl = tab.url
+        val loading = AlertDialog.Builder(this)
+            .setTitle("Reader mode")
+            .setMessage("Preparing a clean reading view…")
+            .setNegativeButton("Cancel", null)
+            .create()
+        loading.show()
+        tab.session.getSessionPageExtractor().getPageContent().accept(
+            { extracted ->
+                runOnUiThread {
+                    if (loading.isShowing) loading.dismiss()
+                    if (isFinishing || isDestroyed || activeTab !== tab || tab.url != sourceUrl) return@runOnUiThread
+                    val content = extracted?.trim().orEmpty()
+                    if (content.isBlank()) {
+                        toast("This page does not contain readable text")
+                    } else {
+                        ReaderPage(this, tab.title, sourceUrl, content).show()
+                    }
+                }
+            },
+            { error ->
+                runOnUiThread {
+                    if (loading.isShowing) loading.dismiss()
+                    android.util.Log.w("BrowseX", "Reader extraction failed", error)
+                    if (!isFinishing && !isDestroyed) toast("Could not prepare reader view")
+                }
+            }
+        )
+    }
+
+
+    private fun showSiteInformation() {
+        val tab = activeTab ?: return
+        val url = tab.url
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            toast("Open a website first")
+            return
+        }
+        SiteInfoPage(
+            activity = this,
+            url = url,
+            title = tab.title,
+            permissions = tab.sitePermissions
+        ).show()
+    }
+
+    private fun showSettings() {
+        SettingsPage(
+            activity = this,
+            store = store,
+            openBookmarks = { showSavedPages("Bookmarks", store.bookmarks()) },
+            openHistory = { showSavedPages("History", store.history()) },
+            openDownloads = { openDownloads() },
+            clearHistory = {
+                store.clearHistory()
+                toast("History cleared")
+            }
+        ).show()
+    }
+
     private fun showSavedPages(title: String, pages: List<String>) {
-        if (pages.isEmpty()) { toast("Nothing saved yet"); return }
-        AlertDialog.Builder(this).setTitle(title)
-            .setItems(pages.map { it.take(80) }.toTypedArray()) { _, index ->
-                pages.getOrNull(index)?.let { createTab(it) }
-            }.setNegativeButton("Close", null).show()
+        val isHistory = title.contains("History", ignoreCase = true)
+        val currentPages = pages.toMutableList()
+        if (currentPages.isEmpty()) { toast("Nothing here yet"); return }
+        val scroll = ScrollView(this)
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+        }
+        scroll.addView(list)
+        lateinit var dialog: AlertDialog
+        fun render() {
+            list.removeAllViews()
+            if (currentPages.isEmpty()) {
+                list.addView(TextView(this).apply {
+                    text = "Nothing here yet"
+                    setTextColor(Color.rgb(83, 105, 123))
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(24), 0, dp(24))
+                })
+                return
+            }
+            currentPages.forEach { page ->
+                val item = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(10), dp(9), dp(6), dp(9))
+                    background = rounded(Color.WHITE, 13)
+                }
+                val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                details.addView(TextView(this).apply {
+                    text = Uri.parse(page).host ?: page
+                    textSize = 14f
+                    setTextColor(Color.rgb(19, 43, 64))
+                    maxLines = 1
+                })
+                details.addView(TextView(this).apply {
+                    text = page
+                    textSize = 10f
+                    setTextColor(Color.rgb(83, 105, 123))
+                    maxLines = 2
+                })
+                item.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
+                val remove = TextView(this).apply {
+                    text = "×"
+                    textSize = 23f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.rgb(190, 65, 75))
+                    contentDescription = "Remove saved page"
+                    setPadding(dp(12), dp(4), dp(12), dp(4))
+                    setOnClickListener {
+                        if (isHistory) store.removeHistory(page) else store.removeBookmark(page)
+                        currentPages.remove(page)
+                        render()
+                    }
+                }
+                item.addView(remove)
+                item.setOnClickListener { createTab(page); dialog.dismiss() }
+                list.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
+                    bottomMargin = dp(7)
+                })
+            }
+        }
+        render()
+        dialog = AlertDialog.Builder(this).setTitle(title).setView(scroll)
+            .setNegativeButton("Close", null).create()
+        dialog.show()
+    }
+
+    /** Shows the in-app view over Android's durable DownloadManager queue. */
+    private fun openDownloads() {
+        DownloadsPage(this, store).show()
+    }
+
+    /** Routes GeckoView's external responses through Android's supported download service. */
+    private fun enqueueDownload(response: WebResponse) {
+        val url = response.uri
+        val uri = Uri.parse(url)
+        if ((uri.scheme != "https" && uri.scheme != "http") || uri.host.isNullOrBlank()) {
+            response.body?.close()
+            toast("This download link is not supported")
+            return
+        }
+        val disposition = response.headers.entries.firstOrNull {
+            it.key.equals("content-disposition", ignoreCase = true)
+        }?.value
+        val mime = response.headers.entries.firstOrNull {
+            it.key.equals("content-type", ignoreCase = true)
+        }?.value?.substringBefore(';')
+        val filename = URLUtil.guessFileName(url, disposition, mime)
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .take(180)
+            .ifBlank { "download" }
+        try {
+            val request = DownloadManager.Request(uri)
+                .setTitle(filename)
+                .setDescription("Downloading with Browse X")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+            if (!mime.isNullOrBlank()) request.setMimeType(mime)
+            CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }?.let {
+                request.addRequestHeader("Cookie", it)
+            }
+            request.addRequestHeader("User-Agent", org.mozilla.geckoview.GeckoSession.getDefaultUserAgent())
+            val id = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+            store.addBrowseXDownload(id)
+            response.body?.close()
+            toast("Download added: $filename")
+            android.util.Log.i("BrowseX", "Download queued with id=$id")
+        } catch (error: Exception) {
+            response.body?.close()
+            android.util.Log.e("BrowseX", "Unable to queue download", error)
+            toast("Could not start download")
+        }
     }
 
     private fun chooseSearchEngine() {
@@ -411,6 +775,58 @@ class MainActivity : AppCompatActivity() {
         }, "Share page"))
     }
 
+    /** Uses GeckoView's native finder so matches are highlighted in page content. */
+    private fun findInPage() {
+        val session = activeTab?.session ?: return
+        val field = EditText(this).apply {
+            hint = "Find text on this page"
+            setSingleLine(true)
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        val count = TextView(this).apply {
+            text = "Type to search"
+            setTextColor(Color.rgb(83, 105, 123))
+            setPadding(dp(4), dp(8), dp(4), dp(4))
+        }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(field)
+            addView(count)
+        }
+        lateinit var dialog: AlertDialog
+        field.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, countBefore: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, countAfter: Int) {
+                val query = s?.toString().orEmpty()
+                if (query.isBlank()) {
+                    session.getFinder().clear()
+                    count.text = "Type to search"
+                } else {
+                    session.getFinder().find(query, GeckoSession.FINDER_FIND_FORWARD)
+                    count.text = "Searching page…"
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) = Unit
+        })
+        dialog = AlertDialog.Builder(this).setTitle("Find in page").setView(panel)
+            .setNegativeButton("Close") { _, _ -> session.getFinder().clear() }
+            .setNeutralButton("Next", null)
+            .setPositiveButton("Previous", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                session.getFinder().find(null, GeckoSession.FINDER_FIND_FORWARD)
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                session.getFinder().find(null, GeckoSession.FINDER_FIND_BACKWARDS)
+            }
+        }
+        dialog.show()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        field.requestFocus()
+    }
+
     private fun copyCurrentAddress() {
         val url = activeTab?.url.orEmpty()
         if (!url.startsWith("http")) return
@@ -423,17 +839,4 @@ class MainActivity : AppCompatActivity() {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    private fun prepareBuiltInExtension() {
-        try {
-            val files = assets.list("ublock")
-            if (!files.isNullOrEmpty()) {
-                BrowserEngine.runtime(this).webExtensionController.ensureBuiltIn(
-                    "resource://android/assets/ublock/",
-                    "uBlock0@raymondhill.net"
-                )
-            }
-        } catch (_: Exception) {
-            // Extension failure must never prevent the browser engine from starting.
-        }
-    }
 }
