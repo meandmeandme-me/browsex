@@ -29,8 +29,15 @@ class StreamDownloadRecordTest {
     }
 
     @Test
+    fun failureStatusIsRecognizedEvenWhenLegacyBooleanIsNotSet() {
+        assertTrue(record("failed").isFailed)
+        assertFalse(record("completed").isFailed)
+    }
+
+    @Test
     fun cancellationIsDistinctFromFailure() {
         assertTrue(record("cancelled").isCancelled)
         assertFalse(record("failed").isCancelled)
+        assertFalse(record("cancelled").isFailed)
     }
 }
