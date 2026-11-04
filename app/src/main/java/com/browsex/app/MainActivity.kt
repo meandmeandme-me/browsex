@@ -1120,6 +1120,11 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    private fun originForUrl(url: String): String {
+        val uri = Uri.parse(url)
+        return Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
+    }
+
     private fun showSiteInformation() {
         val tab = activeTab ?: return
         val url = tab.url
@@ -1144,6 +1149,9 @@ class MainActivity : AppCompatActivity() {
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
                     )
+                },
+                onClearSiteData = {
+                    clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
                 },
                 onResetPermissions = {
                     val storage = browserRuntime?.storageController
@@ -1243,7 +1251,7 @@ class MainActivity : AppCompatActivity() {
         PrivacyPage(
             activity = this,
             store = store,
-            clearData = ::clearBrowsingData
+            clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) }
         ).show()
     }
 
@@ -1251,7 +1259,23 @@ class MainActivity : AppCompatActivity() {
      * GeckoView requires every open session to be closed before persistent site data is cleared.
      * Keep only validated tab URLs, close the sessions, clear data, then recreate the tabs lazily.
      */
-    private fun clearBrowsingData(flags: Long, clearHistory: Boolean) {
+    private fun clearBrowsingData(flags: Long, clearHistory: Boolean) =
+        clearBrowsingDataInternal(flags, clearHistory, host = null, mediaOrigin = null)
+
+    private fun clearBrowsingDataForHost(host: String, mediaOrigin: String) =
+        clearBrowsingDataInternal(
+            org.mozilla.geckoview.StorageController.ClearFlags.SITE_DATA,
+            clearHistory = false,
+            host = host,
+            mediaOrigin = mediaOrigin
+        )
+
+    private fun clearBrowsingDataInternal(
+        flags: Long,
+        clearHistory: Boolean,
+        host: String?,
+        mediaOrigin: String?
+    ) {
         if (clearingBrowsingData) return
         val regularTabs = tabs.filterNot { it.privateMode }
         val snapshot = TabSessionState.normalize(
@@ -1298,8 +1322,11 @@ class MainActivity : AppCompatActivity() {
                 clearingBrowsingData = false
                 if (success) {
                     if (clearHistory) store.clearHistory()
-                    if ((flags and org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS) != 0L) {
-                        store.clearAllSiteMediaDecisions()
+                    when {
+                        mediaOrigin != null -> store.clearSiteMediaDecisions(mediaOrigin)
+                        (flags and org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS) != 0L ||
+                            (flags and org.mozilla.geckoview.StorageController.ClearFlags.SITE_DATA) != 0L ->
+                            store.clearAllSiteMediaDecisions()
                     }
                 }
                 snapshot.urls.forEach { tabs.add(BrowserTab(url = it)) }
@@ -1321,7 +1348,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
         try {
-            storage.clearData(flags).accept(
+            val operation = if (host.isNullOrBlank()) storage.clearData(flags)
+                else storage.clearDataFromHost(host, flags)
+            operation.accept(
                 { restoreAfterClear(true) },
                 { error ->
                     android.util.Log.e("BrowseX", "Browsing data clearing failed", error)

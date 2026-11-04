@@ -20,7 +20,8 @@ class SiteInfoPage(
     private val permissions: List<GeckoSession.PermissionDelegate.ContentPermission>,
     private val store: BrowserStore,
     private val onPermissionChange: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
-    private val onResetPermissions: () -> Unit
+    private val onResetPermissions: () -> Unit,
+    private val onClearSiteData: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val localPermissionValues = mutableMapOf<Pair<Int, String>, Int>()
@@ -205,6 +206,33 @@ class SiteInfoPage(
             }
         }
         root.addView(reset, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+        val clearSiteData = TextView(activity).apply {
+            text = t("Clear this site's data", "مسح بيانات هذا الموقع")
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(colors.danger)
+            setPadding(dp(12), dp(14), dp(12), dp(14))
+            background = cardBackground()
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                AlertDialog.Builder(activity)
+                    .setTitle(t("Clear site data?", "مسح بيانات الموقع؟"))
+                    .setMessage(t(
+                        "This removes cookies, site storage, cache and permissions for this host. It may sign you out. Data owned by other third-party hosts is not included.",
+                        "سيحذف هذا ملفات الارتباط وتخزين الموقع والذاكرة المؤقتة والأذونات لهذا المضيف. قد يؤدي ذلك إلى تسجيل خروجك. لا يشمل بيانات مضيفي الجهات الخارجية."
+                    ))
+                    .setNegativeButton(t("Cancel", "إلغاء"), null)
+                    .setPositiveButton(t("Clear data", "مسح البيانات")) { _, _ ->
+                        onClearSiteData()
+                        activePageDialog?.dismiss()
+                    }
+                    .show()
+            }
+        }
+        root.addView(clearSiteData, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+
         val scroll = ScrollView(activity).apply { addView(root) }
         val dialog = AlertDialog.Builder(activity).setView(scroll)
             .setNegativeButton(t("Close", "إغلاق"), null).create()
