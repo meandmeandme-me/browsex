@@ -1299,6 +1299,9 @@ class MainActivity : AppCompatActivity() {
             regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0,
             HOME_URL
         )
+        val tabsToRestore = snapshot.urls.mapIndexed { index, url ->
+            regularTabs.getOrNull(index)?.also { it.url = url } ?: BrowserTab(url = url)
+        }
         tabs.toList().forEach { tab ->
             tab.permissionDelegate?.cancelPending()
             cancelPlatformPermissionRequests(tab.session)
@@ -1318,6 +1321,7 @@ class MainActivity : AppCompatActivity() {
             tab.sitePermissions = emptyList()
         }
         tabs.clear()
+        tabs.addAll(tabsToRestore)
         activeTab = null
         clearingBrowsingData = flags != 0L
         if (clearingBrowsingData) {
@@ -1345,9 +1349,8 @@ class MainActivity : AppCompatActivity() {
                             store.clearAllSiteMediaDecisions()
                     }
                 }
-                snapshot.urls.forEach { tabs.add(BrowserTab(url = it)) }
-                val restored = tabs.getOrNull(snapshot.activeIndex)
-                    ?: BrowserTab(url = homePageUrl()).also(tabs::add)
+                if (tabs.isEmpty()) tabs.add(BrowserTab(url = homePageUrl()))
+                val restored = tabs.getOrNull(snapshot.activeIndex) ?: tabs.first()
                 activateTab(restored)
                 persistTabs()
                 toast(if (success) "Selected browsing data cleared" else "Could not clear browsing data")
