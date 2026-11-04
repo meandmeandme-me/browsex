@@ -102,3 +102,18 @@ This file records implementation state separately from device verification. A ch
 ## Explicitly deferred
 
 - Ad blocking / uBlock integration is intentionally deferred. Do not expose a working toggle or claim protection until extension installation, permissions, persistence and real blocking behavior are tested.
+
+## Phase 6 — accounts, sync and future clients
+
+- [x] Add provider-neutral account/sync domain models with stable identity subjects, connection states, per-category consent, device metadata and versioned sync-record metadata.
+- [x] Define future Windows, macOS, Linux and Android TV product boundaries without creating empty app modules.
+- [x] Define the account center, provider connection, sync overview, category consent, device management, conflict resolution and privacy/data screen flows for Uizard.
+- [ ] Define backend API, account lifecycle, retention policy, threat model, encryption/key ownership and recovery.
+- [ ] Implement a secure platform credential vault and verified OIDC Authorization Code + PKCE flow.
+- [ ] Build real account UI and device registration/revocation; keep unsupported providers unavailable rather than fake.
+- [ ] Implement opt-in encrypted bookmark sync first, then offline queue, idempotency, conflict resolution and schema migration.
+- [ ] Add cross-device export/deletion, disconnect and local-data-retention flows.
+- [ ] Extract stable pure Kotlin domain/sync code into KMP shared modules only after Android boundaries and tests are stable.
+- [ ] Evaluate Windows, macOS and Linux browser engines independently; document licensing, security updates, sandboxing, extensions and platform integration.
+- [ ] Design and verify Android TV remote/focus navigation, media behavior and low-memory constraints.
+- [ ] Build platform clients and release pipelines only after the relevant engine and UX decisions are approved.
