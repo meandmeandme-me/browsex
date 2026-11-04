@@ -48,7 +48,8 @@ BrowseX/
 │   │   │   │   ├── share/                # share sheet and send/open actions
 │   │   │   │   ├── findinpage/           # page text search
 │   │   │   │   ├── translate/            # translation integration (future)
-│   │   │   │   ├── sync/                 # optional cross-device sync (future)
+│   │   │   │   ├── accounts/             # provider-neutral identity and account lifecycle (future)
+│   │   │   │   ├── sync/                 # opt-in encrypted cross-device sync (future)
 │   │   │   │   └── privacy/              # tracking protection/ad blocking (deferred)
 │   │   │   └── ui/
 │   │   │       ├── browserchrome/        # address bar, toolbar, bottom controls
