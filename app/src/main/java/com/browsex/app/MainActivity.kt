@@ -81,6 +81,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        store.recoverInterruptedStreamDownloads()
         downloadResponseWriter = DownloadResponseWriter(applicationContext)
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             if (uri != null) runCatching {
@@ -1463,7 +1464,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
-        DownloadsPage(this, store).show()
+        DownloadsPage(this, store) { downloadId ->
+            downloadResponseWriter.cancel(downloadId)
+        }.show()
     }
 
     /** Routes GeckoView's external responses through Android's supported download service. */
@@ -1511,31 +1514,42 @@ class MainActivity : AppCompatActivity() {
             .filterNot { it.isISOControl() }
             .trim().trim('.').take(140).ifBlank { "download" }
         val filename = store.reserveDownloadFileName(candidate)
+        val totalBytes = response.headers.entries.firstOrNull {
+            it.key.equals("content-length", ignoreCase = true)
+        }?.value?.toLongOrNull()?.takeIf { it >= 0L } ?: -1L
+        val downloadId = store.beginStreamDownload(
+            displayName = filename,
+            mimeType = mime ?: "application/octet-stream",
+            totalBytes = totalBytes
+        )
         runCatching { response.setReadTimeoutMillis(120_000L) }
-        downloadResponseWriter.write(body, filename, mime) { result, error ->
-            if (result != null) {
-                store.addStreamDownload(
-                    displayName = result.displayName,
-                    uri = result.uri.toString(),
-                    mimeType = mime ?: "application/octet-stream",
-                    bytesWritten = result.bytesWritten
-                )
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed) toast("Downloaded: ${result.displayName}")
+        downloadResponseWriter.write(
+            id = downloadId,
+            body = body,
+            displayName = filename,
+            mimeType = mime,
+            onProgress = { bytes -> store.updateStreamDownloadProgress(downloadId, bytes) }
+        ) { result, error, cancelled ->
+            when {
+                result != null -> {
+                    store.completeStreamDownload(downloadId, result.uri.toString(), result.bytesWritten)
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed) toast("Downloaded: ${result.displayName}")
+                    }
+                    android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
                 }
-                android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
-            } else {
-                store.addStreamDownload(
-                    displayName = filename,
-                    uri = "",
-                    mimeType = mime ?: "application/octet-stream",
-                    bytesWritten = 0L,
-                    failed = true,
-                    error = error?.message ?: "Download failed"
-                )
-                android.util.Log.e("BrowseX", "Response stream download failed", error)
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed) toast("Could not save download: ${error?.message ?: "unknown error"}")
+                else -> {
+                    store.failStreamDownload(
+                        downloadId,
+                        if (cancelled) "Cancelled by user" else error?.message ?: "Download failed",
+                        cancelled = cancelled
+                    )
+                    if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
+                    runOnUiThread {
+                        if (!cancelled && !isFinishing && !isDestroyed) {
+                            toast("Could not save download: ${error?.message ?: "unknown error"}")
+                        }
+                    }
                 }
             }
         }
