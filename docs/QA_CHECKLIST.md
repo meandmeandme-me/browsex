@@ -134,3 +134,5 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [ ] Add reviewed translations and plural/date/number tests for each locale pack before advertising that locale as fully supported.
 - [x] GeckoSession open/close, memory-pressure release, live-session budget and session reset are delegated to BrowserSessionLifecycleCoordinator; behavior still requires runtime verification.
 - [ ] Verify session release/reopen, permission cancellation, tab close, privacy-data clearing and activity destruction on Android API 26, 29, 33 and current API.
+- [x] Original Gecko response-stream metadata, progress, terminal-state persistence and cancellation are delegated to StreamDownloadCoordinator; Android storage permission prompting remains in the Activity.
+- [ ] Verify stream download success/failure/cancel races, permission queue behavior and interrupted-process recovery on API 26, 29, 33 and current API.
