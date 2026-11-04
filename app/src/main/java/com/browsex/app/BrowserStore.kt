@@ -616,7 +616,11 @@ class BrowserStore(context: Context) {
         writeHistoryEntries(historyEntries().filterNot { it.url == url })
     }
 
-    fun clearHistory() = prefs.edit().remove("history").remove("history_entries_v1").apply()
+    fun clearHistory() = prefs.edit()
+        .remove("history")
+        .remove("history_entries_v1")
+        .remove("recently_closed_tabs_v1")
+        .apply()
 
     private fun writeHistoryEntries(entries: List<BrowserHistoryEntry>) {
         val safe = entries.filter { NavigationInput.isValidWebUrl(it.url) }
