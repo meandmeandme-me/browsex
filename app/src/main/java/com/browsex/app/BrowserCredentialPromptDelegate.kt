@@ -10,6 +10,7 @@ import org.mozilla.geckoview.GeckoSession
 internal class BrowserCredentialPromptDelegate(
     private val activity: AppCompatActivity,
     private val privateMode: Boolean,
+    private val hasPrivateTabsOpen: () -> Boolean,
     private val isStillValid: (GeckoSession, String) -> Boolean
 ) : GeckoSession.PromptDelegate {
 
@@ -20,7 +21,8 @@ internal class BrowserCredentialPromptDelegate(
         val option = request.options.firstOrNull() ?: return GeckoResult.fromValue(request.dismiss())
         val origin = CredentialOriginPolicy.canonicalHttpsOrigin(option.value.origin)
             ?: return GeckoResult.fromValue(request.dismiss())
-        if (privateMode || option.hint == Autocomplete.SaveOption.Hint.LOW_CONFIDENCE ||
+        if (privateMode || hasPrivateTabsOpen() ||
+            (option.hint and Autocomplete.SaveOption.Hint.LOW_CONFIDENCE) != 0 ||
             !isStillValid(session, origin) || activity.isFinishing || activity.isDestroyed
         ) return GeckoResult.fromValue(request.dismiss())
 
@@ -29,7 +31,7 @@ internal class BrowserCredentialPromptDelegate(
             .setTitle("Save password?")
             .setMessage("Save the sign-in for " + origin + " under " + option.value.username + "?")
             .setPositiveButton("Save") { _, _ ->
-                result.complete(if (isStillValid(session, origin)) request.confirm(option) else request.dismiss())
+                result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, origin)) request.confirm(option) else request.dismiss())
             }
             .setNegativeButton("Not now") { _, _ -> result.complete(request.dismiss()) }
             .setOnCancelListener { result.complete(request.dismiss()) }
@@ -41,14 +43,25 @@ internal class BrowserCredentialPromptDelegate(
         session: GeckoSession,
         request: GeckoSession.PromptDelegate.AutocompleteRequest<Autocomplete.LoginSelectOption>
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
-        if (privateMode || activity.isFinishing || activity.isDestroyed) {
+        if (privateMode || hasPrivateTabsOpen() || activity.isFinishing || activity.isDestroyed) {
             return GeckoResult.fromValue(request.dismiss())
         }
-        val options = request.options
-        if (options.isEmpty()) return GeckoResult.fromValue(request.dismiss())
-        val firstOrigin = CredentialOriginPolicy.canonicalHttpsOrigin(options.first().value.origin)
+        val safeOptions = request.options.filter { option ->
+            val origin = CredentialOriginPolicy.canonicalHttpsOrigin(option.value.origin)
+            val actionOrigin = option.value.formActionOrigin?.takeIf { it.isNotBlank() }
+                ?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
+            val insecure = (option.hint and Autocomplete.SelectOption.Hint.INSECURE_FORM) != 0
+            !insecure && origin != null && (actionOrigin == null || actionOrigin == origin)
+        }
+        val firstOrigin = safeOptions.firstOrNull()?.value?.origin
+            ?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
             ?: return GeckoResult.fromValue(request.dismiss())
-        if (!isStillValid(session, firstOrigin)) return GeckoResult.fromValue(request.dismiss())
+        val options = safeOptions.filter {
+            CredentialOriginPolicy.canonicalHttpsOrigin(it.value.origin) == firstOrigin
+        }
+        if (options.isEmpty() || !isStillValid(session, firstOrigin)) {
+            return GeckoResult.fromValue(request.dismiss())
+        }
 
         val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
         val labels = options.map { it.value.username }.toTypedArray()
@@ -57,7 +70,7 @@ internal class BrowserCredentialPromptDelegate(
             .setItems(labels) { _, index ->
                 val selected = options.getOrNull(index)
                 val selectedOrigin = selected?.value?.origin?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
-                if (selected == null || selectedOrigin != firstOrigin || !isStillValid(session, firstOrigin)) {
+                if (selected == null || selectedOrigin != firstOrigin || hasPrivateTabsOpen() || !isStillValid(session, firstOrigin)) {
                     result.complete(request.dismiss())
                 } else {
                     BrowserDeviceAuthenticator.authenticate(
@@ -65,7 +78,7 @@ internal class BrowserCredentialPromptDelegate(
                         title = "Unlock saved passwords",
                         subtitle = "Verify your identity to fill this sign-in",
                         onAuthenticated = {
-                            result.complete(if (isStillValid(session, firstOrigin)) request.confirm(selected) else request.dismiss())
+                            result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, firstOrigin)) request.confirm(selected) else request.dismiss())
                         },
                         onRejected = { result.complete(request.dismiss()) }
                     )

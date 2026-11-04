@@ -320,7 +320,7 @@ class MainActivity : AppCompatActivity() {
         )
         browserRuntime = BrowserRuntimeOwner.runtime(applicationContext)
         browserRuntime?.setAutocompleteStorageDelegate(credentialVault)
-        browserRuntime?.settings?.setLoginAutofillEnabled(false)
+        browserRuntime?.settings?.setLoginAutofillEnabled(true)
         browserRuntime?.settings?.setPreferredColorScheme(when (store.themeMode) {
             "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
             "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
@@ -374,6 +374,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        if (::credentialVault.isInitialized) credentialVault.lock()
         hostLifecycleCoordinator.onStop()
         super.onStop()
     }
@@ -403,6 +404,7 @@ class MainActivity : AppCompatActivity() {
         shuttingDown = true
         if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
         if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
+        if (::credentialVault.isInitialized) credentialVault.lock()
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         dataClearDialog?.dismiss()
@@ -581,6 +583,7 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun updateChrome() {
+        if (::credentialVault.isInitialized) credentialVault.setPrivateTabsOpen(tabs.any { it.privateMode })
         val tab = activeTab ?: return
         address.hint = tr(if (tab.privateMode) "Private browsing · Search or enter URL" else "Search or enter URL")
         address.setHintTextColor(if (tab.privateMode) colors.accent else colors.muted)
@@ -633,6 +636,7 @@ class MainActivity : AppCompatActivity() {
         tab.session.promptDelegate = BrowserCredentialPromptDelegate(
             activity = this,
             privateMode = tab.privateMode,
+            hasPrivateTabsOpen = { credentialVault.privateBrowsingActive },
             isStillValid = { session, origin ->
                 !shuttingDown && tabs.any { it === tab } && tab.session === session &&
                     CredentialOriginPolicy.canonicalHttpsOrigin(tab.url) == origin
@@ -987,6 +991,8 @@ class MainActivity : AppCompatActivity() {
                 subtitle = "Verify your identity to view or copy this sign-in",
                 onAuthenticated = {
                     if (isFinishing || isDestroyed) return@authenticate
+                    credentialVault.unlockForSession()
+                    toast(if (credentialVault.privateBrowsingActive) "Close private tabs to enable autofill" else "Autofill unlocked for 60 seconds. Reload the sign-in page.")
                     val dialog = AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
                         .setMessage("Username: " + item.username + "\\nPassword: " + item.password)
                         .setPositiveButton(tr("Copy password")) { _, _ ->

@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.content.Context
+import android.os.SystemClock
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -19,6 +20,13 @@ internal data class StoredCredentialSummary(val id: String, val origin: String, 
 
 internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDelegate {
     private val prefs = context.applicationContext.getSharedPreferences("browsex_credentials_v1", Context.MODE_PRIVATE)
+    private val accessPolicy = CredentialAccessPolicy({ SystemClock.elapsedRealtime() })
+    @Volatile private var privateTabsOpen = false
+
+    val privateBrowsingActive: Boolean get() = privateTabsOpen
+    fun setPrivateTabsOpen(open: Boolean) { privateTabsOpen = open }
+    fun unlockForSession() = accessPolicy.unlock()
+    fun lock() = accessPolicy.lock()
 
     @Synchronized
     fun entries(): List<StoredCredentialSummary> = runCatching {
@@ -36,7 +44,14 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
     }
 
     @Synchronized
+    override fun onLoginFetch(): GeckoResult<Array<Autocomplete.LoginEntry>> =
+        GeckoResult.fromValue(emptyArray<Autocomplete.LoginEntry>())
+
+    @Synchronized
     override fun onLoginFetch(domain: String): GeckoResult<Array<Autocomplete.LoginEntry>> {
+        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) {
+            return GeckoResult.fromValue(emptyArray<Autocomplete.LoginEntry>())
+        }
         val rows = runCatching { read() }.getOrElse {
             android.util.Log.e("BrowseX", "Credential lookup unavailable", it)
             emptyList()
@@ -52,6 +67,7 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
 
     @Synchronized
     override fun onLoginSave(login: Autocomplete.LoginEntry) {
+        if (privateTabsOpen) return
         val origin = CredentialOriginPolicy.canonicalHttpsOrigin(login.origin) ?: return
         val action = login.formActionOrigin?.takeIf { it.isNotBlank() }?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
         if (login.formActionOrigin?.isNotBlank() == true && action != origin) return
@@ -70,8 +86,12 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
     }
 
     private fun read(): List<JSONObject> {
-        val ivText = prefs.getString("iv", null) ?: return emptyList()
-        val dataText = prefs.getString("data", null) ?: return emptyList()
+        val ivText = prefs.getString("iv", null)
+        val dataText = prefs.getString("data", null)
+        if (ivText == null && dataText == null) return emptyList()
+        if (ivText == null || dataText == null) {
+            throw IllegalStateException("Credential vault payload is incomplete")
+        }
         return try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(ivText, Base64.NO_WRAP)))
