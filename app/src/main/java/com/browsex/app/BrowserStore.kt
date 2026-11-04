@@ -169,10 +169,10 @@ class BrowserStore(context: Context) {
     fun bookmarks(): List<String> = bookmarkItems().map { it.url }
     fun history(): List<String> = readList("history")
 
-    fun bookmarkFolders(): List<BookmarkFolder> = readBookmarkFolders()
-    fun bookmarkItems(): List<BookmarkItem> = readBookmarkItems()
+    internal fun bookmarkFolders(): List<BookmarkFolder> = readBookmarkFolders()
+    internal fun bookmarkItems(): List<BookmarkItem> = readBookmarkItems()
 
-    fun createBookmarkFolder(rawName: String): BookmarkFolder? {
+    internal fun createBookmarkFolder(rawName: String): BookmarkFolder? {
         val name = rawName.trim().take(40)
         if (name.isBlank() || name.equals("Unfiled", true)) return null
         val folders = readBookmarkFolders().toMutableList()
