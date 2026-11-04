@@ -332,10 +332,15 @@ class MainActivity : AppCompatActivity() {
                 if (tab === activeTab) updateChrome()
             }
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
+                if (isFinishing || shuttingDown) return null
                 val child = BrowserTab()
                 attachDelegates(child)
+                child.session.open(BrowserEngine.runtime(this@MainActivity))
                 tabs.add(child)
-                runOnUiThread { if (!isFinishing && !shuttingDown) activateTab(child) }
+                runOnUiThread {
+                    if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
+                    else if (tabs.contains(child)) closeTab(child)
+                }
                 return GeckoResult.fromValue(child.session)
             }
         }
