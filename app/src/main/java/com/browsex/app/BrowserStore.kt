@@ -45,13 +45,13 @@ class BrowserStore(context: Context) {
         ids.remove(id)
         ids.add(id)
         val array = JSONArray()
-        ids.takeLast(300).forEach(array::put)
+        ids.takeLast(300).forEach { array.put(it) }
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
     fun removeBrowseXDownload(id: Long) {
         val array = JSONArray()
-        browseXDownloadIds().filterNot { it == id }.forEach(array::put)
+        browseXDownloadIds().filterNot { it == id }.forEach { array.put(it) }
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
