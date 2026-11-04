@@ -81,4 +81,5 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [ ] Verify response-stream writer cleanup on process death, MediaStore pending-row cleanup, FileProvider access on Android 8/9, and large-file behavior.
 - [ ] Verify English/Arabic resources, device-locale fallback, mixed RTL/LTR text, screen readers, large font scale, landscape and tablet layouts.
 - [ ] Verify Unicode NFKC search using full-width Latin, Arabic, CJK and mixed-script page titles/URLs.
+- [ ] Add, edit, remove and reorder home shortcuts; verify order persists after reload and reset restores defaults.
 - [ ] Add reviewed translations and plural/date/number tests for each locale pack before advertising that locale as fully supported.
