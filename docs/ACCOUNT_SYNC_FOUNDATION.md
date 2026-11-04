@@ -75,4 +75,4 @@ Domain models: app/src/main/java/com/browsex/app/AccountDomainModels.kt. They co
 No forced account/paywall, background history collection, sync of private tabs/cookies/form data/site grants/raw credentials/downloaded file bytes, fake provider buttons or unsupported end-to-end encryption claims.
 
 Domain contracts are also defined in app/src/main/java/com/browsex/app/AccountSyncContracts.kt: provider gateway, account session, per-category consent, device registry, encrypted transport/cipher, local record repository, status and account data lifecycle. These are interfaces only; there are no production adapters, provider SDKs, keys, network calls or backend implementation yet.
-
+Backend direction is recorded in ADR-004-account-sync-backend.md: Supabase is the recommended initial candidate behind BrowseX-owned interfaces, pending a PKCE proof of concept, RLS security tests, key-recovery design and deployment decision. No Supabase project or credentials are configured.
