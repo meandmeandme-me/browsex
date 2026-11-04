@@ -36,9 +36,6 @@ import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.WebResponse
 
 private const val HOME_URL = "resource://android/assets/home.html"
-private const val SEARCH_GOOGLE = "https://www.google.com/search?q="
-private const val SEARCH_DDG = "https://html.duckduckgo.com/html/?q="
-private const val SEARCH_BING = "https://www.bing.com/search?q="
 private val COLOR_BG = Color.rgb(13, 17, 23)
 private val COLOR_PANEL = Color.rgb(22, 27, 34)
 private val COLOR_FIELD = Color.rgb(33, 40, 50)
@@ -249,26 +246,8 @@ class MainActivity : AppCompatActivity() {
         address.setText(if (url.startsWith("resource://")) "" else url)
     }
 
-    private fun normalizeInput(raw: String): String {
-        val value = raw.trim()
-        if (value.isEmpty()) return HOME_URL
-        if (value.startsWith("about:") || value.startsWith("resource://")) return value
-        val explicitScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(value)
-        if (explicitScheme) {
-            val scheme = Uri.parse(value).scheme?.lowercase()
-            if (scheme == "http" || scheme == "https") return value
-            return SEARCH_GOOGLE + Uri.encode(value)
-        }
-        val looksLikeHost = !value.contains(" ") &&
-            (value == "localhost" || value.contains(".") || value.startsWith("192.168."))
-        if (looksLikeHost) return "https://$value"
-        val base = when (store.searchEngine) {
-            "DuckDuckGo" -> SEARCH_DDG
-            "Bing" -> SEARCH_BING
-            else -> SEARCH_GOOGLE
-        }
-        return base + Uri.encode(value)
-    }
+    private fun normalizeInput(raw: String): String =
+        NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
 
     private fun safeExternalUrl(uri: Uri): String? {
         val scheme = uri.scheme?.lowercase()
