@@ -33,6 +33,22 @@ class BrowserStore(context: Context) {
         get() = prefs.getBoolean("site_notifications_enabled", true)
         set(value) { prefs.edit().putBoolean("site_notifications_enabled", value).apply() }
 
+    var homeShowQuickLinks: Boolean
+        get() = prefs.getBoolean("home_show_quick_links", true)
+        set(value) { prefs.edit().putBoolean("home_show_quick_links", value).apply() }
+
+    var homeShowRecent: Boolean
+        get() = prefs.getBoolean("home_show_recent", true)
+        set(value) { prefs.edit().putBoolean("home_show_recent", value).apply() }
+
+    var homeLayout: String
+        get() = prefs.getString("home_layout", "grid")?.takeIf { it in setOf("grid", "list") } ?: "grid"
+        set(value) { prefs.edit().putString("home_layout", value.takeIf { it in setOf("grid", "list") } ?: "grid").apply() }
+
+    fun resetHomePreferences() {
+        prefs.edit().remove("home_show_quick_links").remove("home_show_recent").remove("home_layout").apply()
+    }
+
     fun wasPlatformPermissionDenied(permission: String): Boolean =
         prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().contains(permission)
 
@@ -142,17 +158,131 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
-    fun bookmarks(): List<String> = readList("bookmarks")
+    fun bookmarks(): List<String> = bookmarkItems().map { it.url }
     fun history(): List<String> = readList("history")
 
-    fun isBookmarked(url: String): Boolean = bookmarks().contains(url)
+    fun bookmarkFolders(): List<BookmarkFolder> = readBookmarkFolders()
+    fun bookmarkItems(): List<BookmarkItem> = readBookmarkItems()
+
+    fun createBookmarkFolder(rawName: String): BookmarkFolder? {
+        val name = rawName.trim().take(40)
+        if (name.isBlank() || name.equals("Unfiled", true)) return null
+        val folders = readBookmarkFolders().toMutableList()
+        if (folders.size >= 50 || folders.any { it.name.equals(name, true) }) return null
+        val folder = BookmarkFolder("folder_${System.currentTimeMillis()}_${name.hashCode().toUInt().toString(16)}", name)
+        folders.add(folder)
+        writeBookmarkLibrary(folders, readBookmarkItems())
+        return folder
+    }
+
+    fun renameBookmarkFolder(folderId: String, rawName: String): Boolean {
+        if (folderId == BookmarkFolder.DEFAULT_ID) return false
+        val name = rawName.trim().take(40)
+        if (name.isBlank()) return false
+        val folders = readBookmarkFolders().toMutableList()
+        if (folders.any { it.id != folderId && it.name.equals(name, true) }) return false
+        val index = folders.indexOfFirst { it.id == folderId }
+        if (index < 0) return false
+        folders[index] = folders[index].copy(name = name)
+        writeBookmarkLibrary(folders, readBookmarkItems())
+        return true
+    }
+
+    fun removeBookmarkFolder(folderId: String): Boolean {
+        if (folderId == BookmarkFolder.DEFAULT_ID) return false
+        val folders = readBookmarkFolders()
+        if (folders.none { it.id == folderId }) return false
+        val items = readBookmarkItems().map { if (it.folderId == folderId) it.copy(folderId = BookmarkFolder.DEFAULT_ID) else it }
+        writeBookmarkLibrary(folders.filterNot { it.id == folderId }, items)
+        return true
+    }
+
+    fun moveBookmark(url: String, folderId: String): Boolean {
+        if (readBookmarkFolders().none { it.id == folderId }) return false
+        val items = readBookmarkItems().toMutableList()
+        val index = items.indexOfFirst { it.url == url }
+        if (index < 0) return false
+        items[index] = items[index].copy(folderId = folderId)
+        writeBookmarkLibrary(readBookmarkFolders(), items)
+        return true
+    }
+
+    fun isBookmarked(url: String): Boolean = bookmarkItems().any { it.url == url }
 
     fun toggleBookmark(url: String): Boolean {
         if (!NavigationInput.isValidWebUrl(url)) return false
-        val values = bookmarks().toMutableList()
-        val added = if (values.contains(url)) { values.remove(url); false } else { values.add(0, url); true }
-        writeList("bookmarks", values)
+        val items = readBookmarkItems().toMutableList()
+        val existing = items.indexOfFirst { it.url == url }
+        val added = existing < 0
+        if (added) items.add(0, BookmarkItem(
+            id = "bookmark_${url.hashCode().toUInt().toString(16)}",
+            url = url,
+            title = android.net.Uri.parse(url).host.orEmpty().ifBlank { url }.take(160),
+            folderId = BookmarkFolder.DEFAULT_ID,
+            createdAt = System.currentTimeMillis()
+        )) else items.removeAt(existing)
+        writeBookmarkLibrary(readBookmarkFolders(), items)
         return added
+    }
+
+    /** Versioned JSON backup; excludes cookies, credentials, history and sessions. */
+    fun exportBookmarks(): String {
+        val root = JSONObject().put("format", "browsex-bookmarks").put("version", 1)
+        val folders = JSONArray()
+        readBookmarkFolders().forEach { folders.put(JSONObject().put("id", it.id).put("name", it.name)) }
+        val items = JSONArray()
+        readBookmarkItems().forEach {
+            items.put(JSONObject().put("id", it.id).put("url", it.url).put("title", it.title)
+                .put("folderId", it.folderId).put("createdAt", it.createdAt))
+        }
+        return root.put("folders", folders).put("bookmarks", items).toString(2)
+    }
+
+    /** Validates the complete backup before committing; returns the number of accepted bookmarks. */
+    fun importBookmarks(payload: String, merge: Boolean = true): Int {
+        require(payload.length <= 1_000_000) { "Backup file is too large" }
+        val root = JSONObject(payload)
+        require(root.optString("format") == "browsex-bookmarks" && root.optInt("version") == 1) {
+            "Unsupported bookmark backup"
+        }
+        val incomingFolders = mutableListOf(BookmarkFolder.DEFAULT)
+        val folderArray = root.optJSONArray("folders") ?: JSONArray()
+        require(folderArray.length() <= 50) { "Too many folders" }
+        for (i in 0 until folderArray.length()) {
+            val obj = folderArray.optJSONObject(i) ?: continue
+            val id = obj.optString("id").take(80)
+            val name = obj.optString("name").trim().take(40)
+            if (id.isNotBlank() && id != BookmarkFolder.DEFAULT_ID && name.isNotBlank() &&
+                incomingFolders.none { it.id == id || it.name.equals(name, true) }) {
+                incomingFolders.add(BookmarkFolder(id, name))
+            }
+        }
+        val incoming = mutableListOf<BookmarkItem>()
+        val bookmarkArray = root.optJSONArray("bookmarks") ?: JSONArray()
+        require(bookmarkArray.length() <= 1000) { "Too many bookmarks" }
+        for (i in 0 until bookmarkArray.length()) {
+            val obj = bookmarkArray.optJSONObject(i) ?: continue
+            val url = obj.optString("url").trim()
+            if (!NavigationInput.isValidWebUrl(url) || url.length > 4096) continue
+            val folderId = obj.optString("folderId").takeIf { id -> incomingFolders.any { it.id == id } }
+                ?: BookmarkFolder.DEFAULT_ID
+            incoming.add(BookmarkItem(
+                id = obj.optString("id").take(80).ifBlank { "bookmark_${url.hashCode().toUInt().toString(16)}" },
+                url = url,
+                title = obj.optString("title").take(160).ifBlank { android.net.Uri.parse(url).host.orEmpty() },
+                folderId = folderId,
+                createdAt = obj.optLong("createdAt", System.currentTimeMillis()).coerceAtLeast(0L)
+            ))
+        }
+        val folders = if (merge) (readBookmarkFolders() + incomingFolders.drop(1))
+            .distinctBy { it.id }.take(51) else incomingFolders
+        val folderIds = folders.map { it.id }.toSet()
+        val existing = if (merge) readBookmarkItems() else emptyList()
+        val merged = (incoming + existing).map {
+            it.copy(folderId = it.folderId.takeIf(folderIds::contains) ?: BookmarkFolder.DEFAULT_ID)
+        }.distinctBy { it.url }.take(BrowserStorePolicy.MAX_BOOKMARKS)
+        writeBookmarkLibrary(folders, merged)
+        return incoming.size.coerceAtMost(merged.size)
     }
 
     fun addHistory(url: String) {
@@ -172,6 +302,70 @@ class BrowserStore(context: Context) {
     }
 
     fun clearHistory() = prefs.edit().remove("history").apply()
+
+    private fun readBookmarkFolders(): List<BookmarkFolder> {
+        val stored = prefs.getString("bookmark_folders_v1", null)
+        if (stored == null) return listOf(BookmarkFolder.DEFAULT)
+        return try {
+            val array = JSONArray(stored)
+            (0 until minOf(array.length(), 50)).mapNotNull { i ->
+                val obj = array.optJSONObject(i) ?: return@mapNotNull null
+                val id = obj.optString("id").take(80)
+                val name = obj.optString("name").trim().take(40)
+                if (id.isBlank() || name.isBlank()) null else BookmarkFolder(id, name)
+            }.distinctBy { it.id }.let { list ->
+                if (list.any { it.id == BookmarkFolder.DEFAULT_ID }) list
+                else listOf(BookmarkFolder.DEFAULT) + list
+            }
+        } catch (_: Exception) { listOf(BookmarkFolder.DEFAULT) }
+    }
+
+    private fun readBookmarkItems(): List<BookmarkItem> {
+        val stored = prefs.getString("bookmark_items_v1", null)
+        if (stored == null) {
+            val migrated = readList("bookmarks").map { url ->
+                BookmarkItem("bookmark_${url.hashCode().toUInt().toString(16)}", url,
+                    android.net.Uri.parse(url).host.orEmpty().ifBlank { url }.take(160),
+                    BookmarkFolder.DEFAULT_ID, 0L)
+            }
+            writeBookmarkLibrary(listOf(BookmarkFolder.DEFAULT), migrated)
+            return migrated
+        }
+        return try {
+            val folders = readBookmarkFolders().map { it.id }.toSet()
+            val array = JSONArray(stored)
+            (0 until minOf(array.length(), BrowserStorePolicy.MAX_BOOKMARKS)).mapNotNull { i ->
+                val obj = array.optJSONObject(i) ?: return@mapNotNull null
+                val url = obj.optString("url").trim()
+                if (!NavigationInput.isValidWebUrl(url) || url.length > 4096) return@mapNotNull null
+                BookmarkItem(
+                    obj.optString("id").take(80).ifBlank { "bookmark_${url.hashCode().toUInt().toString(16)}" },
+                    url, obj.optString("title").take(160),
+                    obj.optString("folderId").takeIf(folders::contains) ?: BookmarkFolder.DEFAULT_ID,
+                    obj.optLong("createdAt", 0L).coerceAtLeast(0L)
+                )
+            }.distinctBy { it.url }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    private fun writeBookmarkLibrary(folders: List<BookmarkFolder>, items: List<BookmarkItem>) {
+        val safeFolders = (listOf(BookmarkFolder.DEFAULT) + folders.filter { it.id != BookmarkFolder.DEFAULT_ID })
+            .distinctBy { it.id }.take(51)
+        val ids = safeFolders.map { it.id }.toSet()
+        val safeItems = items.filter { NavigationInput.isValidWebUrl(it.url) }
+            .distinctBy { it.url }.take(BrowserStorePolicy.MAX_BOOKMARKS)
+            .map { it.copy(folderId = it.folderId.takeIf(ids::contains) ?: BookmarkFolder.DEFAULT_ID) }
+        val folderJson = JSONArray()
+        safeFolders.forEach { folderJson.put(JSONObject().put("id", it.id).put("name", it.name)) }
+        val itemJson = JSONArray()
+        safeItems.forEach { itemJson.put(JSONObject().put("id", it.id).put("url", it.url)
+            .put("title", it.title.take(160)).put("folderId", it.folderId).put("createdAt", it.createdAt)) }
+        val legacy = JSONArray()
+        safeItems.forEach { legacy.put(it.url) }
+        prefs.edit().putString("bookmark_folders_v1", folderJson.toString())
+            .putString("bookmark_items_v1", itemJson.toString())
+            .putString("bookmarks", legacy.toString()).apply()
+    }
 
     private fun readList(key: String): List<String> = try {
         val array = JSONArray(prefs.getString(key, "[]"))
