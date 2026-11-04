@@ -107,14 +107,40 @@ class MainActivity : AppCompatActivity() {
                 } ?: error("Could not read backup")
                 String(bytes, Charsets.UTF_8)
             }.onSuccess { payload ->
+                val preview = runCatching { store.previewBookmarkImport(payload) }.getOrElse { error ->
+                    android.util.Log.w("BrowseX", "Bookmark import preview rejected", error)
+                    toast(error.message ?: "Could not read backup")
+                    return@onSuccess
+                }
+                val summary = getString(
+                    R.string.ui_import_preview_message,
+                    preview.totalItems,
+                    preview.validItems,
+                    preview.skippedItems,
+                    preview.duplicateIncomingItems,
+                    preview.existingUrlConflicts,
+                    preview.incomingFolders
+                )
                 AlertDialog.Builder(this)
-                    .setTitle(tr("Import bookmarks"))
-                    .setItems(arrayOf(tr("Merge with current bookmarks"), tr("Replace current bookmarks"))) { _, which ->
-                        runCatching { store.importBookmarks(payload, merge = which == 0) }
+                    .setTitle(tr("Import preview"))
+                    .setMessage(summary)
+                    .setPositiveButton(tr("Merge with current bookmarks")) { _, _ ->
+                        runCatching { store.importBookmarks(payload, merge = true) }
                             .onSuccess { count -> toast("Imported $count bookmarks") }
                             .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
                     }
-                    .setNegativeButton(tr("Cancel"), null)
+                    .setNegativeButton(tr("Replace current bookmarks")) { _, _ ->
+                        AlertDialog.Builder(this)
+                            .setMessage(tr("Replace all current bookmarks and folders?"))
+                            .setNegativeButton(tr("Cancel"), null)
+                            .setPositiveButton(tr("Replace")) { _, _ ->
+                                runCatching { store.importBookmarks(payload, merge = false) }
+                                    .onSuccess { count -> toast("Imported $count bookmarks") }
+                                    .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
+                            }
+                            .show()
+                    }
+                    .setNeutralButton(tr("Cancel"), null)
                     .show()
             }.onFailure { error -> android.util.Log.w("BrowseX", "Bookmark backup read failed", error); toast(error.message ?: "Could not read backup") }
         }
