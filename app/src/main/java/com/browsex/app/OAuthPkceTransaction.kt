@@ -21,12 +21,15 @@ internal data class OAuthPkceTransaction private constructor(
     val codeChallenge: String,
     val createdAtEpochMillis: Long
 ) {
+    private var callbackConsumed = false
+
+    @Synchronized
     fun validateCallback(
         callbackUri: String,
         nowEpochMillis: Long,
         maxAgeMillis: Long = DEFAULT_MAX_AGE_MILLIS
     ): String? {
-        if (maxAgeMillis <= 0L || nowEpochMillis < createdAtEpochMillis ||
+        if (callbackConsumed || maxAgeMillis <= 0L || nowEpochMillis < createdAtEpochMillis ||
             nowEpochMillis - createdAtEpochMillis > maxAgeMillis
         ) return null
 
@@ -38,7 +41,9 @@ internal data class OAuthPkceTransaction private constructor(
         val returnedState = params["state"] ?: return null
         if (!constantTimeEquals(state, returnedState)) return null
         if (params.containsKey("error")) return null
-        return params["code"]?.takeIf { it.isNotBlank() && it.length <= MAX_CODE_LENGTH }
+        val code = params["code"]?.takeIf { it.isNotBlank() && it.length <= MAX_CODE_LENGTH } ?: return null
+        callbackConsumed = true
+        return code
     }
 
     companion object {

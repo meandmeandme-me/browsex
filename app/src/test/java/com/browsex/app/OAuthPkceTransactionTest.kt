@@ -21,10 +21,9 @@ class OAuthPkceTransactionTest {
 
     @Test fun acceptsMatchingFreshCallbackAndReturnsOnlyCode() {
         val transaction = OAuthPkceTransaction.create(IdentityProvider.MICROSOFT, redirect, 1000L)
-        assertEquals(
-            "auth-code",
-            transaction.validateCallback("$redirect?code=auth-code&state=${transaction.state}", 2000L)
-        )
+        val callback = "$redirect?code=auth-code&state=${transaction.state}"
+        assertEquals("auth-code", transaction.validateCallback(callback, 2000L))
+        assertNull("A callback must not be accepted twice", transaction.validateCallback(callback, 2000L))
     }
 
     @Test fun rejectsWrongStateRedirectAndExpiredTransaction() {
