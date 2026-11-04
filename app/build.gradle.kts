@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
 }
 
 val stableDebugKeystorePath = System.getenv("BROWSEX_DEBUG_KEYSTORE_PATH")
@@ -45,8 +46,7 @@ android {
         targetSdk = 35
         versionCode = 2
         versionName = "0.2.0"
-        // Do not restrict ABIs: let Android select the native GeckoView library
-        // supported by the device. A forced arm64-only APK rejects 32-bit devices.
+        // Keep all GeckoView-supported ABIs available to the device.
     }
 
     splits {
@@ -111,10 +111,17 @@ kotlin {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
+    kapt("androidx.room:room-compiler:2.7.2")
     implementation("org.mozilla.geckoview:geckoview-omni:150.0.20260511200624")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
