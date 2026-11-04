@@ -529,6 +529,21 @@ class MainActivity : AppCompatActivity() {
             "You can keep up to 20 tabs open" -> "يمكنك فتح 20 تبويبًا كحد أقصى"
             "Search or enter an address" -> "ابحث أو أدخل عنوانًا"
             "Search or enter URL" -> "ابحث أو أدخل عنوان الموقع"
+            "Import bookmarks" -> "استيراد المفضلة"
+            "Merge with current bookmarks" -> "دمج مع المفضلة الحالية"
+            "Replace current bookmarks" -> "استبدال المفضلة الحالية"
+            "Bookmarks exported" -> "تم تصدير المفضلة"
+            "Could not export bookmarks" -> "تعذر تصدير المفضلة"
+            "Could not read backup" -> "تعذرت قراءة النسخة الاحتياطية"
+            "Show favorite shortcuts" -> "إظهار اختصارات المفضلة"
+            "Show discovery card" -> "إظهار بطاقة الاستكشاف"
+            "Home page" -> "الصفحة الرئيسية"
+            "Next" -> "التالي"
+            "Grid layout" -> "تخطيط شبكي"
+            "List layout" -> "تخطيط قائمة"
+            "Shortcut layout" -> "تخطيط الاختصارات"
+            "Reset" -> "إعادة ضبط"
+            "Site permissions reset" -> "تمت إعادة ضبط أذونات الموقع"
             else -> value
         }
     }
