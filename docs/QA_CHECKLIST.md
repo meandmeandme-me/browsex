@@ -20,6 +20,12 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] A failed DownloadManager query is shown as a read error, not misreported as deleted downloads.
 - [x] Launching an external URL preserves saved tabs and opens the new link as the active tab.
 
+## Release signing coverage
+
+- [x] Gradle supports a dedicated environment-based release signing identity and rejects partial configuration.
+- [x] CI skips signed release artifacts when no key is configured and fails on partial secret configuration.
+- [ ] Configure real protected signing secrets and verify release APK signatures, ABI contents and in-place upgrade behavior.
+
 ## Final automated CI gates (required; not verified for the current HEAD)
 
 - [ ] Gradle configuration resolves reproducibly.
