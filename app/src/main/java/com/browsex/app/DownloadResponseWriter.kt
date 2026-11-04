@@ -39,6 +39,7 @@ internal class DownloadResponseWriter(context: Context) {
         try {
             executor.execute {
             var pendingUri: Uri? = null
+            var pendingFile: File? = null
             try {
                 val safeName = displayName
                     .replace(Regex("[\\\\/:*?\"<>|]"), "_")
@@ -65,14 +66,16 @@ internal class DownloadResponseWriter(context: Context) {
                     val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                     if (!directory.exists() && !directory.mkdirs()) error("Downloads folder is unavailable")
                     val file = uniqueFile(directory, safeName)
+                    pendingFile = file
                     val bytes = FileOutputStream(file).use { output ->
                         body.use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
                     }
-                    Result(FileProvider.getUriForFile(appContext, appContext.packageName + ".files", file), file.name, bytes)
+                    Result(FileProvider.getUriForFile(appContext, appContext.packageName + ".files", file), file.name, bytes).also { pendingFile = null }
                 }
                 onComplete(result, null)
             } catch (error: Throwable) {
                 runCatching { pendingUri?.let { appContext.contentResolver.delete(it, null, null) } }
+                runCatching { pendingFile?.delete() }
                 runCatching { body.close() }
                 onComplete(null, error)
             }
