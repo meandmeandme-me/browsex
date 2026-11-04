@@ -4,9 +4,9 @@
 
 ## Product direction
 
-- Keep the existing Figma interface as a reference only; do not redesign or replace it during this foundation phase.
+- Keep the current Figma file as historical/reference material; the next UI specification and screen map are intended for Uizard.
 - Build and verify browser capabilities behind stable interfaces first.
-- Choose a new visual reference and create a new UI direction only after the foundations are stable.
+- Use `WORLD_BROWSER_PRODUCT_REQUIREMENTS.md` to define the new visual and interaction direction; do not treat a competitor's feature list as a requirement by itself.
 - Keep ad blocking explicitly deferred.
 
 ## Current implementation audit
@@ -15,8 +15,8 @@
 |---|---|---|
 | 1. Site privacy and security | HTTP(S)-only navigation validation; Android runtime permission flow for location/camera/microphone; per-site content permission controls; camera/microphone decisions stored by origin; website notification bridge; private notification suppression; Android app notification setting; privacy center for selective cookies, DOM storage, cache, site permissions and auth-session clearing after closing sessions; host-scoped site-data clearing from Site Info | Add Android-backed coverage for clear-data completion/failure and prompt cancellation; harden origin canonicalization and permission expiry/reset. Do not promise revocation for Gecko grants GeckoView cannot revoke. |
 | 2. Sessions and tab recovery | One process-wide GeckoRuntime; per-tab GeckoSession ownership; validated persisted regular-tab URL snapshot; active tab restoration; 20-tab cap; lazy opening of background tabs; one automatic content-process recovery attempt; Gecko private-mode tabs excluded from history and persistence; BrowseX Recall across regular tabs and library | Persist richer safe tab metadata (title and timestamps); explicit restore-last-session and close-session behavior; robust crash/restart tests; process-recreation tests; add a safe memory-pressure policy for inactive tabs only. |
-| 3. Bookmarks, folders, import/export | Bounded, validated URL bookmarks; search and remove; browsing history storage and clearing | Add stable bookmark IDs, folders and ordering; migration from legacy URL-only list; import/export with strict size/URL validation and duplicate handling; user-visible backup/restore flow. |
-| 4. Home customization and themes | System/Light/Dark theme; Arabic/English/System language; shared palette; local home page receives theme/language settings; RTL layout follows RTL locale scripts independently from Arabic translation availability | Persist home layout preferences (quick links/sections); allow safe customization and reset; consolidate theme tokens and ensure every screen uses them; test live theme changes and RTL. |
+| 3. Bookmarks, folders, import/export | Bounded URL validation; stable generated bookmark IDs; default-folder migration from legacy URL-only data; create/rename/delete folders; move bookmarks; manual earlier/later ordering; versioned JSON export/import with size/URL limits and folder-ID/name remapping; title-aware search | Add Android-backed persistence and round-trip tests; add explicit duplicate/replace preview and conflict UI; consider drag reordering after accessible controls are in place. |
+| 4. Home customization and themes | System/Light/Dark theme; Arabic/English/System language; shared palette; locale-script-aware RTL; persisted quick-link/discovery visibility and grid/list shortcut layout; reset to defaults | Allow users to add/remove/reorder individual shortcuts and sections; resource-based multilingual UI; consolidate tokens and verify live changes, contrast and RTL on devices. |
 | 5. Extensible architecture | Separate BrowserStore, permission/notification bridges, palette and several feature pages; documented lifecycle invariants | MainActivity remains a large coordinator; introduce feature contracts and small controllers/repositories; isolate tab/session coordination, privacy, library, settings and home preferences; add migrations and unit tests before UI rewrites. |
 | 6. Low-memory performance | Single GeckoRuntime; background sessions open lazily; bounded tabs/bookmarks/history/download metadata; sessions deactivated when not visible; bounded recovery | Measure cold start, tab switching and memory on low-RAM devices; add lifecycle-aware background tab discard/reload policy with safeguards; avoid duplicate reads/rebuilds; test memory pressure and repeated process death. Never discard the active tab or unsaved user state. |
 
@@ -56,9 +56,9 @@ These are target boundaries, not a claim that these classes already exist. Intro
 - Add a safe memory-pressure policy for inactive tabs only.
 
 ### C. Library
-- Introduce bookmark IDs and folders with legacy migration.
-- Add validated import/export and round-trip tests.
-- Keep history and bookmarks separate.
+- Bookmark IDs, folder CRUD, ordering, migration and validated JSON backup are implemented in the current branch.
+- Add Android-backed migration and import/export round-trip tests before release.
+- Add duplicate conflict preview and keep history separate from bookmarks.
 
 ### D. Home and appearance
 - Add persisted home layout preferences and reset defaults.
@@ -66,9 +66,16 @@ These are target boundaries, not a claim that these classes already exist. Intro
 - Verify RTL and contrast in every feature screen.
 
 ### E. Modularization and performance
-- Extract feature controllers/repositories in small commits.
+- Extract tab/session, privacy, download, library and preference controllers/repositories in small commits.
 - Keep MainActivity as a thin app shell over time.
-- Add baseline measurements and low-memory regression checks.
+- Add baseline measurements and a lifecycle-safe low-memory policy with safeguards for active and unsaved state.
+
+### F. Accounts, sync and international reach
+- Keep the browser fully usable without an account; sign-in must be optional.
+- Add provider-neutral identity interfaces first; add Google, Microsoft and Apple adapters only after provider-specific security and consent review.
+- Sync only user-selected data types; keep private tabs, cookies and site permissions out of cloud sync by default.
+- Define encryption, key recovery, conflict resolution, offline behavior and account deletion/export before implementing a backend.
+- Replace inline two-language strings with a resource-based localization system and verify plural, date, number, search and mixed-direction behavior.
 
 ## Definition of done
 
