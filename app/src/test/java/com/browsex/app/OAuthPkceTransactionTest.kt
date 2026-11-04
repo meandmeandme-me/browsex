@@ -47,5 +47,8 @@ class OAuthPkceTransactionTest {
         assertThrows(IllegalArgumentException::class.java) {
             OAuthPkceTransaction.create(IdentityProvider.GOOGLE, "com.browsex.app:/callback#fragment", 1000L)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            OAuthPkceTransaction.create(IdentityProvider.GOOGLE, "javascript:/callback", 1000L)
+        }
     }
 }

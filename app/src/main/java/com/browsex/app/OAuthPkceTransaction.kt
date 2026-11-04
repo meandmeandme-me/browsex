@@ -85,9 +85,11 @@ internal data class OAuthPkceTransaction private constructor(
                 val uri = URI(raw)
                 val scheme = uri.scheme ?: return null
                 val isHttps = scheme.equals("https", ignoreCase = true)
-                val isAppScheme = !scheme.equals("http", ignoreCase = true) &&
-                    scheme.matches(Regex("[A-Za-z][A-Za-z0-9+.-]{2,63}"))
-                if (!isHttps && !isAppScheme) return null
+                val isBrowseXPrivateScheme = scheme.equals("com.browsex.app", ignoreCase = true) &&
+                    uri.rawAuthority == null
+                val isMicrosoftRedirect = scheme.equals("msauth", ignoreCase = true) &&
+                    uri.rawAuthority.equals("com.browsex.app", ignoreCase = true)
+                if (!isHttps && !isBrowseXPrivateScheme && !isMicrosoftRedirect) return null
                 if ((isHttps && uri.host.isNullOrBlank()) || uri.rawUserInfo != null ||
                     uri.rawFragment != null || uri.rawQuery != null || uri.rawPath.isNullOrBlank()
                 ) return null
