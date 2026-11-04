@@ -20,7 +20,7 @@ import java.util.Date
 internal class DownloadsPage(private val activity: MainActivity, private val store: BrowserStore) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val colors get() = BrowseXColors.resolve(activity, store)
-    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
+    private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
