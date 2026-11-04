@@ -19,7 +19,7 @@ import androidx.appcompat.app.AlertDialog
 import java.text.DateFormat
 import java.util.Date
 
-/** DownloadManager-backed download library; Android remains responsible for file transfer. */
+/** Combined library for Android DownloadManager jobs and Gecko response-stream downloads. */
 internal class DownloadsPage(
     private val activity: MainActivity,
     private val store: BrowserStore,
@@ -186,7 +186,7 @@ internal class DownloadsPage(
                     max = 100
                     isIndeterminate = record.totalBytes <= 0L
                     progress = if (record.totalBytes > 0L) {
-                        ((record.bytesWritten.coerceAtMost(record.totalBytes) * 100L) / record.totalBytes).toInt()
+                        ((record.bytesWritten.coerceAtMost(record.totalBytes).toDouble() / record.totalBytes.toDouble()) * 100.0).toInt().coerceIn(0, 100)
                     } else 0
                 }, LinearLayout.LayoutParams(-1, dp(4)).apply { topMargin = dp(7) })
                 item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
