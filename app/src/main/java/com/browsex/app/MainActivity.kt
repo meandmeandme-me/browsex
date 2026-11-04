@@ -372,6 +372,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
     private fun showTabs() {
+        lateinit var dialog: AlertDialog
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(12))
