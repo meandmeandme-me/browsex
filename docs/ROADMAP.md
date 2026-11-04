@@ -34,6 +34,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Extract GeckoSession progress/navigation/content delegate wiring behind a BrowseX-owned callback contract.
 - [x] Extract bounded Gecko content-process crash recovery into a coordinator with host-injected UI, runtime and permission callbacks.
 - [x] Move tab creation, activation, close and popup-session orchestration into BrowserTabController with injected platform callbacks.
+- [x] Extract Android runtime-permission request ordering, cancellation and teardown rejection into BrowserAndroidPermissionQueue; Activity Result launchers remain host-owned.
 - [x] Move startup restoration, external-link tab selection and post-privacy-clear tab restoration into BrowserTabController; keep persistence decoding and snapshot policy in the Activity/store boundary.
 - [x] Split BrowserStore responsibilities into preference, session, library and download stores while preserving existing SharedPreferences keys and the feature-facing facade.
 - [ ] Extract tab snapshot persistence policy and Android permission queue orchestration from MainActivity; tab membership, selection, activation, popup and restoration are isolated.

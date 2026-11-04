@@ -10,7 +10,7 @@ import org.mozilla.geckoview.GeckoSession
  * All methods are called on the main thread.
  */
 internal class BrowserAndroidPermissionQueue {
-    private val queued = ArrayDeque<PendingPlatformPermission>()
+    private val queued = java.util.ArrayDeque<PendingPlatformPermission>()
     private var active: PendingPlatformPermission? = null
 
     val hasActiveRequest: Boolean
