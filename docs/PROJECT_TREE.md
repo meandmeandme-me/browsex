@@ -136,4 +136,10 @@ Accessibility and font scaling; RTL/localization; responsive layouts; offline/er
 6. Every new package comes with a clear owner, dependency direction and tests.
 7. Keep Android 8/API 26+ compatibility, explicitly smoke-test Android 10/API 29, ARM32/ARM64, 720px phone layouts and tablets.
 8. Ad blocking remains deferred until a supported engine integration is implemented and verified end-to-end.
-9. Do not split Gradle modules or introduce frameworks just to match this diagram.
+9. Do not split Gradle modules or introduce frameworks just to match this diagram. 
+
+## Cross-platform target boundary
+
+The current shipping target remains Android in the single :app module. Future Windows, macOS, Linux and Android TV clients are product targets, not implemented apps. The intended shared extraction is gradual: pure domain/account/sync models first, then repository contracts and deterministic sync rules; platform UI, browser engines, secure storage and OS integration stay native adapters. See MULTIPLATFORM_ARCHITECTURE.md and ACCOUNT_SYNC_UX_MAP.md. Do not create empty platform modules before a real implementation is ready.
+
+Current account foundation file: app/src/main/java/com/browsex/app/AccountDomainModels.kt. It defines provider-neutral identity, connection state, sync consent, device, platform and record metadata types only. It does not authenticate users, store tokens or synchronize data.
