@@ -56,8 +56,12 @@ private object BrowserEngine {
     }
 }
 
+private fun newBrowserSession(privateMode: Boolean): GeckoSession =
+    GeckoSession(GeckoSessionSettings.Builder().usePrivateMode(privateMode).build())
+
 private data class BrowserTab(
-    var session: GeckoSession = GeckoSession(),
+    val privateMode: Boolean = false,
+    var session: GeckoSession = newBrowserSession(privateMode),
     var sessionOpened: Boolean = false,
     var title: String = "New tab",
     var url: String = HOME_URL,
@@ -300,7 +304,7 @@ class MainActivity : AppCompatActivity() {
             tab.session.setActive(false)
             tab.session.close()
         }
-        tab.session = GeckoSession()
+        tab.session = newBrowserSession(tab.privateMode)
         tab.sessionOpened = false
         tab.permissionDelegate = null
         tab.sitePermissions = emptyList()
@@ -317,8 +321,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun persistTabs() {
-        if (!::store.isInitialized || tabs.isEmpty()) return
-        store.saveOpenTabs(tabs.map { it.url }, activeTab?.let(tabs::indexOf)?.coerceAtLeast(0) ?: 0)
+        if (!::store.isInitialized) return
+        val regularTabs = tabs.filterNot { it.privateMode }
+        val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+        store.saveOpenTabs(regularTabs.map { it.url }, activeIndex)
     }
 
     override fun onDestroy() {
@@ -513,6 +519,10 @@ class MainActivity : AppCompatActivity() {
             "Site information" -> "معلومات الموقع"
             "Downloads" -> "التنزيلات"
             "Settings" -> "الإعدادات"
+            "New private tab" -> "تبويب خاص جديد"
+            "Close private tabs" -> "إغلاق التبويبات الخاصة"
+            "No private tabs are open" -> "لا توجد تبويبات خاصة مفتوحة"
+            "Close all private tabs? Their browsing data will be discarded." -> "إغلاق جميع التبويبات الخاصة؟ سيتم التخلص من بيانات تصفحها."
             "Reader mode" -> "وضع القراءة"
             "Find in page" -> "بحث في الصفحة"
             "Share page" -> "مشاركة الصفحة"
@@ -704,14 +714,14 @@ class MainActivity : AppCompatActivity() {
         browserView.requestFocus()
     }
 
-    private fun createTab(url: String) {
+    private fun createTab(url: String, privateMode: Boolean = false) {
         if (shuttingDown) return
         if (tabs.size >= TabSessionState.MAX_TABS) {
             toast("You can keep up to ${TabSessionState.MAX_TABS} tabs open")
             return
         }
         val targetUrl = if (url == HOME_URL) homePageUrl() else url
-        val tab = BrowserTab(url = targetUrl)
+        val tab = BrowserTab(privateMode = privateMode, url = targetUrl)
         tabs.add(tab)
         activateTab(tab)
     }
@@ -787,7 +797,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.progress = 100
                 if (success) {
-                    store.addHistory(tab.url)
+                    if (!tab.privateMode) store.addHistory(tab.url)
                     tab.recoveryAttempts = 0
                     tab.crashed = false
                 }
@@ -818,7 +828,7 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
                     return null
                 }
-                val child = BrowserTab()
+                val child = BrowserTab(privateMode = tab.privateMode)
                 attachDelegates(child)
                 child.session.open(BrowserEngine.runtime(this@MainActivity))
                 child.sessionOpened = true
@@ -967,7 +977,7 @@ class MainActivity : AppCompatActivity() {
                     setTextColor(colors.accent)
                 })
                 preview.addView(TextView(this).apply {
-                    text = tab.title.ifBlank { "New tab" }
+                    text = (if (tab.privateMode) "Private · " else "") + tab.title.ifBlank { "New tab" }
                     textSize = 13f
                     setTextColor(colors.ink)
                     maxLines = 2
@@ -976,7 +986,7 @@ class MainActivity : AppCompatActivity() {
                 })
                 card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
                 card.addView(TextView(this).apply {
-                    text = tab.title.ifBlank { "New tab" }
+                    text = (if (tab.privateMode) "Private · " else "") + tab.title.ifBlank { "New tab" }
                     textSize = 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(colors.ink)
@@ -1051,7 +1061,8 @@ class MainActivity : AppCompatActivity() {
         val actions = arrayOf(
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
-            "Site information", "Search engine", "Clear browsing history", "Settings"
+            "Site information", "Search engine", "Clear browsing history", "Settings",
+            "New private tab", "Close private tabs"
         ).map(::tr).toTypedArray()
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
@@ -1072,6 +1083,16 @@ class MainActivity : AppCompatActivity() {
                     .setNegativeButton(tr("Cancel"), null)
                     .setPositiveButton(tr("Clear")) { _, _ -> store.clearHistory(); toast("History cleared") }.show()
                 11 -> showSettings()
+                12 -> createTab(homePageUrl(), privateMode = true)
+                13 -> {
+                    val privateTabs = tabs.filter { it.privateMode }
+                    if (privateTabs.isEmpty()) toast("No private tabs are open")
+                    else AlertDialog.Builder(this)
+                        .setMessage(tr("Close all private tabs? Their browsing data will be discarded."))
+                        .setNegativeButton(tr("Cancel"), null)
+                        .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
+                        .show()
+                }
             }
         }.show()
     }
@@ -1247,9 +1268,10 @@ class MainActivity : AppCompatActivity() {
      * Keep only validated tab URLs, close the sessions, clear data, then recreate the tabs lazily.
      */
     private fun clearBrowsingData(flags: Long, clearHistory: Boolean) {
+        val regularTabs = tabs.filterNot { it.privateMode }
         val snapshot = TabSessionState.normalize(
-            tabs.map { it.url },
-            activeTab?.let(tabs::indexOf)?.coerceAtLeast(0) ?: 0,
+            regularTabs.map { it.url },
+            regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0,
             HOME_URL
         )
         tabs.toList().forEach { tab ->
@@ -1265,7 +1287,7 @@ class MainActivity : AppCompatActivity() {
                     tab.session.close()
                 }
             }
-            tab.session = GeckoSession()
+            tab.session = newBrowserSession(tab.privateMode)
             tab.sessionOpened = false
             tab.permissionDelegate = null
             tab.sitePermissions = emptyList()

@@ -22,7 +22,8 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 4. Only the active tab is opened at startup and attached to the visible `GeckoView`; restored background tabs retain validated URLs and open only when selected. Open inactive sessions are marked unfocused/inactive on tab switch and when the Activity stops.
 5. Release the visible view session before closing sessions in `onDestroy`.
 6. Validate external intents; never load arbitrary non-HTTP(S) schemes as browser pages.
-7. Persist serializable tab URLs and active index only; never persist GeckoSession objects.
+7. Persist serializable regular-tab URLs and active index only; never persist GeckoSession objects or private-tab URLs.
+8. Private tabs use GeckoSessionSettings.usePrivateMode(true), are excluded from browsing history and startup snapshots, and popup sessions inherit their parent's private mode.
 8. Preserve duplicate URLs in tab snapshots: separate tabs may intentionally display the same page.
 9. Bound persisted collections, enforce the 20-tab cap, and validate restored web/local-home URLs.
 10. After a content-process crash, reopen and reload the affected session once automatically. A repeated crash leaves an explicit recoverable crashed tab; the user can activate it to retry.
