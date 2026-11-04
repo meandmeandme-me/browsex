@@ -177,11 +177,29 @@ class MainActivity : AppCompatActivity() {
             visibility = View.GONE
         }
         browserView = GeckoView(this).apply { setBackgroundColor(Color.WHITE) }
-        bottomBar = LinearLayout(this)
+        bottomBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(14), dp(5), dp(14), dp(8))
+            background = rounded(Color.WHITE, 22)
+            elevation = dp(5).toFloat()
+        }
+        bottomButton("‹", "Go back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
+        bottomButton("›", "Go forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
+        bottomButton("＋", "New tab") { createTab(HOME_URL) }
+        bottomButton("☆", "Bookmark page") {
+            activeTab?.url?.takeIf { it.startsWith("http") }?.let {
+                val added = store.toggleBookmark(it)
+                toast(if (added) "Saved to favorites" else "Removed from favorites")
+            }
+        }
 
         root.addView(topBar)
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
+            setMargins(dp(12), dp(5), dp(12), dp(8))
+        })
         return root
     }
 
