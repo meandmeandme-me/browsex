@@ -1,7 +1,7 @@
 package com.browsex.app
 
 /** Validated, bounded snapshot of the tabs that should be reopened on next launch. */
-internal object TabSessionState {
+object TabSessionState {
     const val MAX_TABS = 20
 
     data class Snapshot(val urls: List<String>, val activeIndex: Int)
