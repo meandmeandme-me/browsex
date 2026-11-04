@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -7,6 +7,8 @@
 <title>Browse X</title>
 <style>
 :root{color-scheme:light;--canvas:#eff5fa;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--card:#fff;--shadow:0 6px 24px rgba(38,77,108,.07)}
+:root[dir="rtl"]{direction:rtl} :root[dir="rtl"] header{flex-direction:row-reverse} :root[dir="rtl"] .section-head{flex-direction:row-reverse} :root[dir="rtl"] .dialog-actions{flex-direction:row-reverse} :root[dir="rtl"] .shortcut-edit{right:auto;left:0}
+html,body{scrollbar-gutter:stable;}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
 body{background:linear-gradient(112deg,#e0f6fc 0%,#f4f7fc 48%,#e6ecfc 100%);background-attachment:fixed}
@@ -16,7 +18,7 @@ header{margin-bottom:30px}
 .brand{display:flex;align-items:center;gap:10px}
 .mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#5fc8e9,#3b69c9 58%,#766bd1);display:grid;place-items:center;color:#fff;font-size:26px;box-shadow:0 5px 14px #477cc333}
 .brand-name{font-size:23px;font-weight:750;letter-spacing:-.7px}
-.icon-btn{width:44px;height:44px;border:0;border-radius:13px;background:var(--card);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}
+ .icon-btn{width:48px;height:48px;border:0;border-radius:13px;background:var(--card);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}
 .greeting{margin:0 0 28px}
 h1{font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:760}
 .greeting p{font-size:14px;color:var(--muted);margin:0}
@@ -28,7 +30,7 @@ h1{font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:
 .shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink)}
 .shortcut-icon{width:58px;height:58px;border-radius:19px;background:var(--card);display:grid;place-items:center;font-size:25px;font-weight:650;box-shadow:var(--shadow);color:var(--blue);overflow:hidden}
 .shortcut-name{font-size:11px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.shortcut-edit{position:absolute;right:0;top:-5px;width:23px;height:23px;border:0;border-radius:50%;background:#dcecff;color:#0759bd;font-size:13px;cursor:pointer}
+ .shortcut-edit{position:absolute;right:0;top:-5px;width:44px;height:44px;border:0;border-radius:50%;background:#dcecff;color:#0759bd;font-size:13px;cursor:pointer}
 .add-shortcut{width:58px;height:58px;border:1px dashed #91abc2;border-radius:19px;background:#ffffff75;color:var(--blue);font-size:26px;cursor:pointer}
 .add-label{display:block;margin-top:8px;font-size:11px;color:var(--muted)}
 .reading-card{padding:12px;border-radius:22px;background:var(--card);border:1px solid #ffffffb3;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block}
@@ -77,9 +79,9 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
 </main>
 <dialog id="shortcut-dialog" aria-labelledby="dialog-title">
  <form class="dialog-body" id="shortcut-form">
-  <h2 id="dialog-title">Add a shortcut</h2><p>Save a website to your start page. Use a full website address.</p>
-  <label for="shortcut-name">Name</label><input id="shortcut-name" maxlength="24" placeholder="My favorite site" required>
-  <label for="shortcut-url">Website address</label><input id="shortcut-url" type="url" inputmode="url" placeholder="https://example.com" required>
+  <h2 id="dialog-title">Add a shortcut</h2><p id="dialog-description">Save a website to your start page. Use a full website address.</p>
+  <label for="shortcut-name" id="name-label">Name</label><input id="shortcut-name" maxlength="24" placeholder="My favorite site" required>
+  <label for="shortcut-url" id="site-label">Website address</label><input id="shortcut-url" type="url" inputmode="url" placeholder="https://example.com" required>
   <div class="dialog-actions">
    <button class="secondary" id="cancel" type="button">Cancel</button>
    <button class="danger" id="delete" type="button" hidden>Delete</button>
@@ -90,13 +92,47 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
 <script>
 (()=>{
  const $=id=>document.getElementById(id);
+ const params=new URLSearchParams(location.search);
+ const selectedLanguage=params.get('bxlang')||'system';
+ const language=selectedLanguage==='system'?(navigator.language.toLowerCase().startsWith('ar')?'ar':'en'):selectedLanguage;
+ const arabic=language==='ar';
+ document.documentElement.lang=language;
+ document.documentElement.dir=arabic?'rtl':'ltr';
+ const copy=arabic?{
+  greeting:['صباح الخير. إلى أين نذهب؟','مساء الخير. إلى أين نذهب؟'],
+  main:['فضول صغير.','عالم أوسع.'],everyday:'مساحتك اليومية',reset:'إعادة ضبط',
+  begin:'ابدأ من هنا',explore:'استكشف',kicker:'الويب المفتوح / اكتشاف',
+  title:'اتبع فضولك',meta:'فكرة جديدة تبدأ ببحث واحد',
+  search:'ابحث أو اكتب عنوانًا في شريط BrowseX بالأعلى.',
+  favorites:'المواقع المفضلة',themeDark:'التبديل إلى الوضع الفاتح',themeLight:'التبديل إلى الوضع الداكن',
+  add:'إضافة موقع',edit:'تعديل',open:'فتح ',delete:'حذف',
+  dialogAdd:'إضافة اختصار',dialogEdit:'تعديل الاختصار',
+  dialogDesc:'احفظ موقعًا في صفحة البداية. أدخل عنوان موقع كاملًا.',
+  name:'الاسم',site:'عنوان الموقع',placeholderName:'موقعي المفضل',
+  cancel:'إلغاء',save:'حفظ',invalid:'أدخل عنوان موقع صحيحًا يبدأ بـ http أو https.',
+  morning:'صباح الخير. إلى أين نذهب؟',afternoon:'نهارك سعيد. إلى أين نذهب؟',evening:'مساء الخير. إلى أين نذهب؟'
+ }:{
+  greeting:['Good morning. Where to next?','Good evening. Where to next?'],
+  main:['A little curiosity.','A wider world.'],everyday:'Your everyday',reset:'Reset',
+  begin:'A place to begin',explore:'Explore',kicker:'OPEN WEB / DISCOVERY',
+  title:'Follow your curiosity',meta:'A new idea is one search away',
+  search:'Search or enter an address in the BrowseX toolbar above.',
+  favorites:'Favorite websites',themeDark:'Switch to light mode',themeLight:'Switch to dark mode',
+  add:'Add site',edit:'Edit',open:'Open ',delete:'Delete',
+  dialogAdd:'Add a shortcut',dialogEdit:'Edit shortcut',
+  dialogDesc:'Save a website to your start page. Use a full website address.',
+  name:'Name',site:'Website address',placeholderName:'My favorite site',
+  cancel:'Cancel',save:'Save',invalid:'Enter a valid http or https website address.',
+  morning:'Good morning. Where to next?',afternoon:'Good afternoon. Where to next?',evening:'Good evening. Where to next?'
+ };
+
  const defaults=[
   {name:'Wikipedia',url:'https://www.wikipedia.org'},
   {name:'Are.na',url:'https://www.are.na'},
   {name:'YouTube',url:'https://www.youtube.com'},
   {name:'GitHub',url:'https://github.com'}
  ];
- const key='browsex.home.shortcuts',themeKey='browsex.home.dark';
+ const key='browsex.home.shortcuts';
  let shortcuts=defaults,editing=-1;
  try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(saved))shortcuts=saved.filter(x=>x&&typeof x.name==='string'&&typeof x.url==='string').slice(0,8)}catch(_){}
  const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'||u.protocol==='http:'}catch(_){return false}};
@@ -105,29 +141,34 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   const nav=$('shortcuts');nav.replaceChildren();
   shortcuts.forEach((item,index)=>{
    const wrap=document.createElement('div');wrap.className='shortcut-wrap';
-   const link=document.createElement('a');link.className='shortcut';link.href=item.url;link.setAttribute('aria-label','Open '+item.name);
+   const link=document.createElement('a');link.className='shortcut';link.href=item.url;link.setAttribute('aria-label',copy.open+item.name);
    const mark=document.createElement('span');mark.className='shortcut-icon';mark.textContent=(item.name.trim()[0]||'↗').toUpperCase();
    const name=document.createElement('span');name.className='shortcut-name';name.textContent=item.name;
    link.append(mark,name);wrap.append(link);
-   const edit=document.createElement('button');edit.className='shortcut-edit';edit.type='button';edit.textContent='✎';edit.setAttribute('aria-label','Edit '+item.name);edit.addEventListener('click',()=>openEditor(index));wrap.append(edit);
+   const edit=document.createElement('button');edit.className='shortcut-edit';edit.type='button';edit.textContent='✎';edit.setAttribute('aria-label',copy.edit+' '+item.name);edit.addEventListener('click',()=>openEditor(index));wrap.append(edit);
    nav.append(wrap);
   });
   if(shortcuts.length<8){
    const wrap=document.createElement('div');wrap.className='shortcut-wrap';
-   const add=document.createElement('button');add.className='add-shortcut';add.type='button';add.textContent='+';add.setAttribute('aria-label','Add shortcut');add.addEventListener('click',()=>openEditor(-1));
-   wrap.append(add);const label=document.createElement('span');label.className='add-label';label.textContent='Add site';wrap.append(label);nav.append(wrap);
+   const add=document.createElement('button');add.className='add-shortcut';add.type='button';add.textContent='+';add.setAttribute('aria-label',copy.add);add.addEventListener('click',()=>openEditor(-1));
+   wrap.append(add);const label=document.createElement('span');label.className='add-label';label.textContent=copy.add;wrap.append(label);nav.append(wrap);
   }
  };
  const dialog=$('shortcut-dialog');
  const openEditor=index=>{
   editing=index;const item=index>=0?shortcuts[index]:{name:'',url:''};
-  $('dialog-title').textContent=index>=0?'Edit shortcut':'Add a shortcut';
+  $('dialog-title').textContent=index>=0?copy.dialogEdit:copy.dialogAdd;
+  $('dialog-description').textContent=copy.dialogDesc;
+  $('name-label').textContent=copy.name;$('site-label').textContent=copy.site;
+  $('shortcut-name').placeholder=copy.placeholderName;
+  $('cancel').textContent=copy.cancel;$('delete').textContent=copy.delete;
+  $('shortcut-form').querySelector('button[type="submit"]').textContent=copy.save;
   $('shortcut-name').value=item.name;$('shortcut-url').value=item.url;
   $('delete').hidden=index<0;dialog.showModal();$('shortcut-name').focus();
  };
  $('shortcut-form').addEventListener('submit',event=>{
   event.preventDefault();const name=$('shortcut-name').value.trim(),url=$('shortcut-url').value.trim();
-  if(!name||!validUrl(url)){$('shortcut-url').setCustomValidity('Enter a valid http or https website address.');$('shortcut-url').reportValidity();$('shortcut-url').setCustomValidity('');return}
+  if(!name||!validUrl(url)){$('shortcut-url').setCustomValidity(copy.invalid);$('shortcut-url').reportValidity();$('shortcut-url').setCustomValidity('');return}
   const item={name,url};
   if(editing>=0)shortcuts[editing]=item;else if(shortcuts.length<8)shortcuts.push(item);
   save();render();dialog.close();
@@ -135,10 +176,24 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  $('cancel').addEventListener('click',()=>dialog.close());
  $('delete').addEventListener('click',()=>{if(editing>=0){shortcuts.splice(editing,1);save();render()}dialog.close()});
  $('reset').addEventListener('click',()=>{shortcuts=defaults.map(x=>({...x}));save();render()});
- const applyTheme=dark=>{document.body.classList.toggle('dark',dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');try{localStorage.setItem(themeKey,dark?'1':'0')}catch(_){}};
- let dark=false;try{dark=localStorage.getItem(themeKey)==='1'}catch(_){}applyTheme(dark);
+ const requestedTheme=params.get('bxtheme')||'system';
+ const systemDark=()=>window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+ const applyTheme=(dark)=>{document.body.classList.toggle('dark',dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?copy.themeDark:copy.themeLight);$('theme').title=dark?copy.themeDark:copy.themeLight;};
+ const shouldDark=requestedTheme==='dark'||(requestedTheme==='system'&&systemDark());
+ applyTheme(shouldDark);
  $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
- const hour=new Date().getHours();$('greeting').textContent=hour<12?'Good morning. Where to next?':hour<18?'Good afternoon. Where to next?':'Good evening. Where to next?';
+ if(requestedTheme==='system'&&window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',event=>applyTheme(event.matches));}
+ $('greeting-title').innerHTML=copy.main.map(s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;')).join('<br>');
+ $('everyday-title').textContent=copy.everyday;$('reset').textContent=copy.reset;
+ $('reading-title').textContent=copy.begin;document.querySelector('.section-head a').textContent=copy.explore;
+ document.querySelector('.kicker').textContent=copy.kicker;
+ document.querySelector('.article-title').textContent=copy.title;
+ document.querySelector('.article-meta').textContent=copy.meta;
+ document.querySelector('.search-hint').textContent=copy.search;
+ $('shortcuts').setAttribute('aria-label',copy.favorites);
+ $('theme').setAttribute('aria-pressed',String(shouldDark));
+ $('theme').addEventListener('click',()=>{$('theme').setAttribute('aria-pressed',String(document.body.classList.contains('dark')))});
+ const hour=new Date().getHours();$('greeting').textContent=hour<12?copy.morning:hour<18?copy.afternoon:copy.evening;
  render();
 })();
 </script>

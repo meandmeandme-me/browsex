@@ -16,6 +16,15 @@ class TabSessionStateTest {
         assertEquals(1, state.activeIndex)
     }
 
+    @Test fun acceptsOnlyKnownHomePreferenceParameters() {
+        val localized = "$home?bxlang=ar&bxtheme=dark"
+        val invalid = "$home?bxlang=ar&bxtheme=dark&redirect=https://evil.example"
+        assertEquals(
+            listOf(localized),
+            TabSessionState.normalize(listOf(localized, invalid), 0, home).urls
+        )
+    }
+
     @Test fun invalidAndEmptySnapshotsFallBackToHome() {
         assertEquals(TabSessionState.Snapshot(listOf(home), 0),
             TabSessionState.normalize(listOf("file:///etc/passwd"), 99, home))

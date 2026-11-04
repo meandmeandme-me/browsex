@@ -19,6 +19,8 @@ import java.util.Date
 /** DownloadManager-backed download library; Android remains responsible for file transfer. */
 internal class DownloadsPage(private val activity: MainActivity, private val store: BrowserStore) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    private val colors get() = BrowseXColors.resolve(activity, store)
+    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
@@ -30,7 +32,8 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(16), dp(18), dp(14))
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setBackgroundColor(colors.canvas)
+            BrowseXColors.applyDirection(this, store)
         }
         val header = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -38,27 +41,36 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
         }
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
-            text = "Downloads"
+            text = t("Downloads", "التنزيلات")
             textSize = 26f
             setTypeface(typeface, Typeface.BOLD)
-            setTextColor(Color.rgb(19, 43, 64))
+            setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
-            text = "Your Browse X downloads"
+            text = t("Your Browse X downloads", "تنزيلات BrowseX")
             textSize = 12f
-            setTextColor(Color.rgb(83, 105, 123))
+            setTextColor(colors.muted)
         })
         header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
         val refresh = TextView(activity).apply {
             text = "↻"
             textSize = 23f
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(8, 102, 217))
-            background = rounded(Color.WHITE, 13)
-            contentDescription = "Refresh downloads"
+            setTextColor(colors.accent)
+            background = rounded(colors.card, 13)
+            contentDescription = t("Refresh downloads", "تحديث التنزيلات")
         }
         header.addView(refresh, LinearLayout.LayoutParams(dp(44), dp(44)))
         root.addView(header)
+        root.addView(TextView(activity).apply {
+            text = t(
+                "Android manages transfers. Some POST downloads or protected requests may not resume exactly; retry and pause are not available for every web request.",
+                "يتولى أندرويد إدارة التنزيل. قد لا تُستأنف بعض تنزيلات POST أو الطلبات المحمية بالطريقة نفسها، كما أن الإيقاف المؤقت والاستئناف غير متاحين لكل الطلبات."
+            )
+            textSize = 11f
+            setTextColor(colors.muted)
+            setPadding(dp(2), dp(9), dp(2), dp(2))
+        })
 
         val scroll = ScrollView(activity)
         val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -66,21 +78,51 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(18) })
 
         fun statusText(status: Int): String = when (status) {
-            DownloadManager.STATUS_PENDING -> "Waiting"
-            DownloadManager.STATUS_RUNNING -> "Downloading"
-            DownloadManager.STATUS_PAUSED -> "Paused"
-            DownloadManager.STATUS_SUCCESSFUL -> "Downloaded"
-            DownloadManager.STATUS_FAILED -> "Failed"
-            else -> "Unknown status"
+            DownloadManager.STATUS_PENDING -> t("Waiting", "في الانتظار")
+            DownloadManager.STATUS_RUNNING -> t("Downloading", "جارٍ التنزيل")
+            DownloadManager.STATUS_PAUSED -> t("Paused", "متوقف مؤقتًا")
+            DownloadManager.STATUS_SUCCESSFUL -> t("Downloaded", "تم التنزيل")
+            DownloadManager.STATUS_FAILED -> t("Failed", "فشل")
+            else -> t("Unknown status", "حالة غير معروفة")
+        }
+
+        fun reasonText(status: Int, reason: Int): String = when {
+            status == DownloadManager.STATUS_PAUSED -> when (reason) {
+                DownloadManager.PAUSED_QUEUED_FOR_WIFI -> t("Waiting for Wi-Fi", "بانتظار Wi-Fi")
+                DownloadManager.PAUSED_WAITING_FOR_NETWORK -> t("Waiting for network", "بانتظار الشبكة")
+                DownloadManager.PAUSED_WAITING_TO_RETRY -> t("Waiting to retry", "بانتظار إعادة المحاولة")
+                else -> t("Paused by Android", "أوقفه أندرويد مؤقتًا")
+            }
+            status == DownloadManager.STATUS_FAILED -> when (reason) {
+                DownloadManager.ERROR_INSUFFICIENT_SPACE -> t("Not enough storage", "المساحة غير كافية")
+                DownloadManager.ERROR_DEVICE_NOT_FOUND -> t("Storage unavailable", "وحدة التخزين غير متاحة")
+                DownloadManager.ERROR_FILE_ALREADY_EXISTS -> t("File already exists", "الملف موجود بالفعل")
+                DownloadManager.ERROR_FILE_ERROR -> t("File write error", "خطأ في كتابة الملف")
+                DownloadManager.ERROR_HTTP_DATA_ERROR -> t("Network data error", "خطأ في بيانات الشبكة")
+                DownloadManager.ERROR_TOO_MANY_REDIRECTS -> t("Too many redirects", "عمليات إعادة توجيه كثيرة")
+                DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> t("Unsupported server response", "استجابة الخادم غير مدعومة")
+                DownloadManager.ERROR_CANNOT_RESUME -> t("Cannot resume this download", "لا يمكن استكمال هذا التنزيل")
+                else -> t("Android could not finish this download", "تعذّر على أندرويد إكمال التنزيل")
+            }
+            else -> ""
         }
 
         fun render() {
             list.removeAllViews()
             val ownedIds = store.browseXDownloadIds()
-            // Query only IDs registered by Browse X; never enumerate other apps' downloads.
-            val cursor = if (ownedIds.isEmpty()) null else manager.query(
-                DownloadManager.Query().setFilterById(*ownedIds.toLongArray())
-            )
+            val seenIds = mutableSetOf<Long>()
+            // Query only IDs registered by BrowseX; never enumerate other apps' downloads.
+            val cursor = try {
+                if (ownedIds.isEmpty()) null else manager.query(
+                    DownloadManager.Query().setFilterById(*ownedIds.toLongArray())
+                )
+            } catch (error: SecurityException) {
+                android.util.Log.w("BrowseX", "Downloads query permission failure", error)
+                null
+            } catch (error: RuntimeException) {
+                android.util.Log.w("BrowseX", "Downloads query failed", error)
+                null
+            }
             var count = 0
             cursor?.use { c ->
                 val idCol = c.getColumnIndex(DownloadManager.COLUMN_ID)
@@ -92,41 +134,45 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                 while (c.moveToNext()) {
                     if (idCol < 0) continue
                     val id = c.getLong(idCol)
+                    seenIds.add(id)
                     count++
                     val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
                     val status = if (statusCol >= 0) c.getInt(statusCol) else -1
                     val total = if (totalCol >= 0) c.getLong(totalCol) else -1L
                     val soFar = if (soFarCol >= 0) c.getLong(soFarCol) else 0L
                     val date = if (dateCol >= 0) c.getLong(dateCol) else 0L
+                    val reason = if (reasonCol >= 0) c.getInt(reasonCol) else 0
                     val item = LinearLayout(activity).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(13), dp(13), dp(10), dp(13))
-                        background = rounded(Color.WHITE, 15)
+                        background = rounded(colors.card, 15)
                     }
                     val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
                     labels.addView(TextView(activity).apply {
                         text = title
                         textSize = 14f
                         setTypeface(typeface, Typeface.BOLD)
-                        setTextColor(Color.rgb(19, 43, 64))
+                        setTextColor(colors.ink)
                         maxLines = 2
                     })
                     val size = if (total > 0) "${(soFar / 1024)} KB / ${(total / 1024)} KB"
                         else if (soFar > 0) "${soFar / 1024} KB" else "Size unavailable"
                     val timestamp = if (date > 0) DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(date)) else ""
+                    val percent = if (total > 0L) " · ${(soFar * 100L / total).coerceIn(0L, 100L)}%" else ""
+                    val reasonLabel = reasonText(status, reason)
                     labels.addView(TextView(activity).apply {
-                        text = listOf(statusText(status), size, timestamp).filter { it.isNotBlank() }.joinToString(" · ")
+                        text = listOf(statusText(status), reasonLabel, size + percent, timestamp).filter { it.isNotBlank() }.joinToString(" · ")
                         textSize = 10f
-                        setTextColor(Color.rgb(83, 105, 123))
+                        setTextColor(colors.muted)
                         setPadding(0, dp(4), 0, 0)
                     })
                     item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
                     val action = TextView(activity).apply {
-                        text = if (status == DownloadManager.STATUS_SUCCESSFUL) "Open" else "×"
+                        text = if (status == DownloadManager.STATUS_SUCCESSFUL) t("Open", "فتح") else if (status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_PAUSED) t("Cancel", "إلغاء") else t("Remove", "حذف")
                         textSize = 13f
                         gravity = Gravity.CENTER
-                        setTextColor(if (status == DownloadManager.STATUS_SUCCESSFUL) Color.rgb(8, 102, 217) else Color.rgb(190, 65, 75))
+                        setTextColor(if (status == DownloadManager.STATUS_SUCCESSFUL) colors.accent else colors.danger)
                         setPadding(dp(10), dp(8), dp(6), dp(8))
                         setOnClickListener {
                             if (status == DownloadManager.STATUS_SUCCESSFUL) {
@@ -136,13 +182,16 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                                     val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
                                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     try { activity.startActivity(intent) }
-                                    catch (_: Exception) { android.widget.Toast.makeText(activity, "No app can open this file", android.widget.Toast.LENGTH_SHORT).show() }
+                                    catch (_: Exception) { android.widget.Toast.makeText(activity, t("No app can open this file", "لا يوجد تطبيق لفتح هذا الملف"), android.widget.Toast.LENGTH_SHORT).show() }
                                 }
                             } else {
-                                AlertDialog.Builder(activity).setMessage("Remove this download?")
-                                    .setNegativeButton("Cancel", null)
-                                    .setPositiveButton("Remove") { _, _ ->
-                                        manager.remove(id)
+                                val removingActive = status == DownloadManager.STATUS_RUNNING ||
+                                    status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_PAUSED
+                                AlertDialog.Builder(activity)
+                                    .setMessage(if (removingActive) t("Cancel this download?", "إلغاء هذا التنزيل؟") else t("Remove this download record?", "حذف سجل هذا التنزيل؟"))
+                                    .setNegativeButton(t("Keep", "احتفاظ"), null)
+                                    .setPositiveButton(t("Remove", "حذف")) { _, _ ->
+                                        runCatching { manager.remove(id) }
                                         store.removeBrowseXDownload(id)
                                         render()
                                     }.show()
@@ -153,11 +202,34 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                     list.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
                 }
             }
+            val missing = ownedIds - seenIds
+            missing.forEach { id ->
+                val stale = LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(13), dp(13), dp(10), dp(13))
+                    background = rounded(colors.card, 15)
+                }
+                stale.addView(TextView(activity).apply {
+                    text = t("Download no longer exists in Android DownloadManager", "التنزيل لم يعد موجودًا في مدير تنزيلات أندرويد")
+                    textSize = 12f
+                    setTextColor(colors.muted)
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                stale.addView(TextView(activity).apply {
+                    text = t("Remove", "حذف")
+                    contentDescription = t("Remove unavailable download", "حذف التنزيل غير المتاح")
+                    setTextColor(colors.danger)
+                    setPadding(dp(12), dp(8), dp(6), dp(8))
+                    setOnClickListener { store.removeBrowseXDownload(id); render() }
+                })
+                list.addView(stale, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+                count++
+            }
             if (count == 0) list.addView(TextView(activity).apply {
-                text = "No Browse X downloads yet. Files you download from websites will appear here."
+                text = t("No BrowseX downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
                 textSize = 13f
                 gravity = Gravity.CENTER
-                setTextColor(Color.rgb(83, 105, 123))
+                setTextColor(colors.muted)
                 setPadding(dp(22), dp(40), dp(22), dp(40))
             })
         }

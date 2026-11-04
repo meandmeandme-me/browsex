@@ -1,15 +1,20 @@
 package com.browsex.app
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.provider.Settings
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import androidx.core.app.NotificationManagerCompat
 
 /**
  * Full-screen settings destination. Browser actions are injected from the activity so
@@ -21,12 +26,66 @@ internal class SettingsPage(
     private val openBookmarks: () -> Unit,
     private val openHistory: () -> Unit,
     private val openDownloads: () -> Unit,
-    private val clearHistory: () -> Unit
+    private val clearHistory: () -> Unit,
+    private val setWebsiteNotifications: (Boolean) -> Unit
 ) {
-    private val ink = Color.rgb(19, 43, 64)
-    private val muted = Color.rgb(83, 105, 123)
-    private val accent = Color.rgb(8, 102, 217)
-    private val canvas = Color.rgb(239, 245, 250)
+    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val ink get() = colors.ink
+    private val muted get() = colors.muted
+    private val accent get() = colors.accent
+    private val canvas get() = colors.canvas
+
+    private fun t(value: String): String {
+        if (!BrowseXColors.isArabic(store)) return value
+        return mapOf(
+            "Settings" to "الإعدادات",
+            "Make Browse X work the way you like" to "خصّص تجربة التصفح كما تحب",
+            "Close settings" to "إغلاق الإعدادات",
+            "General" to "عام",
+            "Choose how you browse" to "اختر طريقة التصفح",
+            "Search engine" to "محرك البحث",
+            "Default search engine" to "محرك البحث الافتراضي",
+            "Theme" to "المظهر",
+            "Choose the browser appearance" to "اختر مظهر المتصفح",
+            "System default" to "حسب النظام",
+            "Light" to "فاتح",
+            "Dark" to "داكن",
+            "Language" to "اللغة",
+            "Choose the app language" to "اختر لغة التطبيق",
+            "System language" to "لغة النظام",
+            "Arabic" to "العربية",
+            "English" to "الإنجليزية",
+            "Website notifications" to "إشعارات المواقع",
+            "Android notification permission" to "إذن إشعارات أندرويد",
+            "Android app permissions" to "أذونات تطبيق أندرويد",
+            "Manage camera, microphone and location access" to "إدارة أذونات الكاميرا والميكروفون والموقع",
+            "Manage notification permission in Android settings" to "إدارة إذن الإشعارات من إعدادات أندرويد",
+            "Enabled" to "مفعّل",
+            "Blocked" to "محظور",
+            "Manage" to "إدارة",
+            "Allow websites to send Android notifications" to "السماح للمواقع بإرسال إشعارات أندرويد",
+            "On" to "مفعّلة",
+            "Off" to "متوقفة",
+            "Your library" to "مكتبتك",
+            "Your saved pages stay on this device" to "صفحاتك المحفوظة تبقى على هذا الجهاز",
+            "Bookmarks" to "المفضلة",
+            "Open and manage saved websites" to "عرض وإدارة المواقع المحفوظة",
+            "Browsing history" to "سجل التصفح",
+            "Review or remove visited pages" to "عرض الصفحات التي زرتها أو حذفها",
+            "Downloads" to "التنزيلات",
+            "Open downloaded files" to "فتح الملفات التي تم تنزيلها",
+            "Privacy & data" to "الخصوصية والبيانات",
+            "Clear browsing history" to "مسح سجل التصفح",
+            "Remove the browsing history stored by Browse X" to "حذف سجل التصفح المحفوظ في BrowseX",
+            "Clear" to "مسح",
+            "Cancel" to "إلغاء",
+            "About" to "حول التطبيق",
+            "About Browse X" to "حول BrowseX",
+            "A calmer way to explore the web" to "طريقة أكثر هدوءًا لاستكشاف الويب",
+            "Done" to "تم",
+            "Browse X  ·  Built for the open web" to "BrowseX · متصفح للويب المفتوح"
+        ).getOrDefault(value, value)
+    }
 
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
@@ -41,6 +100,7 @@ internal class SettingsPage(
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(16), dp(18), dp(16))
             setBackgroundColor(canvas)
+            BrowseXColors.applyDirection(this, store)
         }
 
         val header = LinearLayout(activity).apply {
@@ -49,13 +109,13 @@ internal class SettingsPage(
         }
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
-            text = "Settings"
+            text = t("Settings")
             textSize = 27f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ink)
         })
         heading.addView(TextView(activity).apply {
-            text = "Make Browse X work the way you like"
+            text = t("Make Browse X work the way you like")
             textSize = 12f
             setTextColor(muted)
             setPadding(0, dp(3), 0, 0)
@@ -66,10 +126,12 @@ internal class SettingsPage(
             textSize = 27f
             gravity = Gravity.CENTER
             setTextColor(ink)
-            background = rounded(Color.WHITE, 14)
-            contentDescription = "Close settings"
+            background = rounded(colors.card, 14)
+            contentDescription = t("Close settings")
         }
-        header.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)))
+        close.minimumWidth = dp(48)
+        close.minimumHeight = dp(48)
+        header.addView(close, LinearLayout.LayoutParams(dp(48), dp(48)))
         page.addView(header)
 
         val scroll = ScrollView(activity).apply {
@@ -82,7 +144,7 @@ internal class SettingsPage(
 
         fun section(title: String, subtitle: String? = null) {
             content.addView(TextView(activity).apply {
-                text = title.uppercase()
+                text = t(title).uppercase()
                 textSize = 11f
                 letterSpacing = .08f
                 setTypeface(typeface, Typeface.BOLD)
@@ -90,7 +152,7 @@ internal class SettingsPage(
                 setPadding(dp(3), dp(17), dp(3), dp(8))
             })
             if (subtitle != null) content.addView(TextView(activity).apply {
-                text = subtitle
+                text = t(subtitle)
                 textSize = 12f
                 setTextColor(muted)
                 setPadding(dp(3), 0, dp(3), dp(8))
@@ -102,31 +164,33 @@ internal class SettingsPage(
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(14), dp(13), dp(12), dp(13))
-                background = rounded(Color.WHITE, 15)
+                minimumHeight = dp(58)
+                background = rounded(colors.card, 15)
                 isClickable = true
                 isFocusable = true
                 setOnClickListener { action() }
             }
             val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
             labels.addView(TextView(activity).apply {
-                text = title
+                text = t(title)
                 textSize = 14f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(ink)
             })
             labels.addView(TextView(activity).apply {
-                text = description
+                text = t(description)
                 textSize = 11f
                 setTextColor(muted)
                 setPadding(0, dp(4), 0, 0)
             })
             item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
             item.addView(TextView(activity).apply {
-                text = trailing
+                text = t(trailing)
                 textSize = 18f
                 gravity = Gravity.CENTER
                 setTextColor(accent)
             })
+            item.contentDescription = t("$title, $description")
             content.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(8)
             })
@@ -143,8 +207,75 @@ internal class SettingsPage(
                     dialog.dismiss()
                     show()
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(t("Cancel"), null)
                 .show()
+        }
+
+        row("Theme", "Choose the browser appearance", t(when (store.themeMode) {
+            "dark" -> "Dark"; "light" -> "Light"; else -> "System default"
+        })) {
+            val values = arrayOf("system", "light", "dark")
+            val labels = arrayOf(t("System default"), t("Light"), t("Dark"))
+            AlertDialog.Builder(activity)
+                .setTitle(t("Theme"))
+                .setSingleChoiceItems(labels, values.indexOf(store.themeMode).coerceAtLeast(0)) { choice, index ->
+                    store.themeMode = values[index]
+                    AppCompatDelegate.setDefaultNightMode(when (store.themeMode) {
+                        "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+                        "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                    })
+                    choice.dismiss()
+                    dialog.dismiss()
+                    activity.recreate()
+                }
+                .setNegativeButton(t("Cancel"), null)
+                .show()
+        }
+        row("Language", "Choose the app language", t(when (store.languageMode) {
+            "ar" -> "Arabic"; "en" -> "English"; else -> "System language"
+        })) {
+            val values = arrayOf("system", "ar", "en")
+            val labels = arrayOf(t("System language"), t("Arabic"), t("English"))
+            AlertDialog.Builder(activity)
+                .setTitle(t("Language"))
+                .setSingleChoiceItems(labels, values.indexOf(store.languageMode).coerceAtLeast(0)) { choice, index ->
+                    store.languageMode = values[index]
+                    AppCompatDelegate.setApplicationLocales(
+                        LocaleListCompat.forLanguageTags(if (store.languageMode == "system") "" else store.languageMode)
+                    )
+                    choice.dismiss()
+                    dialog.dismiss()
+                    activity.recreate()
+                }
+                .setNegativeButton(t("Cancel"), null)
+                .show()
+        }
+        row("Website notifications", "Allow websites to send Android notifications", t(if (store.siteNotificationsEnabled) "On" else "Off")) {
+            setWebsiteNotifications(!store.siteNotificationsEnabled)
+            dialog.dismiss()
+            show()
+        }
+        row(
+            "Android notification permission",
+            "Manage notification permission in Android settings",
+            t(if (NotificationManagerCompat.from(activity).areNotificationsEnabled()) "Enabled" else "Blocked")
+        ) {
+            try {
+                activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
+            } catch (_: Exception) {
+                activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${activity.packageName}")))
+            }
+        }
+
+        row(
+            "Android app permissions",
+            "Manage camera, microphone and location access",
+            t("Manage")
+        ) {
+            activity.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${activity.packageName}"))
+            )
         }
 
         section("Your library", "Your saved pages stay on this device")
@@ -164,10 +295,10 @@ internal class SettingsPage(
         section("Privacy & data")
         row("Clear browsing history", "Remove the browsing history stored by Browse X", "Clear") {
             AlertDialog.Builder(activity)
-                .setTitle("Clear browsing history?")
-                .setMessage("This removes the history list saved by Browse X. It does not delete downloaded files or bookmarks.")
+                 .setTitle(t("Clear browsing history?"))
+                .setMessage(t("This removes the history list saved by Browse X. It does not delete downloaded files or bookmarks."))
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Clear") { _, _ ->
+                .setPositiveButton(t("Clear")) { _, _ ->
                     clearHistory()
                     dialog.dismiss()
                     show()
@@ -179,14 +310,14 @@ internal class SettingsPage(
         row("About Browse X", "A calmer way to explore the web", "ⓘ") {
             AlertDialog.Builder(activity)
                 .setTitle("Browse X")
-                .setMessage("Browse X is powered by Mozilla GeckoView. Some browser features are still being built.")
-                .setPositiveButton("Done", null)
+                .setMessage(t("Browse X is powered by Mozilla GeckoView. Some browser features are still being built."))
+                .setPositiveButton(t("Done"), null)
                 .show()
         }
 
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val footer = TextView(activity).apply {
-            text = "Browse X  ·  Built for the open web"
+            text = t("Browse X  ·  Built for the open web")
             textSize = 11f
             gravity = Gravity.CENTER
             setTextColor(muted)

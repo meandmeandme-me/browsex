@@ -9,7 +9,17 @@ object TabSessionState {
     fun normalize(urls: List<String>, activeIndex: Int, homeUrl: String): Snapshot {
         val accepted = urls.mapIndexedNotNull { index, raw ->
             val url = raw.trim()
-            if (url == homeUrl || url == "about:blank" || NavigationInput.isValidWebUrl(url)) {
+            val isConfiguredHome = url.startsWith("$homeUrl?") && run {
+                val params = url.substringAfter('?').split('&').mapNotNull { part ->
+                    val key = part.substringBefore('=', "")
+                    val value = part.substringAfter('=', "")
+                    key.takeIf { it.isNotBlank() }?.let { it to value }
+                }.toMap()
+                params.keys == setOf("bxlang", "bxtheme") &&
+                    params["bxlang"]?.let { it in setOf("system", "ar", "en") } == true &&
+                    params["bxtheme"]?.let { it in setOf("system", "light", "dark") } == true
+            }
+            if (url == homeUrl || isConfiguredHome || url == "about:blank" || NavigationInput.isValidWebUrl(url)) {
                 index to url
             } else null
         }.take(MAX_TABS)

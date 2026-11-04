@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BrowseX</string>
+    <string name="website_notification_channel">Website notifications</string>
+    <string name="website_notification_channel_description">Notifications sent by websites you allow in BrowseX</string>
+</resources>

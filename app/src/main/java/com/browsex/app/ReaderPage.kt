@@ -19,29 +19,33 @@ class ReaderPage(
     private val context: Context,
     private val pageTitle: String,
     private val sourceUrl: String,
-    private val articleText: String
+    private val articleText: String,
+    private val store: BrowserStore
 ) {
+    private val colors get() = BrowseXColors.resolve(context, store)
     private val density = context.resources.displayMetrics.density
+    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
     private fun dp(value: Int) = (value * density).toInt()
 
     fun show() {
         var textSize = 18f
-        val background = Color.rgb(250, 248, 242)
-        val ink = Color.rgb(39, 43, 49)
+        val background = colors.canvas
+        val ink = colors.ink
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(18), dp(22), dp(16))
             setBackgroundColor(background)
+            BrowseXColors.applyDirection(this, store)
         }
         val top = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
         val heading = TextView(context).apply {
-            text = "BROWSE X  ·  READER"
+            text = t("BROWSE X  ·  READER", "BrowseX · وضع القراءة")
             textSize = 11f
             letterSpacing = 0.08f
-            setTextColor(Color.rgb(79, 103, 122))
+            setTextColor(colors.muted)
             typeface = Typeface.DEFAULT_BOLD
         }
         top.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
@@ -50,16 +54,18 @@ class ReaderPage(
             text = "✕"
             textSize = 19f
             gravity = Gravity.CENTER
-            contentDescription = "Close reader"
+            contentDescription = t("Close reader", "إغلاق وضع القراءة")
             setTextColor(ink)
             setPadding(dp(12), dp(6), dp(4), dp(6))
+            minimumWidth = dp(48)
+            minimumHeight = dp(48)
             setOnClickListener { dialog.dismiss() }
         }
         top.addView(close)
         root.addView(top)
 
         val title = TextView(context).apply {
-            text = pageTitle.ifBlank { "Article" }
+            text = pageTitle.ifBlank { t("Article", "مقال") }
             textSize = 27f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
             setTextColor(ink)
@@ -69,13 +75,14 @@ class ReaderPage(
         val source = TextView(context).apply {
             text = android.net.Uri.parse(sourceUrl).host.orEmpty()
             textSize = 12f
-            setTextColor(Color.rgb(103, 111, 119))
+            setTextColor(colors.muted)
             setPadding(0, 0, 0, dp(22))
         }
         root.addView(source)
 
         val body = TextView(context).apply {
             text = articleText
+            textDirection = View.TEXT_DIRECTION_FIRST_STRONG
             this.textSize = textSize
             setTextColor(ink)
             setLineSpacing(dp(5).toFloat(), 1.08f)
@@ -102,23 +109,23 @@ class ReaderPage(
                 gravity = Gravity.CENTER
                 setTextColor(ink)
                 this.background = GradientDrawable().apply {
-                    setColor(Color.WHITE)
+                    setColor(colors.card)
                     cornerRadius = dp(12).toFloat()
                 }
                 setOnClickListener { action() }
             }
-        controls.addView(control("A−", "Decrease text size") {
+        controls.addView(control("A−", t("Decrease text size", "تصغير الخط")) {
             textSize = (textSize - 1f).coerceAtLeast(14f)
             body.textSize = textSize
-        }, LinearLayout.LayoutParams(dp(52), dp(42)).apply { marginEnd = dp(8) })
-        controls.addView(control("A+", "Increase text size") {
+        }, LinearLayout.LayoutParams(dp(52), dp(48)).apply { marginEnd = dp(8) })
+        controls.addView(control("A+", t("Increase text size", "تكبير الخط")) {
             textSize = (textSize + 1f).coerceAtMost(30f)
             body.textSize = textSize
-        }, LinearLayout.LayoutParams(dp(52), dp(42)).apply { marginEnd = dp(8) })
-        controls.addView(control("Copy", "Copy article text") {
+        }, LinearLayout.LayoutParams(dp(52), dp(48)).apply { marginEnd = dp(8) })
+        controls.addView(control(t("Copy", "نسخ"), t("Copy article text", "نسخ نص المقال")) {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText(pageTitle, articleText))
-        }, LinearLayout.LayoutParams(0, dp(42), 1f))
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
         root.addView(controls)
 
         dialog = AlertDialog.Builder(context).setView(root).create()

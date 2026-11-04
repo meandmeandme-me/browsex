@@ -72,7 +72,7 @@ internal class BrowseXPermissionDelegate(
                             result.complete(
                                 if (granted && store.siteNotificationsEnabled && isActiveSession(session))
                                     GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
-                                else GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+                                else GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
                             )
                         }
                     } else {

@@ -39,6 +39,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
+import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.ExperimentalGeckoViewApi
@@ -46,10 +47,6 @@ import org.mozilla.geckoview.WebResponse
 import org.mozilla.geckoview.WebNotification
 
 private const val HOME_URL = "resource://android/assets/home.html"
-private val COLOR_BG = Color.rgb(13, 17, 23)
-private val COLOR_PANEL = Color.rgb(22, 27, 34)
-private val COLOR_FIELD = Color.rgb(33, 40, 50)
-private val COLOR_ACCENT = Color.rgb(65, 132, 245)
 
 /** GeckoRuntime is process-wide. Sessions are owned by MainActivity and always closed there. */
 private object BrowserEngine {
@@ -100,10 +97,18 @@ class MainActivity : AppCompatActivity() {
     private var activePlatformPermission: PendingPlatformPermission? = null
     private val notificationPermissionCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var notificationPermissionInFlight = false
+    private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
+    private val waitingForLegacyDownloads = java.util.ArrayDeque<WebResponse>()
+    private var legacyDownloadPermissionInFlight = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        AppCompatDelegate.setDefaultNightMode(when (store.themeMode) {
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        })
         AppCompatDelegate.setApplicationLocales(
             LocaleListCompat.forLanguageTags(if (store.languageMode == "system") "" else store.languageMode)
         )
@@ -123,6 +128,18 @@ class MainActivity : AppCompatActivity() {
             }
             launchNextPlatformPermission()
         }
+        legacyDownloadPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            legacyDownloadPermissionInFlight = false
+            val pending = waitingForLegacyDownloads.toList()
+            waitingForLegacyDownloads.clear()
+            if (granted) pending.forEach(::enqueueDownload)
+            else {
+                pending.forEach { it.body?.close() }
+                if (!isFinishing && !isDestroyed) toast("Storage permission was denied; download cancelled")
+            }
+        }
         notificationPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
@@ -132,14 +149,26 @@ class MainActivity : AppCompatActivity() {
             val callbacks = notificationPermissionCallbacks.toList()
             notificationPermissionCallbacks.clear()
             callbacks.forEach { callback -> callback(granted && NotificationManagerCompat.from(this).areNotificationsEnabled()) }
+            launchNextPlatformPermission()
         }
         browserRuntime = BrowserEngine.runtime(applicationContext)
+        browserRuntime?.settings?.setPreferredColorScheme(when (store.themeMode) {
+            "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
+            "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            else -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
+        })
+        val requestedLocales = if (store.languageMode == "system") {
+            resources.configuration.locales.toLanguageTags().split(',').filter { it.isNotBlank() }.toTypedArray()
+        } else {
+            arrayOf(store.languageMode)
+        }
+        browserRuntime?.settings?.setLocales(requestedLocales)
         notificationBridge = BrowseXNotificationBridge(this, store, ::requestSiteNotificationPermission)
         browserRuntime?.setWebNotificationDelegate(notificationBridge)
-        window.statusBarColor = Color.rgb(239, 245, 250)
-        window.navigationBarColor = Color.rgb(239, 245, 250)
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = true
+        window.statusBarColor = colors.canvas
+        window.navigationBarColor = colors.canvas
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = !colors.isDark
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = !colors.isDark
         setContentView(createBrowserUi())
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -218,6 +247,8 @@ class MainActivity : AppCompatActivity() {
         shuttingDown = true
         queuedPlatformPermissions.toList().forEach { it.callback.reject() }
         queuedPlatformPermissions.clear()
+        waitingForLegacyDownloads.toList().forEach { it.body?.close() }
+        waitingForLegacyDownloads.clear()
         activePlatformPermission?.let { pending ->
             if (!pending.completed) pending.callback.reject()
             pending.completed = true
@@ -310,15 +341,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) {
-        if (!store.siteNotificationsEnabled || !NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+        if (!store.siteNotificationsEnabled) {
             callback(false)
             return
         }
-        if (Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        ) {
+        if (Build.VERSION.SDK_INT < 33) {
+            callback(NotificationManagerCompat.from(this).areNotificationsEnabled())
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS)
-            callback(true)
+            callback(NotificationManagerCompat.from(this).areNotificationsEnabled())
             return
         }
         if (store.wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) ||
@@ -356,12 +389,78 @@ class MainActivity : AppCompatActivity() {
         intent.removeExtra(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
     }
 
+    private val colors get() = BrowseXColors.resolve(this, store)
+
+    private fun tr(value: String): String {
+        if (!BrowseXColors.isArabic(store)) return value
+        return when (value) {
+            "Home" -> "الرئيسية"
+            "Open tabs" -> "فتح علامات التبويب"
+            "Search or enter URL" -> "ابحث أو أدخل عنوان الموقع"
+            "Your space" -> "مساحة التصفح"
+            "tab" -> "تبويب"
+            "tabs" -> "تبويبات"
+            "Tap a card to return to it" -> "اضغط على بطاقة للعودة إلى التبويب"
+            "New tab" -> "تبويب جديد"
+            "Remove bookmark" -> "إزالة من المفضلة"
+            "Add bookmark" -> "إضافة للمفضلة"
+            "Bookmarks" -> "المفضلة"
+            "History" -> "السجل"
+            "Downloads" -> "التنزيلات"
+            "Share page" -> "مشاركة الصفحة"
+            "Copy page address" -> "نسخ عنوان الصفحة"
+            "Find in page" -> "بحث في الصفحة"
+            "Reader mode" -> "وضع القراءة"
+            "Site information" -> "معلومات الموقع"
+            "Search engine" -> "محرك البحث"
+            "Clear browsing history" -> "مسح سجل التصفح"
+            "BrowseX" -> "BrowseX"
+            "Open webpage first" -> "افتح صفحة ويب أولًا"
+            "Open a webpage first" -> "افتح صفحة ويب أولًا"
+            "Preparing a clean reading view…" -> "جارٍ تجهيز وضع القراءة…"
+            "Cancel" -> "إلغاء"
+            "Clear" -> "مسح"
+            "Delete all browsing history?" -> "حذف سجل التصفح بالكامل؟"
+            "Close" -> "إغلاق"
+            "Back" -> "رجوع"
+            "Forward" -> "للأمام"
+            "Reload" -> "إعادة تحميل"
+            "Tabs" -> "علامات التبويب"
+            "New tab" -> "تبويب جديد"
+            "Bookmark page" -> "إضافة للمفضلة"
+            "Site information" -> "معلومات الموقع"
+            "Downloads" -> "التنزيلات"
+            "Settings" -> "الإعدادات"
+            "Reader mode" -> "وضع القراءة"
+            "Find in page" -> "بحث في الصفحة"
+            "Share page" -> "مشاركة الصفحة"
+            "Copy address" -> "نسخ العنوان"
+            "Close tab" -> "إغلاق التبويب"
+            "Open a website first" -> "افتح موقعًا أولًا"
+            "History cleared" -> "تم مسح السجل"
+            "Page bookmarked" -> "تمت إضافة الصفحة للمفضلة"
+            "Bookmark removed" -> "تمت إزالة الصفحة من المفضلة"
+            "This download link is not supported" -> "رابط التنزيل غير مدعوم"
+            "Android denied access to the Downloads folder" -> "رفض أندرويد الوصول إلى مجلد التنزيلات"
+            "Storage permission was denied; download cancelled" -> "تم رفض إذن التخزين؛ أُلغي التنزيل"
+            "No app can open this file" -> "لا يوجد تطبيق لفتح هذا الملف"
+            "You can keep up to 20 tabs open" -> "يمكنك فتح 20 تبويبًا كحد أقصى"
+            "Search or enter an address" -> "ابحث أو أدخل عنوانًا"
+            "Search or enter URL" -> "ابحث أو أدخل عنوان الموقع"
+            else -> value
+        }
+    }
+
+    private fun homePageUrl(): String =
+        "$HOME_URL?bxlang=${store.languageMode}&bxtheme=${store.themeMode}"
+
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun createBrowserUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setBackgroundColor(colors.canvas)
+            BrowseXColors.applyDirection(this, store)
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -373,10 +472,10 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setBackgroundColor(colors.canvas)
         }
-        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }.apply {
-            background = rounded(Color.WHITE, 10)
+        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(homePageUrl()) }.apply {
+            background = rounded(colors.card, 10)
             textSize = 22f
         }
         topBar.addView(home, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
@@ -384,16 +483,16 @@ class MainActivity : AppCompatActivity() {
         })
 
         address = EditText(this).apply {
-            hint = "Search or enter URL"
-            setHintTextColor(Color.rgb(83, 105, 123))
-            setTextColor(Color.rgb(19, 43, 64))
+            hint = tr("Search or enter URL")
+            setHintTextColor(colors.muted)
+            setTextColor(colors.ink)
             textSize = 14f
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
             setPadding(dp(14), 0, dp(12), 0)
-            background = rounded(Color.WHITE, 24)
+            background = rounded(colors.card, 24)
             elevation = dp(3).toFloat()
             setOnEditorActionListener { _, action, _ ->
                 if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
@@ -408,34 +507,34 @@ class MainActivity : AppCompatActivity() {
         })
 
         tabsButton = actionButton("▢", "Open tabs") { showTabs() }.apply {
-            background = rounded(Color.WHITE, 10)
+            background = rounded(colors.card, 10)
             textSize = 20f
         }
         topBar.addView(tabsButton, LinearLayout.LayoutParams(dp(44), dp(48)).apply {
             marginEnd = dp(4)
         })
         val menu = actionButton("⋮", "Browser menu") { showBrowserMenu() }.apply {
-            background = rounded(Color.WHITE, 10)
+            background = rounded(colors.card, 10)
             textSize = 22f
         }
         topBar.addView(menu, LinearLayout.LayoutParams(dp(44), dp(48)))
 
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.rgb(8, 102, 217))
+            progressTintList = android.content.res.ColorStateList.valueOf(colors.accent)
             visibility = View.GONE
         }
-        browserView = GeckoView(this).apply { setBackgroundColor(Color.WHITE) }
+        browserView = GeckoView(this).apply { setBackgroundColor(colors.card) }
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setPadding(dp(14), dp(5), dp(14), dp(8))
-            background = rounded(Color.WHITE, 22)
+            background = rounded(colors.card, 22)
             elevation = dp(5).toFloat()
         }
         bottomButton("‹", "Go back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
         bottomButton("›", "Go forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
-        bottomButton("＋", "New tab") { createTab(HOME_URL) }
+        bottomButton("＋", "New tab") { createTab(homePageUrl()) }
         bottomButton("☆", "Bookmark page") {
             activeTab?.url?.takeIf { it.startsWith("http") }?.let {
                 val added = store.toggleBookmark(it)
@@ -449,6 +548,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
             setMargins(dp(12), dp(5), dp(12), dp(8))
         })
+        BrowseXColors.applyDirection(root, store)
         return root
     }
 
@@ -459,18 +559,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun actionButton(label: String, description: String, action: () -> Unit) =
         TextView(this).apply {
-            text = label
-            contentDescription = description
+            text = tr(label)
+            contentDescription = tr(description)
             textSize = 22f
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(48, 61, 88))
+            setTextColor(colors.ink)
+            minimumWidth = dp(48)
+            minimumHeight = dp(48)
             setOnClickListener { action() }
         }
 
     private fun bottomButton(label: String, description: String, action: () -> Unit) =
         actionButton(label, description, action).also {
             it.textSize = 23f
-            it.setTextColor(Color.rgb(54, 62, 86))
+            it.setTextColor(colors.ink)
             bottomBar.addView(it, LinearLayout.LayoutParams(0, -1, 1f))
         }
 
@@ -480,6 +582,7 @@ class MainActivity : AppCompatActivity() {
         progress.progress = tab.progress
         progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
         tabsButton.text = "▢ ${tabs.size}"
+        tabsButton.contentDescription = "${tr("Open tabs")}: ${tabs.size}"
     }
 
     private fun updateAddress() {
@@ -489,7 +592,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun normalizeInput(raw: String): String =
-        NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
+        if (raw.isBlank()) homePageUrl() else NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
 
     private fun safeExternalUrl(uri: Uri): String? = NavigationInput.externalWebUrl(uri.toString())
 
@@ -509,12 +612,13 @@ class MainActivity : AppCompatActivity() {
             toast("You can keep up to ${TabSessionState.MAX_TABS} tabs open")
             return
         }
-        val tab = BrowserTab()
+        val targetUrl = if (url == HOME_URL) homePageUrl() else url
+        val tab = BrowserTab(url = targetUrl)
         attachDelegates(tab)
         tab.session.open(BrowserEngine.runtime(this))
         tabs.add(tab)
         activateTab(tab)
-        tab.session.loadUri(url)
+        tab.session.loadUri(targetUrl)
     }
 
     private fun activateTab(tab: BrowserTab) {
@@ -522,12 +626,23 @@ class MainActivity : AppCompatActivity() {
         val previous = activeTab
         if (previous !== tab) {
             previous?.let {
-                it.session.setFocused(false)
-                it.session.setActive(false)
+                runCatching { it.session.setFocused(false); it.session.setActive(false) }
+            }
+        }
+        if (tab.crashed) {
+            try {
+                tab.recoveryAttempts = 0
+                tab.crashed = false
+                attachDelegates(tab)
+                tab.session.open(BrowserEngine.runtime(this))
+                tab.session.loadUri(tab.url.ifBlank { homePageUrl() })
+            } catch (error: RuntimeException) {
+                tab.crashed = true
+                android.util.Log.e("BrowseX", "Manual tab recovery failed", error)
+                toast("This tab could not be reopened")
             }
         }
         activeTab = tab
-        tab.crashed = false
         tab.session.setActive(true)
         tab.session.setFocused(true)
         browserView.setSession(tab.session)
@@ -544,7 +659,7 @@ class MainActivity : AppCompatActivity() {
         if (wasActive) browserView.releaseSession()
         tabs.removeAt(index)
         tab.session.close()
-        if (tabs.isEmpty()) createTab(HOME_URL)
+        if (tabs.isEmpty()) createTab(homePageUrl())
         else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
         else updateChrome()
     }
@@ -634,15 +749,21 @@ class MainActivity : AppCompatActivity() {
                         return@runOnUiThread
                     }
                     tab.recoveryAttempts += 1
-                    val restoreUrl = tab.url.ifBlank { HOME_URL }
+                    val restoreUrl = tab.url.ifBlank { homePageUrl() }
                     val wasActive = tab === activeTab
                     tab.permissionDelegate?.cancelPending()
                     cancelPlatformPermissionRequests(session)
                     attachDelegates(tab)
                     try {
                         session.open(BrowserEngine.runtime(this@MainActivity))
-                        if (wasActive) activateTab(tab)
-                        session.loadUri(restoreUrl)
+                        if (wasActive) {
+                            activateTab(tab)
+                            session.loadUri(restoreUrl)
+                        } else {
+                            session.setFocused(false)
+                            session.setActive(false)
+                            session.loadUri(restoreUrl)
+                        }
                     } catch (error: RuntimeException) {
                         tab.crashed = true
                         android.util.Log.e("BrowseX", "Tab recovery failed", error)
@@ -670,7 +791,7 @@ class MainActivity : AppCompatActivity() {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(12))
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setBackgroundColor(colors.canvas)
         }
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -678,34 +799,34 @@ class MainActivity : AppCompatActivity() {
         }
         val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(this).apply {
-            text = "Your space"
+            text = tr("Your space")
             textSize = 25f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(19, 43, 64))
+            setTextColor(colors.ink)
         })
         heading.addView(TextView(this).apply {
-            text = "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
+            text = if (BrowseXColors.isArabic(store)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
             textSize = 13f
-            setTextColor(Color.rgb(83, 105, 123))
+            setTextColor(colors.muted)
             setPadding(0, dp(3), 0, 0)
         })
         header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
         val add = TextView(this).apply {
-            text = "+  New tab"
+            text = "+  ${tr("New tab")}"
             textSize = 14f
-            setTextColor(Color.WHITE)
+            setTextColor(colors.card)
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(11), dp(16), dp(11))
-            background = rounded(Color.rgb(8, 102, 217), 22)
-            setOnClickListener { createTab(HOME_URL); dialog.dismiss(); showTabs() }
+            background = rounded(colors.accent, 22)
+            setOnClickListener { createTab(homePageUrl()); dialog.dismiss(); showTabs() }
         }
         header.addView(add)
         page.addView(header)
 
         val hint = TextView(this).apply {
-            text = "Tap a card to return to it"
+            text = tr("Tap a card to return to it")
             textSize = 12f
-            setTextColor(Color.rgb(83, 105, 123))
+            setTextColor(colors.muted)
             setPadding(0, dp(15), 0, dp(12))
         }
         page.addView(hint)
@@ -722,25 +843,25 @@ class MainActivity : AppCompatActivity() {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(dp(13), dp(13), dp(13), dp(12))
-                    background = rounded(Color.WHITE, 18)
+                    background = rounded(colors.card, 18)
                     elevation = dp(if (selected) 4 else 1).toFloat()
                 }
                 val preview = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
                     setPadding(dp(8), dp(8), dp(8), dp(8))
-                    background = rounded(if (selected) Color.rgb(225, 239, 255) else Color.rgb(243, 247, 251), 12)
+                    background = rounded(if (selected) colors.selected else colors.panel, 12)
                 }
                 preview.addView(TextView(this).apply {
                     text = "Browse X"
                     textSize = 11f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.rgb(8, 102, 217))
+                    setTextColor(colors.accent)
                 })
                 preview.addView(TextView(this).apply {
                     text = tab.title.ifBlank { "New tab" }
                     textSize = 13f
-                    setTextColor(Color.rgb(31, 48, 65))
+                    setTextColor(colors.ink)
                     maxLines = 2
                     gravity = Gravity.CENTER
                     setPadding(0, dp(7), 0, dp(3))
@@ -750,14 +871,14 @@ class MainActivity : AppCompatActivity() {
                     text = tab.title.ifBlank { "New tab" }
                     textSize = 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.rgb(19, 43, 64))
+                    setTextColor(colors.ink)
                     maxLines = 1
                     setPadding(0, dp(10), 0, dp(3))
                 })
                 card.addView(TextView(this).apply {
                     text = tab.url.removePrefix("https://").removePrefix("http://").ifBlank { "Start page" }
                     textSize = 11f
-                    setTextColor(Color.rgb(83, 105, 123))
+                    setTextColor(colors.muted)
                     maxLines = 2
                 })
                 val actions = LinearLayout(this).apply {
@@ -768,13 +889,13 @@ class MainActivity : AppCompatActivity() {
                 actions.addView(TextView(this).apply {
                     text = if (selected) "● Active" else "Open"
                     textSize = 12f
-                    setTextColor(if (selected) Color.rgb(8, 102, 217) else Color.rgb(83, 105, 123))
+                    setTextColor(if (selected) colors.accent else colors.muted)
                 }, LinearLayout.LayoutParams(0, dp(32), 1f))
                 actions.addView(TextView(this).apply {
                     text = "×"
                     textSize = 22f
                     gravity = Gravity.CENTER
-                    setTextColor(Color.rgb(190, 65, 75))
+                    setTextColor(colors.danger)
                     contentDescription = "Close tab"
                     setPadding(dp(12), 0, dp(5), 0)
                     setOnClickListener {
@@ -802,8 +923,8 @@ class MainActivity : AppCompatActivity() {
             text = "Done"
             textSize = 14f
             gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(19, 43, 64), 24)
+            setTextColor(colors.card)
+            background = rounded(colors.ink, 24)
             setPadding(dp(20), dp(13), dp(20), dp(13))
         }
         page.addView(done, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })
@@ -823,7 +944,7 @@ class MainActivity : AppCompatActivity() {
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
             "Site information", "Search engine", "Clear browsing history", "Settings"
-        )
+        ).map(::tr).toTypedArray()
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
                 0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
@@ -839,9 +960,9 @@ class MainActivity : AppCompatActivity() {
                 7 -> openReaderMode()
                 8 -> showSiteInformation()
                 9 -> chooseSearchEngine()
-                10 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
+                10 -> AlertDialog.Builder(this).setMessage(tr("Delete all browsing history?"))
+                    .setNegativeButton(tr("Cancel"), null)
+                    .setPositiveButton(tr("Clear")) { _, _ -> store.clearHistory(); toast("History cleared") }.show()
                 11 -> showSettings()
             }
         }.show()
@@ -857,8 +978,8 @@ class MainActivity : AppCompatActivity() {
         }
         val sourceUrl = tab.url
         val loading = AlertDialog.Builder(this)
-            .setTitle("Reader mode")
-            .setMessage("Preparing a clean reading view…")
+            .setTitle(tr("Reader mode"))
+            .setMessage(tr("Preparing a clean reading view…"))
             .setNegativeButton("Cancel", null)
             .create()
         loading.show()
@@ -871,7 +992,7 @@ class MainActivity : AppCompatActivity() {
                     if (content.isBlank()) {
                         toast("This page does not contain readable text")
                     } else {
-                        ReaderPage(this, tab.title, sourceUrl, content).show()
+                        ReaderPage(this, tab.title, sourceUrl, content, store).show()
                     }
                 }
             },
@@ -893,12 +1014,42 @@ class MainActivity : AppCompatActivity() {
             toast("Open a website first")
             return
         }
-        SiteInfoPage(
-            activity = this,
-            url = url,
-            title = tab.title,
-            permissions = tab.sitePermissions
-        ).show()
+        fun showPage() {
+            if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return
+            SiteInfoPage(
+                activity = this,
+                url = url,
+                title = tab.title,
+                permissions = tab.sitePermissions,
+                store = store,
+                onPermissionChange = { permission, value ->
+                    val storage = browserRuntime?.storageController
+                    storage?.setPermission(permission, value)
+                    storage?.getPermissions(url, false)?.accept(
+                        { updated -> runOnUiThread {
+                            if (tabs.contains(tab) && tab.url == url) tab.sitePermissions = updated.toList()
+                        } },
+                        { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
+                    )
+                }
+            ).show()
+        }
+        val storage = browserRuntime?.storageController
+        if (storage == null) {
+            showPage()
+            return
+        }
+        storage.getPermissions(url, false).accept(
+            { permissions -> runOnUiThread {
+                if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
+                tab.sitePermissions = permissions.toList()
+                showPage()
+            } },
+            { error -> runOnUiThread {
+                android.util.Log.w("BrowseX", "Could not load site permissions", error)
+                showPage()
+            } }
+        )
     }
 
     private fun showSettings() {
@@ -911,6 +1062,10 @@ class MainActivity : AppCompatActivity() {
             clearHistory = {
                 store.clearHistory()
                 toast("History cleared")
+            },
+            setWebsiteNotifications = { enabled ->
+                store.siteNotificationsEnabled = enabled
+                if (!enabled) NotificationManagerCompat.from(this).cancelAll()
             }
         ).show()
     }
@@ -935,10 +1090,27 @@ class MainActivity : AppCompatActivity() {
     /** Routes GeckoView's external responses through Android's supported download service. */
     private fun enqueueDownload(response: WebResponse) {
         val url = response.uri
-        val uri = Uri.parse(url)
-        if ((uri.scheme != "https" && uri.scheme != "http") || uri.host.isNullOrBlank()) {
+        val uri = try { Uri.parse(url) } catch (_: Exception) { null }
+        if (uri == null || (uri.scheme != "https" && uri.scheme != "http") ||
+            uri.host.isNullOrBlank() || uri.userInfo != null
+        ) {
             response.body?.close()
             toast("This download link is not supported")
+            return
+        }
+        if (Build.VERSION.SDK_INT <= 28 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        ) {
+            response.body?.close()
+            if (!::legacyDownloadPermissionLauncher.isInitialized || isFinishing || isDestroyed) {
+                toast("Storage permission is unavailable")
+                return
+            }
+            waitingForLegacyDownloads.add(response)
+            if (!legacyDownloadPermissionInFlight) {
+                legacyDownloadPermissionInFlight = true
+                legacyDownloadPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
             return
         }
         val disposition = response.headers.entries.firstOrNull {
@@ -947,26 +1119,34 @@ class MainActivity : AppCompatActivity() {
         val mime = response.headers.entries.firstOrNull {
             it.key.equals("content-type", ignoreCase = true)
         }?.value?.substringBefore(';')
-        val filename = URLUtil.guessFileName(url, disposition, mime)
+        val candidate = URLUtil.guessFileName(url, disposition, mime)
             .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            .take(180)
+            .filterNot { it.isISOControl() }
+            .trim()
+            .trim('.')
+            .take(140)
             .ifBlank { "download" }
+        val filename = store.reserveDownloadFileName(candidate)
         try {
             val request = DownloadManager.Request(uri)
                 .setTitle(filename)
-                .setDescription("Downloading with Browse X")
+                .setDescription("Downloading with BrowseX")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
             if (!mime.isNullOrBlank()) request.setMimeType(mime)
             CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }?.let {
                 request.addRequestHeader("Cookie", it)
             }
-            request.addRequestHeader("User-Agent", org.mozilla.geckoview.GeckoSession.getDefaultUserAgent())
+            request.addRequestHeader("User-Agent", GeckoSession.getDefaultUserAgent())
             val id = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
             store.addBrowseXDownload(id)
             response.body?.close()
-            toast("Download added: $filename")
+            toast("Download queued: $filename. Protected or POST requests may not transfer exactly.")
             android.util.Log.i("BrowseX", "Download queued with id=$id")
+        } catch (error: SecurityException) {
+            response.body?.close()
+            android.util.Log.e("BrowseX", "Download destination permission denied", error)
+            toast("Android denied access to the Downloads folder")
         } catch (error: Exception) {
             response.body?.close()
             android.util.Log.e("BrowseX", "Unable to queue download", error)
@@ -1004,7 +1184,7 @@ class MainActivity : AppCompatActivity() {
         }
         val count = TextView(this).apply {
             text = "Type to search"
-            setTextColor(Color.rgb(83, 105, 123))
+            setTextColor(colors.muted)
             setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         val panel = LinearLayout(this).apply {
@@ -1055,7 +1235,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toast(message: String) {
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(this, tr(message), android.widget.Toast.LENGTH_SHORT).show()
     }
 
 }

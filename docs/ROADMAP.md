@@ -1,6 +1,6 @@
 # BrowseX implementation roadmap
 
-This file is the source of truth for feature sequencing. Keep each task small, tested, and buildable.
+This file records implementation state separately from device verification. A checked implementation item is not a claim that it has passed the final build or physical-device QA.
 
 ## Phase 0 — engineering baseline
 
@@ -8,7 +8,7 @@ This file is the source of truth for feature sequencing. Keep each task small, t
 - [x] Record architecture, lifecycle rules, compatibility targets and feature contracts.
 - [x] Extract URL parsing/validation into a pure policy with unit tests.
 - [x] Add CI gates for unit tests, lint, APK verification and checksums.
-- [x] Add pure tests for persisted URL validation, duplicate removal, storage limits and search-engine fallback.
+- [x] Add pure tests for persisted URL validation, duplicate tabs, storage limits and search-engine fallback.
 - [ ] Add Android-backed persistence tests for BrowserStore.
 - [ ] Establish a stable release signing/update strategy; debug signatures are not a release strategy.
 
@@ -17,34 +17,42 @@ This file is the source of truth for feature sequencing. Keep each task small, t
 - [x] Validate external HTTP/HTTPS intents and reject unsafe schemes.
 - [x] Persist and restore a bounded, URL-validated tab snapshot and active tab.
 - [x] Enforce the 20-tab cap for regular and popup tab creation.
+- [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
+- [x] Add one automatic recovery attempt for crashed content sessions and a manual retry path after repeated crashes.
 - [ ] Verify process recreation, tab switching and GeckoSession lifecycle on Android 10 and newer.
 - [ ] Verify back/forward, fullscreen, popup/new-session and share flows on device.
 
-## Phase 2 — core product screens
+## Phase 2 — permissions, notifications and downloads
 
-- [x] Add settings, bookmarks, history, reader mode and read-only site information screens.
-- [x] Route GeckoView external responses to Android DownloadManager.
-- [x] Track BrowseX-owned DownloadManager IDs and filter the Downloads screen so it does not list other apps' downloads.
-- [x] Support opening completed downloads and removing/cancelling queued or active downloads.
-- [ ] Improve download fidelity for POST requests and custom authorization headers; current DownloadManager integration re-fetches the response URL and only forwards cookies and a default User-Agent.
-- [ ] Add durable Android-backed tests for the download registry and device tests for redirects, duplicate names, failures and cancellation.
-- [ ] Implement site permission prompts using the exact pinned GeckoView 150 API, including Android runtime permissions for location/camera/microphone.
-- [ ] Implement web notifications end-to-end: content permission, GeckoView WebNotificationDelegate, Android notification channels and API 33+ runtime permission.
-- [ ] Add permission revoke controls using GeckoView's stored ContentPermission objects.
+- [x] Add Android runtime permission handling for location, camera and microphone requests coming from GeckoView.
+- [x] Add per-site content permission prompts with Allow, Block and Not now outcomes.
+- [x] Add Site Info controls to change stored content permissions to Allow, Block or Ask; persistent storage has an explicit non-revocable state.
+- [x] Store camera/microphone decisions by validated site origin and separately require Android runtime permission.
+- [x] Bridge Gecko web notifications to Android NotificationManager channels, including Android 13+ POST_NOTIFICATIONS and tap/dismiss callbacks.
+- [x] Suppress website notifications for private-browsing notifications and honor the app-level notification switch.
+- [x] Map DownloadManager pending/running/paused/successful/failed/unknown states and Android reason codes.
+- [x] Report missing DownloadManager records and allow their BrowseX registry entries to be removed.
+- [x] Sanitize and reserve collision-safe filenames for downloads started by BrowseX.
+- [x] Request legacy external-storage permission only on Android API 26–28.
+- [ ] Implement exact POST-body / protected request transfer, custom authorization headers and byte-for-byte download continuation; the current DownloadManager URL re-fetch cannot guarantee these semantics.
+- [ ] Add Android-backed tests for notification callbacks, permission callbacks and download registry behavior.
 
 ## Phase 3 — design coverage and accessibility
 
-- [ ] Compare each implemented screen against its Figma frame and record deviations.
-- [ ] Complete home/start screen states and visual tab workspace.
-- [ ] Complete downloads, reader, alerts/notifications, share sheet and settings screens.
-- [ ] Complete landscape and tablet layouts.
-- [ ] Verify touch targets, contrast, font scaling, RTL and narrow 720px-wide devices.
+- [x] Add shared System/Light/Dark palette and preferred Gecko web-content color scheme.
+- [x] Add Arabic/English/System language choices and apply RTL to the local home page and core native screens.
+- [x] Apply theme palette to home, browser chrome, Settings, Site Info, Downloads, Reader and Saved Pages.
+- [x] Improve primary control touch targets and accessible labels.
+- [ ] Compare each implemented screen against its Figma frame and record remaining deviations.
+- [ ] Finish translations for every secondary prompt and toast; some uncommon strings remain English.
+- [ ] Verify compact, landscape, tablet, large-font and screen-reader layouts on devices.
 
 ## Phase 4 — release hardening
 
-- [x] CI builds debug APK outputs for `armeabi-v7a`, `arm64-v8a` and universal output and verifies package ID, minSdk, native libraries, signatures and checksums.
+- [x] CI workflow defines unit-test, lint, ABI APK build, package verification and checksums.
+- [ ] Run the one final comprehensive CI/QA pass after this implementation batch is complete.
 - [ ] Run Android 10/API 29 smoke tests and current Android smoke tests.
-- [ ] Verify cold start, offline/error page, downloads, external links and rotation.
+- [ ] Verify cold start, offline/error page, downloads, external links, theme switching and process recreation.
 - [ ] Configure stable release signing and version/update policy.
 - [ ] Publish only artifacts from a green commit; attach SHA-256 checksums and release notes.
 

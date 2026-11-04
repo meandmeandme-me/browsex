@@ -76,6 +76,10 @@ BrowseX/
 └── README.md
 ```
 
+## Current implementation files
+
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+
 ## Dependency direction
 
 Keep dependencies pointing inward and avoid feature-to-feature coupling:

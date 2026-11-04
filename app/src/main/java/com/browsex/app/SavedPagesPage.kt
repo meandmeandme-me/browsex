@@ -25,9 +25,11 @@ internal class SavedPagesPage(
 ) {
     private val pages = initialPages.toMutableList()
     private var dismissDialog: (() -> Unit)? = null
-    private val ink = Color.rgb(19, 43, 64)
-    private val muted = Color.rgb(83, 105, 123)
-    private val accent = Color.rgb(8, 102, 217)
+    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val ink get() = colors.ink
+    private val muted get() = colors.muted
+    private val accent get() = colors.accent
+    private fun t(en: String, ar: String) = if (BrowseXColors.isArabic(store)) ar else en
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
@@ -40,7 +42,8 @@ internal class SavedPagesPage(
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(16), dp(18), dp(14))
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setBackgroundColor(colors.canvas)
+            BrowseXColors.applyDirection(this, store)
         }
         val header = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -48,13 +51,13 @@ internal class SavedPagesPage(
         }
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
-            text = title
+            text = if (title == "Bookmarks") t("Bookmarks", "المفضلة") else t("History", "السجل")
             textSize = 26f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ink)
         })
         heading.addView(TextView(activity).apply {
-            text = if (isHistory) "Pages you have visited" else "Websites saved for later"
+            text = if (isHistory) t("Pages you have visited", "الصفحات التي زرتها") else t("Websites saved for later", "مواقع حفظتها لوقت لاحق")
             textSize = 12f
             setTextColor(muted)
             setPadding(0, dp(3), 0, 0)
@@ -65,20 +68,22 @@ internal class SavedPagesPage(
             textSize = 27f
             gravity = Gravity.CENTER
             setTextColor(ink)
-            background = rounded(Color.WHITE, 14)
-            contentDescription = "Close"
+            background = rounded(colors.card, 14)
+            contentDescription = t("Close", "إغلاق")
         }
-        header.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)))
+        close.minimumWidth = dp(48)
+        close.minimumHeight = dp(48)
+        header.addView(close, LinearLayout.LayoutParams(dp(48), dp(48)))
         root.addView(header)
 
         val search = EditText(activity).apply {
-            hint = if (isHistory) "Search browsing history" else "Search bookmarks"
+            hint = if (isHistory) t("Search browsing history", "ابحث في سجل التصفح") else t("Search bookmarks", "ابحث في المفضلة")
             textSize = 14f
             isSingleLine = true
             setTextColor(ink)
             setHintTextColor(muted)
             setPadding(dp(15), 0, dp(15), 0)
-            background = rounded(Color.WHITE, 15)
+            background = rounded(colors.card, 15)
         }
         root.addView(search, LinearLayout.LayoutParams(-1, dp(48)).apply {
             topMargin = dp(17)
@@ -95,7 +100,7 @@ internal class SavedPagesPage(
             textSize = 13f
             setTextColor(muted)
             setPadding(dp(22), dp(38), dp(22), dp(38))
-            background = rounded(Color.WHITE, 16)
+            background = rounded(colors.card, 16)
         }
 
         val tools = LinearLayout(activity).apply {
@@ -110,24 +115,24 @@ internal class SavedPagesPage(
         tools.addView(count, LinearLayout.LayoutParams(0, -2, 1f))
         if (isHistory) {
             val clear = TextView(activity).apply {
-                text = "Clear history"
+                text = t("Clear history", "مسح السجل")
                 textSize = 12f
                 setTypeface(typeface, Typeface.BOLD)
-                setTextColor(Color.rgb(190, 65, 75))
+                setTextColor(colors.danger)
                 setPadding(dp(10), dp(8), dp(4), dp(8))
                 setOnClickListener {
                     AlertDialog.Builder(activity)
-                        .setTitle("Clear browsing history?")
+                        .setTitle(t("Clear browsing history?", "مسح سجل التصفح؟"))
                         .setMessage("This removes the history saved by Browse X. Bookmarks and downloaded files are kept.")
-                        .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Clear") { _, _ ->
+                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                        .setPositiveButton(t("Clear", "مسح")) { _, _ ->
                             store.clearHistory()
                             pages.clear()
                             search.text?.clear()
                             if (search.text.isNullOrEmpty()) {
                                 list.removeAllViews()
-                                count.text = "0 of 0 ${if (isHistory) "pages" else "saved sites"}"
-                                empty.text = if (isHistory) "Your browsing history is empty." else "No bookmarks yet. Save a page to find it here."
+                                count.text = if (BrowseXColors.isArabic(store)) "0 من 0 صفحة" else "0 of 0 ${if (isHistory) "pages" else "saved sites"}"
+                                empty.text = if (isHistory) t("Your browsing history is empty.", "سجل التصفح فارغ.") else t("No bookmarks yet. Save a page to find it here.", "لا توجد صفحات مفضلة بعد. احفظ صفحة لتظهر هنا.")
                                 list.addView(empty, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
                             }
                         }.show()
@@ -170,12 +175,12 @@ internal class SavedPagesPage(
             normalized.isBlank() || page.contains(normalized, ignoreCase = true) ||
                 Uri.parse(page).host.orEmpty().contains(normalized, ignoreCase = true)
         }
-        count.text = "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
+        count.text = if (BrowseXColors.isArabic(store)) "${filtered.size} من ${pages.size} صفحة" else "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
         if (filtered.isEmpty()) {
             empty.text = when {
                 pages.isEmpty() && isHistory -> "Your browsing history is empty."
                 pages.isEmpty() -> "No bookmarks yet. Save a page to find it here."
-                else -> "No pages match your search."
+                else -> t("No pages match your search.", "لا توجد صفحات تطابق البحث.")
             }
             list.addView(empty, LinearLayout.LayoutParams(-1, -2).apply {
                 topMargin = dp(8)
@@ -187,7 +192,7 @@ internal class SavedPagesPage(
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(13), dp(12), dp(8), dp(12))
-                background = rounded(Color.WHITE, 15)
+                background = rounded(colors.card, 15)
                 isFocusable = true
                 isClickable = true
             }
@@ -212,9 +217,11 @@ internal class SavedPagesPage(
                 text = "×"
                 textSize = 23f
                 gravity = Gravity.CENTER
-                setTextColor(Color.rgb(190, 65, 75))
-                contentDescription = if (isHistory) "Remove from history" else "Remove bookmark"
+                setTextColor(colors.danger)
+                contentDescription = if (isHistory) t("Remove from history", "حذف من السجل") else t("Remove bookmark", "إزالة من المفضلة")
                 setPadding(dp(12), dp(5), dp(8), dp(5))
+                minimumWidth = dp(48)
+                minimumHeight = dp(48)
                 setOnClickListener {
                     if (isHistory) store.removeHistory(page) else store.removeBookmark(page)
                     pages.remove(page)

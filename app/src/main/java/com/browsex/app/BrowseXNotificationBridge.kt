@@ -96,8 +96,8 @@ internal class BrowseXNotificationBridge(
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
-            CHANNEL_ID, "Website notifications", NotificationManager.IMPORTANCE_DEFAULT
-        ).apply { description = "Notifications sent by websites you allow in BrowseX" }
+            CHANNEL_ID, activity.getString(R.string.website_notification_channel), NotificationManager.IMPORTANCE_DEFAULT
+        ).apply { description = activity.getString(R.string.website_notification_channel_description) }
         activity.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
