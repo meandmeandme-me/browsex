@@ -24,6 +24,7 @@ internal class SavedPagesPage(
     private val onOpen: (String) -> Unit
 ) {
     private val pages = initialPages.toMutableList()
+    private var selectedFolderId: String? = null
     private var dismissDialog: (() -> Unit)? = null
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val ink get() = colors.ink
@@ -88,6 +89,13 @@ internal class SavedPagesPage(
         root.addView(search, LinearLayout.LayoutParams(-1, dp(48)).apply {
             topMargin = dp(17)
         })
+        val folderBar = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = if (isHistory) android.view.View.GONE else android.view.View.VISIBLE
+            setPadding(0, dp(8), 0, dp(2))
+        }
+        root.addView(folderBar)
 
         val scroll = ScrollView(activity).apply { clipToPadding = false }
         val list = LinearLayout(activity).apply {
@@ -150,6 +158,55 @@ internal class SavedPagesPage(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, countAfter: Int) = refresh(s?.toString().orEmpty())
             override fun afterTextChanged(s: Editable?) = Unit
         })
+        fun drawFolders() {
+            folderBar.removeAllViews()
+            val folders = store.bookmarkFolders()
+            fun chip(label: String, id: String?) {
+                val selected = selectedFolderId == id
+                val view = TextView(activity).apply {
+                    text = label
+                    textSize = 11f
+                    setTypeface(typeface, Typeface.BOLD)
+                    setTextColor(if (selected) colors.accent else muted)
+                    setPadding(dp(12), dp(9), dp(12), dp(9))
+                    background = rounded(if (selected) colors.selected else colors.card, 18)
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener { selectedFolderId = id; drawFolders(); refresh(search.text?.toString().orEmpty()) }
+                }
+                folderBar.addView(view, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
+            }
+            chip(t("All", "الكل"), null)
+            folders.forEach { folder ->
+                chip(if (folder.id == BookmarkFolder.DEFAULT_ID) t("Unfiled", "غير مصنف") else folder.name, folder.id)
+            }
+            val add = TextView(activity).apply {
+                text = "+"
+                textSize = 19f
+                gravity = Gravity.CENTER
+                setTextColor(accent)
+                setPadding(dp(12), dp(5), dp(12), dp(5))
+                background = rounded(colors.card, 18)
+                contentDescription = t("Create folder", "إنشاء مجلد")
+                setOnClickListener {
+                    val field = EditText(activity).apply {
+                        hint = t("Folder name", "اسم المجلد")
+                        maxLines = 1
+                    }
+                    AlertDialog.Builder(activity)
+                        .setTitle(t("New bookmark folder", "مجلد مفضلة جديد"))
+                        .setView(field)
+                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                        .setPositiveButton(t("Create", "إنشاء")) { _, _ ->
+                            val created = store.createBookmarkFolder(field.text?.toString().orEmpty())
+                            if (created == null) toast(t("Folder name is invalid or already used", "اسم المجلد غير صالح أو مستخدم"))
+                            else { selectedFolderId = created.id; drawFolders(); refresh(search.text?.toString().orEmpty()) }
+                        }.show()
+                }
+            }
+            folderBar.addView(add, LinearLayout.LayoutParams(dp(42), dp(38)))
+        }
+        drawFolders()
         refresh("")
 
         dialog = AlertDialog.Builder(activity).setView(root).create()
@@ -171,9 +228,12 @@ internal class SavedPagesPage(
     ) {
         list.removeAllViews()
         val normalized = query.trim()
+        val folderUrls = if (isHistory || selectedFolderId == null) null else
+            store.bookmarkItems().filter { it.folderId == selectedFolderId }.map { it.url }.toSet()
         val filtered = pages.filter { page ->
-            normalized.isBlank() || page.contains(normalized, ignoreCase = true) ||
-                Uri.parse(page).host.orEmpty().contains(normalized, ignoreCase = true)
+            (folderUrls == null || page in folderUrls) &&
+                (normalized.isBlank() || page.contains(normalized, ignoreCase = true) ||
+                    Uri.parse(page).host.orEmpty().contains(normalized, ignoreCase = true))
         }
         count.text = if (BrowseXColors.isArabic(store)) "${filtered.size} من ${pages.size} صفحة" else "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
         if (filtered.isEmpty()) {
@@ -230,6 +290,19 @@ internal class SavedPagesPage(
             }
             item.addView(remove)
             item.setOnClickListener { onOpen(page); dismissDialog?.invoke() }
+            if (!isHistory) item.setOnLongClickListener {
+                val folders = store.bookmarkFolders()
+                val labels = folders.map { if (it.id == BookmarkFolder.DEFAULT_ID) t("Unfiled", "غير مصنف") else it.name }.toTypedArray()
+                AlertDialog.Builder(activity)
+                    .setTitle(t("Move bookmark to folder", "نقل المفضلة إلى مجلد"))
+                    .setItems(labels) { _, index ->
+                        store.moveBookmark(page, folders[index].id)
+                        render(query, list, count, empty)
+                    }
+                    .setNegativeButton(t("Cancel", "إلغاء"), null)
+                    .show()
+                true
+            }
             list.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(8)
             })
