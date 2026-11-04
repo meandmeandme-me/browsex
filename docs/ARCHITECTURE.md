@@ -68,3 +68,6 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - Desktop browser engines must be selected per OS after compatibility, security, sandbox, extension, accessibility, performance, licensing and update evaluation. GeckoView remains the Android engine.
 - Android TV requires a remote-first focus-navigation design, not a scaled phone layout.
 - See MULTIPLATFORM_ARCHITECTURE.md, ACCOUNT_SYNC_FOUNDATION.md and ACCOUNT_SYNC_UX_MAP.md.
+## GeckoSession lifecycle ownership
+
+`BrowserSessionLifecycleCoordinator` owns session release for memory pressure, the live-session budget, session reset and Activity teardown. `MainActivity` remains responsible for selected-tab UI, GeckoView attachment and Android permission queues, which are injected as cleanup callbacks. This is an incremental boundary extraction, not a complete separation of browser orchestration.
