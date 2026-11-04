@@ -74,6 +74,7 @@ Never call a build successful until its workflow conclusion is `success` and the
 ## Extracted browser storage boundaries
 
 - [x] DownloadManager IDs, response-stream records, filename reservations and interrupted-record recovery are delegated to BrowserDownloadStore using the existing persisted keys.
+- [x] BrowserStore is reduced to a compatibility facade; feature callers retain their existing API while storage responsibilities are separated.
 - [ ] Verify active response-stream records, completed records, cancellation and DownloadManager ID ownership after upgrade/restart.
 
 - [x] Bookmark folders/items, history, legacy bookmark migration and JSON backup/import are delegated to BrowserLibraryStore without changing existing persisted keys.
