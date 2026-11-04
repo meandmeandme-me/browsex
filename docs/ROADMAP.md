@@ -22,11 +22,12 @@ This file records implementation state separately from device verification. A ch
 - [x] Add Gecko private-mode tabs; exclude their URLs from persisted sessions and history, inherit private mode for popup tabs, and close their session data with the tab.
 - [x] Add BrowseX Recall to search regular open tabs, bookmarks and recent history from one surface; private tabs are intentionally excluded.
 - [x] Save, list, reopen and delete up to ten named regular-tab sessions; private tabs are never included in a saved session.
+- [x] Keep up to ten recently closed regular tabs and restore them from the tab workspace; private tabs are never recorded.
 - [x] Extract process-wide GeckoRuntime ownership and the tab/session state model from MainActivity into a dedicated browser-core file.
 - [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
 - [x] Add one automatic recovery attempt for crashed content sessions and a manual retry path after repeated crashes.
-- [ ] Verify process recreation, tab switching, named-session persistence and GeckoSession lifecycle on Android 10 and newer.
+- [ ] Verify process recreation, recently-closed restore, tab switching, named-session persistence and GeckoSession lifecycle on Android 10 and newer.
 - [ ] Verify back/forward, fullscreen, popup/new-session and share flows on device.
 
 ## Phase 2 — permissions, notifications and downloads
@@ -55,7 +56,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Apply theme palette to home, browser chrome, Settings, Site Info, Downloads, Reader and Saved Pages.
 - [x] Improve primary control touch targets and accessible labels.
 - [ ] Produce a complete Uizard screen/flow map from the product requirements and compare every delivered screen against the approved Uizard direction.
-- [ ] Finish translations for every secondary prompt and toast; some uncommon strings remain English.
+- [ ] Finish translations for remaining secondary prompts/toasts and the custom home page; add language-specific plural/date/number formatting.
 - [ ] Verify compact, landscape, tablet, large-font and screen-reader layouts on devices.
 
 ## Phase 4 — release hardening
@@ -71,7 +72,9 @@ This file records implementation state separately from device verification. A ch
 
 - [x] Add bounded bookmark folders, safe legacy migration, validated JSON import/export, title-aware search and manual ordering.
 - [x] Persist home section visibility and shortcut layout preferences with reset behavior.
-- [ ] Expand Android string resources beyond the initial English/Arabic browser-chrome migration; add locale packs and resource-based translation for Settings, Downloads and Library screens, plus plural/number/date formatting.
+- [x] Move browser chrome, Settings, Downloads and Saved Pages labels into shared Android resource lookup with English/Arabic resources.
+- [x] Accept validated BCP 47 app language tags and preserve device locale/RTL direction in the home page.
+- [ ] Add professionally reviewed locale packs beyond English/Arabic; complete plural/number/date formatting and translation coverage for every feature screen. Unsupported locales currently fall back to English.
 - [ ] Complete locale-aware mixed RTL/LTR rendering, font fallback, Unicode search normalization and accessibility verification.
 - [ ] Define provider-neutral account identity and consent boundaries before adding Google, Microsoft, Apple or other identity providers.
 - [ ] Define opt-in, per-data-type sync contracts, encryption/key ownership, conflict resolution, offline queue and account deletion/export before any cloud sync.
