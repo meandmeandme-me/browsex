@@ -1090,6 +1090,28 @@ class MainActivity : AppCompatActivity() {
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
                     )
+                },
+                onResetPermissions = {
+                    val storage = browserRuntime?.storageController
+                    tab.sitePermissions.filter {
+                        it.permission != GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE
+                    }.forEach { permission ->
+                        storage?.setPermission(
+                            permission,
+                            GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+                        )
+                    }
+                    val uri = Uri.parse(url)
+                    val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
+                    store.clearSiteMediaDecisions(origin)
+                    tab.sitePermissions = emptyList()
+                    storage?.getPermissions(url, false)?.accept(
+                        { updated -> runOnUiThread {
+                            if (tabs.contains(tab) && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
+                        } },
+                        { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
+                    )
+                    toast("Site permissions reset")
                 }
             ).show()
         }
