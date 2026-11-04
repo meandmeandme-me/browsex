@@ -99,12 +99,50 @@ class MainActivity : AppCompatActivity() {
     private val notificationPermissionCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var notificationPermissionInFlight = false
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
+    private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
     private val waitingForLegacyDownloads = java.util.ArrayDeque<WebResponse>()
     private var legacyDownloadPermissionInFlight = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) runCatching {
+                contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(store.exportBookmarks().toByteArray(Charsets.UTF_8))
+                } ?: error("Could not open destination")
+            }.onSuccess { toast("Bookmarks exported") }
+                .onFailure { android.util.Log.e("BrowseX", "Bookmark export failed", it); toast("Could not export bookmarks") }
+        }
+        bookmarkImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) runCatching {
+                val bytes = contentResolver.openInputStream(uri)?.use { input ->
+                    val out = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    var total = 0
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= 1_000_000) { "Backup file is too large" }
+                        out.write(buffer, 0, count)
+                    }
+                    out.toByteArray()
+                } ?: error("Could not read backup")
+                String(bytes, Charsets.UTF_8)
+            }.onSuccess { payload ->
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Import bookmarks"))
+                    .setItems(arrayOf(tr("Merge with current bookmarks"), tr("Replace current bookmarks"))) { _, which ->
+                        runCatching { store.importBookmarks(payload, merge = which == 0) }
+                            .onSuccess { count -> toast("Imported $count bookmarks") }
+                            .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
+                    }
+                    .setNegativeButton(tr("Cancel"), null)
+                    .show()
+            }.onFailure { error -> android.util.Log.w("BrowseX", "Bookmark backup read failed", error); toast(error.message ?: "Could not read backup") }
+        }
         AppCompatDelegate.setDefaultNightMode(when (store.themeMode) {
             "dark" -> AppCompatDelegate.MODE_NIGHT_YES
             "light" -> AppCompatDelegate.MODE_NIGHT_NO
@@ -464,7 +502,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun homePageUrl(): String =
-        "$HOME_URL?bxlang=${store.languageMode}&bxtheme=${store.themeMode}"
+        "$HOME_URL?bxlang=${store.languageMode}&bxtheme=${store.themeMode}" +
+            "&bxquick=${store.homeShowQuickLinks}&bxdiscovery=${store.homeShowDiscovery}&bxlayout=${store.homeLayout}"
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
@@ -1086,8 +1125,40 @@ class MainActivity : AppCompatActivity() {
             setWebsiteNotifications = { enabled ->
                 store.siteNotificationsEnabled = enabled
                 if (!enabled) NotificationManagerCompat.from(this).cancelAll()
-            }
+            },
+            importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
+            exportBookmarks = { bookmarkExportLauncher.launch("browsex-bookmarks.json") },
+            showHomePreferences = { showHomePreferences() }
         ).show()
+    }
+
+    private fun showHomePreferences() {
+        val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
+        val checked = booleanArrayOf(store.homeShowQuickLinks, store.homeShowDiscovery)
+        AlertDialog.Builder(this)
+            .setTitle(tr("Home page"))
+            .setMultiChoiceItems(labels, checked) { _, which, enabled ->
+                if (which == 0) store.homeShowQuickLinks = enabled else store.homeShowDiscovery = enabled
+            }
+            .setPositiveButton(tr("Next")) { _, _ ->
+                val layouts = arrayOf(tr("Grid layout"), tr("List layout"))
+                val values = arrayOf("grid", "list")
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Shortcut layout"))
+                    .setSingleChoiceItems(layouts, values.indexOf(store.homeLayout).coerceAtLeast(0)) { choice, index ->
+                        store.homeLayout = values[index]
+                        choice.dismiss()
+                        activeTab?.takeIf { it.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
+                    }
+                    .setNeutralButton(tr("Reset")) { _, _ ->
+                        store.resetHomePreferences()
+                        activeTab?.takeIf { it.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
+                    }
+                    .setNegativeButton(tr("Close"), null)
+                    .show()
+            }
+            .setNegativeButton(tr("Cancel"), null)
+            .show()
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
