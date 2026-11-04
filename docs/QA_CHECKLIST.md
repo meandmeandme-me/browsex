@@ -5,6 +5,7 @@ Implementation and verification are tracked separately. Items under “implement
 ## Implemented paths to verify in the final pass
 
 - [x] Pure URL normalization and bounded tab snapshot normalization have unit coverage.
+- [x] Stream-download queued/running/terminal/cancelled state predicates have JVM unit coverage (not run in this implementation pass).
 - [x] Android location/camera/microphone runtime permission request bridge and allow/deny result handling.
 - [x] Gecko content permission prompt provides Allow, Block and Not now; Site Info can change stored decisions.
 - [x] Camera/microphone origin decisions are separate from Android runtime permissions.
