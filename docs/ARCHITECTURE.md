@@ -15,6 +15,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - `BrowserPreferencesStore` + `BrowserPreferencePolicy`: isolated browser-wide settings and per-origin media/platform permission decisions; pure BCP 47, theme and home-layout normalization is separately testable. `BrowserSessionStore` and these preference stores currently use the existing SharedPreferences file to preserve user data; a future DataStore/Room migration can now happen behind these boundaries.
 - `BrowserPalette`: shared light/dark/system color tokens and direction helpers for Android screens.
 - `BrowseXPermissionDelegate`: separates Android runtime permission requests from Gecko content and media permission decisions.
+- `BrowserAndroidPermissionQueue`: serializes Android runtime-permission prompts, validates the selected/live GeckoSession, and rejects queued/active Gecko callbacks exactly once on tab cancellation or Activity teardown. The Activity still owns the Activity Result launchers.
 - `BrowseXNotificationBridge` + `SiteNotificationActionReceiver`: WebNotificationDelegate adapter, Android notification channel, click and dismiss actions.
 - `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `ReaderPage`: feature screens; theme colors and RTL are shared through BrowserPalette. `BrowseXStrings` resolves UI labels from Android locale resources. `BrowserTextNormalizer` applies Unicode NFKC and locale-independent case normalization to library/Recall search.
 - `app/src/main/assets/home.html`: local start page; receives the stored language/theme selection through validated local query parameters.
@@ -70,7 +71,11 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - See MULTIPLATFORM_ARCHITECTURE.md, ACCOUNT_SYNC_FOUNDATION.md and ACCOUNT_SYNC_UX_MAP.md.
 ## GeckoSession lifecycle ownership
 
-`BrowserSessionLifecycleCoordinator` owns session release for memory pressure, the live-session budget, session reset and Activity teardown. `MainActivity` remains responsible for selected-tab UI, GeckoView attachment and Android permission queues, which are injected as cleanup callbacks. This is an incremental boundary extraction, not a complete separation of browser orchestration.
+`BrowserSessionLifecycleCoordinator` owns session release for memory pressure, the live-session budget, session reset and Activity teardown. `MainActivity` remains responsible for selected-tab UI, GeckoView attachment and Android Activity Result launchers. `BrowserAndroidPermissionQueue` owns request ordering, stale-tab rejection, per-session cancellation and teardown completion. This is an incremental boundary extraction, not a complete separation of browser orchestration.
+## Android permission lifecycle ownership
+
+`BrowserAndroidPermissionQueue` serializes Gecko-originated runtime permission requests while Android Activity Result launchers stay registered with `MainActivity`. It binds each callback to its originating session, rejects requests when their tab is no longer selected/live, and guarantees queued or active callbacks are rejected during session cancellation and Activity teardown. Website notification permission remains a separate Android 13+ flow because it has a distinct user-facing lifecycle.
+
 ## Download lifecycle ownership
 
 `StreamDownloadCoordinator` owns BrowseX stream-download metadata, progress updates, completion/failure state and cancellation around `DownloadResponseWriter`. The Activity still validates external responses, obtains legacy Android storage permission and presents user feedback. The writer continues to persist the original Gecko response body rather than re-fetching its URL.
