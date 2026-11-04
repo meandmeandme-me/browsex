@@ -92,8 +92,9 @@ internal class BrowserTabController(
             }
             if (!tab.sessionOpened) {
                 attachDelegates(tab)
-                tab.session.open(runtime())
+                // Mark ownership before opening so a partially failed Gecko open is still cleaned up.
                 tab.sessionOpened = true
+                tab.session.open(runtime())
                 tab.session.loadUri(tab.url.ifBlank { homeUrl() })
             }
             tab.session.setActive(true)
@@ -102,6 +103,10 @@ internal class BrowserTabController(
             enforceSessionBudget()
             updateChrome()
         } catch (error: RuntimeException) {
+            // A load/focus/view failure can happen after Gecko has opened the session.
+            // Reset through the lifecycle owner to avoid leaking a native session.
+            runCatching { sessionLifecycle.resetSession(tab) }
+                .onFailure { cleanupError -> error.addSuppressed(cleanupError) }
             tab.sessionOpened = false
             tab.crashed = true
             android.util.Log.e("BrowseX", "Could not activate tab session", error)
@@ -131,14 +136,28 @@ internal class BrowserTabController(
             return null
         }
         val child = BrowserTab(privateMode = parent.privateMode)
-        attachDelegates(child)
-        child.session.open(runtime())
-        child.sessionOpened = true
-        registry.add(child)
-        dispatchToMain {
-            if (!isHostUnavailable() && tabs.any { it === child }) activateTab(child)
-            else if (tabs.any { it === child }) closeTab(child)
+        try {
+            attachDelegates(child)
+            // Set the flag first so lifecycle cleanup also covers a partially failed open.
+            child.sessionOpened = true
+            child.session.open(runtime())
+            if (!registry.add(child)) {
+                sessionLifecycle.closeAndDiscard(child)
+                return null
+            }
+            dispatchToMain {
+                if (!isHostUnavailable() && tabs.any { it === child }) activateTab(child)
+                else if (tabs.any { it === child }) closeTab(child)
+            }
+            return GeckoResult.fromValue(child.session)
+        } catch (error: RuntimeException) {
+            runCatching { sessionLifecycle.closeAndDiscard(child) }
+                .onFailure { cleanupError -> error.addSuppressed(cleanupError) }
+            android.util.Log.e("BrowseX", "Could not create popup tab session", error)
+            dispatchToMain {
+                if (!isHostUnavailable()) showMessage("Could not open the new tab. Try again.")
+            }
+            return null
         }
-        return GeckoResult.fromValue(child.session)
     }
 }
