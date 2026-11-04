@@ -9,7 +9,7 @@
 :root{color-scheme:light;--canvas:#eff5fa;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--card:#fff;--shadow:0 6px 24px rgba(38,77,108,.07)}
 :root[dir="rtl"]{direction:rtl} :root[dir="rtl"] header{flex-direction:row-reverse} :root[dir="rtl"] .section-head{flex-direction:row-reverse} :root[dir="rtl"] .dialog-actions{flex-direction:row-reverse} :root[dir="rtl"] .shortcut-edit{right:auto;left:0}
 html,body{scrollbar-gutter:stable;}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
 body{background:linear-gradient(112deg,#e0f6fc 0%,#f4f7fc 48%,#e6ecfc 100%);background-attachment:fixed}
 main{width:min(100%,620px);margin:auto;padding:24px 20px 36px}
@@ -20,12 +20,12 @@ header{margin-bottom:30px}
 .brand-name{font-size:23px;font-weight:750;letter-spacing:-.7px}
  .icon-btn{width:48px;height:48px;border:0;border-radius:13px;background:var(--card);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}
 .greeting{margin:0 0 28px}
-h1{font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:760}
+h1{white-space:pre-line;font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:760}
 .greeting p{font-size:14px;color:var(--muted);margin:0}
 .section-head{margin:0 0 14px}
 .section-head h2{font-size:17px;font-weight:550;margin:0}
 .text-action{border:0;background:transparent;color:var(--blue);font-size:13px;font-weight:650;padding:8px 0;cursor:pointer}
-.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:30px}
+.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:30px}.shortcuts.list{grid-template-columns:1fr}.shortcuts.list .shortcut{flex-direction:row;justify-content:flex-start}.shortcuts.list .shortcut-icon{width:46px;height:46px;border-radius:14px}.shortcuts.list .shortcut-name{font-size:13px}
 .shortcut-wrap{position:relative;min-width:0}
 .shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink)}
 .shortcut-icon{width:58px;height:58px;border-radius:19px;background:var(--card);display:grid;place-items:center;font-size:25px;font-weight:650;box-shadow:var(--shadow);color:var(--blue);overflow:hidden}
@@ -63,7 +63,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  <div class="brand"><div class="mark" aria-hidden="true">✳</div><div class="brand-name">Browse X</div></div>
  <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle appearance">☾</button>
 </header>
-<section class="greeting"><h1>A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
+<section class="greeting"><h1 id="greeting-title">A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
 <section aria-labelledby="everyday-title">
  <div class="section-head"><h2 id="everyday-title">Your everyday</h2><button class="text-action" id="reset" type="button">Reset</button></div>
  <nav class="shortcuts" id="shortcuts" aria-label="Favorite websites"></nav>
@@ -176,6 +176,12 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  $('cancel').addEventListener('click',()=>dialog.close());
  $('delete').addEventListener('click',()=>{if(editing>=0){shortcuts.splice(editing,1);save();render()}dialog.close()});
  $('reset').addEventListener('click',()=>{shortcuts=defaults.map(x=>({...x}));save();render()});
+ const quickVisible=params.get('bxquick')!=='false';
+ const discoveryVisible=params.get('bxdiscovery')!=='false';
+ const shortcutLayout=params.get('bxlayout')==='list'?'list':'grid';
+ document.querySelector('[aria-labelledby="everyday-title"]').hidden=!quickVisible;
+ document.querySelector('[aria-labelledby="reading-title"]').hidden=!discoveryVisible;
+ $('shortcuts').classList.toggle('list',shortcutLayout==='list');
  const requestedTheme=params.get('bxtheme')||'system';
  const systemDark=()=>window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
  const applyTheme=(dark)=>{document.body.classList.toggle('dark',dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?copy.themeDark:copy.themeLight);$('theme').title=dark?copy.themeDark:copy.themeLight;};
@@ -183,7 +189,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  applyTheme(shouldDark);
  $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
  if(requestedTheme==='system'&&window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',event=>applyTheme(event.matches));}
- $('greeting-title').innerHTML=copy.main.map(s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;')).join('<br>');
+ $('greeting-title').textContent=copy.main.join('\\n');
  $('everyday-title').textContent=copy.everyday;$('reset').textContent=copy.reset;
  $('reading-title').textContent=copy.begin;document.querySelector('.section-head a').textContent=copy.explore;
  document.querySelector('.kicker').textContent=copy.kicker;
