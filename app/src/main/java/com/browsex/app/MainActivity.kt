@@ -26,6 +26,8 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.WebExtension
+import org.mozilla.geckoview.WebExtensionController
 
 private const val HOME_URL = "resource://android/assets/home.html"
 private const val SEARCH_GOOGLE = "https://www.google.com/search?q="
@@ -67,6 +69,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabsButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
+    private var adBlockExtension: WebExtension? = null
+    private var adBlockReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,6 +152,8 @@ class MainActivity : AppCompatActivity() {
             }
             setOnFocusChangeListener { _, focused -> if (!focused) updateAddress() }
         }
+        address.background = rounded(Color.argb(225, 247, 248, 255), 24)
+        address.setTextColor(Color.rgb(34, 42, 62))
         addressRow.addView(address, LinearLayout.LayoutParams(0, dp(46), 1f))
         addressRow.addView(actionButton("⋮", "Browser menu") { showBrowserMenu() }, LinearLayout.LayoutParams(dp(44), dp(46)))
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -162,7 +168,9 @@ class MainActivity : AppCompatActivity() {
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setBackgroundColor(COLOR_PANEL)
+            background = rounded(Color.argb(232, 248, 249, 255), 28)
+            elevation = dp(10).toFloat()
+            setPadding(dp(5), 0, dp(5), 0)
         }
         backButton = bottomButton("‹", "Back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
         forwardButton = bottomButton("›", "Forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
@@ -173,7 +181,7 @@ class MainActivity : AppCompatActivity() {
 
         root.addView(topBar)
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(54)))
+        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(58)).apply { setMargins(dp(14), dp(5), dp(14), dp(9)) })
         return root
     }
 
@@ -195,6 +203,7 @@ class MainActivity : AppCompatActivity() {
     private fun bottomButton(label: String, description: String, action: () -> Unit) =
         actionButton(label, description, action).also {
             it.textSize = 23f
+            it.setTextColor(Color.rgb(54, 62, 86))
             bottomBar.addView(it, LinearLayout.LayoutParams(0, -1, 1f))
         }
 
@@ -361,22 +370,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun showBrowserMenu() {
         val actions = arrayOf(
+            "Ad blocker: ${if (store.adBlockEnabled) "On" else "Off"}",
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Share page", "Copy page address",
             "Search engine", "Clear browsing history"
         )
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
-                0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
+                0 -> toggleAdBlocking()
+                1 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
                     val added = store.toggleBookmark(it)
                     toast(if (added) "Bookmark saved" else "Bookmark removed")
                 }
-                1 -> showSavedPages("Bookmarks", store.bookmarks())
-                2 -> showSavedPages("History", store.history())
-                3 -> shareCurrentPage()
-                4 -> copyCurrentAddress()
-                5 -> chooseSearchEngine()
-                6 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
+                2 -> showSavedPages("Bookmarks", store.bookmarks())
+                3 -> showSavedPages("History", store.history())
+                4 -> shareCurrentPage()
+                5 -> copyCurrentAddress()
+                6 -> chooseSearchEngine()
+                7 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
             }
@@ -426,14 +437,58 @@ class MainActivity : AppCompatActivity() {
     private fun prepareBuiltInExtension() {
         try {
             val files = assets.list("ublock")
-            if (!files.isNullOrEmpty()) {
-                BrowserEngine.runtime(this).webExtensionController.ensureBuiltIn(
-                    "resource://android/assets/ublock/",
-                    "uBlock0@raymondhill.net"
-                )
+            if (files.isNullOrEmpty()) {
+                adBlockReady = true
+                toast("Ad blocker files are not included in this build")
+                return
             }
-        } catch (_: Exception) {
-            // Extension failure must never prevent the browser engine from starting.
+            BrowserEngine.runtime(this).webExtensionController.ensureBuiltIn(
+                "resource://android/assets/ublock/",
+                "uBlock0@raymondhill.net"
+            ).accept({ extension ->
+                adBlockExtension = extension
+                adBlockReady = true
+                if (!store.adBlockEnabled && extension.isEnabled) {
+                    BrowserEngine.runtime(this).webExtensionController.disable(
+                        extension, WebExtensionController.EnableSource.APP
+                    ).accept({ adBlockExtension = it }, { })
+                }
+                if (store.adBlockEnabled && !extension.isEnabled) {
+                    BrowserEngine.runtime(this).webExtensionController.enable(
+                        extension, WebExtensionController.EnableSource.APP
+                    ).accept({ adBlockExtension = it }, { })
+                }
+            }, { error ->
+                adBlockReady = true
+                android.util.Log.e("BrowseX", "uBlock Origin could not be installed", error)
+                runOnUiThread { toast("Ad blocker could not start") }
+            })
+        } catch (error: Exception) {
+            adBlockReady = true
+            android.util.Log.e("BrowseX", "uBlock Origin setup failed", error)
         }
+    }
+
+    private fun toggleAdBlocking() {
+        val extension = adBlockExtension
+        if (!adBlockReady || extension == null) {
+            toast("Ad blocker is not ready. Check this build includes uBlock Origin.")
+            return
+        }
+        val controller = BrowserEngine.runtime(this).webExtensionController
+        val enable = !store.adBlockEnabled
+        val operation = if (enable) {
+            controller.enable(extension, WebExtensionController.EnableSource.USER)
+        } else {
+            controller.disable(extension, WebExtensionController.EnableSource.USER)
+        }
+        operation.accept({ updated ->
+            adBlockExtension = updated
+            store.adBlockEnabled = enable
+            toast(if (enable) "Ad blocking enabled" else "Ad blocking paused")
+        }, { error ->
+            android.util.Log.e("BrowseX", "Could not change ad blocker state", error)
+            toast("Could not change ad blocker")
+        })
     }
 }
