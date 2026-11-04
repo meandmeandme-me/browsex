@@ -12,4 +12,4 @@ This is an in-browser password manager, not an Android-wide AutofillService or p
 
 ## Android permissions
 
-Runtime permission requests are scoped to the active GeckoSession and serialized through BrowserAndroidPermissionQueue. Activity Result launchers remain Activity-owned; the queue owns ordering, cancellation, stale-session rejection, and exactly-once callback completion.
+Gecko media/location permission requests are scoped to the active GeckoSession and coordinated by BrowserAndroidPermissionCoordinator over BrowserAndroidPermissionQueue. Android notification permission requests use BrowserNotificationPermissionCoordinator, which coalesces concurrent callbacks and handles pre-Android-13 behavior separately. Activity Result launchers remain Activity-owned; coordinators own ordering, cancellation, stale-session rejection, and callback completion.

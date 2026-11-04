@@ -176,8 +176,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var platformPermissionCoordinator: BrowserAndroidPermissionCoordinator
-    private val notificationPermissionCallbacks = mutableListOf<(Boolean) -> Unit>()
-    private var notificationPermissionInFlight = false
+    private lateinit var notificationPermissionCoordinator: BrowserNotificationPermissionCoordinator
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
@@ -267,7 +266,7 @@ class MainActivity : AppCompatActivity() {
             activeSession = { activeTab?.session },
             containsSession = { session -> tabs.any { it.session === session } },
             isHostAvailable = { !shuttingDown && !isFinishing && !isDestroyed },
-            anotherPromptInFlight = { notificationPermissionInFlight },
+            anotherPromptInFlight = { ::notificationPermissionCoordinator.isInitialized && notificationPermissionCoordinator.isInFlight },
             isGranted = { permission ->
                 ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
             },
@@ -286,14 +285,23 @@ class MainActivity : AppCompatActivity() {
         notificationPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-            notificationPermissionInFlight = false
-            if (granted) store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS)
-            else store.markPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS)
-            val callbacks = notificationPermissionCallbacks.toList()
-            notificationPermissionCallbacks.clear()
-            callbacks.forEach { callback -> callback(granted && NotificationManagerCompat.from(this).areNotificationsEnabled()) }
-            platformPermissionCoordinator.launchNext()
+            notificationPermissionCoordinator.onResult(granted)
         }
+        notificationPermissionCoordinator = BrowserNotificationPermissionCoordinator(
+            apiLevel = Build.VERSION.SDK_INT,
+            featureEnabled = { store.siteNotificationsEnabled },
+            permissionGranted = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+            },
+            notificationsEnabled = { NotificationManagerCompat.from(this).areNotificationsEnabled() },
+            previouslyDenied = { store.wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
+            clearDenial = { store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS) },
+            markDenied = { store.markPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
+            hostAvailable = { !isFinishing && !isDestroyed },
+            launchRequest = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+            afterResolved = { platformPermissionCoordinator.launchNext() }
+        )
         downloadRequestCoordinator = BrowserDownloadRequestCoordinator(
             apiLevel = Build.VERSION.SDK_INT,
             hasLegacyStoragePermission = {
@@ -394,6 +402,7 @@ class MainActivity : AppCompatActivity() {
         persistTabs()
         shuttingDown = true
         if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
+        if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         notificationPermissionCallbacks.toList().forEach { it(false) }
@@ -417,32 +426,8 @@ class MainActivity : AppCompatActivity() {
         platformPermissionCoordinator.cancelSession(session)
     }
 
-    fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) {
-        if (!store.siteNotificationsEnabled) {
-            callback(false)
-            return
-        }
-        if (Build.VERSION.SDK_INT < 33) {
-            callback(NotificationManagerCompat.from(this).areNotificationsEnabled())
-            return
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS)
-            callback(NotificationManagerCompat.from(this).areNotificationsEnabled())
-            return
-        }
-        if (store.wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) ||
-            !::notificationPermissionLauncher.isInitialized || isFinishing || isDestroyed
-        ) {
-            callback(false)
-            return
-        }
-        notificationPermissionCallbacks.add(callback)
-        if (!notificationPermissionInFlight) {
-            notificationPermissionInFlight = true
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
+    fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) =
+        notificationPermissionCoordinator.request(callback)
 
     @Suppress("DEPRECATION")
     private fun handleSiteNotificationIntent(intent: Intent?) {
