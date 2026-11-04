@@ -966,7 +966,7 @@ class MainActivity : AppCompatActivity() {
                     setTextColor(colors.accent)
                 })
                 preview.addView(TextView(this).apply {
-                    text = (if (tab.privateMode) "${tr("Private")} · " else "") + tab.title.ifBlank { "New tab" }
+                    text = (if (tab.privateMode) tr("Private") + " · " else "") + tab.title.ifBlank { "New tab" }
                     textSize = 13f
                     setTextColor(colors.ink)
                     maxLines = 2
@@ -975,7 +975,7 @@ class MainActivity : AppCompatActivity() {
                 })
                 card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
                 card.addView(TextView(this).apply {
-                    text = (if (tab.privateMode) "${tr("Private")} · " else "") + tab.title.ifBlank { "New tab" }
+                    text = (if (tab.privateMode) tr("Private") + " · " else "") + tab.title.ifBlank { "New tab" }
                     textSize = 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(colors.ink)
