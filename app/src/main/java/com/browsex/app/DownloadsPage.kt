@@ -189,6 +189,26 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                     }
                 }
                 item.addView(action)
+                if (!record.failed) item.addView(TextView(activity).apply {
+                    text = "×"
+                    textSize = 20f
+                    gravity = Gravity.CENTER
+                    setTextColor(colors.muted)
+                    minimumWidth = dp(40)
+                    minimumHeight = dp(48)
+                    contentDescription = t("Remove download record", "حذف سجل التنزيل")
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        AlertDialog.Builder(activity)
+                            .setMessage(t("Remove this download from BrowseX? The saved file will remain on your device.", "إزالة هذا التنزيل من BrowseX؟ سيبقى الملف محفوظًا على جهازك."))
+                            .setNegativeButton(t("Keep", "احتفاظ"), null)
+                            .setPositiveButton(t("Remove", "حذف")) { _, _ ->
+                                store.removeStreamDownload(record.id)
+                                render()
+                            }.show()
+                    }
+                })
                 list.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             }
             cursor?.use { c ->
