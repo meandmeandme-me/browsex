@@ -117,4 +117,5 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("org.mozilla.geckoview:geckoview-omni:150.0.20260511200624")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
