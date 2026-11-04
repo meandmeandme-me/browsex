@@ -737,6 +737,7 @@ class MainActivity : AppCompatActivity() {
             }
             request.addRequestHeader("User-Agent", org.mozilla.geckoview.GeckoSession.getDefaultUserAgent())
             val id = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+            store.addBrowseXDownload(id)
             response.body?.close()
             toast("Download added: $filename")
             android.util.Log.i("BrowseX", "Download queued with id=$id")
