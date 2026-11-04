@@ -9,6 +9,8 @@ class BrowserStore(context: Context) {
 
     private companion object {
         const val HOME_URL_FOR_STORE = "resource://android/assets/home.html"
+        // Bound legacy/corrupt session payloads before the pure session validator processes them.
+        const val MAX_RAW_STORED_TABS = 500
     }
 
     var adBlockEnabled: Boolean
@@ -90,15 +92,22 @@ class BrowserStore(context: Context) {
 
     private fun readList(key: String): List<String> = try {
         val array = JSONArray(prefs.getString(key, "[]"))
-        val values = (0 until array.length()).mapNotNull { index ->
+        val values = (0 until minOf(array.length(), MAX_RAW_STORED_TABS)).mapNotNull { index ->
             array.optString(index).takeIf(String::isNotBlank)
         }
-        BrowserStorePolicy.normalizeUrls(values, limitFor(key))
+        // TabSessionState must see the original positions and duplicates so it can restore
+        // the correct active tab. Bookmark/history collections intentionally deduplicate.
+        if (key == "open_tabs") values
+        else BrowserStorePolicy.normalizeUrls(values, limitFor(key))
     } catch (_: Exception) { emptyList() }
 
     private fun writeList(key: String, values: List<String>) {
         val array = JSONArray()
-        BrowserStorePolicy.normalizeUrls(values, limitFor(key)).forEach { array.put(it) }
+        if (key == "open_tabs") {
+            TabSessionState.normalize(values, 0, HOME_URL_FOR_STORE).urls.forEach { array.put(it) }
+        } else {
+            BrowserStorePolicy.normalizeUrls(values, limitFor(key)).forEach { array.put(it) }
+        }
         prefs.edit().putString(key, array.toString()).apply()
     }
 

@@ -29,4 +29,24 @@ class TabSessionStateTest {
         assertEquals(TabSessionState.MAX_TABS, state.urls.size)
         assertEquals(TabSessionState.MAX_TABS - 1, state.activeIndex)
     }
+
+    @Test fun keepsDuplicateUrlsBecauseTheyCanRepresentSeparateTabs() {
+        val state = TabSessionState.normalize(
+            listOf("https://example.com", "https://example.com", home),
+            1,
+            home
+        )
+        assertEquals(listOf("https://example.com", "https://example.com", home), state.urls)
+        assertEquals(1, state.activeIndex)
+    }
+
+    @Test fun activeTabIndexTracksOriginalPositionWhenEarlierEntriesAreRejected() {
+        val state = TabSessionState.normalize(
+            listOf("javascript:alert(1)", "https://one.example", "file:///etc/passwd", "https://two.example"),
+            3,
+            home
+        )
+        assertEquals(listOf("https://one.example", "https://two.example"), state.urls)
+        assertEquals(1, state.activeIndex)
+    }
 }

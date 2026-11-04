@@ -5,7 +5,7 @@
 BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX AppCompat/Core and Mozilla GeckoView.
 
 - `MainActivity`: currently owns browser chrome, GeckoRuntime lifecycle, tabs, navigation, menus, settings dialogs, saved pages, sharing and fullscreen behavior.
-- `BrowserStore`: SharedPreferences persistence for bookmarks, history and search-engine preference.
+- `BrowserStore`: SharedPreferences persistence for bookmarks, history, search-engine preference, open-tab snapshots and BrowseX-owned DownloadManager IDs.
 - `app/src/main/assets/home.html`: local start page loaded through `resource://android/assets/home.html`.
 - `AndroidManifest.xml`: network permission, launcher entry point and HTTP(S) deep links.
 - `app/build.gradle.kts`: Android/Kotlin configuration, SDK levels, GeckoView and ABI split configuration.
@@ -19,6 +19,8 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 5. Release the visible view session before closing sessions in `onDestroy`.
 6. Validate external intents; never load arbitrary non-HTTP(S) schemes as browser pages.
 7. Persistent user data must remain in app-private storage unless a feature explicitly exports it.
+8. Preserve duplicate URLs in tab snapshots: separate tabs may intentionally display the same page.
+9. Bound persisted collections and validate restored URLs before opening sessions.
 
 ## Planned package boundaries (incremental, compile-checked)
 
@@ -35,10 +37,11 @@ Keep the app as a single Gradle module until these boundaries are stable. Avoid 
 
 ## Feature integration contracts
 
-- Downloads: GeckoSession download delegate -> validated download request -> Android DownloadManager or app-managed destination -> visible download state. Handle permission/errors and duplicate names. The current implementation routes GeckoView external responses through Android DownloadManager and displays the system-wide DownloadManager collection. It is not an app-isolated queue; DownloadManager re-fetches the URL, so POST bodies and arbitrary request headers are not guaranteed to survive.
+- Downloads: GeckoSession external response -> validated download request -> Android DownloadManager -> visible BrowseX-owned download state. The Downloads screen filters by IDs explicitly registered by BrowseX and does not show other apps' downloads. DownloadManager re-fetches the URL, so POST bodies and arbitrary request headers are not guaranteed to survive; cookies and a default User-Agent are forwarded.
 - Reader: explicit user action -> GeckoView PageExtractionController -> native reader presentation -> preserve original URL and navigation state. No page scripts are injected. Current GeckoView 150 extraction uses its default extraction options; boilerplate-removal tuning is not enabled.
 - Site notifications: use GeckoView permission delegates and Android notification permission/channel APIs; request only after a site gesture and only on supported Android versions.
-- Site information: show the active origin, HTTPS status and content permissions reported by GeckoView. This first pass is read-only; permission grant/revoke controls remain pending.\n- Settings: preferences have typed defaults and a single source of truth; UI must reflect persisted values.
+- Site information: show the active origin, HTTPS status and content permissions reported by GeckoView. This first pass is read-only; permission grant/revoke controls remain pending.
+- Settings: preferences have typed defaults and a single source of truth; UI must reflect persisted values.
 - Responsive UI: test compact phone, landscape, and tablet widths; use available width rather than device-brand checks.
 
 ## Compatibility
