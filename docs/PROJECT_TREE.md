@@ -12,7 +12,13 @@ BrowseX/
 │   │   ├── java/com/browsex/app/
 │   │   │   ├── BrowseXApplication.kt     # process-wide setup (when needed)
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
-│   │   │   ├── BrowserTabRegistry.kt     # open-tab membership and selected-tab state
+│   │   │   ├── BrowserTabRegistry.kt     # identity-safe open-tab membership and selection
+│   │   │   ├── BrowserTabController.kt   # tab creation, activation, popup and close lifecycle
+│   │   │   ├── BrowserSessionLifecycleCoordinator.kt # session close/reset/memory budget
+│   │   │   ├── BrowserHostLifecycleCoordinator.kt # Activity and memory-pressure lifecycle
+│   │   │   ├── BrowserContentProcessRecoveryCoordinator.kt # bounded Gecko crash recovery
+│   │   │   ├── BrowserBrowsingDataCoordinator.kt # clear-data transaction and tab restore
+│   │   │   ├── BrowserTabPersistenceCoordinator.kt # regular-tab snapshot persistence
 │   │   │   ├── BrowserSessionDelegateFactory.kt # GeckoView callbacks -> BrowseX event contract
 │   │   │   ├── BrowserAndroidPermissionQueue.kt # serialized Android runtime permission requests
 │   │   │   ├── TabsPage.kt                # responsive tab workspace UI with injected actions

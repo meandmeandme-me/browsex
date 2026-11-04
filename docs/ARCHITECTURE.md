@@ -4,7 +4,11 @@
 
 BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX AppCompat/Core and Mozilla GeckoView.
 
-- `MainActivity`: application shell for browser chrome and platform wiring. Open-tab membership and selected-tab state are owned by `BrowserTabRegistry`; live GeckoSession budget/memory-pressure decisions are delegated to pure `TabLifecyclePolicy`. Tab workspace rendering is isolated in `TabsPage`; Gecko callbacks are adapted by `BrowserSessionDelegateFactory`, while Activity-hosted event handling and session lifecycle remain further extraction work.
+- `MainActivity`: Android composition root for browser chrome, GeckoView attachment, Activity Result launchers and user-facing platform feedback. Tab membership, tab operations, Activity/memory lifecycle, crash recovery, browsing-data transactions and persistence policy are delegated to focused coordinators; UI rendering remains in feature pages.
+- `BrowserTabController`: owns identity-safe tab creation, selection, closing, popup routing and activation; session teardown is delegated to `BrowserSessionLifecycleCoordinator`.
+- `BrowserHostLifecycleCoordinator`: owns Activity start/stop, tab persistence on stop/memory pressure and inactive-session deactivation/release.
+- `BrowserContentProcessRecoveryCoordinator`: bounds automatic content-process recovery, rejects stale callbacks and closes failed/repeatedly crashed sessions.
+- `BrowserBrowsingDataCoordinator`: owns the clear-data transaction, including regular-tab snapshotting, session reset, Gecko storage clearing and selection restoration.
 - `BrowserSessionDelegateFactory`: maps GeckoSession progress/navigation/content callbacks into a BrowseX-owned callback contract. It does not directly render UI or persist data.
 - `TabsPage`: renders the responsive tab workspace and named/recent session actions through injected callbacks; it does not own GeckoSession lifecycle or mutate browser state directly.
 - `BrowserRuntimeOwner` and `BrowserTab`: isolated ownership of the process-wide GeckoRuntime and serializable-per-tab UI/session state; private mode is selected before opening each GeckoSession.
@@ -12,7 +16,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - `BrowserDownloadStore`: owns DownloadManager ID tracking, response-stream download records, filename reservations and interrupted-record recovery.
 - `BrowserLibraryStore`: owns bookmark folders/items, title-aware history, legacy bookmark migration and validated JSON backup/import with conflict preview.
 - `BrowserSessionStore`: owns regular-tab snapshots, named sessions and recently-closed tab persistence; private tabs remain excluded and existing SharedPreferences keys are preserved.
-- `BrowserTabPersistenceCoordinator`: owns the Activity-facing snapshot policy for restoring regular tabs and persisting only non-private tab URLs plus the selected regular-tab index; lifecycle callbacks in `MainActivity` delegate to it.
+- `BrowserTabPersistenceCoordinator`: owns the snapshot policy for restoring regular tabs and persisting only non-private tab URLs plus the selected regular-tab index; `BrowserHostLifecycleCoordinator` calls it through an injected persistence callback.
 - `BrowserPreferencesStore` + `BrowserPreferencePolicy`: isolated browser-wide settings and per-origin media/platform permission decisions; pure BCP 47, theme and home-layout normalization is separately testable. `BrowserSessionStore` and these preference stores currently use the existing SharedPreferences file to preserve user data; a future DataStore/Room migration can now happen behind these boundaries.
 - `BrowserPalette`: shared light/dark/system color tokens and direction helpers for Android screens.
 - `BrowseXPermissionDelegate`: separates Android runtime permission requests from Gecko content and media permission decisions.
@@ -33,9 +37,9 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 6. Validate external intents; never load arbitrary non-HTTP(S) schemes as browser pages.
 7. Persist serializable regular-tab URLs, active index and named regular-tab session snapshots only; never persist GeckoSession objects, private-tab URLs, cookies or page form data.
 8. Private tabs use GeckoSessionSettings.usePrivateMode(true), are excluded from browsing history and startup snapshots, and popup sessions inherit their parent's private mode.
-8. Preserve duplicate URLs in tab snapshots: separate tabs may intentionally display the same page.
-9. Bound persisted collections, enforce the 20-tab cap, and validate restored web/local-home URLs.
-10. After a content-process crash, reopen and reload the affected session once automatically. A repeated crash leaves an explicit recoverable crashed tab; the user can activate it to retry.
+9. Preserve duplicate URLs in tab snapshots: separate tabs may intentionally display the same page.
+10. Bound persisted collections, enforce the 20-tab cap, and validate restored web/local-home URLs.
+11. After a content-process crash, attempt one automatic recovery. A repeated failure closes the native session but preserves the tab record so the user can explicitly retry.
 
 ## Feature integration contracts and limits
 
@@ -72,10 +76,14 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - See MULTIPLATFORM_ARCHITECTURE.md, ACCOUNT_SYNC_FOUNDATION.md and ACCOUNT_SYNC_UX_MAP.md.
 ## GeckoSession lifecycle ownership
 
-`BrowserSessionLifecycleCoordinator` owns session release for memory pressure, the live-session budget, session reset and Activity teardown. `MainActivity` remains responsible for selected-tab UI, GeckoView attachment and Android Activity Result launchers. `BrowserAndroidPermissionQueue` owns request ordering, stale-tab rejection, per-session cancellation and teardown completion. This is an incremental boundary extraction, not a complete separation of browser orchestration.
+`BrowserTabController` owns tab identity, selection, activation and popup routing. `BrowserSessionLifecycleCoordinator` owns session release for memory pressure, the live-session budget, session reset and teardown. `BrowserHostLifecycleCoordinator` owns Activity visibility and memory-pressure policy. `BrowserContentProcessRecoveryCoordinator` owns bounded crash recovery. `BrowserBrowsingDataCoordinator` owns the clear-data transaction. `MainActivity` remains the Android composition root for visible UI, GeckoView attachment and Activity Result launchers. `BrowserAndroidPermissionQueue` owns request ordering, stale-tab rejection, per-session cancellation and teardown completion. Browser orchestration is split into focused boundaries, while platform event callbacks and visual UI remain hosted by the Activity.
 ## Android permission lifecycle ownership
 
 `BrowserAndroidPermissionQueue` serializes Gecko-originated runtime permission requests while Android Activity Result launchers stay registered with `MainActivity`. It binds each callback to its originating session, rejects requests when their tab is no longer selected/live, and guarantees queued or active callbacks are rejected during session cancellation and Activity teardown. Website notification permission remains a separate Android 13+ flow because it has a distinct user-facing lifecycle.
+
+## Browsing-data lifecycle ownership
+
+`BrowserBrowsingDataCoordinator` snapshots validated regular-tab URLs, closes live sessions before Gecko storage deletion, restores the selected regular tab and persists the resulting snapshot. `MainActivity` supplies the progress dialog and completion feedback; it no longer owns the storage-clear transaction.
 
 ## Download lifecycle ownership
 

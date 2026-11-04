@@ -5,8 +5,8 @@ Implementation and verification are tracked separately. Items under “implement
 ## Implemented paths to verify in the final pass
 
 - [x] Pure URL normalization and bounded tab snapshot normalization have unit coverage.
-- [x] Stream-download queued/running/terminal/cancelled state predicates have JVM unit coverage (not run in this implementation pass).
-- [x] Download filename policy has JVM unit coverage for path separators, control characters, bidi overrides, Unicode preservation and length bounds (not run in this implementation pass).
+- [x] Stream-download queued/running/terminal/cancelled state predicates have JVM unit coverage.
+- [x] Download filename policy has JVM unit coverage for path separators, control characters, bidi overrides, Unicode preservation and length bounds.
 - [x] Android location/camera/microphone runtime permission request bridge and allow/deny result handling.
 - [x] Gecko content permission prompt provides Allow, Block and Not now; Site Info can change stored decisions.
 - [x] Camera/microphone origin decisions are separate from Android runtime permissions.
@@ -26,16 +26,15 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] CI skips signed release artifacts when no key is configured and fails on partial secret configuration.
 - [ ] Configure real protected signing secrets and verify release APK signatures, ABI contents and in-place upgrade behavior.
 
-## Final automated CI gates (required; not verified for the current HEAD)
+## Final automated CI gates (verified on commit `ecc071e2e5ac2c86ed9d7e38a069c0dc84715d1f`)
 
-- [ ] Gradle configuration resolves reproducibly.
-- [ ] Kotlin compilation succeeds.
-- [ ] Unit tests pass, including the configured-home-URL snapshot test.
-- [ ] Android lint completes with no new errors.
-- [ ] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
-- [ ] APK package ID and minSdk are correct.
-- [ ] APKs contain the expected GeckoView native libraries for each ABI.
-- [ ] CI uploads debug artifacts only after every required gate passes; public release publishing waits for stable signing.
+- [x] Gradle configuration resolves.
+- [x] Kotlin compilation and JVM unit tests pass.
+- [x] Android lint completes successfully.
+- [x] Debug APKs are generated for `armeabi-v7a`, `arm64-v8a` and universal output.
+- [x] APK output verification, package identity, minimum SDK and GeckoView native-library ABI checks pass.
+- [x] CI uploads all three debug artifacts after required gates pass.
+- [ ] Signed release APKs are built and verified after protected release-signing secrets are configured.
 
 ## Functional checks (physical-device validation still required)
 
@@ -106,15 +105,19 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [x] GeckoSession delegate wiring is moved to BrowserSessionDelegateFactory with BrowseX-owned callbacks.
 - [ ] Verify popup/new-session routing, content-process crash recovery, page progress/history callbacks and fullscreen transitions on device.
 - [ ] Verify tab workspace, saved-session replace/open/delete, recently-closed restore and 2/3-column layouts on phone/tablet.
-- [x] JVM tests added for add/remove/select/replace/clear invariants (not run in this implementation pass).
+- [x] JVM tests for add/remove/select/replace/clear and equal-URL identity invariants pass in CI.
 
 ## Tab lifecycle policy coverage
 
 - [x] Pure session-budget selection preserves the active tab and releases least-recently-used inactive sessions.
 - [x] Memory-pressure selection releases inactive opened sessions in deterministic oldest-first order.
-- [x] JVM unit tests added for budget, tie-breaking, memory pressure and minimum-budget behavior (not run in this implementation pass).
+- [x] JVM unit tests for budget, tie-breaking, memory pressure and minimum-budget behavior pass in CI.
 
 ## Additional coverage for the current foundation work
+
+- [x] Activity start/stop and memory-pressure handling extracted to `BrowserHostLifecycleCoordinator` with JVM tests for active-session focus, persistence and inactive-session release.
+- [x] Gecko tab activation and popup failures now close/reset partially opened sessions; content-process recovery avoids stale-session reloads and closes sessions after repeated crashes.
+- [x] Browsing-data clear transaction extracted from `MainActivity` into `BrowserBrowsingDataCoordinator`; CI compilation, unit tests, lint and APK verification pass.
 
 - [ ] Save a named session, close/reopen BrowseX, and verify the saved session remains available.
 - [ ] Open a saved session and verify its active tab is selected; verify the 20-tab cap and partial-open warning.
