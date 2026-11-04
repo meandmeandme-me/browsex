@@ -14,6 +14,7 @@ BrowseX/
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
 │   │   │   ├── TabLifecyclePolicy.kt     # pure Gecko session budget/memory policy
 │   │   │   ├── BrowserPreferencesStore.kt # settings and site-permission persistence
+│   │   │   ├── BrowserSessionStore.kt     # regular tabs, named sessions and recently closed tabs
 │   │   │   ├── BrowserPreferencePolicy.kt # pure preference normalization
 │   │   │   ├── TabLifecyclePolicy.kt     # pure live-session budget and memory-pressure policy
 │   │   │   ├── di/                       # dependency wiring; introduce only when useful
