@@ -58,6 +58,7 @@ private object BrowserEngine {
 
 private data class BrowserTab(
     var session: GeckoSession = GeckoSession(),
+    var sessionOpened: Boolean = false,
     var title: String = "New tab",
     var url: String = HOME_URL,
     var progress: Int = 0,
@@ -183,13 +184,21 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        val snapshot = store.restoreOpenTabs()
+        snapshot.urls.forEach { savedUrl -> tabs.add(BrowserTab(url = savedUrl)) }
+        val restoredActive = tabs.getOrNull(snapshot.activeIndex)
         val externalUrl = intent?.data?.let(::safeExternalUrl)
         if (externalUrl != null) {
-            createTab(externalUrl)
+            if (tabs.size >= TabSessionState.MAX_TABS) {
+                val discardIndex = tabs.indices.firstOrNull { tabs[it] !== restoredActive } ?: 0
+                tabs.removeAt(discardIndex)
+            }
+            val externalTab = BrowserTab(url = externalUrl)
+            tabs.add(externalTab)
+            activateTab(externalTab)
         } else {
-            val snapshot = store.restoreOpenTabs()
-            snapshot.urls.forEach(::createTab)
-            tabs.getOrNull(snapshot.activeIndex)?.let(::activateTab)
+            val initialTab = restoredActive ?: BrowserTab(url = homePageUrl()).also(tabs::add)
+            activateTab(initialTab)
         }
         handleSiteNotificationIntent(intent)
     }
@@ -206,14 +215,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        activeTab?.session?.let {
+        activeTab?.takeIf { it.sessionOpened }?.session?.let {
             runCatching { it.setActive(true); it.setFocused(true) }
         }
     }
 
     override fun onStop() {
         persistTabs()
-        tabs.forEach { tab ->
+        tabs.filter { it.sessionOpened }.forEach { tab ->
             runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
         }
         super.onStop()
@@ -223,7 +232,7 @@ class MainActivity : AppCompatActivity() {
         super.onTrimMemory(level)
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
             persistTabs()
-            tabs.filter { it !== activeTab }.forEach { tab ->
+            tabs.filter { it !== activeTab && it.sessionOpened }.forEach { tab ->
                 runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
             }
         }
@@ -232,7 +241,7 @@ class MainActivity : AppCompatActivity() {
     override fun onLowMemory() {
         super.onLowMemory()
         persistTabs()
-        tabs.filter { it !== activeTab }.forEach { tab ->
+        tabs.filter { it !== activeTab && it.sessionOpened }.forEach { tab ->
             runCatching { tab.session.setActive(false) }
         }
     }
@@ -263,7 +272,10 @@ class MainActivity : AppCompatActivity() {
         browserRuntime?.setWebNotificationDelegate(null)
         if (::browserView.isInitialized) browserView.releaseSession()
         tabs.toList().forEach { tab ->
-            runCatching { tab.session.setFocused(false); tab.session.setActive(false); tab.session.close() }
+            if (tab.sessionOpened) {
+                runCatching { tab.session.setFocused(false); tab.session.setActive(false); tab.session.close() }
+            }
+            tab.sessionOpened = false
         }
         tabs.clear()
         activeTab = null
@@ -614,39 +626,41 @@ class MainActivity : AppCompatActivity() {
         }
         val targetUrl = if (url == HOME_URL) homePageUrl() else url
         val tab = BrowserTab(url = targetUrl)
-        attachDelegates(tab)
-        tab.session.open(BrowserEngine.runtime(this))
         tabs.add(tab)
         activateTab(tab)
-        tab.session.loadUri(targetUrl)
     }
 
     private fun activateTab(tab: BrowserTab) {
         if (!tabs.contains(tab)) return
         val previous = activeTab
         if (previous !== tab) {
-            previous?.let {
+            previous?.takeIf { it.sessionOpened }?.let {
                 runCatching { it.session.setFocused(false); it.session.setActive(false) }
             }
         }
-        if (tab.crashed) {
-            try {
+        activeTab = tab
+        try {
+            if (tab.crashed) {
                 tab.recoveryAttempts = 0
                 tab.crashed = false
+            }
+            if (!tab.sessionOpened) {
                 attachDelegates(tab)
                 tab.session.open(BrowserEngine.runtime(this))
+                tab.sessionOpened = true
                 tab.session.loadUri(tab.url.ifBlank { homePageUrl() })
-            } catch (error: RuntimeException) {
-                tab.crashed = true
-                android.util.Log.e("BrowseX", "Manual tab recovery failed", error)
-                toast("This tab could not be reopened")
             }
+            tab.session.setActive(true)
+            tab.session.setFocused(true)
+            browserView.setSession(tab.session)
+            updateChrome()
+        } catch (error: RuntimeException) {
+            tab.sessionOpened = false
+            tab.crashed = true
+            android.util.Log.e("BrowseX", "Could not activate tab session", error)
+            toast("This tab could not be opened. Try again.")
+            updateChrome()
         }
-        activeTab = tab
-        tab.session.setActive(true)
-        tab.session.setFocused(true)
-        browserView.setSession(tab.session)
-        updateChrome()
     }
 
     private fun closeTab(tab: BrowserTab) {
@@ -655,10 +669,13 @@ class MainActivity : AppCompatActivity() {
         val wasActive = activeTab === tab
         tab.permissionDelegate?.cancelPending()
         cancelPlatformPermissionRequests(tab.session)
-        runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
+        if (tab.sessionOpened) {
+            runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
+        }
         if (wasActive) browserView.releaseSession()
         tabs.removeAt(index)
-        tab.session.close()
+        if (tab.sessionOpened) runCatching { tab.session.close() }
+        tab.sessionOpened = false
         if (tabs.isEmpty()) createTab(homePageUrl())
         else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
         else updateChrome()
@@ -716,6 +733,7 @@ class MainActivity : AppCompatActivity() {
                 val child = BrowserTab()
                 attachDelegates(child)
                 child.session.open(BrowserEngine.runtime(this@MainActivity))
+                child.sessionOpened = true
                 tabs.add(child)
                 runOnUiThread {
                     if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
@@ -756,6 +774,7 @@ class MainActivity : AppCompatActivity() {
                     attachDelegates(tab)
                     try {
                         session.open(BrowserEngine.runtime(this@MainActivity))
+                        tab.sessionOpened = true
                         if (wasActive) {
                             activateTab(tab)
                             session.loadUri(restoreUrl)
@@ -765,6 +784,7 @@ class MainActivity : AppCompatActivity() {
                             session.loadUri(restoreUrl)
                         }
                     } catch (error: RuntimeException) {
+                        tab.sessionOpened = false
                         tab.crashed = true
                         android.util.Log.e("BrowseX", "Tab recovery failed", error)
                         if (wasActive) toast("Could not restore this tab. Open a new tab.")
