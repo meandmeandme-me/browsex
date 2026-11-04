@@ -10,7 +10,10 @@ import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.util.concurrent.Executors
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * Persists the response body GeckoView already received.
@@ -21,9 +24,9 @@ import java.util.concurrent.Executors
  */
 internal class DownloadResponseWriter(context: Context) {
     private val appContext = context.applicationContext
-    private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "BrowseX-download-writer").apply { isDaemon = true }
-    }
+    private val executor = ThreadPoolExecutor(
+        1, 1, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(8)
+    ) { runnable -> Thread(runnable, "BrowseX-download-writer").apply { isDaemon = true } }
 
     data class Result(val uri: Uri, val displayName: String, val bytesWritten: Long)
 
@@ -33,7 +36,8 @@ internal class DownloadResponseWriter(context: Context) {
         mimeType: String?,
         onComplete: (Result?, Throwable?) -> Unit
     ) {
-        executor.execute {
+        try {
+            executor.execute {
             var pendingUri: Uri? = null
             try {
                 val safeName = displayName
@@ -72,6 +76,10 @@ internal class DownloadResponseWriter(context: Context) {
                 runCatching { body.close() }
                 onComplete(null, error)
             }
+            }
+        } catch (_: RejectedExecutionException) {
+            runCatching { body.close() }
+            onComplete(null, IllegalStateException("Too many downloads are already queued"))
         }
     }
 
