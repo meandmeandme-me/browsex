@@ -58,11 +58,11 @@ internal class StreamDownloadCoordinator(
         return true
     }
 
-    fun cancel(downloadId: String): Boolean {
-        val cancelled = writer.cancel(downloadId)
-        if (cancelled) store.failStreamDownload(downloadId, "Cancelled by user", cancelled = true)
-        return cancelled
-    }
+    /**
+     * Requests cancellation only. The writer owns the terminal callback and persists
+     * exactly one final state after the response stream has actually stopped.
+     */
+    fun cancel(downloadId: String): Boolean = writer.cancel(downloadId)
 
     fun shutdown() = writer.shutdown()
 }
