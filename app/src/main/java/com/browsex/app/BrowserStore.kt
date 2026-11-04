@@ -25,10 +25,19 @@ class BrowserStore(context: Context) {
         get() = prefs.getString("theme_mode", "system")?.takeIf { it in setOf("system", "light", "dark") } ?: "system"
         set(value) { prefs.edit().putString("theme_mode", value.takeIf { it in setOf("system", "light", "dark") } ?: "system").apply() }
 
-    /** UI language preference: system, ar or en. */
+    /** BCP 47 app language tag, or system to follow the device locale. */
     var languageMode: String
-        get() = prefs.getString("language_mode", "system")?.takeIf { it in setOf("system", "ar", "en") } ?: "system"
-        set(value) { prefs.edit().putString("language_mode", value.takeIf { it in setOf("system", "ar", "en") } ?: "system").apply() }
+        get() = normalizeLanguageTag(prefs.getString("language_mode", "system"))
+        set(value) { prefs.edit().putString("language_mode", normalizeLanguageTag(value)).apply() }
+
+    private fun normalizeLanguageTag(value: String?): String {
+        val raw = value?.trim().orEmpty()
+        if (raw.equals("system", ignoreCase = true)) return "system"
+        if (raw.length !in 2..35 || !raw.matches(Regex("[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"))) return "system"
+        val locale = java.util.Locale.forLanguageTag(raw)
+        val tag = locale.toLanguageTag()
+        return tag.takeIf { it.isNotBlank() && it != "und" } ?: "system"
+    }
 
     var siteNotificationsEnabled: Boolean
         get() = prefs.getBoolean("site_notifications_enabled", true)
