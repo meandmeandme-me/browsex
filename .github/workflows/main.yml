@@ -1,9 +1,12 @@
-name: Build APK
+name: Build and publish BrowseX APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, rewrite-v2 ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -42,10 +45,15 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Build debug APK
+      - name: Build universal APK
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      - uses: actions/upload-artifact@v4
+      - name: Publish latest APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
         with:
-          name: BrowseX-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          tag_name: browsex-latest
+          name: BrowseX – Latest build
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          files: app/build/outputs/apk/debug/*.apk

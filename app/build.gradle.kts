@@ -12,11 +12,20 @@ android {
     defaultConfig {
         applicationId = "com.browsex.app"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
-        // Phones are almost all arm64. This keeps the APK smaller.
-        ndk { abiFilters += listOf("arm64-v8a") }
+        targetSdk = 35
+        versionCode = 2
+        versionName = "0.2.0"
+        // Do not restrict ABIs: let Android select the native GeckoView library
+        // supported by the device. A forced arm64-only APK rejects 32-bit devices.
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
+        }
     }
 
     buildTypes {
@@ -46,6 +55,5 @@ kotlin {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
-    // Firefox engine (all CPU types in one package).
     implementation("org.mozilla.geckoview:geckoview-omni:150.0.20260511200624")
 }
