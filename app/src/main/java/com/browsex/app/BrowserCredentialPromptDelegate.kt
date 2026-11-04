@@ -57,11 +57,19 @@ internal class BrowserCredentialPromptDelegate(
             .setItems(labels) { _, index ->
                 val selected = options.getOrNull(index)
                 val selectedOrigin = selected?.value?.origin?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
-                result.complete(
-                    if (selected != null && selectedOrigin == firstOrigin && isStillValid(session, firstOrigin))
-                        request.confirm(selected)
-                    else request.dismiss()
-                )
+                if (selected == null || selectedOrigin != firstOrigin || !isStillValid(session, firstOrigin)) {
+                    result.complete(request.dismiss())
+                } else {
+                    BrowserDeviceAuthenticator.authenticate(
+                        activity = activity,
+                        title = "Unlock saved passwords",
+                        subtitle = "Verify your identity to fill this sign-in",
+                        onAuthenticated = {
+                            result.complete(if (isStillValid(session, firstOrigin)) request.confirm(selected) else request.dismiss())
+                        },
+                        onRejected = { result.complete(request.dismiss()) }
+                    )
+                }
             }
             .setOnCancelListener { result.complete(request.dismiss()) }
             .show()

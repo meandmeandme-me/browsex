@@ -998,17 +998,28 @@ class MainActivity : AppCompatActivity() {
         val labels = saved.map { it.username + " · " + Uri.parse(it.origin).host.orEmpty() }.toTypedArray()
         AlertDialog.Builder(this).setTitle(tr("Saved passwords")).setItems(labels) { _, index ->
             val item = saved.getOrNull(index) ?: return@setItems
-            AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
-                .setMessage("Username: " + item.username + "\nPassword: " + item.password)
-                .setPositiveButton(tr("Copy password")) { _, _ ->
-                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", item.password))
-                    toast("Password copied")
-                }
-                .setNegativeButton(tr("Close"), null)
-                .setNeutralButton(tr("Delete")) { _, _ ->
-                    if (credentialVault.delete(item.id)) toast("Saved password deleted")
-                }.show()
+            BrowserDeviceAuthenticator.authenticate(
+                activity = this,
+                title = "Unlock saved passwords",
+                subtitle = "Verify your identity to view or copy this sign-in",
+                onAuthenticated = {
+                    if (isFinishing || isDestroyed) return@authenticate
+                    val dialog = AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
+                        .setMessage("Username: " + item.username + "\\nPassword: " + item.password)
+                        .setPositiveButton(tr("Copy password")) { _, _ ->
+                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", item.password))
+                            toast("Password copied")
+                        }
+                        .setNegativeButton(tr("Close"), null)
+                        .setNeutralButton(tr("Delete")) { _, _ ->
+                            if (credentialVault.delete(item.id)) toast("Saved password deleted")
+                        }.create()
+                    dialog.setOnShowListener { dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+                    dialog.show()
+                },
+                onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
+            )
         }.setNegativeButton(tr("Close"), null).show()
     }
 
