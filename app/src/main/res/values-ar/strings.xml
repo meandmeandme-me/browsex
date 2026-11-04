@@ -197,4 +197,8 @@
     <string name="ui_move_bookmark_to_folder">نقل المفضلة إلى مجلد</string>
     <string name="ui_recently_closed">المغلقة مؤخرًا</string>
     <string name="ui_no_recently_closed_tabs">لا توجد تبويبات مغلقة مؤخرًا</string>
+    <string name="ui_search_your_open_tabs_bookmarks_and_recent_history_in_one_place">ابحث في التبويبات المفتوحة والمفضلة والسجل الحديث من مكان واحد.</string>
+    <string name="ui_search_pages_or_websites">ابحث عن صفحة أو موقع</string>
+    <string name="ui_recent_history">السجل الحديث</string>
+    <string name="ui_no_matching_pages_try_another_search">لا توجد صفحات مطابقة. جرّب بحثاً آخر.</string>
 </resources>
