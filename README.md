@@ -81,3 +81,4 @@ gradle testDebugUnitTest lintDebug assembleDebug
 ## دراسة المتصفحات مفتوحة المصدر
 
 - [نتائج دراسة Firefox وBrave وCromite وDuckDuckGo وقرارات الاستفادة والتراخيص](docs/OPEN_SOURCE_BROWSER_RESEARCH.md).
+- [خطة ترحيل التخزين الآمن إلى Room وDataStore](docs/STORAGE_MIGRATION_PLAN.md) — خطة فقط؛ لم يتغير محرك التخزين الحالي بعد.
