@@ -168,18 +168,21 @@ class BrowserStore(context: Context) {
 
     internal fun savedSessions(): List<SavedBrowserSession> = try {
         val stored = prefs.getString("named_sessions_v1", "[]") ?: "[]"
-        if (stored.length > 1_000_000) return emptyList()
-        val array = JSONArray(stored)
-        (0 until minOf(array.length(), 10)).mapNotNull { index ->
-            val item = array.optJSONObject(index) ?: return@mapNotNull null
-            val id = item.optString("id").take(100)
-            val name = item.optString("name").trim().take(40)
-            val rawUrls = item.optJSONArray("urls") ?: JSONArray()
-            val urls = (0 until minOf(rawUrls.length(), TabSessionState.MAX_TABS))
-                .mapNotNull { rawUrls.optString(it).takeIf(String::isNotBlank) }
-            if (id.isBlank() || name.isBlank() || urls.isEmpty()) return@mapNotNull null
-            val snapshot = TabSessionState.normalize(urls, item.optInt("activeIndex", 0), HOME_URL_FOR_STORE)
-            SavedBrowserSession(id, name, snapshot.urls, snapshot.activeIndex, item.optLong("savedAt", 0L).coerceAtLeast(0L))
+        if (stored.length > 1_000_000) {
+            emptyList()
+        } else {
+            val array = JSONArray(stored)
+            (0 until minOf(array.length(), 10)).mapNotNull { index ->
+                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id").take(100)
+                val name = item.optString("name").trim().take(40)
+                val rawUrls = item.optJSONArray("urls") ?: JSONArray()
+                val urls = (0 until minOf(rawUrls.length(), TabSessionState.MAX_TABS))
+                    .mapNotNull { rawUrls.optString(it).takeIf(String::isNotBlank) }
+                if (id.isBlank() || name.isBlank() || urls.isEmpty()) return@mapNotNull null
+                val snapshot = TabSessionState.normalize(urls, item.optInt("activeIndex", 0), HOME_URL_FOR_STORE)
+                SavedBrowserSession(id, name, snapshot.urls, snapshot.activeIndex, item.optLong("savedAt", 0L).coerceAtLeast(0L))
+            }
         }
     } catch (_: Exception) { emptyList() }
 
