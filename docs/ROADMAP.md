@@ -21,11 +21,12 @@ This file records implementation state separately from device verification. A ch
 - [x] Restore tab metadata without opening every saved tab at startup; open only the active session and load background tabs on demand.
 - [x] Add Gecko private-mode tabs; exclude their URLs from persisted sessions and history, inherit private mode for popup tabs, and close their session data with the tab.
 - [x] Add BrowseX Recall to search regular open tabs, bookmarks and recent history from one surface; private tabs are intentionally excluded.
+- [x] Save, list, reopen and delete up to ten named regular-tab sessions; private tabs are never included in a saved session.
 - [x] Extract process-wide GeckoRuntime ownership and the tab/session state model from MainActivity into a dedicated browser-core file.
 - [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
 - [x] Add one automatic recovery attempt for crashed content sessions and a manual retry path after repeated crashes.
-- [ ] Verify process recreation, tab switching and GeckoSession lifecycle on Android 10 and newer.
+- [ ] Verify process recreation, tab switching, named-session persistence and GeckoSession lifecycle on Android 10 and newer.
 - [ ] Verify back/forward, fullscreen, popup/new-session and share flows on device.
 
 ## Phase 2 — permissions, notifications and downloads
@@ -75,7 +76,8 @@ This file records implementation state separately from device verification. A ch
 - [ ] Define opt-in, per-data-type sync contracts, encryption/key ownership, conflict resolution, offline queue and account deletion/export before any cloud sync.
 - [ ] Research and prioritize user-facing capabilities using `WORLD_BROWSER_PRODUCT_REQUIREMENTS.md`; do not clone feature lists without validating value, cost and privacy.
 - [ ] Extract MainActivity responsibilities incrementally into tab, privacy, download, library and preference coordinators.
-- [ ] Add a safe, lifecycle-aware inactive-tab memory policy and measure it on low-RAM devices.
+- [x] Add a basic lifecycle-aware inactive-tab policy: keep the active tab, bound warm sessions, and close/recreate inactive sessions under memory pressure.
+- [ ] Measure cold start, tab switching, peak memory and recovery on low-RAM devices; tune the policy from measurements.
 
 ## Explicitly deferred
 
