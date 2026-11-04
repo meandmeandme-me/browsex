@@ -270,7 +270,7 @@ class BrowserStore(context: Context) {
                 val id = item.optString("id").take(100)
                 val name = item.optString("displayName").take(140)
                 val uri = item.optString("uri").take(2048)
-                if (id.isBlank() || name.isBlank() || uri.isBlank()) return@mapNotNull null
+                if (id.isBlank() || name.isBlank() || (uri.isBlank() && !item.optBoolean("failed", false))) return@mapNotNull null
                 StreamDownloadRecord(
                     id, name, uri,
                     item.optString("mimeType", "application/octet-stream").take(120),
