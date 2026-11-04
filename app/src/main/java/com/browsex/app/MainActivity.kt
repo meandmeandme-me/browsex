@@ -464,6 +464,7 @@ class MainActivity : AppCompatActivity() {
             "Save session" -> "حفظ الجلسة"
             "Saved sessions" -> "الجلسات المحفوظة"
             "Session name" -> "اسم الجلسة"
+            "Save" -> "حفظ"
             "Save browsing session" -> "حفظ جلسة التصفح"
             "Session saved" -> "تم حفظ الجلسة"
             "No regular tabs to save" -> "لا توجد تبويبات عادية لحفظها"
