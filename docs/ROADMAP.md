@@ -28,6 +28,8 @@ This file records implementation state separately from device verification. A ch
 - [x] Extract process-wide GeckoRuntime ownership and the tab/session state model from MainActivity into a dedicated browser-core file.
 - [x] Extract tab membership/selection into BrowserTabRegistry and isolate pure GeckoSession budget/memory-pressure policy.
 - [x] Move tab workspace UI and saved/recent session actions into TabsPage with injected browser callbacks.
+- [x] Extract GeckoSession progress/navigation/content delegate wiring behind a BrowseX-owned callback contract.
+- [ ] Move tab open/close/recovery orchestration and Activity-hosted GeckoSession event handling into a lifecycle-aware coordinator.
 - [x] Split BrowserStore responsibilities into preference, session, library and download stores while preserving existing SharedPreferences keys and the feature-facing facade.
 - [ ] Extract GeckoSession delegate wiring and tab open/close orchestration from MainActivity behind an explicit browser coordinator contract.
 - [ ] Migrate the focused stores from SharedPreferences to Room/DataStore with versioned, non-destructive migrations and Android-backed upgrade tests.
