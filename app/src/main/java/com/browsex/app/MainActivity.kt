@@ -1465,7 +1465,9 @@ class MainActivity : AppCompatActivity() {
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
         DownloadsPage(this, store) { downloadId ->
-            downloadResponseWriter.cancel(downloadId)
+            val cancelled = downloadResponseWriter.cancel(downloadId)
+            if (cancelled) store.failStreamDownload(downloadId, "Cancelled by user", cancelled = true)
+            cancelled
         }.show()
     }
 
