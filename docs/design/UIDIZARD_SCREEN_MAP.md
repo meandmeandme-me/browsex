@@ -161,7 +161,8 @@ States:
 - Empty folder.
 - No search matches.
 - Import validation error.
-- Duplicate conflict preview.
+- Duplicate conflict preview with valid/skipped counts.
+- Explicit merge versus destructive replace confirmation.
 - Import complete / export complete.
 
 Data rules:
