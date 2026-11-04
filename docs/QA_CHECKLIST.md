@@ -96,6 +96,8 @@ Never call a build successful until its workflow conclusion is `success` and the
 ## Tab registry and lifecycle coverage
 
 - [x] Tab collection and selected-tab membership are owned by BrowserTabRegistry; equal-URL tabs remain distinct by identity.
+- [x] Tab workspace rendering is moved to TabsPage and browser mutations are injected through callbacks.
+- [ ] Verify tab workspace, saved-session replace/open/delete, recently-closed restore and 2/3-column layouts on phone/tablet.
 - [x] JVM tests added for add/remove/select/replace/clear invariants (not run in this implementation pass).
 
 ## Tab lifecycle policy coverage
