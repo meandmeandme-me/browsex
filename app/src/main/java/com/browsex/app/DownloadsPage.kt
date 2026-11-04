@@ -17,7 +17,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /** DownloadManager-backed download library; Android remains responsible for file transfer. */
-internal class DownloadsPage(private val activity: MainActivity) {
+internal class DownloadsPage(private val activity: MainActivity, private val store: BrowserStore) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
@@ -76,7 +76,7 @@ internal class DownloadsPage(private val activity: MainActivity) {
 
         fun render() {
             list.removeAllViews()
-            val ownedIds = activity.browserStoreForDownloads().browseXDownloadIds()
+            val ownedIds = store.browseXDownloadIds()
             val cursor = manager.query(DownloadManager.Query())
             var count = 0
             cursor?.use { c ->
@@ -141,7 +141,7 @@ internal class DownloadsPage(private val activity: MainActivity) {
                                     .setNegativeButton("Cancel", null)
                                     .setPositiveButton("Remove") { _, _ ->
                                         manager.remove(id)
-                                        activity.browserStoreForDownloads().removeBrowseXDownload(id)
+                                        store.removeBrowseXDownload(id)
                                         render()
                                     }.show()
                             }
