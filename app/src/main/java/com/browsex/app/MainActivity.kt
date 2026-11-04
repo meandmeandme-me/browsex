@@ -53,6 +53,17 @@ private const val MAX_LIVE_GECKO_SESSIONS = 3
 class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private val tabRegistry = BrowserTabRegistry<BrowserTab>()
     private val sessionDelegateFactory by lazy { BrowserSessionDelegateFactory(this) }
+    private val sessionLifecycleCoordinator by lazy {
+        BrowserSessionLifecycleCoordinator(
+            registry = tabRegistry,
+            beforeSessionClose = { tab ->
+                tab.permissionDelegate?.cancelPending()
+                cancelPlatformPermissionRequests(tab.session)
+            },
+            createSession = ::newBrowserSession,
+            maxLiveSessions = MAX_LIVE_GECKO_SESSIONS
+        )
+    }
     private val tabs: List<BrowserTab> get() = tabRegistry.tabs
     private val activeTab: BrowserTab? get() = tabRegistry.activeTab
     private lateinit var store: BrowserStore
@@ -281,50 +292,19 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         }
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             // Keep the visible tab alive; inactive tabs retain their URL and reopen lazily.
-            TabLifecyclePolicy.sessionsToReleaseForMemoryPressure(lifecycleCandidates())
-                .forEach { index -> tabs.getOrNull(index)?.let(::releaseInactiveSession) }
+            sessionLifecycleCoordinator.releaseForMemoryPressure()
         }
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         persistTabs()
-        TabLifecyclePolicy.sessionsToReleaseForMemoryPressure(lifecycleCandidates())
-            .forEach { index -> tabs.getOrNull(index)?.let(::releaseInactiveSession) }
+        sessionLifecycleCoordinator.releaseForMemoryPressure()
     }
 
-    private fun releaseInactiveSession(tab: BrowserTab) {
-        if (tab === activeTab || !tab.sessionOpened) return
-        tab.permissionDelegate?.cancelPending()
-        cancelPlatformPermissionRequests(tab.session)
-        runCatching {
-            tab.session.setFocused(false)
-            tab.session.setActive(false)
-            tab.session.close()
-        }
-        tab.session = newBrowserSession(tab.privateMode)
-        tab.sessionOpened = false
-        tab.permissionDelegate = null
-        tab.sitePermissions = emptyList()
-    }
-
-    /** Snapshot the tab list before applying a pure lifecycle decision. */
-    private fun lifecycleCandidates(): List<TabLifecyclePolicy.Candidate> =
-        tabs.mapIndexed { index, tab ->
-            TabLifecyclePolicy.Candidate(
-                index = index,
-                active = tab === activeTab,
-                opened = tab.sessionOpened,
-                lastActiveAt = tab.lastActiveAt
-            )
-        }
-
-    /** Bound live Gecko sessions to the visible tab plus two warm background tabs. */
+    /** GeckoSession resource limits and background release are owned by the lifecycle coordinator. */
     private fun enforceLiveSessionBudget() {
-        TabLifecyclePolicy.sessionsToReleaseForBudget(
-            candidates = lifecycleCandidates(),
-            maxLiveSessions = MAX_LIVE_GECKO_SESSIONS
-        ).forEach { index -> tabs.getOrNull(index)?.let(::releaseInactiveSession) }
+        sessionLifecycleCoordinator.enforceLiveSessionBudget()
     }
 
     private fun persistTabs() {
@@ -351,18 +331,9 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         notificationPermissionCallbacks.clear()
         dataClearDialog?.dismiss()
         dataClearDialog = null
-        tabs.toList().forEach { tab ->
-            tab.permissionDelegate?.cancelPending()
-            cancelPlatformPermissionRequests(tab.session)
-        }
         browserRuntime?.setWebNotificationDelegate(null)
         if (::browserView.isInitialized) browserView.releaseSession()
-        tabs.toList().forEach { tab ->
-            if (tab.sessionOpened) {
-                runCatching { tab.session.setFocused(false); tab.session.setActive(false); tab.session.close() }
-            }
-            tab.sessionOpened = false
-        }
+        sessionLifecycleCoordinator.closeAllSessions()
         tabRegistry.clear()
         super.onDestroy()
     }
@@ -1127,24 +1098,8 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         val tabsToRestore = snapshot.urls.mapIndexed { index, url ->
             regularTabs.getOrNull(index)?.also { it.url = url } ?: BrowserTab(url = url)
         }
-        tabs.toList().forEach { tab ->
-            tab.permissionDelegate?.cancelPending()
-            cancelPlatformPermissionRequests(tab.session)
-        }
         if (::browserView.isInitialized) browserView.releaseSession()
-        tabs.toList().forEach { tab ->
-            if (tab.sessionOpened) {
-                runCatching {
-                    tab.session.setFocused(false)
-                    tab.session.setActive(false)
-                    tab.session.close()
-                }
-            }
-            tab.session = newBrowserSession(tab.privateMode)
-            tab.sessionOpened = false
-            tab.permissionDelegate = null
-            tab.sitePermissions = emptyList()
-        }
+        tabs.toList().forEach(sessionLifecycleCoordinator::resetSession)
         tabRegistry.clear()
         tabRegistry.addAll(tabsToRestore)
         tabRegistry.select(tabsToRestore.getOrNull(snapshot.activeIndex))
