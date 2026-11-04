@@ -34,6 +34,8 @@ internal object NavigationInput {
         return search(value, searchEngine)
     }
 
+    fun externalWebUrl(raw: String): String? = raw.trim().takeIf(::isValidWebUrl)
+
     fun isValidWebUrl(value: String): Boolean = try {
         val uri = URI(value)
         (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) &&
