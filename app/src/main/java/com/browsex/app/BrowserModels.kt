@@ -26,7 +26,7 @@ internal fun newBrowserSession(privateMode: Boolean): GeckoSession =
             .build()
     )
 
-class BrowserTab internal constructor(
+data class BrowserTab internal constructor(
     val privateMode: Boolean = false,
     var session: GeckoSession = newBrowserSession(privateMode),
     var sessionOpened: Boolean = false,
