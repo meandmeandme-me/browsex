@@ -15,6 +15,7 @@ This file records implementation state separately from device verification. A ch
 ## Phase 1 — browser foundation
 
 - [x] Validate external HTTP/HTTPS intents and reject unsafe schemes.
+- [x] Accept internationalized domain names using IDNA ASCII validation while rejecting credentials, malformed authorities and invalid ports.
 - [x] Persist and restore a bounded, URL-validated tab snapshot and active tab.
 - [x] Enforce the 20-tab cap for regular and popup tab creation.
 - [x] Restore tab metadata without opening every saved tab at startup; open only the active session and load background tabs on demand.
