@@ -117,3 +117,5 @@ This file records implementation state separately from device verification. A ch
 - [ ] Evaluate Windows, macOS and Linux browser engines independently; document licensing, security updates, sandboxing, extensions and platform integration.
 - [ ] Design and verify Android TV remote/focus navigation, media behavior and low-memory constraints.
 - [ ] Build platform clients and release pipelines only after the relevant engine and UX decisions are approved.
+- [x] Evaluate account backend options and record a reversible Supabase/PostgreSQL + Auth + RLS direction behind BrowseX-owned interfaces.
+- [ ] Complete Android/desktop PKCE proof of concept, RLS isolation tests, encryption/key recovery threat model and deployment decision before wiring provider UI.
