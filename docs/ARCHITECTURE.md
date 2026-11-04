@@ -35,7 +35,7 @@ Keep the app as a single Gradle module until these boundaries are stable. Avoid 
 
 ## Feature integration contracts
 
-- Downloads: GeckoSession download delegate -> validated download request -> Android DownloadManager or app-managed destination -> visible download state. Handle permission/errors and duplicate names. The current Downloads menu entry only opens Android's Downloads collection; it is not browser download interception.
+- Downloads: GeckoSession download delegate -> validated download request -> Android DownloadManager or app-managed destination -> visible download state. Handle permission/errors and duplicate names. The current implementation routes GeckoView external responses through Android DownloadManager and displays the system-wide DownloadManager collection. It is not an app-isolated queue; DownloadManager re-fetches the URL, so POST bodies and arbitrary request headers are not guaranteed to survive.
 - Reader: explicit user action -> GeckoView PageExtractionController -> native reader presentation -> preserve original URL and navigation state. No page scripts are injected. Current GeckoView 150 extraction uses its default extraction options; boilerplate-removal tuning is not enabled.
 - Site notifications: use GeckoView permission delegates and Android notification permission/channel APIs; request only after a site gesture and only on supported Android versions.
 - Site information: show the active origin, HTTPS status and content permissions reported by GeckoView. This first pass is read-only; permission grant/revoke controls remain pending.\n- Settings: preferences have typed defaults and a single source of truth; UI must reflect persisted values.
