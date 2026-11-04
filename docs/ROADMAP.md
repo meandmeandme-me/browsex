@@ -34,6 +34,8 @@ This file records implementation state separately from device verification. A ch
 - [x] Add per-site content permission prompts with Allow, Block and Not now outcomes.
 - [x] Add Site Info controls to change stored content permissions to Allow, Block or Ask; persistent storage has an explicit non-revocable state.
 - [x] Add a privacy center for selecting GeckoView cookies, DOM storage, cache, authentication-session and site-permission data to clear; close all sessions before clearing and restore validated tabs afterward.
+- [x] Add host-scoped site-data clearing from Site Info, with an explicit warning about sign-out and third-party host boundaries.
+- [x] Enrich local history with page titles and visit timestamps while migrating legacy URL-only history.
 - [x] Store camera/microphone decisions by validated site origin and separately require Android runtime permission.
 - [x] Bridge Gecko web notifications to Android NotificationManager channels, including Android 13+ POST_NOTIFICATIONS and tap/dismiss callbacks.
 - [x] Suppress website notifications for private-browsing notifications and honor the app-level notification switch.
