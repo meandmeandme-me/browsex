@@ -32,6 +32,7 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.WebResponse
 
 private const val HOME_URL = "resource://android/assets/home.html"
@@ -566,6 +567,7 @@ class MainActivity : AppCompatActivity() {
 
 
     /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
+    @OptIn(ExperimentalGeckoViewApi::class)
     private fun openReaderMode() {
         val tab = activeTab ?: return
         if (!tab.url.startsWith("http://") && !tab.url.startsWith("https://")) {
