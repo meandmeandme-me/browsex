@@ -77,7 +77,10 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
         fun render() {
             list.removeAllViews()
             val ownedIds = store.browseXDownloadIds()
-            val cursor = manager.query(DownloadManager.Query())
+            // Query only IDs registered by Browse X; never enumerate other apps' downloads.
+            val cursor = if (ownedIds.isEmpty()) null else manager.query(
+                DownloadManager.Query().setFilterById(*ownedIds.toLongArray())
+            )
             var count = 0
             cursor?.use { c ->
                 val idCol = c.getColumnIndex(DownloadManager.COLUMN_ID)
@@ -89,10 +92,9 @@ internal class DownloadsPage(private val activity: MainActivity, private val sto
                 while (c.moveToNext()) {
                     if (idCol < 0) continue
                     val id = c.getLong(idCol)
-                    if (id !in ownedIds) continue
                     count++
-                    val title = c.getString(titleCol) ?: "Downloaded file"
-                    val status = c.getInt(statusCol)
+                    val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
+                    val status = if (statusCol >= 0) c.getInt(statusCol) else -1
                     val total = if (totalCol >= 0) c.getLong(totalCol) else -1L
                     val soFar = if (soFarCol >= 0) c.getLong(soFarCol) else 0L
                     val date = if (dateCol >= 0) c.getLong(dateCol) else 0L
