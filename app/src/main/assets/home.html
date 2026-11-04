@@ -6,87 +6,140 @@
 <meta name="theme-color" content="#eff5fa">
 <title>Browse X</title>
 <style>
-:root{color-scheme:light;--canvas:#eff5fa;--pearl:#f7f9fc;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--white:#fff;--shadow:0 6px 24px rgba(38,77,108,.07);--card-radius:22px}
+:root{color-scheme:light;--canvas:#eff5fa;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--card:#fff;--shadow:0 6px 24px rgba(38,77,108,.07)}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
 body{background:linear-gradient(112deg,#e0f6fc 0%,#f4f7fc 48%,#e6ecfc 100%);background-attachment:fixed}
-main{width:min(100%,560px);margin:auto;padding:24px 20px 34px}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:25px}
+main{width:min(100%,620px);margin:auto;padding:24px 20px 36px}
+header,.section-head{display:flex;align-items:center;justify-content:space-between}
+header{margin-bottom:30px}
 .brand{display:flex;align-items:center;gap:10px}
-.mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#5fc8e9,#3b69c9 58%,#766bd1);display:grid;place-items:center;color:white;font-size:26px;font-weight:300;box-shadow:0 5px 14px #477cc333}
+.mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#5fc8e9,#3b69c9 58%,#766bd1);display:grid;place-items:center;color:#fff;font-size:26px;box-shadow:0 5px 14px #477cc333}
 .brand-name{font-size:23px;font-weight:750;letter-spacing:-.7px}
-.icon-btn{width:44px;height:44px;border:0;border-radius:10px;background:#fff;color:var(--ink);font-size:21px;box-shadow:var(--shadow)}
-.greeting{margin:0 0 25px}
-h1{font-size:32px;line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:750}
+.icon-btn{width:44px;height:44px;border:0;border-radius:13px;background:var(--card);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}
+.greeting{margin:0 0 28px}
+h1{font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:760}
 .greeting p{font-size:14px;color:var(--muted);margin:0}
-.section-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px}
-.section-head h2{font-size:17px;font-weight:450;margin:0}
-.text-action{border:0;background:transparent;color:var(--blue);font-size:13px;font-weight:650;padding:6px 0}
-.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:27px}
+.section-head{margin:0 0 14px}
+.section-head h2{font-size:17px;font-weight:550;margin:0}
+.text-action{border:0;background:transparent;color:var(--blue);font-size:13px;font-weight:650;padding:8px 0;cursor:pointer}
+.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:30px}
+.shortcut-wrap{position:relative;min-width:0}
 .shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink)}
-.shortcut-icon{width:56px;height:56px;border-radius:18px;background:#fff;display:grid;place-items:center;font-size:25px;font-weight:500;box-shadow:var(--shadow);color:var(--blue)}
-.shortcut:nth-child(2) .shortcut-icon{color:#132b40}
-.shortcut:nth-child(3) .shortcut-icon{color:#132b40}
-.shortcut:nth-child(4) .shortcut-icon{color:#132b40}
-.shortcut span:last-child{font-size:11px;font-weight:550;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.reading-head{margin-bottom:14px}
-.reading-card{padding:12px;border-radius:22px;background:#fff;border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block}
-.editorial-art{height:138px;border-radius:16px;overflow:hidden;position:relative;background:linear-gradient(130deg,#b7cbd2 0%,#d7d6c7 45%,#8da8a9 100%)}
-.editorial-art:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7e8cf,#b5a58f 65%,#7c8e8c);left:8%;top:-62px;box-shadow:100px 48px 0 -28px rgba(255,255,255,.35)}
-.editorial-art:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(16,40,51,.08),transparent 60%),linear-gradient(0deg,rgba(14,35,45,.18),transparent 55%)}
-.article-info{padding:10px 0 0}
+.shortcut-icon{width:58px;height:58px;border-radius:19px;background:var(--card);display:grid;place-items:center;font-size:25px;font-weight:650;box-shadow:var(--shadow);color:var(--blue);overflow:hidden}
+.shortcut-name{font-size:11px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.shortcut-edit{position:absolute;right:0;top:-5px;width:23px;height:23px;border:0;border-radius:50%;background:#dcecff;color:#0759bd;font-size:13px;cursor:pointer}
+.add-shortcut{width:58px;height:58px;border:1px dashed #91abc2;border-radius:19px;background:#ffffff75;color:var(--blue);font-size:26px;cursor:pointer}
+.add-label{display:block;margin-top:8px;font-size:11px;color:var(--muted)}
+.reading-card{padding:12px;border-radius:22px;background:var(--card);border:1px solid #ffffffb3;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block}
+.editorial-art{height:142px;border-radius:16px;overflow:hidden;position:relative;background:linear-gradient(130deg,#b7cbd2 0%,#d7d6c7 45%,#8da8a9 100%)}
+.editorial-art:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7e8cf,#b5a58f 65%,#7c8e8c);left:8%;top:-62px;box-shadow:100px 48px 0 -28px #ffffff59}
+.article-info{padding:11px 2px 1px}
 .kicker{font-size:11px;color:var(--blue);letter-spacing:.2px;margin-bottom:5px}
-.article-title{font-size:20px;line-height:1.2;margin:0 0 6px;font-weight:500}
+.article-title{font-size:20px;line-height:1.2;margin:0 0 6px;font-weight:600}
 .article-meta{font-size:12px;color:var(--muted)}
-.search-hint{margin:22px 0 0;text-align:center;font-size:11px;color:#71869a}
-body.dark{--canvas:#111d2e;--ink:#edf5ff;--muted:#aab9c9;--line:#31445a;--white:#1c2b40;background:linear-gradient(120deg,#1c3547,#1c263e 52%,#302c4a);color:var(--ink)}
-body.dark .icon-btn,body.dark .shortcut-icon,body.dark .reading-card{background:#20334a;color:var(--ink)}
-body.dark .mark{box-shadow:none}
-body.dark .editorial-art{filter:brightness(.8)}
-@media(max-width:360px){main{padding:18px 14px}.shortcuts{gap:5px}.shortcut-icon{width:50px;height:50px}.shortcut span:last-child{font-size:10px}h1{font-size:29px}}
-@media(min-width:700px){main{padding-top:38px}.shortcuts{gap:16px}.shortcut-icon{width:62px;height:62px}}
+.search-hint{margin:22px 0 0;text-align:center;font-size:11px;color:var(--muted)}
+dialog{width:min(420px,calc(100% - 32px));border:0;border-radius:22px;padding:0;background:var(--card);color:var(--ink);box-shadow:0 20px 70px #0b203855}
+dialog::backdrop{background:#0c203b80;backdrop-filter:blur(3px)}
+.dialog-body{padding:21px}
+.dialog-body h2{font-size:20px;margin:0 0 6px}
+.dialog-body p{font-size:12px;color:var(--muted);margin:0 0 17px}
+label{display:block;font-size:12px;font-weight:650;margin:12px 0 6px}
+input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--canvas);color:var(--ink);font-size:14px;outline-color:var(--blue)}
+.dialog-actions{display:flex;gap:8px;margin-top:18px}
+.dialog-actions button{flex:1;min-height:44px;border:0;border-radius:12px;font-weight:650;cursor:pointer}
+.primary{background:var(--blue);color:#fff}.secondary{background:var(--canvas);color:var(--ink)}.danger{background:#fff0f0;color:#b42332}
+body.dark{color-scheme:dark;--canvas:#111d2e;--ink:#edf5ff;--muted:#aab9c9;--line:#31445a;--card:#20334a;--blue:#78b5ff;background:linear-gradient(120deg,#1c3547,#1c263e 52%,#302c4a);color:var(--ink)}
+body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}body.dark .shortcut-edit{background:#294d76;color:#cfe5ff}body.dark .danger{background:#492d38;color:#ffc5cc}
+@media(max-width:360px){main{padding:18px 14px}.shortcuts{gap:6px}.shortcut-icon,.add-shortcut{width:51px;height:51px}.shortcut-name,.add-label{font-size:10px}}
+@media(min-width:700px){main{padding-top:38px}.shortcuts{gap:18px}.shortcut-icon,.add-shortcut{width:64px;height:64px}}
 </style>
 </head>
 <body>
 <main>
 <header>
  <div class="brand"><div class="mark" aria-hidden="true">✳</div><div class="brand-name">Browse X</div></div>
- <button class="icon-btn" id="settings" aria-label="Settings">☷</button>
+ <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle appearance">☾</button>
 </header>
 <section class="greeting"><h1>A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
 <section aria-labelledby="everyday-title">
- <div class="section-head"><h2 id="everyday-title">Your everyday</h2><button class="text-action" id="edit">Edit</button></div>
- <nav class="shortcuts" id="shortcuts" aria-label="Favorite websites">
-  <a class="shortcut" href="https://fieldnotes.design"><span class="shortcut-icon">F</span><span>Fieldnotes</span></a>
-  <a class="shortcut" href="https://www.are.na"><span class="shortcut-icon">A</span><span>Are.na</span></a>
-  <a class="shortcut" href="https://www.wikipedia.org"><span class="shortcut-icon">W</span><span>Wikipedia</span></a>
-  <a class="shortcut" href="https://linear.app"><span class="shortcut-icon">L</span><span>Linear</span></a>
- </nav>
+ <div class="section-head"><h2 id="everyday-title">Your everyday</h2><button class="text-action" id="reset" type="button">Reset</button></div>
+ <nav class="shortcuts" id="shortcuts" aria-label="Favorite websites"></nav>
 </section>
 <section aria-labelledby="reading-title">
- <div class="section-head reading-head"><h2 id="reading-title">Pick up a good read</h2><button class="text-action" id="view-all">View all</button></div>
- <a class="reading-card" href="https://fieldnotes.design">
-  <div class="editorial-art" role="img" aria-label="Soft editorial still life"></div>
-  <div class="article-info"><div class="kicker">FIELDNOTES&nbsp; / &nbsp;DESIGN &amp; LIVING</div><h3 class="article-title">The art of doing less</h3><div class="article-meta">6 min read · Saved yesterday</div></div>
+ <div class="section-head"><h2 id="reading-title">A place to begin</h2><a class="text-action" href="https://www.wikipedia.org" aria-label="Explore Wikipedia">Explore</a></div>
+ <a class="reading-card" href="https://www.wikipedia.org">
+  <div class="editorial-art" role="img" aria-label="Abstract soft editorial artwork"></div>
+  <div class="article-info"><div class="kicker">OPEN WEB&nbsp; / &nbsp;DISCOVERY</div><h3 class="article-title">Follow your curiosity</h3><div class="article-meta">A new idea is one search away</div></div>
  </a>
 </section>
 <p class="search-hint">Search or enter an address in the Browse X toolbar above.</p>
 </main>
+<dialog id="shortcut-dialog" aria-labelledby="dialog-title">
+ <form class="dialog-body" id="shortcut-form">
+  <h2 id="dialog-title">Add a shortcut</h2><p>Save a website to your start page. Use a full website address.</p>
+  <label for="shortcut-name">Name</label><input id="shortcut-name" maxlength="24" placeholder="My favorite site" required>
+  <label for="shortcut-url">Website address</label><input id="shortcut-url" type="url" inputmode="url" placeholder="https://example.com" required>
+  <div class="dialog-actions">
+   <button class="secondary" id="cancel" type="button">Cancel</button>
+   <button class="danger" id="delete" type="button" hidden>Delete</button>
+   <button class="primary" type="submit">Save</button>
+  </div>
+ </form>
+</dialog>
 <script>
-(()=> {
+(()=>{
  const $=id=>document.getElementById(id);
- $('settings').addEventListener('click',()=>alert('Open the Browse X menu above to access browser settings.'));
- $('edit').addEventListener('click',()=>{
-   const current=[...document.querySelectorAll('.shortcut span:last-child')].map(x=>x.textContent).join(', ');
-   const value=prompt('Edit your four favorite labels (separate with commas):',current);
-   if(!value)return;
-   const names=value.split(',').map(x=>x.trim()).filter(Boolean).slice(0,4);
-   const links=[...document.querySelectorAll('.shortcut')];
-   names.forEach((name,i)=>{if(links[i]){links[i].querySelector('span:last-child').textContent=name;links[i].querySelector('.shortcut-icon').textContent=name.charAt(0).toUpperCase();}});
+ const defaults=[
+  {name:'Wikipedia',url:'https://www.wikipedia.org'},
+  {name:'Are.na',url:'https://www.are.na'},
+  {name:'YouTube',url:'https://www.youtube.com'},
+  {name:'GitHub',url:'https://github.com'}
+ ];
+ const key='browsex.home.shortcuts',themeKey='browsex.home.dark';
+ let shortcuts=defaults,editing=-1;
+ try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(saved))shortcuts=saved.filter(x=>x&&typeof x.name==='string'&&typeof x.url==='string').slice(0,8)}catch(_){}
+ const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'||u.protocol==='http:'}catch(_){return false}};
+ const save=()=>{try{localStorage.setItem(key,JSON.stringify(shortcuts))}catch(_){}};
+ const render=()=>{
+  const nav=$('shortcuts');nav.replaceChildren();
+  shortcuts.forEach((item,index)=>{
+   const wrap=document.createElement('div');wrap.className='shortcut-wrap';
+   const link=document.createElement('a');link.className='shortcut';link.href=item.url;link.setAttribute('aria-label','Open '+item.name);
+   const mark=document.createElement('span');mark.className='shortcut-icon';mark.textContent=(item.name.trim()[0]||'↗').toUpperCase();
+   const name=document.createElement('span');name.className='shortcut-name';name.textContent=item.name;
+   link.append(mark,name);wrap.append(link);
+   const edit=document.createElement('button');edit.className='shortcut-edit';edit.type='button';edit.textContent='✎';edit.setAttribute('aria-label','Edit '+item.name);edit.addEventListener('click',()=>openEditor(index));wrap.append(edit);
+   nav.append(wrap);
+  });
+  if(shortcuts.length<8){
+   const wrap=document.createElement('div');wrap.className='shortcut-wrap';
+   const add=document.createElement('button');add.className='add-shortcut';add.type='button';add.textContent='+';add.setAttribute('aria-label','Add shortcut');add.addEventListener('click',()=>openEditor(-1));
+   wrap.append(add);const label=document.createElement('span');label.className='add-label';label.textContent='Add site';wrap.append(label);nav.append(wrap);
+  }
+ };
+ const dialog=$('shortcut-dialog');
+ const openEditor=index=>{
+  editing=index;const item=index>=0?shortcuts[index]:{name:'',url:''};
+  $('dialog-title').textContent=index>=0?'Edit shortcut':'Add a shortcut';
+  $('shortcut-name').value=item.name;$('shortcut-url').value=item.url;
+  $('delete').hidden=index<0;dialog.showModal();$('shortcut-name').focus();
+ };
+ $('shortcut-form').addEventListener('submit',event=>{
+  event.preventDefault();const name=$('shortcut-name').value.trim(),url=$('shortcut-url').value.trim();
+  if(!name||!validUrl(url)){$('shortcut-url').setCustomValidity('Enter a valid http or https website address.');$('shortcut-url').reportValidity();$('shortcut-url').setCustomValidity('');return}
+  const item={name,url};
+  if(editing>=0)shortcuts[editing]=item;else if(shortcuts.length<8)shortcuts.push(item);
+  save();render();dialog.close();
  });
- $('view-all').addEventListener('click',()=>location.href='https://fieldnotes.design');
- const hour=new Date().getHours();
- $('greeting').textContent=hour<12?'Good morning. Where to next?':hour<18?'Good afternoon. Where to next?':'Good evening. Where to next?';
+ $('cancel').addEventListener('click',()=>dialog.close());
+ $('delete').addEventListener('click',()=>{if(editing>=0){shortcuts.splice(editing,1);save();render()}dialog.close()});
+ $('reset').addEventListener('click',()=>{shortcuts=defaults.map(x=>({...x}));save();render()});
+ const applyTheme=dark=>{document.body.classList.toggle('dark',dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');try{localStorage.setItem(themeKey,dark?'1':'0')}catch(_){}};
+ let dark=false;try{dark=localStorage.getItem(themeKey)==='1'}catch(_){}applyTheme(dark);
+ $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
+ const hour=new Date().getHours();$('greeting').textContent=hour<12?'Good morning. Where to next?':hour<18?'Good afternoon. Where to next?':'Good evening. Where to next?';
+ render();
 })();
 </script>
 </body>
