@@ -82,3 +82,4 @@ gradle testDebugUnitTest lintDebug assembleDebug
 
 - [نتائج دراسة Firefox وBrave وCromite وDuckDuckGo وقرارات الاستفادة والتراخيص](docs/OPEN_SOURCE_BROWSER_RESEARCH.md).
 - [خطة ترحيل التخزين الآمن إلى Room وDataStore](docs/STORAGE_MIGRATION_PLAN.md) — خطة فقط؛ لم يتغير محرك التخزين الحالي بعد.
+- [تقييم واعتماد اتجاه أولي لخادم الحسابات والمزامنة](docs/decisions/ADR-004-account-sync-backend.md) — Supabase مرشح موصى به، وليس خدمة منشورة أو مهيأة بعد.
