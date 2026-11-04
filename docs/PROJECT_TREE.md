@@ -12,6 +12,7 @@ BrowseX/
 │   │   ├── java/com/browsex/app/
 │   │   │   ├── BrowseXApplication.kt     # process-wide setup (when needed)
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
+│   │   │   ├── TabLifecyclePolicy.kt     # pure live-session budget and memory-pressure policy
 │   │   │   ├── di/                       # dependency wiring; introduce only when useful
 │   │   │   ├── core/
 │   │   │   │   ├── common/               # Result, dispatchers, shared primitives
@@ -81,7 +82,7 @@ BrowseX/
 
 ## Current implementation files
 
-The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabLifecyclePolicy`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
 
 ## Dependency direction
 
