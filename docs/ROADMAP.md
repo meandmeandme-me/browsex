@@ -72,6 +72,7 @@ This file records implementation state separately from device verification. A ch
 
 - [x] Add bounded bookmark folders, safe legacy migration, validated JSON import/export, title-aware search and manual ordering.
 - [x] Persist home section visibility and shortcut layout preferences with reset behavior.
+- [x] Add, edit, remove and move home shortcuts earlier/later with saved ordering and phone-safe editor controls.
 - [x] Move browser chrome, Settings, Downloads, Saved Pages, Site Info, Reader and Recall labels into shared Android resource lookup with English/Arabic resources.
 - [x] Normalize Unicode compatibility forms and case for bookmark/history/Recall search.
 - [x] Accept validated BCP 47 app language tags and preserve device locale/RTL direction in the home page.
