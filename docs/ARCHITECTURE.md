@@ -74,3 +74,8 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 ## Download lifecycle ownership
 
 `StreamDownloadCoordinator` owns BrowseX stream-download metadata, progress updates, completion/failure state and cancellation around `DownloadResponseWriter`. The Activity still validates external responses, obtains legacy Android storage permission and presents user feedback. The writer continues to persist the original Gecko response body rather than re-fetching its URL.
+
+
+## Account and sync contract boundary
+
+`AccountDomainModels.kt` defines provider-neutral value types. `AccountSyncContracts.kt` defines suspend repository/gateway boundaries for identity, account state, consent, device registry, encrypted transport/cipher, sync records/status and account data lifecycle. These are contracts only; no OAuth provider, token vault, sync server or cloud data path exists yet.
