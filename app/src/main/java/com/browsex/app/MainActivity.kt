@@ -370,73 +370,157 @@ class MainActivity : AppCompatActivity() {
         } else controller.show(WindowInsetsCompat.Type.systemBars())
     }
 
+    /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
     private fun showTabs() {
-        val scroll = ScrollView(this)
-        val grid = LinearLayout(this).apply {
+        val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(8), dp(14), dp(8))
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setBackgroundColor(Color.rgb(239, 245, 250))
         }
-        scroll.addView(grid)
-        lateinit var dialog: AlertDialog
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        heading.addView(TextView(this).apply {
+            text = "Your space"
+            textSize = 25f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(19, 43, 64))
+        })
+        heading.addView(TextView(this).apply {
+            text = "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
+            textSize = 13f
+            setTextColor(Color.rgb(83, 105, 123))
+            setPadding(0, dp(3), 0, 0)
+        })
+        header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
+        val add = TextView(this).apply {
+            text = "+  New tab"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(11), dp(16), dp(11))
+            background = rounded(Color.rgb(8, 102, 217), 22)
+            setOnClickListener { createTab(HOME_URL); dialog.dismiss(); showTabs() }
+        }
+        header.addView(add)
+        page.addView(header)
 
-        tabs.chunked(2).forEach { pair ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.TOP
-            }
-            pair.forEach { tab ->
+        val hint = TextView(this).apply {
+            text = "Tap a card to return to it"
+            textSize = 12f
+            setTextColor(Color.rgb(83, 105, 123))
+            setPadding(0, dp(15), 0, dp(12))
+        }
+        page.addView(hint)
+
+        val scroll = ScrollView(this)
+        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        scroll.addView(grid)
+        val columns = if (resources.configuration.screenWidthDp >= 600) 3 else 2
+        val rows = tabs.chunked(columns)
+        rows.forEach { rowTabs ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
+            rowTabs.forEach { tab ->
+                val selected = tab === activeTab
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(12), dp(12), dp(12), dp(10))
-                    background = rounded(Color.WHITE, 16)
-                    elevation = dp(2).toFloat()
+                    setPadding(dp(13), dp(13), dp(13), dp(12))
+                    background = rounded(Color.WHITE, 18)
+                    elevation = dp(if (selected) 4 else 1).toFloat()
                 }
-                val title = TextView(this).apply {
+                val preview = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), dp(8), dp(8), dp(8))
+                    background = rounded(if (selected) Color.rgb(225, 239, 255) else Color.rgb(243, 247, 251), 12)
+                }
+                preview.addView(TextView(this).apply {
+                    text = "Browse X"
+                    textSize = 11f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.rgb(8, 102, 217))
+                })
+                preview.addView(TextView(this).apply {
+                    text = tab.title.ifBlank { "New tab" }
+                    textSize = 13f
+                    setTextColor(Color.rgb(31, 48, 65))
+                    maxLines = 2
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(7), 0, dp(3))
+                })
+                card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
+                card.addView(TextView(this).apply {
                     text = tab.title.ifBlank { "New tab" }
                     textSize = 14f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(Color.rgb(19, 43, 64))
-                    maxLines = 2
-                }
-                val url = TextView(this).apply {
-                    text = tab.url.removePrefix("https://").removePrefix("http://")
+                    maxLines = 1
+                    setPadding(0, dp(10), 0, dp(3))
+                })
+                card.addView(TextView(this).apply {
+                    text = tab.url.removePrefix("https://").removePrefix("http://").ifBlank { "Start page" }
                     textSize = 11f
                     setTextColor(Color.rgb(83, 105, 123))
                     maxLines = 2
-                    setPadding(0, dp(5), 0, dp(10))
+                })
+                val actions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(9), 0, 0)
                 }
-                val close = TextView(this).apply {
-                    text = "×  Close tab"
+                actions.addView(TextView(this).apply {
+                    text = if (selected) "● Active" else "Open"
                     textSize = 12f
-                    setTextColor(Color.rgb(8, 102, 217))
-                    gravity = Gravity.END
+                    setTextColor(if (selected) Color.rgb(8, 102, 217) else Color.rgb(83, 105, 123))
+                }, LinearLayout.LayoutParams(0, dp(32), 1f))
+                actions.addView(TextView(this).apply {
+                    text = "×"
+                    textSize = 22f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.rgb(190, 65, 75))
+                    contentDescription = "Close tab"
+                    setPadding(dp(12), 0, dp(5), 0)
                     setOnClickListener {
                         closeTab(tab)
                         dialog.dismiss()
-                        if (tabs.isNotEmpty()) showTabs()
+                        showTabs()
                     }
-                }
-                card.addView(title)
-                card.addView(url)
-                card.addView(close)
+                })
+                card.addView(actions)
                 card.setOnClickListener {
                     activateTab(tab)
                     dialog.dismiss()
                 }
-                row.addView(card, LinearLayout.LayoutParams(0, dp(116), 1f).apply {
-                    setMargins(dp(5), dp(5), dp(5), dp(5))
+                row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    setMargins(dp(4), dp(4), dp(4), dp(9))
                 })
             }
-            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, dp(116), 1f))
+            repeat(columns - rowTabs.size) {
+                row.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
+            }
             grid.addView(row)
         }
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        val done = TextView(this).apply {
+            text = "Done"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(19, 43, 64), 24)
+            setPadding(dp(20), dp(13), dp(20), dp(13))
+        }
+        page.addView(done, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })
 
-        dialog = AlertDialog.Builder(this)
-            .setTitle("Your tabs · ${tabs.size}")
-            .setView(scroll)
-            .setPositiveButton("New tab") { _, _ -> createTab(HOME_URL) }
-            .setNegativeButton("Done", null)
-            .create()
+        dialog = AlertDialog.Builder(this).setView(page).create()
+        done.setOnClickListener { dialog.dismiss() }
+        dialog.setOnShowListener {
+            dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        }
         dialog.show()
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
     private fun showBrowserMenu() {
