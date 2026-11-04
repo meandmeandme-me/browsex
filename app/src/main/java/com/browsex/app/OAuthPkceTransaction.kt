@@ -84,7 +84,7 @@ internal data class OAuthPkceTransaction private constructor(
                     scheme.matches(Regex("[A-Za-z][A-Za-z0-9+.-]{2,63}"))
                 if (!isHttps && !isAppScheme) return null
                 if ((isHttps && uri.host.isNullOrBlank()) || uri.rawUserInfo != null ||
-                    uri.rawFragment != null || uri.rawPath.isNullOrBlank()
+                    uri.rawFragment != null || uri.rawQuery != null || uri.rawPath.isNullOrBlank()
                 ) return null
                 uri
             } catch (_: Exception) { null }

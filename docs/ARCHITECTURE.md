@@ -70,6 +70,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 
 - Current product delivery is Android-only. Windows, macOS, Linux and Android TV are planned targets, not implemented clients.
 - Account domain models live in AccountDomainModels.kt and intentionally avoid Android/GeckoView/OAuth SDK dependencies. They are initial pure models, not a functioning account feature.
+- `OAuthPkceTransaction` creates cryptographically random OAuth state and RFC 7636 S256 PKCE verifier/challenge pairs, enforces a short callback lifetime, and validates the exact configured redirect target and returned state before yielding an authorization code. It is a security primitive only: provider client IDs, provider authorization/token endpoints, Android callback registration, token vault, account UI and backend are not wired, so Google/Microsoft/Apple sign-in is not available.
 - Account sign-in, BrowseX profile, sync consent, device registry and encrypted sync are separate boundaries. Local browsing never requires an account.
 - Future shared code should be extracted gradually, with Kotlin Multiplatform evaluated for pure domain and sync logic. Do not move GeckoView, Android permissions, native UI or platform storage into common code.
 - Desktop browser engines must be selected per OS after compatibility, security, sandbox, extension, accessibility, performance, licensing and update evaluation. GeckoView remains the Android engine.
