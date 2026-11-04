@@ -58,3 +58,10 @@ gradle testDebugUnitTest lintDebug assembleDebug
 - [Project tree and dependency contracts](docs/PROJECT_TREE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [QA checklist](docs/QA_CHECKLIST.md)
+
+
+## Product and architecture planning
+
+- [World-browser product requirements](docs/WORLD_BROWSER_PRODUCT_REQUIREMENTS.md) — competitor research, user-behavior evidence, global requirements and Uizard brief.
+- [Account and sync foundation](docs/ACCOUNT_SYNC_FOUNDATION.md) — provider-neutral identity, security boundaries and opt-in sync design.
+- [Implementation roadmap](docs/ROADMAP.md) — verified implementation versus remaining device QA.
