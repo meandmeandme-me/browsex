@@ -175,7 +175,7 @@ class BrowserStore(context: Context) {
     fun history(): List<String> = historyEntries().map { it.url }
 
     /** Title and visit time make history useful for recall while preserving legacy URL access. */
-    fun historyEntries(): List<BrowserHistoryEntry> {
+    internal fun historyEntries(): List<BrowserHistoryEntry> {
         val stored = prefs.getString("history_entries_v1", null)
         if (stored == null) {
             val migrated = readList("history").map { url ->
