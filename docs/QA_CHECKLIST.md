@@ -64,3 +64,17 @@ Implementation and verification are tracked separately. Items under “implement
 ## Release rules
 
 Never call a build successful until its workflow conclusion is `success` and the artifact is attached to that exact commit. Never claim physical-device validation unless it was performed on a device. Do not overwrite or ask the user to uninstall an existing install as a troubleshooting shortcut.
+
+## Additional coverage for the current foundation work
+
+- [ ] Save a named session, close/reopen BrowseX, and verify the saved session remains available.
+- [ ] Open a saved session and verify its active tab is selected; verify the 20-tab cap and partial-open warning.
+- [ ] Verify private tabs are never included in a named session or normal restore.
+- [ ] Save a session using an existing name and verify replacement requires confirmation.
+- [ ] Import backups with colliding folder IDs and duplicate folder names; verify bookmarks map to the intended folder.
+- [ ] Import malformed, oversized, unsupported-version and non-HTTP(S) bookmark data; verify no partial writes occur.
+- [ ] Reorder bookmarks within a folder and verify items in other folders retain their order.
+- [ ] Search bookmarks/history by page title, domain and URL.
+- [ ] Trigger Android memory pressure with multiple tabs; verify active tab remains usable and inactive tabs reopen from validated URLs.
+- [ ] Verify downloads from GET, POST, authenticated and one-time URL responses once response-stream transfer is implemented; current DownloadManager behavior is not sufficient evidence.
+- [ ] Verify all target locales, mixed RTL/LTR text, screen readers, large font scale, landscape and tablet layouts.
