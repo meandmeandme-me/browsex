@@ -58,7 +58,7 @@ These are target boundaries, not a claim that these classes already exist. Intro
 ### C. Library
 - Bookmark IDs, folder CRUD, ordering, migration and validated JSON backup are implemented in the current branch.
 - Add Android-backed migration and import/export round-trip tests before release.
-- Add duplicate conflict preview and keep history separate from bookmarks.
+- Duplicate conflict preview and destructive-replace confirmation are implemented; verify malformed files, collisions and no partial writes.
 
 ### D. Home and appearance
 - Add persisted home layout preferences and reset defaults.
