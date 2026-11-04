@@ -174,7 +174,7 @@ internal class TabsPage(
                         if (tabs.size >= TabSessionState.MAX_TABS) {
                             onToast("Tab limit reached")
                         } else {
-                            store.consumeRecentlyClosedTab(recentlyClosed[index].id)?.let { createTab(it.url) }
+                            store.consumeRecentlyClosedTab(recentlyClosed[index].id)?.let { onCreateTab(it.url) }
                         }
                     }
                     .setNegativeButton(tr("Close"), null)
