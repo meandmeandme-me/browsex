@@ -2,6 +2,7 @@ package com.browsex.app
 
 import android.content.Context
 import org.json.JSONArray
+import org.json.JSONObject
 
 /** Small durable store for browser preferences, bookmarks and recent history. */
 class BrowserStore(context: Context) {
@@ -31,6 +32,69 @@ class BrowserStore(context: Context) {
     var siteNotificationsEnabled: Boolean
         get() = prefs.getBoolean("site_notifications_enabled", true)
         set(value) { prefs.edit().putBoolean("site_notifications_enabled", value).apply() }
+
+    fun wasPlatformPermissionDenied(permission: String): Boolean =
+        prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().contains(permission)
+
+    fun markPlatformPermissionDenied(permission: String) {
+        val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
+        values.add(permission)
+        prefs.edit().putStringSet("denied_platform_permissions", values).apply()
+    }
+
+    fun clearPlatformPermissionDenial(permission: String) {
+        val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
+        if (values.remove(permission)) prefs.edit().putStringSet("denied_platform_permissions", values).apply()
+    }
+
+    fun siteMediaDecision(origin: String, feature: String): String? {
+        if (!isSafePermissionOrigin(origin) || feature !in setOf("camera", "microphone")) return null
+        return try {
+            JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}")
+                .optString("$origin|$feature").takeIf { it == "allow" || it == "deny" }
+        } catch (_: Exception) { null }
+    }
+
+    fun setSiteMediaDecision(origin: String, feature: String, decision: String) {
+        if (!isSafePermissionOrigin(origin) || feature !in setOf("camera", "microphone")) return
+        if (decision !in setOf("allow", "deny", "ask")) return
+        val key = "$origin|$feature"
+        val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
+        catch (_: Exception) { JSONObject() }
+        if (decision == "ask") json.remove(key) else json.put(key, decision)
+        while (json.length() > 100) {
+            val oldest = json.keys().asSequence().firstOrNull() ?: break
+            json.remove(oldest)
+        }
+        prefs.edit().putString("site_media_permissions", json.toString()).apply()
+    }
+
+    fun reserveDownloadFileName(candidate: String): String {
+        val names = try {
+            val array = JSONArray(prefs.getString("browsex_download_names", "[]"))
+            (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }.toMutableSet()
+        } catch (_: Exception) { mutableSetOf() }
+        val dot = candidate.lastIndexOf('.').takeIf { it > 0 } ?: candidate.length
+        val stem = candidate.substring(0, dot)
+        val extension = candidate.substring(dot)
+        var result = candidate
+        var suffix = 1
+        while (names.any { it.equals(result, ignoreCase = true) }) {
+            result = "$stem ($suffix)$extension"
+            suffix++
+        }
+        names.add(result)
+        val array = JSONArray()
+        names.toList().takeLast(MAX_TRACKED_DOWNLOADS).forEach { array.put(it) }
+        prefs.edit().putString("browsex_download_names", array.toString()).apply()
+        return result
+    }
+
+    private fun isSafePermissionOrigin(origin: String): Boolean = try {
+        val uri = android.net.Uri.parse(origin)
+        (uri.scheme == "https" || uri.scheme == "http") &&
+            !uri.host.isNullOrBlank() && uri.userInfo == null
+    } catch (_: Exception) { false }
 
     var searchEngine: String
         get() = BrowserStorePolicy.normalizeSearchEngine(prefs.getString("search_engine", "Google"))
