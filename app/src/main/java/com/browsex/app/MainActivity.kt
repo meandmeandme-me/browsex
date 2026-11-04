@@ -101,6 +101,26 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
     private val tabPersistenceCoordinator by lazy {
         BrowserTabPersistenceCoordinator(store, { tabs }, { activeTab })
     }
+    private val hostLifecycleCoordinator by lazy {
+        BrowserHostLifecycleCoordinator(
+            tabs = { tabs },
+            activeTab = { activeTab },
+            isSessionOpened = { it.sessionOpened },
+            persistTabs = ::persistTabs,
+            setSessionActive = { tab, active ->
+                runCatching {
+                    if (active) {
+                        tab.session.setActive(true)
+                        tab.session.setFocused(true)
+                    } else {
+                        tab.session.setFocused(false)
+                        tab.session.setActive(false)
+                    }
+                }
+            },
+            releaseForMemoryPressure = sessionLifecycleCoordinator::releaseForMemoryPressure
+        )
+    }
     private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText
@@ -285,37 +305,22 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
 
     override fun onStart() {
         super.onStart()
-        activeTab?.takeIf { it.sessionOpened }?.session?.let {
-            runCatching { it.setActive(true); it.setFocused(true) }
-        }
+        hostLifecycleCoordinator.onStart()
     }
 
     override fun onStop() {
-        persistTabs()
-        tabs.filter { it.sessionOpened }.forEach { tab ->
-            runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
-        }
+        hostLifecycleCoordinator.onStop()
         super.onStop()
     }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
-            persistTabs()
-            tabs.filter { it !== activeTab && it.sessionOpened }.forEach { tab ->
-                runCatching { tab.session.setFocused(false); tab.session.setActive(false) }
-            }
-        }
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
-            // Keep the visible tab alive; inactive tabs retain their URL and reopen lazily.
-            sessionLifecycleCoordinator.releaseForMemoryPressure()
-        }
+        hostLifecycleCoordinator.onTrimMemory(level)
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
-        persistTabs()
-        sessionLifecycleCoordinator.releaseForMemoryPressure()
+        hostLifecycleCoordinator.onLowMemory()
     }
 
     /** GeckoSession resource limits and background release are owned by the lifecycle coordinator. */
