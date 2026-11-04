@@ -16,7 +16,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-internal data class StoredCredentialSummary(val id: String, val origin: String, val username: String, val password: String)
+internal data class StoredCredentialSummary(val id: String, val origin: String, val username: String)
 
 internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDelegate {
     private val prefs = context.applicationContext.getSharedPreferences("browsex_credentials_v1", Context.MODE_PRIVATE)
@@ -31,11 +31,21 @@ internal class BrowserCredentialVault(context: Context) : Autocomplete.StorageDe
     @Synchronized
     fun entries(): List<StoredCredentialSummary> = runCatching {
         read().map { StoredCredentialSummary(it.optString("id"), it.optString("origin"),
-            it.optString("username"), it.optString("secret")) }
+            it.optString("username")) }
     }.getOrElse { android.util.Log.e("BrowseX", "Credential list unavailable", it); emptyList() }
 
     @Synchronized
+    fun passwordFor(id: String): String? {
+        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return null
+        return runCatching {
+            read().firstOrNull { it.optString("id") == id }
+                ?.optString("secret")?.takeIf { it.isNotEmpty() }
+        }.getOrElse { android.util.Log.e("BrowseX", "Saved credential unavailable", it); null }
+    }
+
+    @Synchronized
     fun delete(id: String): Boolean {
+        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return false
         val rows = runCatching { read() }.getOrElse { return false }
         val filtered = rows.filterNot { it.optString("id") == id }
         if (filtered.size == rows.size) return false
