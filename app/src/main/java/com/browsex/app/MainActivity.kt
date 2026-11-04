@@ -364,7 +364,6 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
             tab.sessionOpened = false
         }
         tabRegistry.clear()
-        tabRegistry.select(null)
         super.onDestroy()
     }
 
