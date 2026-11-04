@@ -117,7 +117,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun persistTabs() {
         if (!::store.isInitialized || tabs.isEmpty()) return
-        store.saveOpenTabs(tabs.map { it.url }, tabs.indexOf(activeTab).coerceAtLeast(0))
+        store.saveOpenTabs(tabs.map { it.url }, activeTab?.let(tabs::indexOf)?.coerceAtLeast(0) ?: 0)
     }
 
     override fun onDestroy() {
