@@ -55,8 +55,8 @@ internal class BrowserSessionLifecycleCoordinator(
      * Clears session-scoped state even if Gecko's close operation throws.
      */
     private fun closeCurrentSession(tab: BrowserTab) {
-        beforeSessionClose(tab)
         try {
+            beforeSessionClose(tab)
             if (tab.sessionOpened) {
                 runCatching {
                     tab.session.setFocused(false)
@@ -65,6 +65,7 @@ internal class BrowserSessionLifecycleCoordinator(
                 }
             }
         } finally {
+            // Host callback failures must not leave stale session state attached to a tab.
             tab.sessionOpened = false
             tab.permissionDelegate = null
             tab.sitePermissions = emptyList()
