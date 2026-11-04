@@ -242,4 +242,5 @@
     <string name="ui_import_preview">Import preview</string>
     <string name="ui_replace_all_current_bookmarks_and_folders">Replace all current bookmarks and folders?</string>
     <string name="ui_import_preview_message">Items: %1$d\nValid: %2$d\nSkipped: %3$d\nDuplicates in backup: %4$d\nAlready saved here: %5$d\nFolders: %6$d</string>
+    <string name="ui_tabs_title">Tabs</string>
 </resources>
