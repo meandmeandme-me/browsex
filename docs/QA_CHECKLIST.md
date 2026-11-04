@@ -13,7 +13,10 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Shared theme and locale preferences are applied to native screens and local home page.
 - [x] Arabic RTL home page and core native screens; touch targets/content descriptions improved.
 - [x] DownloadManager reason codes, status/progress, missing IDs, open/cancel/remove and filename reservations.
-- [x] Crash recovery attempt, manual retry state, inactive-session deactivation and bounded tab restoration.
+- [x] Crash recovery attempt, manual retry state, inactive-session deactivation and lazy tab restoration.
+- [x] Site Info permission rows expose Allow/Block/Ask controls.
+- [x] A failed DownloadManager query is shown as a read error, not misreported as deleted downloads.
+- [x] Launching an external URL preserves saved tabs and opens the new link as the active tab.
 
 ## Final automated CI gates (run once after implementation is complete)
 
@@ -32,13 +35,14 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] HTTP and HTTPS navigation work; unsafe schemes are rejected.
 - [ ] Search engine selection persists after restart.
 - [ ] Back/forward state updates correctly.
-- [ ] Opening, switching, closing and restoring tabs does not leak GeckoSessions.
+- [ ] Opening, switching, closing and restoring tabs does not leak GeckoSessions; 20 saved tabs must not all load simultaneously.
+- [ ] Launching through an external HTTP(S) link preserves saved tabs and opens the external link as the active tab.
 - [ ] The 20-tab cap is enforced for new tabs and popups.
 - [ ] Backgrounding, returning, low-memory callbacks and repeated content-process crashes recover without losing unrelated tabs.
 - [ ] External links and share intents work.
 - [ ] Bookmark/history add, remove and clear persist correctly.
 - [ ] Site permission prompt appears only after a site request; Android deny, app settings re-grant, per-origin allow/block/ask and dialog cancellation behave correctly.
-- [ ] Site Info refreshes stored Gecko permissions after every change; persistent storage explains its non-revocable grant.
+- [ ] Site Info refreshes stored Gecko permissions after every Allow/Block/Ask change; permission rows are keyboard/TalkBack accessible; persistent storage explains its non-revocable grant.
 - [ ] API 33+ notification permission prompt appears on first eligible request; app toggle, OS-level disable, tap, dismiss and private browsing are correct.
 - [ ] BrowseX downloads list includes only IDs registered by BrowseX.
 - [ ] Downloads complete, open, cancel, remove and survive process restart; missing Android records are clearable.

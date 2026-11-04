@@ -54,7 +54,7 @@ jobs:
           printf '%s\n' "${APKS[@]}"
           AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
           for apk in "${APKS[@]}"; do
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
             BADGING="$("$AAPT" dump badging "$apk")"
             grep -F "package: name='com.browsex.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
@@ -68,10 +68,32 @@ jobs:
           grep -q 'lib/arm64-v8a/libxul.so' "$RUNNER_TEMP/universal-files.txt"
           printf '%s\n' "${APKS[@]}" | xargs sha256sum | tee "$APK_DIR/SHA256SUMS.txt"
 
-      - name: Upload verified debug APKs
+      - name: Upload ARM64 debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: browsex-debug-apks
-          path: app/build/outputs/apk/debug/
+          name: browsex-arm64-v8a-debug
+          path: |
+            app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+            app/build/outputs/apk/debug/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload ARM32 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsex-armeabi-v7a-debug
+          path: |
+            app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+            app/build/outputs/apk/debug/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload universal debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsex-universal-debug
+          path: |
+            app/build/outputs/apk/debug/app-universal-debug.apk
+            app/build/outputs/apk/debug/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14

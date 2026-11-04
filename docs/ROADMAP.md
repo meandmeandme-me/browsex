@@ -17,6 +17,8 @@ This file records implementation state separately from device verification. A ch
 - [x] Validate external HTTP/HTTPS intents and reject unsafe schemes.
 - [x] Persist and restore a bounded, URL-validated tab snapshot and active tab.
 - [x] Enforce the 20-tab cap for regular and popup tab creation.
+- [x] Restore tab metadata without opening every saved tab at startup; open only the active session and load background tabs on demand.
+- [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
 - [x] Add one automatic recovery attempt for crashed content sessions and a manual retry path after repeated crashes.
 - [ ] Verify process recreation, tab switching and GeckoSession lifecycle on Android 10 and newer.
