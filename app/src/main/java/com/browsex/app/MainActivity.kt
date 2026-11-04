@@ -520,6 +520,7 @@ class MainActivity : AppCompatActivity() {
             "Site information" -> "معلومات الموقع"
             "Downloads" -> "التنزيلات"
             "Settings" -> "الإعدادات"
+            "Find anything" -> "اعثر على أي شيء"
             "New private tab" -> "تبويب خاص جديد"
             "Close private tabs" -> "إغلاق التبويبات الخاصة"
             "No private tabs are open" -> "لا توجد تبويبات خاصة مفتوحة"
@@ -1070,7 +1071,7 @@ class MainActivity : AppCompatActivity() {
             if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
             "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
             "Site information", "Search engine", "Clear browsing history", "Settings",
-            "New private tab", "Close private tabs"
+            "New private tab", "Close private tabs", "Find anything"
         ).map(::tr).toTypedArray()
         AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
             when (index) {
@@ -1101,6 +1102,7 @@ class MainActivity : AppCompatActivity() {
                         .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
                         .show()
                 }
+                14 -> showRecall()
             }
         }.show()
     }
@@ -1342,6 +1344,18 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.e("BrowseX", "Could not start browsing data clearing", error)
             restoreAfterClear(false)
         }
+    }
+
+    private fun showRecall() {
+        RecallPage(
+            activity = this,
+            store = store,
+            openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
+            onOpen = { url ->
+                val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
+                if (existing != null) activateTab(existing) else createTab(url)
+            }
+        ).show()
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
