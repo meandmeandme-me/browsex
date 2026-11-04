@@ -75,7 +75,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Add Arabic/English/System language choices and apply RTL to the local home page and core native screens.
 - [x] Apply theme palette to home, browser chrome, Settings, Site Info, Downloads, Reader and Saved Pages.
 - [x] Improve primary control touch targets and accessible labels.
-- [ ] Produce a complete Uizard screen/flow map from the product requirements and compare every delivered screen against the approved Uizard direction.
+- [ ] UI/visual design is user-owned and intentionally out of this implementation task. The earlier Figma reference is superseded; do not design screens or treat it as acceptance criteria. Resume UI implementation only from the user's later-approved design/specification.
 - [ ] Finish translations for remaining secondary prompts/toasts and the custom home page; add language-specific plural/date/number formatting.
 - [ ] Verify compact, landscape, tablet, large-font and screen-reader layouts on devices.
 
