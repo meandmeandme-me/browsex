@@ -103,6 +103,7 @@ Never call a build successful until its workflow conclusion is `success` and the
 - [x] Tab collection and selected-tab membership are owned by BrowserTabRegistry; equal-URL tabs remain distinct by identity.
 - [x] Tab workspace rendering is moved to TabsPage and browser mutations are injected through callbacks.
 - [x] GeckoSession delegate wiring is moved to BrowserSessionDelegateFactory with BrowseX-owned callbacks.
+- [x] Gecko page progress/history/navigation/title/fullscreen/download/crash event handling is extracted to BrowserTabEventCoordinator.
 - [ ] Verify popup/new-session routing, content-process crash recovery, page progress/history callbacks and fullscreen transitions on device.
 - [ ] Verify tab workspace, saved-session replace/open/delete, recently-closed restore and 2/3-column layouts on phone/tablet.
 - [x] JVM tests for add/remove/select/replace/clear and equal-URL identity invariants pass in CI.

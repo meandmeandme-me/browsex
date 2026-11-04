@@ -14,6 +14,7 @@ BrowseX/
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
 │   │   │   ├── BrowserTabRegistry.kt     # identity-safe open-tab membership and selection
 │   │   │   ├── BrowserTabController.kt   # tab creation, activation, popup and close lifecycle
+│   │   │   ├── BrowserTabEventCoordinator.kt # Gecko page/navigation/crash event routing
 │   │   │   ├── BrowserSessionLifecycleCoordinator.kt # session close/reset/memory budget
 │   │   │   ├── BrowserHostLifecycleCoordinator.kt # Activity and memory-pressure lifecycle
 │   │   │   ├── BrowserContentProcessRecoveryCoordinator.kt # bounded Gecko crash recovery
