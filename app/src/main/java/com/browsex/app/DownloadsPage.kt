@@ -390,7 +390,7 @@ internal class DownloadsPage(
         val refreshHandler = Handler(Looper.getMainLooper())
         val refreshRunnable = object : Runnable {
             override fun run() {
-                if (!::dialog.isInitialized || !dialog.isShowing) return
+                if (!dialog.isShowing) return
                 if (store.streamDownloads().any { it.isActive }) {
                     val scrollY = scroll.scrollY
                     render()
