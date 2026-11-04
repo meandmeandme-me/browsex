@@ -60,7 +60,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] Verify multiple matching accounts show a selection prompt and require fresh device authentication before filling; verify onStop immediately locks the vault.
 - [ ] Verify HTTP forms, cross-origin form actions, subdomains, alternate ports and malformed origins never receive saved credentials.
 - [ ] Verify any open private tab blocks credential fetch/save across all tabs; private tabs never offer saved-account selection, and regular autofill works again only after all private tabs close and the user unlocks.
-- [ ] Verify the password manager exposes only username/origin metadata before authentication; reveal, copy and delete require authentication.
+- [ ] Verify no credential metadata is shown before authentication; after authentication, list only username/origin, and require a fresh authentication before reveal, copy or delete.
 - [ ] Verify the password manager requires device authentication before listing, revealing, copying or deleting entries; verify the Keystore rejects direct decrypt/encrypt without a recent biometric/device-credential authorization and accepts it only within the configured 60-second window.
 - [ ] Verify v1-to-v2 vault migration preserves entries, re-encrypts under the auth-bound key and removes the legacy key only after a successful write; test interrupted migration and corrupted ciphertext fail closed without overwrite.
 - [ ] Verify Android 8–10 and Android 11+ authentication-bound Keystore key behavior on physical devices, including biometric enrollment changes, device-credential fallback, reboot, lockout, key invalidation and the 60-second expiry.
