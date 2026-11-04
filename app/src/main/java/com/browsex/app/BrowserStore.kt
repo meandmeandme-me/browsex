@@ -37,16 +37,16 @@ class BrowserStore(context: Context) {
         get() = prefs.getBoolean("home_show_quick_links", true)
         set(value) { prefs.edit().putBoolean("home_show_quick_links", value).apply() }
 
-    var homeShowRecent: Boolean
-        get() = prefs.getBoolean("home_show_recent", true)
-        set(value) { prefs.edit().putBoolean("home_show_recent", value).apply() }
+    var homeShowDiscovery: Boolean
+        get() = prefs.getBoolean("home_show_discovery", true)
+        set(value) { prefs.edit().putBoolean("home_show_discovery", value).apply() }
 
     var homeLayout: String
         get() = prefs.getString("home_layout", "grid")?.takeIf { it in setOf("grid", "list") } ?: "grid"
         set(value) { prefs.edit().putString("home_layout", value.takeIf { it in setOf("grid", "list") } ?: "grid").apply() }
 
     fun resetHomePreferences() {
-        prefs.edit().remove("home_show_quick_links").remove("home_show_recent").remove("home_layout").apply()
+        prefs.edit().remove("home_show_quick_links").remove("home_show_discovery").remove("home_layout").apply()
     }
 
     fun wasPlatformPermissionDenied(permission: String): Boolean =
