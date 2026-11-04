@@ -8,6 +8,7 @@ import java.util.UUID
 /** Small durable store for browser preferences, bookmarks and recent history. */
 class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
+    private val preferences = BrowserPreferencesStore(prefs)
 
     private companion object {
         const val HOME_URL_FOR_STORE = "resource://android/assets/home.html"
@@ -17,96 +18,50 @@ class BrowserStore(context: Context) {
     }
 
     var adBlockEnabled: Boolean
-        get() = prefs.getBoolean("ad_block_enabled", false)
-        set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
+        get() = preferences.adBlockEnabled
+        set(value) { preferences.adBlockEnabled = value }
 
-    /** Theme preference: system, light or dark. */
     var themeMode: String
-        get() = prefs.getString("theme_mode", "system")?.takeIf { it in setOf("system", "light", "dark") } ?: "system"
-        set(value) { prefs.edit().putString("theme_mode", value.takeIf { it in setOf("system", "light", "dark") } ?: "system").apply() }
+        get() = preferences.themeMode
+        set(value) { preferences.themeMode = value }
 
-    /** BCP 47 app language tag, or system to follow the device locale. */
     var languageMode: String
-        get() = normalizeLanguageTag(prefs.getString("language_mode", "system"))
-        set(value) { prefs.edit().putString("language_mode", normalizeLanguageTag(value)).apply() }
-
-    private fun normalizeLanguageTag(value: String?): String {
-        val raw = value?.trim().orEmpty()
-        if (raw.equals("system", ignoreCase = true)) return "system"
-        if (raw.length !in 2..35 || !raw.matches(Regex("[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"))) return "system"
-        val locale = java.util.Locale.forLanguageTag(raw)
-        val tag = locale.toLanguageTag()
-        return tag.takeIf { it.isNotBlank() && it != "und" } ?: "system"
-    }
+        get() = preferences.languageMode
+        set(value) { preferences.languageMode = value }
 
     var siteNotificationsEnabled: Boolean
-        get() = prefs.getBoolean("site_notifications_enabled", true)
-        set(value) { prefs.edit().putBoolean("site_notifications_enabled", value).apply() }
+        get() = preferences.siteNotificationsEnabled
+        set(value) { preferences.siteNotificationsEnabled = value }
 
     var homeShowQuickLinks: Boolean
-        get() = prefs.getBoolean("home_show_quick_links", true)
-        set(value) { prefs.edit().putBoolean("home_show_quick_links", value).apply() }
+        get() = preferences.homeShowQuickLinks
+        set(value) { preferences.homeShowQuickLinks = value }
 
     var homeShowDiscovery: Boolean
-        get() = prefs.getBoolean("home_show_discovery", true)
-        set(value) { prefs.edit().putBoolean("home_show_discovery", value).apply() }
+        get() = preferences.homeShowDiscovery
+        set(value) { preferences.homeShowDiscovery = value }
 
     var homeLayout: String
-        get() = prefs.getString("home_layout", "grid")?.takeIf { it in setOf("grid", "list") } ?: "grid"
-        set(value) { prefs.edit().putString("home_layout", value.takeIf { it in setOf("grid", "list") } ?: "grid").apply() }
+        get() = preferences.homeLayout
+        set(value) { preferences.homeLayout = value }
 
-    fun resetHomePreferences() {
-        prefs.edit().remove("home_show_quick_links").remove("home_show_discovery").remove("home_layout").apply()
-    }
+    var searchEngine: String
+        get() = preferences.searchEngine
+        set(value) { preferences.searchEngine = value }
 
+    fun resetHomePreferences() = preferences.resetHomePreferences()
     fun wasPlatformPermissionDenied(permission: String): Boolean =
-        prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().contains(permission)
-
-    fun markPlatformPermissionDenied(permission: String) {
-        val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
-        values.add(permission)
-        prefs.edit().putStringSet("denied_platform_permissions", values).apply()
-    }
-
-    fun clearPlatformPermissionDenial(permission: String) {
-        val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
-        if (values.remove(permission)) prefs.edit().putStringSet("denied_platform_permissions", values).apply()
-    }
-
-    fun siteMediaDecision(origin: String, feature: String): String? {
-        if (!isSafePermissionOrigin(origin) || feature !in setOf("camera", "microphone")) return null
-        return try {
-            JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}")
-                .optString("$origin|$feature").takeIf { it == "allow" || it == "deny" }
-        } catch (_: Exception) { null }
-    }
-
-    fun setSiteMediaDecision(origin: String, feature: String, decision: String) {
-        if (!isSafePermissionOrigin(origin) || feature !in setOf("camera", "microphone")) return
-        if (decision !in setOf("allow", "deny", "ask")) return
-        val key = "$origin|$feature"
-        val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
-        catch (_: Exception) { JSONObject() }
-        if (decision == "ask") json.remove(key) else json.put(key, decision)
-        while (json.length() > 100) {
-            val oldest = json.keys().asSequence().firstOrNull() ?: break
-            json.remove(oldest)
-        }
-        prefs.edit().putString("site_media_permissions", json.toString()).apply()
-    }
-
-    fun clearSiteMediaDecisions(origin: String) {
-        if (!isSafePermissionOrigin(origin)) return
-        val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
-        catch (_: Exception) { return }
-        json.keys().asSequence().filter { it.startsWith("$origin|") }.toList().forEach(json::remove)
-        prefs.edit().putString("site_media_permissions", json.toString()).apply()
-    }
-
-    /** Clears BrowseX's supplemental per-origin media decisions after Gecko site permissions are cleared. */
-    fun clearAllSiteMediaDecisions() {
-        prefs.edit().remove("site_media_permissions").apply()
-    }
+        preferences.wasPlatformPermissionDenied(permission)
+    fun markPlatformPermissionDenied(permission: String) =
+        preferences.markPlatformPermissionDenied(permission)
+    fun clearPlatformPermissionDenial(permission: String) =
+        preferences.clearPlatformPermissionDenial(permission)
+    fun siteMediaDecision(origin: String, feature: String): String? =
+        preferences.siteMediaDecision(origin, feature)
+    fun setSiteMediaDecision(origin: String, feature: String, decision: String) =
+        preferences.setSiteMediaDecision(origin, feature, decision)
+    fun clearSiteMediaDecisions(origin: String) = preferences.clearSiteMediaDecisions(origin)
+    fun clearAllSiteMediaDecisions() = preferences.clearAllSiteMediaDecisions()
 
     @Synchronized
     fun reserveDownloadFileName(candidate: String): String {
@@ -129,18 +84,6 @@ class BrowserStore(context: Context) {
         prefs.edit().putString("browsex_download_names", array.toString()).apply()
         return result
     }
-
-    private fun isSafePermissionOrigin(origin: String): Boolean = try {
-        val uri = android.net.Uri.parse(origin)
-        (uri.scheme == "https" || uri.scheme == "http") &&
-            !uri.host.isNullOrBlank() && uri.userInfo == null
-    } catch (_: Exception) { false }
-
-    var searchEngine: String
-        get() = BrowserStorePolicy.normalizeSearchEngine(prefs.getString("search_engine", "Google"))
-        set(value) {
-            prefs.edit().putString("search_engine", BrowserStorePolicy.normalizeSearchEngine(value)).apply()
-        }
 
     fun saveOpenTabs(urls: List<String>, activeIndex: Int) {
         val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
