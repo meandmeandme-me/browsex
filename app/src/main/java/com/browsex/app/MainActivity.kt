@@ -1262,13 +1262,16 @@ class MainActivity : AppCompatActivity() {
     private fun clearBrowsingData(flags: Long, clearHistory: Boolean) =
         clearBrowsingDataInternal(flags, clearHistory, host = null, mediaOrigin = null)
 
-    private fun clearBrowsingDataForHost(host: String, mediaOrigin: String) =
+    private fun clearBrowsingDataForHost(host: String, mediaOrigin: String) {
+        val canonicalHost = if (host.contains(':')) host else
+            runCatching { java.net.IDN.toASCII(host, java.net.IDN.USE_STD3_ASCII_RULES) }.getOrDefault(host)
         clearBrowsingDataInternal(
             org.mozilla.geckoview.StorageController.ClearFlags.SITE_DATA,
             clearHistory = false,
-            host = host,
+            host = canonicalHost,
             mediaOrigin = mediaOrigin
         )
+    }
 
     private fun clearBrowsingDataInternal(
         flags: Long,
