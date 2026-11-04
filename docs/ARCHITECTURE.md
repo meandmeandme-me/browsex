@@ -15,6 +15,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 - `BrowserRuntimeOwner` and `BrowserTab`: isolated ownership of the process-wide GeckoRuntime and serializable-per-tab UI/session state; private mode is selected before opening each GeckoSession.
 - `BrowserStore`: compatibility facade preserving the existing feature-facing storage API while delegating persistence to focused stores.
 - `BrowserDownloadStore`: owns DownloadManager ID tracking, response-stream download records, filename reservations and interrupted-record recovery.
+- `BrowserDownloadRequestCoordinator`: owns Gecko response validation, the bounded Android 8–9 storage-permission wait queue, permission-result draining and response-stream cleanup when the host is destroyed. `MainActivity` now supplies the Activity Result launcher and delegates the request lifecycle.
 - `BrowserLibraryStore`: owns bookmark folders/items, title-aware history, legacy bookmark migration and validated JSON backup/import with conflict preview.
 - `BrowserSessionStore`: owns regular-tab snapshots, named sessions and recently-closed tab persistence; private tabs remain excluded and existing SharedPreferences keys are preserved.
 - `BrowserTabPersistenceCoordinator`: owns the snapshot policy for restoring regular tabs and persisting only non-private tab URLs plus the selected regular-tab index; `BrowserHostLifecycleCoordinator` calls it through an injected persistence callback.
@@ -89,7 +90,7 @@ BrowseX is a single Android application module (`:app`) using Kotlin, AndroidX A
 
 ## Download lifecycle ownership
 
-`StreamDownloadCoordinator` owns BrowseX stream-download metadata, progress updates, completion/failure state and cancellation around `DownloadResponseWriter`. The Activity still validates external responses, obtains legacy Android storage permission and presents user feedback. The writer continues to persist the original Gecko response body rather than re-fetching its URL.
+`BrowserDownloadRequestCoordinator` validates HTTP(S) Gecko responses, owns the bounded pending-response queue for Android 8–9 storage permission and closes one-shot response bodies on denial, queue overflow, launch failure or Activity teardown. `StreamDownloadCoordinator` owns stream-download metadata, progress updates, completion/failure state and cancellation around `DownloadResponseWriter`. `MainActivity` supplies the platform launcher and user feedback; the writer persists the original Gecko response body rather than re-fetching its URL.
 
 
 ## Account and sync contract boundary
