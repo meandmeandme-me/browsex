@@ -33,9 +33,10 @@ This file records implementation state separately from device verification. A ch
 - [x] Use one deterministic GeckoSession teardown path for tab close, session reset, inactive-session release and Activity shutdown; clear per-session delegates/permissions even when cleanup callbacks fail.
 - [x] Extract GeckoSession progress/navigation/content delegate wiring behind a BrowseX-owned callback contract.
 - [x] Extract bounded Gecko content-process crash recovery into a coordinator with host-injected UI, runtime and permission callbacks.
-- [ ] Move tab creation, activation, close and popup-session orchestration out of MainActivity into a lifecycle-aware tab coordinator.
+- [x] Move tab creation, activation, close and popup-session orchestration into BrowserTabController with injected platform callbacks.
+- [ ] Move tab restoration and external-link tab selection into BrowserTabController; keep startup persistence decoding in the Activity until the restore contract is isolated.
 - [x] Split BrowserStore responsibilities into preference, session, library and download stores while preserving existing SharedPreferences keys and the feature-facing facade.
-- [ ] Complete extraction of tab open/close orchestration from MainActivity behind an explicit browser coordinator contract; GeckoSession delegate wiring is already isolated.
+- [ ] Complete extraction of tab restoration and startup/session persistence orchestration from MainActivity; GeckoSession delegate wiring and interactive tab lifecycle are isolated.
 - [ ] Migrate the focused stores from SharedPreferences to Room/DataStore with versioned, non-destructive migrations and Android-backed upgrade tests.
 - [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
