@@ -13,6 +13,7 @@ BrowseX/
 │   │   │   ├── BrowseXApplication.kt     # process-wide setup (when needed)
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
 │   │   │   ├── BrowserTabRegistry.kt     # open-tab membership and selected-tab state
+│   │   │   ├── TabsPage.kt                # responsive tab workspace UI with injected actions
 │   │   │   ├── TabLifecyclePolicy.kt     # pure Gecko session budget/memory policy
 │   │   │   ├── BrowserPreferencesStore.kt # settings and site-permission persistence
 │   │   │   ├── BrowserSessionStore.kt     # regular tabs, named sessions and recently closed tabs
@@ -88,7 +89,7 @@ BrowseX/
 
 ## Current implementation files
 
-The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `BrowserTabRegistry`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
 
 ## Dependency direction
 
