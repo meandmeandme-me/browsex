@@ -63,8 +63,25 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
             maxLiveSessions = MAX_LIVE_GECKO_SESSIONS
         )
     }
-    private val tabs: List<BrowserTab> get() = tabRegistry.tabs
-    private val activeTab: BrowserTab? get() = tabRegistry.activeTab
+    private val tabController by lazy {
+        BrowserTabController(
+            registry = tabRegistry,
+            sessionLifecycle = sessionLifecycleCoordinator,
+            homeUrl = ::homePageUrl,
+            isHostUnavailable = { shuttingDown || isFinishing || isDestroyed },
+            attachDelegates = ::attachDelegates,
+            runtime = { BrowserRuntimeOwner.runtime(this) },
+            attachSessionToView = { session -> browserView.setSession(session) },
+            releaseViewSession = { browserView.releaseSession() },
+            enforceSessionBudget = ::enforceLiveSessionBudget,
+            updateChrome = ::updateChrome,
+            showMessage = ::toast,
+            recordRecentlyClosed = { tab -> store.recordRecentlyClosedTab(tab.url, tab.title) },
+            dispatchToMain = { action -> runOnUiThread(action) }
+        )
+    }
+    private val tabs: List<BrowserTab> get() = tabController.tabs
+    private val activeTab: BrowserTab? get() = tabController.activeTab
     private val contentProcessRecoveryCoordinator by lazy {
         BrowserContentProcessRecoveryCoordinator(
             dispatchToMain = { action -> runOnUiThread(action) },
@@ -634,65 +651,12 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         browserView.requestFocus()
     }
 
-    private fun createTab(url: String, privateMode: Boolean = false) {
-        if (shuttingDown) return
-        if (tabs.size >= TabSessionState.MAX_TABS) {
-            toast("You can keep up to ${TabSessionState.MAX_TABS} tabs open")
-            return
-        }
-        val targetUrl = if (url == HOME_URL) homePageUrl() else url
-        val tab = BrowserTab(privateMode = privateMode, url = targetUrl)
-        tabRegistry.add(tab)
-        activateTab(tab)
-    }
+    private fun createTab(url: String, privateMode: Boolean = false) =
+        tabController.createTab(url, privateMode)
 
-    private fun activateTab(tab: BrowserTab) {
-        if (!tabs.contains(tab)) return
-        val previous = activeTab
-        if (previous !== tab) {
-            previous?.takeIf { it.sessionOpened }?.let {
-                runCatching { it.session.setFocused(false); it.session.setActive(false) }
-            }
-        }
-        tabRegistry.select(tab)
-        tab.lastActiveAt = android.os.SystemClock.elapsedRealtime()
-        try {
-            if (tab.crashed) {
-                tab.recoveryAttempts = 0
-                tab.crashed = false
-            }
-            if (!tab.sessionOpened) {
-                attachDelegates(tab)
-                tab.session.open(BrowserRuntimeOwner.runtime(this))
-                tab.sessionOpened = true
-                tab.session.loadUri(tab.url.ifBlank { homePageUrl() })
-            }
-            tab.session.setActive(true)
-            tab.session.setFocused(true)
-            browserView.setSession(tab.session)
-            enforceLiveSessionBudget()
-            updateChrome()
-        } catch (error: RuntimeException) {
-            tab.sessionOpened = false
-            tab.crashed = true
-            android.util.Log.e("BrowseX", "Could not activate tab session", error)
-            toast("This tab could not be opened. Try again.")
-            updateChrome()
-        }
-    }
+    private fun activateTab(tab: BrowserTab) = tabController.activateTab(tab)
 
-    private fun closeTab(tab: BrowserTab) {
-        val index = tabs.indexOf(tab)
-        if (index < 0) return
-        val wasActive = activeTab === tab
-        if (!tab.privateMode) store.recordRecentlyClosedTab(tab.url, tab.title)
-        if (wasActive) browserView.releaseSession()
-        sessionLifecycleCoordinator.closeAndDiscard(tab)
-        tabRegistry.removeAt(index)
-        if (tabs.isEmpty()) createTab(homePageUrl())
-        else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
-        else updateChrome()
-    }
+    private fun closeTab(tab: BrowserTab) = tabController.closeTab(tab)
 
     private fun attachDelegates(tab: BrowserTab) {
         tab.permissionDelegate = BrowseXPermissionDelegate(
@@ -751,22 +715,8 @@ class MainActivity : AppCompatActivity(), BrowserSessionDelegateCallbacks {
         if (tab === activeTab) updateChrome()
     }
 
-    override fun onNewSession(parent: BrowserTab, uri: String): GeckoResult<GeckoSession>? {
-        if (isFinishing || shuttingDown || tabs.size >= TabSessionState.MAX_TABS) {
-            runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
-            return null
-        }
-        val child = BrowserTab(privateMode = parent.privateMode)
-        attachDelegates(child)
-        child.session.open(BrowserRuntimeOwner.runtime(this))
-        child.sessionOpened = true
-        tabRegistry.add(child)
-        runOnUiThread {
-            if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
-            else if (tabs.contains(child)) closeTab(child)
-        }
-        return GeckoResult.fromValue(child.session)
-    }
+    override fun onNewSession(parent: BrowserTab, uri: String): GeckoResult<GeckoSession>? =
+        tabController.onNewSession(parent)
 
     override fun onTitleChange(tab: BrowserTab, title: String?) {
         tab.title = title?.takeIf { it.isNotBlank() } ?: "New tab"
