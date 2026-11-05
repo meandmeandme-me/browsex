@@ -168,10 +168,6 @@ internal class BrowseXPermissionDelegate(
         dialogs.clear()
     }
 
-    private fun safeOrigin(raw: String): String? = try {
-        val uri = Uri.parse(raw)
-        val scheme = uri.scheme?.lowercase()
-        if ((scheme != "https" && scheme != "http") || uri.host.isNullOrBlank() || uri.userInfo != null) null
-        else Uri.Builder().scheme(scheme).encodedAuthority(uri.encodedAuthority).build().toString()
-    } catch (_: Exception) { null }
+    private fun safeOrigin(raw: String): String? =
+        BrowserSiteOriginPolicy.canonicalOrigin(raw)
 }

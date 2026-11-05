@@ -847,10 +847,8 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun originForUrl(url: String): String {
-        val uri = Uri.parse(url)
-        return Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
-    }
+    private fun originForUrl(url: String): String =
+        BrowserSiteOriginPolicy.canonicalOrigin(url).orEmpty()
 
     private fun showSiteInformation() {
         val tab = activeTab ?: return
