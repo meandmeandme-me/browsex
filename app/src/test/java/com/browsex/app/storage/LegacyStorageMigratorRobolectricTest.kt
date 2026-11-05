@@ -124,16 +124,27 @@ class LegacyStorageMigratorRobolectricTest {
             // A completed marker makes a repeated app-start call a no-op.
             assertNull(migrator.migrateIfNeeded())
 
-            // Simulate recovery after the Room transaction committed but before the
-            // completion marker was durable. Re-import replaces the owned tables atomically.
+            // Simulate a lost SharedPreferences marker after the Room transaction committed.
+            // The transactional Room record must prevent a second import from clearing newer data.
+            dao.putBookmarks(listOf(
+                BookmarkEntity(
+                    id = "created-after-import",
+                    url = "https://newer.test",
+                    title = "Newer bookmark",
+                    folderId = "work",
+                    createdAt = 600L
+                )
+            ))
             marker.edit().remove("completed_version").commit()
             val retried = migrator.migrateIfNeeded()
-            assertNotNull(retried)
-            assertEquals(1, dao.bookmarks().size)
+            assertNull(retried)
+            assertEquals(2, dao.bookmarks().size)
+            assertTrue(dao.bookmarks().any { it.id == "created-after-import" })
             assertEquals(1, dao.history(10).size)
             assertEquals(1, dao.savedSessions().size)
             assertEquals(2, dao.savedSessionTabs().size)
             assertEquals(1, dao.downloads().size)
+            assertEquals(1, marker.getInt("completed_version", 0))
             assertEquals(sourceBefore, source.all.toMap())
         } finally {
             database.close()

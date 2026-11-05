@@ -136,6 +136,15 @@ data class PlatformDownloadIdEntity(
     @ColumnInfo(name = "tracked_at") val trackedAt: Long
 )
 
+
+@Entity(tableName = "storage_migration_state")
+data class StorageMigrationStateEntity(
+    @PrimaryKey val id: String = "legacy_import",
+    val version: Int,
+    val digest: String,
+    @ColumnInfo(name = "completed_at") val completedAt: Long
+)
+
 @Dao
 interface BrowseXStorageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -173,6 +182,12 @@ interface BrowseXStorageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putPlatformDownloadIds(items: List<PlatformDownloadIdEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putMigrationState(state: StorageMigrationStateEntity)
+
+    @Query("SELECT * FROM storage_migration_state WHERE id = 'legacy_import' LIMIT 1")
+    suspend fun migrationState(): StorageMigrationStateEntity?
 
     @Query("SELECT * FROM bookmarks ORDER BY sort_order, created_at DESC")
     suspend fun bookmarks(): List<BookmarkEntity>
@@ -292,10 +307,7 @@ interface BrowseXStorageDao {
     }
 }
 
-/**
- * Version one is a staging schema only. SharedPreferences remains authoritative
- * until the idempotent importer and rollback tests are shipped.
- */
+/** Room storage schema. Legacy import state is committed atomically with imported rows. */
 @Database(
     entities = [
         BookmarkFolderEntity::class,
