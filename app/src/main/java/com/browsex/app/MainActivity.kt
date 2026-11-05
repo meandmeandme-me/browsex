@@ -359,11 +359,10 @@ class MainActivity : AppCompatActivity() {
         browserRuntime?.settings?.setLocales(requestedLocales)
         notificationBridge = BrowseXNotificationBridge(this, store, ::requestSiteNotificationPermission)
         browserRuntime?.setWebNotificationDelegate(notificationBridge)
-        window.statusBarColor = colors.canvas
-        window.navigationBarColor = colors.canvas
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = !colors.isDark
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = !colors.isDark
-        setContentView(createBrowserUi())
+        // Temporary engine-only host: the legacy chrome is intentionally detached while the
+        // browser engine and feature services are reorganized for the new UI architecture.
+        browserView = GeckoView(this)
+        setContentView(browserView)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -710,30 +709,13 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun updateChrome() {
+        // Presentation is intentionally absent during the engine/platform refoundation.
         if (::credentialVault.isInitialized) credentialVault.setPrivateTabsOpen(tabs.any { it.privateMode })
-        syncUBlockButton()
-        val tab = activeTab ?: return
-        address.hint = tr(if (tab.privateMode) "Private browsing · Search or enter URL" else "Search or enter URL")
-        address.setHintTextColor(if (tab.privateMode) colors.accent else colors.muted)
-        if (!address.hasFocus()) updateAddress()
-        progress.progress = tab.progress
-        progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
-        tabsButton.text = "▢ ${tabs.size}"
-        tabsButton.contentDescription = "${tr("Open tabs")}: ${tabs.size}"
     }
 
-    private fun syncUBlockButton() {
-        if (!::uBlockButton.isInitialized) return
-        val manager = uBlockOriginManager
-        val available = manager?.hasBrowserAction(activeTab?.session) == true
-        uBlockButton.visibility = if (available) View.VISIBLE else View.GONE
-    }
+    private fun syncUBlockButton() = Unit
 
-    private fun updateAddress() {
-        if (!::address.isInitialized || address.hasFocus()) return
-        val url = activeTab?.url.orEmpty()
-        address.setText(if (url.startsWith("resource://")) "" else url)
-    }
+    private fun updateAddress() = Unit
 
     private fun normalizeInput(raw: String): String =
         if (raw.isBlank()) homePageUrl() else NavigationInput.normalize(raw, store.searchEngine, HOME_URL)

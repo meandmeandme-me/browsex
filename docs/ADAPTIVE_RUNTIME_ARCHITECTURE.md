@@ -73,3 +73,11 @@ changing defaults. The device screen class is exposed separately for future resp
    on a 2 GB class device.
 6. Only then remove the old visual shell and keep a minimal host entry point for engine
    verification; the future Uizard UI will be added as a separate presentation layer.
+
+## UI refoundation status
+
+The current Activity now hosts GeckoView directly without rendering the legacy browser
+chrome. Existing domain stores, engine delegates, permission bridges, downloads, credential
+vault, and tab/session lifecycle remain in place. Old presentation helpers are temporarily
+retained as unreachable migration material and must be deleted after their remaining
+feature responsibilities have been moved behind presentation-independent interfaces.
