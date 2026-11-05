@@ -106,9 +106,15 @@ This file records implementation state separately from device verification. A ch
 - [x] Add a basic lifecycle-aware inactive-tab policy: keep the active tab, bound warm sessions, and close/recreate inactive sessions under memory pressure.
 - [ ] Measure cold start, tab switching, peak memory and recovery on low-RAM devices; tune the policy from measurements.
 
-## Explicitly deferred
+## uBlock Origin protection
 
-- Ad blocking / uBlock integration is intentionally deferred. Do not expose a working toggle or claim protection until extension installation, permissions, persistence and real blocking behavior are tested.
+- [x] Add the GeckoView WebExtension installation and lifecycle manager for the official Mozilla-signed uBlock Origin XPI.
+- [x] Add browser-chrome action popup and per-site control access.
+- [x] Add Settings management for install, enable, disable and uninstall, with explicit private-browsing opt-in.
+- [x] Keep Gecko Safe Browsing enabled and avoid overlapping Gecko Tracking Protection where uBlock is active.
+- [x] Add protection-policy JVM tests and Arabic/English settings resources.
+- [ ] Complete physical-device end-to-end testing of AMO installation, popup interaction, anti-adblock defusing, per-site exceptions and private-mode behavior.
+- [ ] Verify extension updates, offline/retry behavior, and compatibility with major banking, streaming, shopping and identity sign-in flows.
 
 ## Phase 6 — accounts, sync and future clients
 

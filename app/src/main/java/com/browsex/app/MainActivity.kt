@@ -406,6 +406,7 @@ class MainActivity : AppCompatActivity() {
                     onComplete = { installed ->
                         val enabled = installed?.metaData?.enabled == true
                         val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
+                        store.adBlockInstalled = installed != null
                         store.adBlockEnabled = enabled
                         store.adBlockPrivateEnabled = privateAllowed
                         BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
@@ -986,6 +987,7 @@ class MainActivity : AppCompatActivity() {
                             } else {
                                 val enabled = installed.metaData?.enabled == true
                                 val privateAllowed = enabled && installed.metaData?.allowedInPrivateBrowsing == true
+                                store.adBlockInstalled = true
                                 store.adBlockEnabled = enabled
                                 store.adBlockPrivateEnabled = privateAllowed
                                 BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
@@ -1018,6 +1020,7 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             val nowEnabled = updated.metaData?.enabled == true
                             val privateAllowed = nowEnabled && updated.metaData?.allowedInPrivateBrowsing == true
+                            store.adBlockInstalled = true
                             store.adBlockEnabled = nowEnabled
                             store.adBlockPrivateEnabled = privateAllowed
                             BrowserContentProtectionPolicy.configure(nowEnabled, privateAllowed)
@@ -1047,6 +1050,7 @@ class MainActivity : AppCompatActivity() {
                                     android.util.Log.w("BrowseX", "Could not uninstall uBlock Origin", error)
                                     toast("Could not uninstall uBlock Origin")
                                 } else {
+                                    store.adBlockInstalled = false
                                     store.adBlockEnabled = false
                                     store.adBlockPrivateEnabled = false
                                     BrowserContentProtectionPolicy.configure(false, false)

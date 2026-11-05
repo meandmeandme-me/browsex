@@ -14,6 +14,10 @@ class BrowserStore(context: Context) {
         get() = preferences.adBlockEnabled
         set(value) { preferences.adBlockEnabled = value }
 
+    var adBlockInstalled: Boolean
+        get() = preferences.adBlockInstalled
+        set(value) { preferences.adBlockInstalled = value }
+
     var adBlockPrivateEnabled: Boolean
         get() = preferences.adBlockPrivateEnabled
         set(value) { preferences.adBlockPrivateEnabled = value }

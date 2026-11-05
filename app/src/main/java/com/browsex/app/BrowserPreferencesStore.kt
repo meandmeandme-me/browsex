@@ -15,6 +15,10 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         get() = prefs.getBoolean("ad_block_enabled", false)
         set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
 
+    var adBlockInstalled: Boolean
+        get() = prefs.getBoolean("ad_block_installed", false)
+        set(value) { prefs.edit().putBoolean("ad_block_installed", value).apply() }
+
     /** True only when the user explicitly allowed uBlock Origin in private tabs. */
     var adBlockPrivateEnabled: Boolean
         get() = prefs.getBoolean("ad_block_private_enabled", false)

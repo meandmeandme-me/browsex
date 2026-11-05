@@ -270,7 +270,11 @@ internal class SettingsPage(
 
         row(
             "uBlock Origin",
-            if (store.adBlockEnabled) "Installed and enabled" else if (store.adBlockPrivateEnabled) "Installed but disabled" else "Install and manage real ad and tracker blocking",
+            when {
+                !store.adBlockInstalled -> "Install and manage real ad and tracker blocking"
+                store.adBlockEnabled -> "Installed and enabled"
+                else -> "Installed but disabled"
+            },
             t("Manage")
         ) {
             dialog.dismiss()

@@ -26,6 +26,21 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
 - [x] CredentialAccessPolicy has JVM tests for locked-by-default state, timed unlock expiry, private-tab override and explicit lock.
 
+## uBlock Origin integration
+
+- [x] Install the official Mozilla Add-ons XPI through GeckoView WebExtensionController only after explicit user action.
+- [x] Verify extension identity before accepting installation; reject optional permission escalation requests.
+- [x] Persist installed/enabled state separately and store private-browsing consent independently.
+- [x] Attach extension delegates to regular and private GeckoSessions and expose its action popup from browser chrome.
+- [x] Preserve per-site control in the uBlock popup; never silently disable protection globally when one site fails.
+- [x] Avoid running GeckoView Tracking Protection alongside enabled uBlock on sessions where uBlock is allowed; retain Gecko Safe Browsing.
+- [x] JVM tests cover the Gecko/uBlock protection-selection policy.
+- [ ] Install from Mozilla Add-ons on an API 26+ physical device and verify signed XPI installation and persistence after process restart.
+- [ ] Verify the uBlock popup opens, filter counts update, and its per-site power button affects only the current site.
+- [ ] Test known anti-adblock pages, ordinary login/video/checkout sites, site breakage, and restoration after re-enabling protection.
+- [ ] Verify private-mode behavior with opt-in disabled and enabled; private URLs must never be persisted or added to history.
+- [ ] Verify network/offline installation errors, upgrade, disable/enable, uninstall, and extension refresh after app restart.
+
 ## Release signing coverage
 
 - [x] Gradle supports a dedicated environment-based release signing identity and rejects partial configuration.
