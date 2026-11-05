@@ -131,17 +131,17 @@ internal class LegacySettingsMigration(
         val migrated = currentData.toMutablePreferences()
         booleanKeys.forEach { key ->
             if (migrated[booleanPreferencesKey(key)] == null && legacy.contains(key)) {
-                migrated[booleanPreferencesKey(key)] = legacy.getBoolean(key, false)
+                migrated[booleanPreferencesKey(key)] = runCatching { legacy.getBoolean(key, false) }.getOrDefault(false)
             }
         }
         stringKeys.forEach { key ->
             if (migrated[stringPreferencesKey(key)] == null && legacy.contains(key)) {
-                legacy.getString(key, null)?.let { migrated[stringPreferencesKey(key)] = it }
+                runCatching { legacy.getString(key, null) }.getOrNull()?.let { migrated[stringPreferencesKey(key)] = it }
             }
         }
         setKeys.forEach { key ->
             if (migrated[stringSetPreferencesKey(key)] == null && legacy.contains(key)) {
-                migrated[stringSetPreferencesKey(key)] = legacy.getStringSet(key, emptySet()).orEmpty().toSet()
+                migrated[stringSetPreferencesKey(key)] = runCatching { legacy.getStringSet(key, emptySet()).orEmpty().toSet() }.getOrDefault(emptySet())
             }
         }
         return migrated

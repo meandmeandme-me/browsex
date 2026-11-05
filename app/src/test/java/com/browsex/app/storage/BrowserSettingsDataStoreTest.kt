@@ -82,4 +82,33 @@ class BrowserSettingsDataStoreTest {
         legacy.edit().clear().commit()
         Unit
     }
+    @Test
+    fun malformedLegacyPreferenceTypesFallBackToSafeDefaults() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val legacyName = "browsex.browser.invalid.\${UUID.randomUUID()}"
+        val legacy = context.getSharedPreferences(legacyName, Context.MODE_PRIVATE)
+        legacy.edit()
+            .putString("ad_block_enabled", "not-a-boolean")
+            .putInt("theme_mode", 42)
+            .putString("denied_platform_permissions", "not-a-set")
+            .commit()
+
+        val isolatedFile = File(
+            context.filesDir,
+            "datastore/browsex-invalid-\${UUID.randomUUID()}.preferences_pb"
+        )
+        val isolatedStore = PreferenceDataStoreFactory.create(
+            migrations = listOf(LegacySettingsMigration(context, legacyName)),
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            produceFile = { isolatedFile }
+        )
+        val settings = BrowserSettingsDataStore(context, isolatedStore).snapshot()
+
+        assertEquals(false, settings.adBlockEnabled)
+        assertEquals("system", settings.themeMode)
+        assertTrue(settings.deniedPlatformPermissions.isEmpty())
+
+        legacy.edit().clear().commit()
+    }
+
 }
