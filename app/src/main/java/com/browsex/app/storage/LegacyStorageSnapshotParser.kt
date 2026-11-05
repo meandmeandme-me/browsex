@@ -88,9 +88,13 @@ internal object LegacyStorageSnapshotParser {
                     item.optLong("createdAt", 0L).coerceAtLeast(0L)
                 ))
             }
-        } else {
-            parseStrings(legacy, 500).forEach { rawUrl ->
-                val url = validUrl(rawUrl) ?: return@forEach
+        }
+        // The legacy URL-only mirror is written in the same preference transaction.
+        // Merge it when detailed JSON is partial/corrupt so one malformed row cannot
+        // make an otherwise valid legacy bookmark disappear from the import.
+        parseStrings(legacy, 500).forEach { rawUrl ->
+            val url = validUrl(rawUrl) ?: return@forEach
+            if (rows.none { it.url == url }) {
                 rows.add(BookmarkRow(stableId("bookmark", url), url,
                     hostOf(url).ifBlank { url }, "unfiled", 0L))
             }
@@ -121,9 +125,12 @@ internal object LegacyStorageSnapshotParser {
                     item.optLong("visitedAt", 0L).coerceAtLeast(0L), 1
                 ))
             }
-        } else {
-            parseStrings(legacy, 600).forEach { rawUrl ->
-                val url = validUrl(rawUrl) ?: return@forEach
+        }
+        // Preserve valid URLs from the compatibility mirror if a detailed row is
+        // missing; detailed metadata wins when both forms contain the same URL.
+        parseStrings(legacy, 600).forEach { rawUrl ->
+            val url = validUrl(rawUrl) ?: return@forEach
+            if (rows.none { it.url == url }) {
                 rows.add(HistoryEntryEntity(stableId("history", url), url, hostOf(url), 0L, 1))
             }
         }
@@ -135,11 +142,14 @@ internal object LegacyStorageSnapshotParser {
         val sessions = mutableListOf<SavedSessionEntity>()
         val tabs = mutableListOf<SavedSessionTabEntity>()
         val usedIds = mutableSetOf<String>()
+        val usedNames = mutableSetOf<String>()
         for (index in 0 until array.length()) {
             val item = array.optJSONObject(index) ?: continue
             val id = item.optString("id").take(100)
             val name = item.optString("name").trim().take(40)
-            if (id.isBlank() || name.isBlank() || !usedIds.add(id)) continue
+            if (id.isBlank() || name.isBlank() || !usedIds.add(id) ||
+                !usedNames.add(name.lowercase(Locale.ROOT))
+            ) continue
             val urlArray = item.optJSONArray("urls") ?: JSONArray()
             val rawUrls = (0 until minOf(urlArray.length(), 20))
                 .mapNotNull { urlArray.optString(it).takeIf(String::isNotBlank) }

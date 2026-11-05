@@ -23,6 +23,25 @@ class LegacyStorageSnapshotParserTest {
     }
 
     @Test
+    fun legacyMirrorsBackfillValidRowsMissingFromDetailedJson() {
+        val bookmarks = JSONArray()
+            .put(JSONObject().put("id", "detailed").put("url", "https://detailed.example"))
+        val history = JSONArray()
+            .put(JSONObject().put("url", "https://detailed.example").put("title", "Detailed"))
+        val parsed = LegacyStorageSnapshotParser.parse(mapOf(
+            "bookmark_items_v1" to bookmarks.toString(),
+            "bookmarks" to JSONArray().put("https://detailed.example")
+                .put("https://legacy.example").toString(),
+            "history_entries_v1" to history.toString(),
+            "history" to JSONArray().put("https://detailed.example")
+                .put("https://legacy-history.example").toString()
+        ))
+        assertEquals(2, parsed.bookmarks.size)
+        assertEquals(2, parsed.history.size)
+        assertEquals("detailed", parsed.bookmarks.first().id)
+    }
+
+    @Test
     fun missingBookmarkFoldersAndReferencesAreRepairedToUnfiled() {
         val items = JSONArray()
             .put(JSONObject().put("id", "stable-id").put("url", "https://example.com").put("folderId", "missing"))
