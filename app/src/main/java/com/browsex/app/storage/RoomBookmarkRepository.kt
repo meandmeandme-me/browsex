@@ -59,6 +59,7 @@ internal class RoomBookmarkRepository(
             val name = item.optString("name").trim().take(MAX_FOLDER_NAME_LENGTH)
             val normalizedName = name.lowercase(java.util.Locale.ROOT)
             if (id.isBlank() || id == "unfiled" || name.isBlank() ||
+                folders.size >= MAX_BACKUP_FOLDERS - 1 ||
                 !seenFolderIds.add(id) || !seenFolderNames.add(normalizedName)
             ) continue
             folders.add(BookmarkFolderEntity(id, name, folders.size + 1, 0L))
@@ -201,7 +202,7 @@ internal class RoomBookmarkRepository(
         const val MAX_TITLE_LENGTH = 160
         const val MAX_FOLDER_NAME_LENGTH = 40
         const val MAX_BACKUP_BYTES = 1_000_000
-        const val MAX_BACKUP_FOLDERS = 49
+        const val MAX_BACKUP_FOLDERS = 50
         const val MAX_BACKUP_BOOKMARKS = 1000
         const val BACKUP_FORMAT = "browsex-bookmarks"
         const val BACKUP_VERSION = 1
