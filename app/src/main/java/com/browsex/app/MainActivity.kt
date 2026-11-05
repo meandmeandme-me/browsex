@@ -190,8 +190,14 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             clearSiteMediaDecisions = { origin ->
-                if (origin == null) store.clearAllSiteMediaDecisions()
-                else store.clearSiteMediaDecisions(origin)
+                lifecycleScope.launch {
+                    runCatching {
+                        val permissions = storageRuntime.awaitReady().sitePermissions
+                        if (origin == null) permissions.clearAll() else permissions.clearOrigin(origin)
+                    }.onFailure { error ->
+                        android.util.Log.e("BrowseX", "Could not clear site permission decisions", error)
+                    }
+                }
             },
             dispatchToMain = { action -> runOnUiThread(action) },
             isHostUnavailable = { isFinishing || isDestroyed },
@@ -975,7 +981,10 @@ class MainActivity : AppCompatActivity() {
                     }
                     val uri = Uri.parse(url)
                     val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
-                    store.clearSiteMediaDecisions(origin)
+                    lifecycleScope.launch {
+                        runCatching { storageRuntime.awaitReady().sitePermissions.clearOrigin(origin) }
+                            .onFailure { error -> android.util.Log.e("BrowseX", "Could not reset saved site permissions", error) }
+                    }
                     tab.sitePermissions = emptyList()
                     storage?.getPermissions(url, false)?.accept(
                         { updated -> runOnUiThread {

@@ -10,6 +10,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import org.mozilla.geckoview.GeckoSession
 
 /** Site identity, live GeckoView content permission controls and per-origin media decisions. */
@@ -33,6 +35,19 @@ class SiteInfoPage(
     private fun dp(value: Int) = (value * density).toInt()
 
     fun show() {
+        activity.lifecycleScope.launch {
+            val decisions = runCatching {
+                activity.storageRuntime.awaitReady().sitePermissions.all()
+                    .filter { it.origin == originForStore() }
+                    .associate { it.feature to it.decision }
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not load site permission decisions", it)
+            }.getOrDefault(emptyMap())
+            showWithSiteDecisions(decisions)
+        }
+    }
+
+    private fun showWithSiteDecisions(siteDecisions: Map<String, String>) {
         val uri = android.net.Uri.parse(url)
         val host = uri.host.orEmpty()
         val secure = uri.scheme.equals("https", true)
@@ -142,7 +157,7 @@ class SiteInfoPage(
             }
         }
         listOf("camera", "microphone").forEach { feature ->
-            val decision = store.siteMediaDecision(originForStore(), feature)
+            val decision = siteDecisions[feature]
             val row = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -168,7 +183,7 @@ class SiteInfoPage(
                 setTextColor(colors.muted)
             })
             row.contentDescription = t("Change ", "تغيير إذن ") + name
-            row.setOnClickListener { showMediaPermissionChoices(feature, name) }
+            row.setOnClickListener { showMediaPermissionChoices(feature, name, siteDecisions) }
             root.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
         }
         root.addView(TextView(activity).apply {
@@ -280,9 +295,9 @@ class SiteInfoPage(
             .show()
     }
 
-    private fun showMediaPermissionChoices(feature: String, name: String) {
+    private fun showMediaPermissionChoices(feature: String, name: String, siteDecisions: Map<String, String>) {
         val labels = arrayOf(t("Ask every time", "اسأل في كل مرة"), t("Allow", "سماح"), t("Block", "حظر"))
-        val selected = when (store.siteMediaDecision(originForStore(), feature)) {
+        val selected = when (siteDecisions[feature]) {
             "allow" -> 1
             "deny" -> 2
             else -> 0
@@ -290,10 +305,18 @@ class SiteInfoPage(
         AlertDialog.Builder(activity)
             .setTitle(name)
             .setSingleChoiceItems(labels, selected) { dialog, index ->
-                store.setSiteMediaDecision(originForStore(), feature, arrayOf("ask", "allow", "deny")[index])
-                dialog.dismiss()
-                activePageDialog?.dismiss()
-                show()
+                activity.lifecycleScope.launch {
+                    runCatching {
+                        activity.storageRuntime.awaitReady().sitePermissions.setDecision(
+                            originForStore(), feature, arrayOf("ask", "allow", "deny")[index]
+                        )
+                    }.onFailure {
+                        android.util.Log.e("BrowseX", "Could not update site permission", it)
+                    }
+                    dialog.dismiss()
+                    activePageDialog?.dismiss()
+                    show()
+                }
             }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
             .show()
