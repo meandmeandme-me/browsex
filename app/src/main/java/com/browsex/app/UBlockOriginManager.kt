@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.PopupWindow
 import androidx.appcompat.app.AppCompatActivity
+import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
@@ -28,7 +29,7 @@ internal class UBlockOriginManager(
     private val createTab: (GeckoSession) -> GeckoResult<GeckoSession>?,
     private val closeTab: (GeckoSession) -> Boolean,
     private val onActionChanged: () -> Unit
-) {
+) : WebExtension.ActionDelegate {
     private val controller: WebExtensionController = runtime.webExtensionController
     private val sessionActions = WeakHashMap<GeckoSession, WebExtension.Action>()
     private var defaultAction: WebExtension.Action? = null
@@ -73,7 +74,7 @@ internal class UBlockOriginManager(
             permissions: Array<String>,
             origins: Array<String>,
             dataCollectionPermissions: Array<String>
-        ): GeckoResult<GeckoResult.AllowOrDeny> = GeckoResult.deny()
+        ): GeckoResult<AllowOrDeny> = GeckoResult.deny()
     }
 
     private val tabDelegate = object : WebExtension.TabDelegate {
@@ -90,7 +91,7 @@ internal class UBlockOriginManager(
         override fun onCloseTab(
             source: WebExtension?,
             session: GeckoSession
-        ): GeckoResult<GeckoResult.AllowOrDeny> {
+        ): GeckoResult<AllowOrDeny> {
             return if (closeTab(session)) GeckoResult.allow() else GeckoResult.deny()
         }
 
@@ -98,7 +99,7 @@ internal class UBlockOriginManager(
             extension: WebExtension,
             session: GeckoSession,
             details: WebExtension.UpdateTabDetails
-        ): GeckoResult<GeckoResult.AllowOrDeny> {
+        ): GeckoResult<AllowOrDeny> {
             return if (existingSessions().any { it === session }) {
                 GeckoResult.allow()
             } else {
@@ -116,13 +117,13 @@ internal class UBlockOriginManager(
         controller.list().accept(
             { extensions ->
                 if (destroyed) return@accept
-                extension = extensions.firstOrNull { it.id == EXTENSION_ID }
+                extension = extensions.orEmpty().firstOrNull { it.id == EXTENSION_ID }
                 extension?.let(::registerExtension)
                 onComplete(extension)
                 onActionChanged()
             },
             { error ->
-                if (!destroyed) onFailure(error)
+                if (!destroyed) onFailure(error ?: IllegalStateException("Could not list installed extensions"))
             }
         )
     }
@@ -146,10 +147,12 @@ internal class UBlockOriginManager(
                 installConsentPending = false
                 if (destroyed) {
                     onComplete(null, IllegalStateException("BrowseX closed during installation"))
+                } else if (installed == null) {
+                    onComplete(null, IllegalStateException("Mozilla Add-ons returned no extension"))
                 } else if (installed.id != EXTENSION_ID) {
                     controller.uninstall(installed).accept(
                         { onComplete(null, IllegalStateException("Unexpected extension identity")) },
-                        { error -> onComplete(null, error) }
+                        { error -> onComplete(null, error ?: IllegalStateException("Could not remove unexpected extension")) }
                     )
                 } else {
                     extension = installed
@@ -185,7 +188,7 @@ internal class UBlockOriginManager(
                     onActionChanged()
                 }
             },
-            { error -> if (!destroyed) onComplete(null, error) }
+            { error -> if (!destroyed) onComplete(null, error ?: IllegalStateException("uBlock operation failed")) }
         )
     }
 
@@ -207,7 +210,7 @@ internal class UBlockOriginManager(
                     onComplete(null)
                 }
             },
-            { error -> if (!destroyed) onComplete(error) }
+            { error -> if (!destroyed) onComplete(error ?: IllegalStateException("uBlock uninstall failed")) }
         )
     }
 
@@ -236,9 +239,10 @@ internal class UBlockOriginManager(
 
     private fun resolveAction(session: GeckoSession?): WebExtension.Action? {
         val local = session?.let { sessionActions[it] }
-        return when {
-            local != null -> local.withDefault(defaultAction)
-            else -> defaultAction
+        return if (local != null) {
+            defaultAction?.let(local::withDefault) ?: local
+        } else {
+            defaultAction
         }
     }
 
