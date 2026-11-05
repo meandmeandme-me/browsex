@@ -6,6 +6,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -22,6 +24,7 @@ internal class BrowserStorageRuntime(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val started = AtomicBoolean(false)
     private val ready = CompletableDeferred<Result<BrowserStorageGraph>>()
+    private val tabSnapshotMutex = Mutex()
 
     suspend fun awaitReady(): BrowserStorageGraph {
         if (started.compareAndSet(false, true)) {
@@ -36,5 +39,26 @@ internal class BrowserStorageRuntime(context: Context) {
             }
         }
         return ready.await().getOrThrow()
+    }
+
+    suspend fun restoreOpenTabs(): TabSessionSnapshot =
+        awaitReady().tabs.restore()
+
+    /**
+     * Tab state is captured by the Activity, then persisted on the application scope so
+     * onStop/onDestroy cannot cancel the final snapshot with the Activity lifecycle.
+     */
+    fun persistOpenTabs(urls: List<String>, activeIndex: Int) {
+        val safeUrls = urls.toList()
+        scope.launch {
+            runCatching {
+                val storage = awaitReady()
+                tabSnapshotMutex.withLock {
+                    storage.tabs.save(safeUrls, activeIndex)
+                }
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not persist regular tab snapshot", error)
+            }
+        }
     }
 }

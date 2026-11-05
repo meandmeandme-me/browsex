@@ -134,9 +134,6 @@ class MainActivity : AppCompatActivity() {
     private val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
     private lateinit var credentialVault: BrowserCredentialVault
-    private val tabPersistenceCoordinator by lazy {
-        BrowserTabPersistenceCoordinator(store, { tabs }, { activeTab })
-    }
     private val hostLifecycleCoordinator by lazy {
         BrowserHostLifecycleCoordinator(
             tabs = { tabs },
@@ -497,8 +494,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun persistTabs() {
-        if (!::store.isInitialized) return
-        tabPersistenceCoordinator.persistOpenTabs()
+        if (!::store.isInitialized || !initialBrowserTabsRestored) return
+        val currentTabs = tabs
+        val selectedIndex = currentTabs.indexOfFirst { it === activeTab }
+        val snapshot = BrowserTabPersistencePolicy.snapshot(
+            urls = currentTabs.map { it.url },
+            privateFlags = currentTabs.map { it.privateMode },
+            activeIndex = selectedIndex,
+            homeUrl = homePageUrl()
+        )
+        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex)
     }
 
     override fun onDestroy() {
@@ -1000,11 +1005,20 @@ class MainActivity : AppCompatActivity() {
     private fun restoreInitialBrowserTabs(startupIntent: Intent?) {
         if (initialBrowserTabsRestored || isFinishing || isDestroyed) return
         initialBrowserTabsRestored = true
-        val snapshot = tabPersistenceCoordinator.restoreOpenTabs()
-        val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
-        tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
-        handleSiteNotificationIntent(startupIntent)
-        syncUBlockButton()
+        lifecycleScope.launch {
+            val snapshot = runCatching { storageRuntime.restoreOpenTabs() }
+                .onFailure { error ->
+                    android.util.Log.e("BrowseX", "Room tab restore failed; using legacy snapshot", error)
+                }
+                .getOrElse { store.restoreOpenTabs().let { legacy ->
+                    com.browsex.app.storage.TabSessionSnapshot(legacy.urls, legacy.activeIndex, 0L)
+                } }
+            if (isFinishing || isDestroyed) return@launch
+            val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
+            tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
+            handleSiteNotificationIntent(startupIntent)
+            syncUBlockButton()
+        }
     }
 
     private fun openAutofillServiceSettings() {
