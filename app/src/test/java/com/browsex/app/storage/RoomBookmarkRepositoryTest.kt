@@ -42,6 +42,10 @@ class RoomBookmarkRepositoryTest {
             assertTrue(repository.remove("https://example.test/docs"))
             assertFalse(repository.remove("https://example.test/docs"))
             assertNull(repository.find("https://example.test/docs"))
+
+            val longTitle = "x".repeat(200)
+            assertTrue(repository.add("https://example.test/long-title", longTitle, createdAt = 12L))
+            assertEquals(160, repository.find("https://example.test/long-title")?.title?.length)
         } finally {
             database.close()
         }

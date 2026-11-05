@@ -5,13 +5,14 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Latest implementation commit: `7cc0d6301e77b2b433d217d16e3c0f09157f4773`
+- Latest implementation commit: `TBD` — Room bookmark repository compile fix.
 - Last verified successful CI commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c`
 - Current phase: **Phase 2 — Storage foundation and safe migration**
-- Current task: build the first Room-backed repository slice and establish safe production cutover boundaries.
-- Current CI for latest implementation:
-- Run [42059964060](https://github.com/meandmeandme-me/browsex/actions/runs/42059964060): in_progress
-- Run [42059954735](https://github.com/meandmeandme-me/browsex/actions/runs/42059954735): in_progress
+- Current task: complete bookmark repository parity and establish safe production cutover boundaries.
+- CI on previous HEAD `ac161663a58932007e963d4b66a2db6e7f0b2880`:
+  - Push run [42060084325](https://github.com/meandmeandme-me/browsex/actions/runs/42060084325): **failure** at Kotlin compilation.
+  - PR run [42060091076](https://github.com/meandmeandme-me/browsex/actions/runs/42060091076): **failure** at the same Kotlin compilation error.
+  - Root cause: suspend DAO method was passed as a non-suspending function reference in `find`.
 - Product direction: stable multilingual browser core first; replace transitional chrome UI later using the approved product map/Uizard workflow.
 - User confirmed no user data exists at present. Keep migrations defensive and non-destructive anyway.
 
@@ -45,7 +46,9 @@
 
 - Added DAO operations for atomic bookmark insert (IGNORE against the unique URL index), lookup, delete and folder move.
 - Added `RoomBookmarkRepository` with URL and folder validation, title normalization, duplicate rejection, and basic CRUD.
-- Added Robolectric coverage for add/find/move/remove, duplicate URLs, invalid schemes and missing folders.
+- Repository lookup now invokes the suspend DAO method directly from a suspend body (not through an incompatible function reference).
+- Long titles are safely normalized to the 160-character storage limit instead of rejecting the bookmark.
+- Added Robolectric coverage for add/find/move/remove, duplicate URLs, invalid schemes, missing folders and long-title normalization.
 - **Not wired to production callers yet.** `BrowserStore` and `MainActivity` still use SharedPreferences for bookmark operations. Do not claim cutover complete.
 
 ## Architecture truths — do not misreport
@@ -60,7 +63,7 @@
 
 ## Next actions — ordered
 
-1. Confirm the current Room schema snapshot is version-controlled and define schema migration policy before enabling Room in production. The current generated schema is version 2; Room has not been wired as production storage.
+1. Confirm this compile fix on CI; inspect and version-control the Room schema snapshot and define schema migration policy before enabling Room in production.
 2. Complete bookmark repository parity: folder lifecycle, ordering, import/export and robust transaction semantics.
 3. Add repository restart/round-trip, malformed-data, rollback and concurrency tests.
 4. Wire bookmark reads and writes through one source of truth; remove legacy bookmark writes only after verified cutover.
@@ -83,12 +86,17 @@
 
 ## Change log
 
+### 2026-11-05 — Room bookmark repository compile correction
+- Fixed the suspend DAO lookup invocation that blocked Kotlin compilation.
+- Normalized long titles to the repository's documented 160-character limit.
+- Added a regression assertion for long-title handling.
+- CI has not yet been run for this correction.
+
 ### 2026-11-05 — Room bookmark repository foundation
 - Commit: `7cc0d6301e77b2b433d217d16e3c0f09157f4773`
 - Added DAO atomic insert, lookup, delete and folder-move operations.
 - Added RoomBookmarkRepository and Robolectric CRUD/validation tests.
 - Production cutover deliberately deferred to avoid dual sources of truth.
-- Latest implementation CI is listed in the current checkpoint above.
 
 ### 2026-11-05 — Room migration marker authority
 - Commit: `eba399035b79ef652e33433fc0e9a26958c1af1f`

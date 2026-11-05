@@ -12,8 +12,10 @@ internal class RoomBookmarkRepository(
 ) {
     suspend fun all(): List<BookmarkEntity> = dao.bookmarks()
 
-    suspend fun find(url: String): BookmarkEntity? =
-        url.takeIf(::isSafeUrl)?.let(dao::bookmark)
+    suspend fun find(url: String): BookmarkEntity? {
+        if (!isSafeUrl(url)) return null
+        return dao.bookmark(url)
+    }
 
     suspend fun add(
         url: String,
@@ -21,13 +23,14 @@ internal class RoomBookmarkRepository(
         folderId: String = DEFAULT_FOLDER_ID,
         createdAt: Long = System.currentTimeMillis()
     ): Boolean {
-        if (!isSafeUrl(url) || title.length > MAX_TITLE_LENGTH || createdAt < 0L) return false
+        if (!isSafeUrl(url) || createdAt < 0L) return false
         if (dao.folder(folderId) == null) return false
         val host = android.net.Uri.parse(url).host.orEmpty()
+        val normalizedTitle = title.trim().ifBlank { host.ifBlank { url } }.take(MAX_TITLE_LENGTH)
         val entity = BookmarkEntity(
             id = "bookmark_${UUID.randomUUID()}",
             url = url,
-            title = title.trim().ifBlank { host.ifBlank { url } }.take(MAX_TITLE_LENGTH),
+            title = normalizedTitle,
             folderId = folderId,
             createdAt = createdAt
         )
