@@ -2,7 +2,6 @@ package com.browsex.app
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import org.mozilla.geckoview.GeckoResult
