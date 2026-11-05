@@ -357,6 +357,48 @@ interface BrowseXStorageDao {
     @Query("SELECT COUNT(*) FROM download_records")
     suspend fun downloadRecordCount(): Int
 
+    /**
+     * Merge a validated bookmark backup without overwriting existing URLs.
+     * Folder matching is case-insensitive and the operation is one transaction.
+     */
+    @Transaction
+    suspend fun mergeBookmarkBackup(
+        incomingFolders: List<BookmarkFolderEntity>,
+        incomingBookmarks: List<BookmarkEntity>
+    ): Pair<Int, Int> {
+        val folderMap = mutableMapOf("unfiled" to "unfiled")
+        var importedFolders = 0
+        incomingFolders.forEach { incoming ->
+            if (incoming.id == "unfiled" || incoming.name.isBlank()) return@forEach
+            val existingByName = folders().firstOrNull { it.name.equals(incoming.name, ignoreCase = true) }
+            if (existingByName != null) {
+                folderMap[incoming.id] = existingByName.id
+            } else if (folderCount() < MAX_BOOKMARK_FOLDERS) {
+                val id = if (folder(incoming.id) == null) incoming.id
+                    else "imported_${incoming.id.hashCode().toUInt().toString(16)}"
+                val safe = incoming.copy(id = id, sortOrder = folderCount())
+                if (insertFolder(safe) != -1L) {
+                    folderMap[incoming.id] = id
+                    importedFolders++
+                } else {
+                    folderMap[incoming.id] = "unfiled"
+                }
+            } else {
+                folderMap[incoming.id] = "unfiled"
+            }
+        }
+
+        var importedBookmarks = 0
+        incomingBookmarks.forEach { incoming ->
+            if (bookmark(incoming.url) != null) return@forEach
+            val folderId = folderMap[incoming.folderId] ?: "unfiled"
+            if (insertBookmark(incoming.copy(folderId = folderId)) != -1L) {
+                importedBookmarks++
+            }
+        }
+        return importedFolders to importedBookmarks
+    }
+
     @Transaction
     suspend fun removeFolder(folderId: String): Boolean {
         if (folderId == "unfiled" || folder(folderId) == null) return false

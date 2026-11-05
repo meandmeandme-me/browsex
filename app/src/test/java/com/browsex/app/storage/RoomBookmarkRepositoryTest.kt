@@ -16,6 +16,60 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class RoomBookmarkRepositoryTest {
     @Test
+    fun bookmarkBackupRoundTripsAndMergesWithoutOverwritingExistingUrls() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(),
+            BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+
+        try {
+            val dao = database.storageDao()
+            dao.putFolders(listOf(BookmarkFolderEntity(id = "unfiled", name = "Unfiled")))
+            val repository = RoomBookmarkRepository(dao)
+            assertTrue(repository.add("https://existing.example", "Original", createdAt = 1L))
+            assertTrue(repository.add("https://portable.example", "Portable", createdAt = 2L))
+
+            val backup = repository.exportBookmarks()
+            val importedDatabase = Room.inMemoryDatabaseBuilder(
+                RuntimeEnvironment.getApplication(),
+                BrowseXDatabase::class.java
+            ).allowMainThreadQueries().build()
+            try {
+                val importedDao = importedDatabase.storageDao()
+                importedDao.putFolders(listOf(BookmarkFolderEntity(id = "unfiled", name = "Unfiled")))
+                val importedRepository = RoomBookmarkRepository(importedDao)
+                assertTrue(importedRepository.add("https://existing.example", "Keep me", createdAt = 3L))
+                val result = importedRepository.importBookmarks(backup)
+                assertEquals(1, result.importedBookmarks)
+                assertEquals(1, result.skippedBookmarks)
+                assertEquals("Keep me", importedRepository.find("https://existing.example")?.title)
+                assertEquals("Portable", importedRepository.find("https://portable.example")?.title)
+                val secondImport = importedRepository.importBookmarks(backup)
+                assertEquals(0, secondImport.importedBookmarks)
+            } finally {
+                importedDatabase.close()
+            }
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun bookmarkBackupRejectsUnsupportedOrOversizedPayloads() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(),
+            BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomBookmarkRepository(database.storageDao())
+            assertTrue(runCatching { repository.importBookmarks("""{"format":"other","version":1}""") }.isFailure)
+            assertTrue(runCatching { repository.importBookmarks("x".repeat(1_000_001)) }.isFailure)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun bookmarkCrudUsesRoomConstraintsAndValidatesInputs() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),

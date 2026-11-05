@@ -12,6 +12,93 @@ internal class RoomBookmarkRepository(
 ) {
     suspend fun all(): List<BookmarkEntity> = dao.bookmarks()
 
+    /** Portable bookmark-only backup; excludes history, sessions, cookies and credentials. */
+    suspend fun exportBookmarks(): String {
+        val root = org.json.JSONObject()
+            .put("format", "browsex-bookmarks")
+            .put("version", 1)
+        val folderArray = org.json.JSONArray()
+        dao.folders().forEach { folder ->
+            folderArray.put(org.json.JSONObject().put("id", folder.id).put("name", folder.name))
+        }
+        val bookmarkArray = org.json.JSONArray()
+        dao.bookmarks().forEach { bookmark ->
+            bookmarkArray.put(org.json.JSONObject()
+                .put("id", bookmark.id)
+                .put("url", bookmark.url)
+                .put("title", bookmark.title)
+                .put("folderId", bookmark.folderId)
+                .put("createdAt", bookmark.createdAt))
+        }
+        return root.put("folders", folderArray).put("bookmarks", bookmarkArray).toString(2)
+    }
+
+    /**
+     * Imports a versioned backup as a merge. Existing bookmarks are never overwritten;
+     * malformed or unsafe rows are skipped and the payload is size/count bounded.
+     */
+    suspend fun importBookmarks(payload: String): BookmarkBackupImportResult {
+        require(payload.length <= MAX_BACKUP_BYTES) { "Backup file is too large" }
+        val root = runCatching { org.json.JSONObject(payload) }
+            .getOrElse { throw IllegalArgumentException("Invalid bookmark backup", it) }
+        require(root.optString("format") == BACKUP_FORMAT && root.optInt("version") == BACKUP_VERSION) {
+            "Unsupported bookmark backup"
+        }
+        val folderArray = root.optJSONArray("folders") ?: org.json.JSONArray()
+        val bookmarkArray = root.optJSONArray("bookmarks") ?: org.json.JSONArray()
+        require(folderArray.length() <= MAX_BACKUP_FOLDERS) { "Too many folders in backup" }
+        require(bookmarkArray.length() <= MAX_BACKUP_BOOKMARKS) { "Too many bookmarks in backup" }
+
+        val folders = mutableListOf<BookmarkFolderEntity>()
+        val seenFolderIds = mutableSetOf("unfiled")
+        val seenFolderNames = mutableSetOf("unfiled")
+        for (index in 0 until folderArray.length()) {
+            val item = folderArray.optJSONObject(index) ?: continue
+            val id = item.optString("id").trim().take(80)
+            val name = item.optString("name").trim().take(MAX_FOLDER_NAME_LENGTH)
+            val normalizedName = name.lowercase(java.util.Locale.ROOT)
+            if (id.isBlank() || id == "unfiled" || name.isBlank() ||
+                !seenFolderIds.add(id) || !seenFolderNames.add(normalizedName)
+            ) continue
+            folders.add(BookmarkFolderEntity(id, name, folders.size + 1, 0L))
+        }
+
+        val folderIds = folders.map { it.id }.toSet() + "unfiled"
+        val bookmarks = mutableListOf<BookmarkEntity>()
+        val seenUrls = mutableSetOf<String>()
+        var skipped = 0
+        for (index in 0 until bookmarkArray.length()) {
+            val item = bookmarkArray.optJSONObject(index)
+            if (item == null) {
+                skipped++
+                continue
+            }
+            val url = item.optString("url").trim()
+            if (!isSafeUrl(url) || !seenUrls.add(url)) {
+                skipped++
+                continue
+            }
+            val title = item.optString("title").trim()
+                .ifBlank { android.net.Uri.parse(url).host.orEmpty().ifBlank { url } }
+                .take(MAX_TITLE_LENGTH)
+            val folderId = item.optString("folderId").takeIf(folderIds::contains) ?: "unfiled"
+            bookmarks.add(BookmarkEntity(
+                id = "import_${java.util.UUID.randomUUID()}",
+                url = url,
+                title = title,
+                folderId = folderId,
+                sortOrder = bookmarks.size,
+                createdAt = item.optLong("createdAt", 0L).coerceAtLeast(0L)
+            ))
+        }
+        val (importedFolders, importedBookmarks) = dao.mergeBookmarkBackup(folders, bookmarks)
+        return BookmarkBackupImportResult(
+            importedFolders = importedFolders,
+            importedBookmarks = importedBookmarks,
+            skippedBookmarks = skipped + (bookmarks.size - importedBookmarks)
+        )
+    }
+
     suspend fun folders(): List<BookmarkFolderEntity> = dao.folders()
 
     suspend fun createFolder(name: String, createdAt: Long = System.currentTimeMillis()): String? {
@@ -82,5 +169,17 @@ internal class RoomBookmarkRepository(
         const val MAX_URL_LENGTH = 4096
         const val MAX_TITLE_LENGTH = 160
         const val MAX_FOLDER_NAME_LENGTH = 40
+        const val MAX_BACKUP_BYTES = 1_000_000
+        const val MAX_BACKUP_FOLDERS = 50
+        const val MAX_BACKUP_BOOKMARKS = 1000
+        const val BACKUP_FORMAT = "browsex-bookmarks"
+        const val BACKUP_VERSION = 1
     }
 }
+
+/** Counts rows actually imported; conflicts with existing URLs are reported as skipped. */
+internal data class BookmarkBackupImportResult(
+    val importedFolders: Int,
+    val importedBookmarks: Int,
+    val skippedBookmarks: Int
+)
