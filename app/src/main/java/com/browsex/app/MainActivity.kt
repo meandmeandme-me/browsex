@@ -531,6 +531,16 @@ class MainActivity : AppCompatActivity() {
 
     private val colors get() = BrowseXColors.resolve(this, store)
 
+    private val passwordManager by lazy {
+        BrowserPasswordManagerCoordinator(
+            activity = this,
+            vault = credentialVault,
+            isHostUnavailable = { isFinishing || isDestroyed },
+            showMessage = ::toast,
+            translate = ::tr
+        )
+    }
+
     private val pageActions by lazy {
         BrowserPageActionsCoordinator(
             activity = this,
@@ -1234,55 +1244,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPasswordManager() {
-        BrowserDeviceAuthenticator.authenticate(
-            activity = this,
-            title = "Unlock saved passwords",
-            subtitle = "Verify your identity to view saved sign-ins",
-            onAuthenticated = {
-                if (isFinishing || isDestroyed) return@authenticate
-                credentialVault.unlockForSession()
-                val saved = credentialVault.entries()
-                if (saved.isEmpty()) {
-                    toast(if (credentialVault.privateBrowsingActive) "Close private tabs to view saved entries" else "No saved passwords yet")
-                    return@authenticate
-                }
-                val labels = saved.map { it.username + " · " + Uri.parse(it.origin).host.orEmpty() }.toTypedArray()
-                AlertDialog.Builder(this).setTitle(tr("Saved passwords")).setItems(labels) { _, index ->
-                    val item = saved.getOrNull(index) ?: return@setItems
-                    BrowserDeviceAuthenticator.authenticate(
-                        activity = this,
-                        title = "Reveal saved password",
-                        subtitle = "Verify your identity to reveal or copy this sign-in",
-                        onAuthenticated = {
-                            if (isFinishing || isDestroyed) return@authenticate
-                            credentialVault.unlockForSession()
-                            val secret = credentialVault.passwordFor(item.id)
-                            if (secret == null) {
-                                toast(if (credentialVault.privateBrowsingActive) "Close private tabs to view saved entries" else "Saved entry unavailable")
-                                return@authenticate
-                            }
-                            val dialog = AlertDialog.Builder(this).setTitle(Uri.parse(item.origin).host.orEmpty())
-                                .setMessage("Username: " + item.username + "\\nPassword: " + secret)
-                                .setPositiveButton(tr("Copy password")) { _, _ ->
-                                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", secret))
-                                    toast("Password copied")
-                                }
-                                .setNegativeButton(tr("Close"), null)
-                                .setNeutralButton(tr("Delete")) { _, _ ->
-                                    if (credentialVault.delete(item.id)) toast("Saved password deleted")
-                                }.create()
-                            dialog.setOnShowListener { dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
-                            dialog.show()
-                        },
-                        onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
-                    )
-                }.setNegativeButton(tr("Close"), null).show()
-            },
-            onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
-        )
-    }
 
     private fun toast(message: String) {
         android.widget.Toast.makeText(this, tr(message), android.widget.Toast.LENGTH_SHORT).show()
