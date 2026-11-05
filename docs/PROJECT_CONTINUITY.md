@@ -5,8 +5,8 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Last verified successful CI commit: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
-- Latest implementation commit: `eba399035b79ef652e33433fc0e9a26958c1af1f` (CI pending at last check).\n- Latest implementation checkpoint: stale SharedPreferences migration marker no longer skips the authoritative Room-state check; regression test added (CI result pending for this change).
+- Last verified successful CI commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c`
+- Latest verified branch commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c` (CI completed successfully).\n- Latest implementation checkpoint: stale SharedPreferences migration marker no longer skips the authoritative Room-state check; regression test added (CI result pending for this change).
 - Current phase: **Phase 2 — Storage foundation and safe migration**
 - Current status: CI passed for the base commit; storage foundation exists but is not yet wired as the application's live source of truth.
 - Product direction: rebuild the browser experience around a stable, multilingual browser core; old chrome UI is transitional/partly removed. New visual UI is planned separately via Uizard.
@@ -48,7 +48,7 @@
 
 ## Important architecture truth / do not misreport
 
-- Room is **not yet the live application source of truth**. Do not claim storage cutover is complete.
+- Room is **not yet the live application source of truth**. Do not claim storage cutover is complete. A first Room-backed bookmark repository now provides validated add/find/remove/move operations, but production callers still use the legacy store.
 - DataStore exists but is not yet wired as the live settings source throughout the app.
 - BrowserStore and its session/library/download stores still rely on SharedPreferences and synchronous call sites.
 - MainActivity still contains transitional/legacy helpers and is large; the old UI is only partly removed.
@@ -58,9 +58,9 @@
 
 ## Next actions — ordered
 
-1. Inspect current storage code and all BrowserStore call sites before choosing a migration slice.
-2. Add/verify Room schema export and a safe schema migration strategy before Room is enabled for production. Confirm whether any released build could have created schema v1.
-3. Introduce repository interfaces and migrate one bounded feature slice (prefer bookmarks/library or sessions) end-to-end; avoid duplicate sources of truth.
+1. Confirm the Room schema snapshot from CI is checked into version control and establish schema migration policy before Room is enabled for production.
+2. Complete bookmark repository parity (folders, import/export, ordering) and test rollback/restart behavior.
+3. Wire bookmark reads and writes through one repository source of truth; remove legacy bookmark writes only after cutover tests pass.
 4. Keep UI/main-thread code non-blocking: no `runBlocking` in activity/UI getters. Use lifecycle-aware coroutine/Flow collection and explicit suspend operations.
 5. Add round-trip, process-restart, malformed-data, duplicate-import, rollback and concurrency tests for each migrated slice.
 6. Migrate settings to DataStore through a repository and remove legacy reads only after a verified transition.
@@ -82,6 +82,13 @@ For every meaningful code or documentation change:
 6. Never mark a phase complete based only on code being written; require tests and relevant runtime validation.
 
 ## Change log
+
+### 2026-11-05 — First Room bookmark repository slice
+- Added Room DAO operations for atomic bookmark insert (unique URL constraint), lookup, delete and folder move.
+- Added `RoomBookmarkRepository` with URL validation, folder validation, safe title handling and duplicate rejection.
+- Added Robolectric coverage for add/find/move/remove, duplicate URLs, invalid schemes and missing folders.
+- Production `BrowserStore`/`MainActivity` callers are intentionally not switched yet; no duplicate source of truth has been introduced.
+- CI status: pending for this change.
 
 ### 2026-11-05 — Storage migration marker authority fix\n- Removed the early return based only on the SharedPreferences marker; every migration attempt now checks the Room migration-state row.\n- Added a Robolectric regression test for a stale marker with an empty Room database.\n- Implementation commit: `eba399035b79ef652e33433fc0e9a26958c1af1f`
 - CI runs: [push](https://github.com/meandmeandme-me/browsex/actions/runs/42056985725) and [pull request](https://github.com/meandmeandme-me/browsex/actions/runs/42056999656), both pending at last check.\n\n### 2026-11-05 — Continuity checkpoint created

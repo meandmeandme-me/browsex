@@ -153,6 +153,21 @@ interface BrowseXStorageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putBookmarks(items: List<BookmarkEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertBookmark(item: BookmarkEntity): Long
+
+    @Query("SELECT * FROM bookmarks WHERE url = :url LIMIT 1")
+    suspend fun bookmark(url: String): BookmarkEntity?
+
+    @Query("DELETE FROM bookmarks WHERE url = :url")
+    suspend fun deleteBookmark(url: String): Int
+
+    @Query("SELECT * FROM bookmark_folders WHERE id = :folderId LIMIT 1")
+    suspend fun folder(folderId: String): BookmarkFolderEntity?
+
+    @Query("UPDATE bookmarks SET folder_id = :folderId WHERE url = :url")
+    suspend fun moveBookmark(url: String, folderId: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putHistory(items: List<HistoryEntryEntity>)
 
