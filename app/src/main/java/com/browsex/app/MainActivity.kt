@@ -461,7 +461,7 @@ class MainActivity : AppCompatActivity() {
             arrayOf(store.languageMode)
         }
         browserRuntime?.settings?.setLocales(requestedLocales)
-        notificationBridge = BrowseXNotificationBridge(this, store, ::requestSiteNotificationPermission)
+        notificationBridge = BrowseXNotificationBridge(this, ::requestSiteNotificationPermission)
         browserRuntime?.setWebNotificationDelegate(notificationBridge)
         // Temporary engine-only host: the legacy chrome is intentionally detached while the
         // browser engine and feature services are reorganized for the new UI architecture.
