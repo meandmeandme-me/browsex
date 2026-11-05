@@ -187,14 +187,14 @@ internal class DownloadsPage(
                 } else {
                     " · ${record.bytesWritten / 1024} KB"
                 }
-                val detail = statusLabel + if (record.isActive || !recordIsFailed) progressText + " · " + date else ""
+                val detail = statusLabel + if (recordIsActive || !recordIsFailed) progressText + " · " + date else ""
                 labels.addView(TextView(activity).apply {
                     text = detail
                     textSize = 10f
                     setTextColor(when {
-                        record.isFailed -> colors.danger
-                        record.isCancelled -> colors.muted
-                        record.isActive -> colors.accent
+                        recordIsFailed -> colors.danger
+                        recordIsCancelled -> colors.muted
+                        recordIsActive -> colors.accent
                         else -> colors.muted
                     })
                     setPadding(0, dp(4), 0, 0)
