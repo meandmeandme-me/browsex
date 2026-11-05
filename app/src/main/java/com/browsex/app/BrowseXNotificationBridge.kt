@@ -27,6 +27,7 @@ internal class BrowseXNotificationBridge(
             val source = notification.source
             if (notification.privateBrowsing || !store.siteNotificationsEnabled ||
                 !isSafeWebOrigin(notification.origin) ||
+                store.siteMediaDecision(notification.origin, "notifications") == "deny" ||
                 (source != null && !isSafeWebOrigin(source))
             ) {
                 notification.dismiss()
