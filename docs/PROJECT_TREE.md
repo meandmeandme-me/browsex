@@ -20,6 +20,9 @@ BrowseX/
 │   │   │   ├── BrowserContentProcessRecoveryCoordinator.kt # bounded Gecko crash recovery
 │   │   │   ├── BrowserBrowsingDataCoordinator.kt # clear-data transaction and tab restore
 │   │   │   ├── BrowserTabPersistenceCoordinator.kt # regular-tab snapshot persistence
+│   │   │   ├── BrowserPageActionsCoordinator.kt # search/share/find/copy page actions
+│   │   │   ├── BrowserPasswordManagerCoordinator.kt # authenticated credential manager UI flow
+│   │   │   ├── BrowserUBlockSettingsCoordinator.kt # extension install/enable/site controls/uninstall
 │   │   │   ├── BrowserTabPersistencePolicy.kt # private-tab exclusion and active-index remapping
 │   │   │   ├── BrowserSessionDelegateFactory.kt # GeckoView callbacks -> BrowseX event contract
 │   │   │   ├── BrowserAndroidPermissionCoordinator.kt # validation and lifecycle around runtime permissions
@@ -163,6 +166,7 @@ Current account foundation file: app/src/main/java/com/browsex/app/AccountDomain
 - `BrowserCredentialVault.kt`: encrypted, HTTPS-origin-scoped GeckoView login storage. `BrowseXAutofillService.kt` and `CredentialAutofillAuthActivity.kt` add optional, authenticated, exact-origin HTTPS filling for other apps; credential capture is disabled and account sync is not implemented.
 - `BrowserNotificationPermissionCoordinator.kt`: serializes/coalesces Android notification permission requests separately from Gecko media/location permissions.
 - `StreamDownloadCoordinator.kt`: owns stream-download record creation, progress/terminal persistence and cancellation; Activity owns Android permission prompts and user notifications.
-- `storage/BrowseXDatabase.kt`, `storage/LegacyStorageSnapshotParser.kt` and `storage/LegacyStorageMigrator.kt`: staged Room v1 schema and transactional snapshot importer. Production reads/writes still use SharedPreferences; DataStore and Room cutover are not enabled. See `STORAGE_MIGRATION_PLAN.md`.
+- `storage/BrowseXDatabase.kt`, `storage/LegacyStorageSnapshotParser.kt` and `storage/LegacyStorageMigrator.kt`: staged Room v1 schema and transactional snapshot importer. The importer now verifies row counts for every migrated collection before writing its completion marker. Production reads/writes still use SharedPreferences; DataStore and Room cutover are not enabled. See `STORAGE_MIGRATION_PLAN.md`.
+- `BrowserPageActionsCoordinator.kt`, `BrowserPasswordManagerCoordinator.kt` and `BrowserUBlockSettingsCoordinator.kt`: isolate user-facing workflows from `MainActivity`; keep the Activity as lifecycle/host composition rather than a feature implementation bucket.
 
 - `AccountSyncContracts.kt`: platform-neutral repository/gateway interfaces for provider auth, account session, consent, devices, encrypted sync transport/cipher, sync status and account export/deletion; interfaces only, no live integration.
