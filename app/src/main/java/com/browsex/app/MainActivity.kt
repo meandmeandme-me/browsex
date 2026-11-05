@@ -827,7 +827,7 @@ class MainActivity : AppCompatActivity() {
                         .show()
                 }
                 14 -> showRecall()
-                15 -> showPasswordManager()
+                15 -> passwordManager.show()
             }
         }.show()
     }
