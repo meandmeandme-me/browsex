@@ -27,6 +27,82 @@ internal data class OidcAuthorizationCodeCallback(
     val state: String
 )
 
+internal data class OidcAuthorizationRequestConfig(
+    val authorizationEndpoint: String,
+    val clientId: String,
+    val redirectUri: String,
+    val scopes: Set<String>
+)
+
+/**
+ * Constructs an Authorization Code request without launching a provider or storing secrets.
+ * The caller still needs to pin issuer metadata and register the exact redirect URI.
+ */
+internal object OidcAuthorizationRequestBuilder {
+    fun build(
+        config: OidcAuthorizationRequestConfig,
+        pkce: OidcPkceRequest
+    ): String? = runCatching {
+        val endpoint = URI(config.authorizationEndpoint)
+        if (!endpoint.scheme.equals("https", true) ||
+            endpoint.host.isNullOrBlank() ||
+            endpoint.rawUserInfo != null ||
+            endpoint.rawFragment != null
+        ) return null
+        if (config.clientId.isBlank() || config.clientId.length > 512) return null
+        if (!isRegisteredRedirect(config.redirectUri)) return null
+        if (config.scopes.isEmpty() || config.scopes.any { it.isBlank() || it.any(Char::isWhitespace) }) return null
+        if (!config.scopes.contains("openid")) return null
+        if (pkce.codeChallengeMethod != "S256" || pkce.codeVerifier.length !in 43..128 ||
+            pkce.state.isBlank() || pkce.nonce.isBlank()
+        ) return null
+
+        val existingQuery = endpoint.rawQuery?.takeIf { it.isNotBlank() }
+        val parameters = linkedMapOf(
+            "response_type" to "code",
+            "client_id" to config.clientId,
+            "redirect_uri" to config.redirectUri,
+            "scope" to config.scopes.sorted().joinToString(" "),
+            "state" to pkce.state,
+            "nonce" to pkce.nonce,
+            "code_challenge" to pkce.codeChallenge,
+            "code_challenge_method" to "S256"
+        )
+        val query = buildString {
+            if (existingQuery != null) {
+                append(existingQuery)
+                append('&')
+            }
+            append(parameters.entries.joinToString("&") { (key, value) ->
+                encodeQuery(key) + "=" + encodeQuery(value)
+            })
+        }
+        URI(
+            endpoint.scheme,
+            endpoint.rawAuthority,
+            endpoint.rawPath.ifBlank { "/" },
+            query,
+            null
+        ).toASCIIString()
+    }.getOrNull()
+
+    private fun isRegisteredRedirect(value: String): Boolean = runCatching {
+        val uri = URI(value)
+        val scheme = uri.scheme?.lowercase() ?: return false
+        if (uri.rawUserInfo != null || uri.rawQuery != null || uri.rawFragment != null) return false
+        when (scheme) {
+            "https" -> !uri.host.isNullOrBlank()
+            else -> scheme.matches(Regex("^[a-z][a-z0-9+.-]*$")) &&
+                uri.rawAuthority == null && !uri.rawPath.isNullOrBlank()
+        }
+    }.getOrDefault(false)
+
+    private fun encodeQuery(value: String): String =
+        java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+            .replace("+", "%20")
+            .replace("%7E", "~")
+}
+
 internal object OidcPkce {
     private const val RANDOM_BYTES = 32
     private const val CHALLENGE_METHOD = "S256"

@@ -100,4 +100,69 @@ class OidcPkceTest {
             ) != null
         )
     }
+
+    @Test
+    fun authorizationRequestUsesCodeFlowExactRedirectAndS256() {
+        val pkce = OidcPkce.create()
+        val config = OidcAuthorizationRequestConfig(
+            authorizationEndpoint = "https://login.example.test/authorize",
+            clientId = "browsex-client",
+            redirectUri = "com.browsex.app:/oauth2redirect",
+            scopes = setOf("profile", "openid", "email")
+        )
+
+        val request = OidcAuthorizationRequestBuilder.build(config, pkce)
+
+        assertNotNull(request)
+        assertTrue(request!!.startsWith("https://login.example.test/authorize?"))
+        assertTrue(request.contains("response_type=code"))
+        assertTrue(request.contains("code_challenge_method=S256"))
+        assertTrue(request.contains("client_id=browsex-client"))
+        assertTrue(request.contains("redirect_uri=com.browsex.app%3A%2Foauth2redirect"))
+        assertTrue(request.contains("state=" + pkce.state))
+        assertTrue(request.contains("nonce=" + pkce.nonce))
+        assertTrue(request.contains("scope=email%20openid%20profile"))
+        assertFalse(request.contains("code_verifier"))
+    }
+
+    @Test
+    fun authorizationRequestRejectsInsecureEndpointsAndMissingOpenIdScope() {
+        val pkce = OidcPkce.create()
+        val base = OidcAuthorizationRequestConfig(
+            authorizationEndpoint = "http://login.example.test/authorize",
+            clientId = "client",
+            redirectUri = "com.browsex.app:/oauth2redirect",
+            scopes = setOf("openid", "profile")
+        )
+        assertNull(OidcAuthorizationRequestBuilder.build(base, pkce))
+        assertNull(OidcAuthorizationRequestBuilder.build(
+            base.copy(
+                authorizationEndpoint = "https://login.example.test/authorize",
+                scopes = setOf("profile", "email")
+            ),
+            pkce
+        ))
+        assertNull(OidcAuthorizationRequestBuilder.build(
+            base.copy(
+                authorizationEndpoint = "https://user@login.example.test/authorize"
+            ),
+            pkce
+        ))
+    }
+
+    @Test
+    fun authorizationRequestRejectsRedirectUriWithUntrustedQueryOrFragment() {
+        val pkce = OidcPkce.create()
+        val config = OidcAuthorizationRequestConfig(
+            authorizationEndpoint = "https://login.example.test/authorize",
+            clientId = "client",
+            redirectUri = "https://app.example.test/callback?next=https://evil.test",
+            scopes = setOf("openid")
+        )
+        assertNull(OidcAuthorizationRequestBuilder.build(config, pkce))
+        assertNull(OidcAuthorizationRequestBuilder.build(
+            config.copy(redirectUri = "https://app.example.test/callback#token"),
+            pkce
+        ))
+    }
 }
