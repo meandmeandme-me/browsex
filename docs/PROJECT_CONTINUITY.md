@@ -5,8 +5,9 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Latest implementation commit: `6fa5cbc0718b1bf7ecb487c4452aed4ed6569e70` (Room tab snapshot repository).
+- Latest implementation commit: `feb11b537f180474d3e45a1115388e999ce5c30a` (safe download filename normalization).
 - Previous implementation commits in this phase:
+  - `866fc1389ac8cebbe58b850d212c4543abc1cf0f`: download filename sanitization.
   - `9cbe2d0a2ab14dd8155fe1827193d6f0a6f4ffa8`: canonical Room site permission repository.
   - `ad03d18d1192e2082c740c950831f53b14bd06aa`: bounded download records, filename reservations, and platform download IDs.
   - `f225ffe06860b85d251aac88960b3ea985ae16c2`: Room history repository.
@@ -19,7 +20,7 @@
 - **Verification boundary:** commits `3b9de5e`, `b96163a`, and `26dd424` have not yet been treated as verified. Do not claim their tests/build pass until CI completes successfully.
 - Current phase: **Phase 2 — Storage foundation and safe migration**
 - Current task: finish repository parity and harden backup/import before any production cutover.
-- Room groundwork now includes dedicated repositories for bookmarks/folders and backup, regular tab snapshots, named sessions/recently closed tabs, history, downloads, and per-origin camera/microphone decisions. These are persistence layers and tests, not yet connected to production UI/runtime controllers.
+- Room groundwork now includes dedicated repositories for bookmarks/folders and backup, regular tab snapshots, named sessions/recently closed tabs, history, downloads (including 300-record retention, safe filename reservations, and platform download ID tracking), and per-origin camera/microphone decisions. These are persistence layers and tests, not yet connected to production UI/runtime controllers.
 - Room is still **not wired as the production source of truth**. Legacy SharedPreferences remains active; do not delete or clear legacy keys.
 - Room bookmark repository now has versioned bookmark-only JSON export/import matching the legacy portable backup contract (`format=browsex-bookmarks`, `version=1`, `folders`, `bookmarks`). Import is merge-only, validates web URLs, deduplicates folder names/URLs, remaps folders by case-insensitive name, never overwrites existing bookmark URLs, and enforces 50 folders / 200 stored bookmarks. It excludes history, sessions, cookies, credentials, and private browsing data.
 - Legacy storage parser now caps folders at 50 total including the protected `unfiled` row while continuing past malformed/duplicate rows until the cap is reached.
