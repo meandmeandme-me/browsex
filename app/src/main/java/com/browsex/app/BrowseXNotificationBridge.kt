@@ -18,6 +18,7 @@ import org.mozilla.geckoview.WebNotificationDelegate
 /** Adapts Gecko web notifications to Android's notification tray without leaking private tabs. */
 internal class BrowseXNotificationBridge(
     private val activity: MainActivity,
+    private val store: BrowserStore,
     private val requestRuntimePermission: ((Boolean) -> Unit) -> Unit
 ) : WebNotificationDelegate {
     private val main = Handler(Looper.getMainLooper())
@@ -26,18 +27,14 @@ internal class BrowseXNotificationBridge(
     override fun onShowNotification(notification: WebNotification) {
         main.post {
             val source = notification.source
-            if (notification.privateBrowsing || !isSafeWebOrigin(notification.origin) ||
+            if (notification.privateBrowsing || !store.siteNotificationsEnabled ||
+                !isSafeWebOrigin(notification.origin) ||
                 (source != null && !isSafeWebOrigin(source))
             ) {
                 notification.dismiss()
                 return@post
             }
             activity.lifecycleScope.launch {
-                val globallyEnabled = websiteNotificationsEnabled()
-                if (!globallyEnabled) {
-                    notification.dismiss()
-                    return@launch
-                }
                 val siteAllows = runCatching {
                     activity.storageRuntime.awaitReady().sitePermissions.decision(
                         notification.origin, "notifications"
@@ -52,13 +49,12 @@ internal class BrowseXNotificationBridge(
                 requestRuntimePermission { granted ->
                     main.post {
                         if (!granted || activity.isFinishing || activity.isDestroyed ||
-                            notification.privateBrowsing
+                            notification.privateBrowsing || !store.siteNotificationsEnabled
                         ) {
                             notification.dismiss()
                         } else {
                             activity.lifecycleScope.launch {
-                                val globallyEnabled = websiteNotificationsEnabled()
-                                val stillAllowed = globallyEnabled && runCatching {
+                                val stillAllowed = runCatching {
                                     activity.storageRuntime.awaitReady().sitePermissions.decision(
                                         notification.origin, "notifications"
                                     ) != "deny"
@@ -80,12 +76,6 @@ internal class BrowseXNotificationBridge(
             notification.dismiss()
         }
     }
-
-    /** DataStore is the single source of truth for the global website-notification switch. */
-    private suspend fun websiteNotificationsEnabled(): Boolean =
-        runCatching { activity.storageRuntime.settings.snapshot().siteNotificationsEnabled }
-            .onFailure { android.util.Log.e("BrowseX", "Could not read website notification setting", it) }
-            .getOrDefault(false)
 
     private fun showInAndroid(notification: WebNotification) {
         try {

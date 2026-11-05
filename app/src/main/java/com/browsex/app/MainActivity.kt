@@ -172,7 +172,6 @@ class MainActivity : AppCompatActivity() {
         store.adBlockPrivateEnabled = settings.adBlockPrivateEnabled
         store.themeMode = settings.themeMode
         store.languageMode = settings.languageMode
-        store.siteNotificationsEnabled = settings.siteNotificationsEnabled
         store.homeShowQuickLinks = settings.homeShowQuickLinks
         store.homeShowDiscovery = settings.homeShowDiscovery
         store.homeLayout = settings.homeLayout
@@ -418,7 +417,7 @@ class MainActivity : AppCompatActivity() {
         }
         notificationPermissionCoordinator = BrowserNotificationPermissionCoordinator(
             apiLevel = Build.VERSION.SDK_INT,
-            featureEnabled = { store.siteNotificationsEnabled },
+            featureEnabled = { browserSettingsSnapshot.siteNotificationsEnabled },
             permissionGranted = {
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED
@@ -1104,7 +1103,6 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             setWebsiteNotifications = { enabled ->
-                store.siteNotificationsEnabled = enabled
                 if (!enabled) NotificationManagerCompat.from(this).cancelAll()
             },
             importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
