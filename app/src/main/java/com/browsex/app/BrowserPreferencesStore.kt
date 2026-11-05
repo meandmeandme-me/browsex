@@ -59,13 +59,18 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
     fun wasPlatformPermissionDenied(permission: String): Boolean =
         prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().contains(permission)
 
-    fun markPlatformPermissionDenied(permission: String) {
+    /**
+     * SharedPreferences protects individual reads and writes, not a read-modify-write
+     * sequence. Synchronizing on the shared instance prevents concurrent permission
+     * callbacks from overwriting each other's additions.
+     */
+    fun markPlatformPermissionDenied(permission: String) = synchronized(prefs) {
         val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
         values.add(permission)
         prefs.edit().putStringSet("denied_platform_permissions", values).apply()
     }
 
-    fun clearPlatformPermissionDenial(permission: String) {
+    fun clearPlatformPermissionDenial(permission: String) = synchronized(prefs) {
         val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
         if (values.remove(permission)) prefs.edit().putStringSet("denied_platform_permissions", values).apply()
     }
@@ -82,26 +87,30 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
     fun setSiteMediaDecision(origin: String, feature: String, decision: String) {
         val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return
         if (feature !in MEDIA_FEATURES || decision !in PERMISSION_DECISIONS) return
-        val key = "$canonicalOrigin|$feature"
-        val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
-        catch (_: Exception) { JSONObject() }
-        if (decision == "ask") json.remove(key) else json.put(key, decision)
-        while (json.length() > MAX_ORIGIN_MEDIA_DECISIONS) {
-            val oldest = json.keys().asSequence().firstOrNull() ?: break
-            json.remove(oldest)
+        synchronized(prefs) {
+            val key = "$canonicalOrigin|$feature"
+            val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
+            catch (_: Exception) { JSONObject() }
+            if (decision == "ask") json.remove(key) else json.put(key, decision)
+            while (json.length() > MAX_ORIGIN_MEDIA_DECISIONS) {
+                val oldest = json.keys().asSequence().firstOrNull() ?: break
+                json.remove(oldest)
+            }
+            prefs.edit().putString("site_media_permissions", json.toString()).apply()
         }
-        prefs.edit().putString("site_media_permissions", json.toString()).apply()
     }
 
     fun clearSiteMediaDecisions(origin: String) {
         val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return
-        val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
-        catch (_: Exception) { return }
-        json.keys().asSequence().filter { it.startsWith("$canonicalOrigin|") }.toList().forEach(json::remove)
-        prefs.edit().putString("site_media_permissions", json.toString()).apply()
+        synchronized(prefs) {
+            val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
+            catch (_: Exception) { return }
+            json.keys().asSequence().filter { it.startsWith("$canonicalOrigin|") }.toList().forEach(json::remove)
+            prefs.edit().putString("site_media_permissions", json.toString()).apply()
+        }
     }
 
-    fun clearAllSiteMediaDecisions() {
+    fun clearAllSiteMediaDecisions() = synchronized(prefs) {
         prefs.edit().remove("site_media_permissions").apply()
     }
 

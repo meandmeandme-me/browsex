@@ -58,4 +58,34 @@ class BrowserPreferencesStoreTest {
         assertNull(store.siteMediaDecision("https://example.com", "geolocation"))
         assertNull(store.siteMediaDecision("https://example.com", "camera"))
     }
+
+    @Test
+    fun concurrentPlatformPermissionUpdatesDoNotLoseEntries() {
+        val workers = (0 until 24).map { index ->
+            Thread { store.markPlatformPermissionDenied("permission-$index") }
+        }
+
+        workers.forEach(Thread::start)
+        workers.forEach(Thread::join)
+
+        workers.indices.forEach { index ->
+            assertEquals(true, store.wasPlatformPermissionDenied("permission-$index"))
+        }
+    }
+
+    @Test
+    fun concurrentSitePermissionUpdatesDoNotLoseEntries() {
+        val workers = (0 until 24).map { index ->
+            Thread {
+                store.setSiteMediaDecision("https://site-$index.example", "camera", "allow")
+            }
+        }
+
+        workers.forEach(Thread::start)
+        workers.forEach(Thread::join)
+
+        workers.indices.forEach { index ->
+            assertEquals("allow", store.siteMediaDecision("https://site-$index.example", "camera"))
+        }
+    }
 }
