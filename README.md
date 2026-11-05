@@ -14,6 +14,8 @@
 - إعدادات Light/Dark/System والعربية/الإنجليزية، واتجاه RTL للشاشات الأساسية وصفحة البداية.
 - تنزيلات DownloadManager مع الحالات والأسباب والتقدم والإلغاء، وتنزيلات Gecko المباشرة مع حفظ جسم الاستجابة الأصلي، وتقدم البايتات وإلغاء التنزيل وحذف الملف الجزئي عند الإلغاء.
 - التنزيلات المباشرة غير قابلة للاستكمال تلقائيًا بعد موت العملية، ولا نعد بدعم Resume للطلبات أحادية الاستخدام أو POST والمصادقة.
+- مدير كلمات مرور محلي مشفر بـAndroid Keystore، مع تعبئة داخل GeckoView وخدمة Android Autofill اختيارية للتطبيقات الأخرى: تتطلب موافقة المستخدم، تحقق الجهاز، واختيار الحساب، وتملأ HTTPS فقط بتطابق أصل دقيق. الخدمة Fill-only ولا تجمع كلمات مرور من التطبيقات الأخرى.
+- طبقة Room 2.8.5 ومخطط v1 ومستورد غير هدّام لنسخة SharedPreferences موجودة كمرحلة تحضيرية؛ ما زالت SharedPreferences مصدر التخزين التشغيلي ولم يُفعّل تحويل القراءة/الكتابة إلى Room أو DataStore بعد.
 - اختبارات URL واستعادة التبويبات، وCI لاختبارات JVM وAndroid Lint وبناء APK والتحقق من التوقيع والـABI والـSHA-256.
 
 ## حدود يجب معرفتها
@@ -42,7 +44,7 @@
 
 ## البناء محلياً
 
-المتطلبات: JDK 17 وAndroid SDK 36 وGradle 8.11.1.
+المتطلبات: JDK 17 وAndroid SDK 36 وGradle 8.13. المشروع يستخدم AGP 8.13.2 وKotlin 2.3.20 وKSP 2.3.12.
 
 ```bash
 gradle testDebugUnitTest lintDebug assembleDebug
@@ -81,5 +83,5 @@ gradle testDebugUnitTest lintDebug assembleDebug
 ## دراسة المتصفحات مفتوحة المصدر
 
 - [نتائج دراسة Firefox وBrave وCromite وDuckDuckGo وقرارات الاستفادة والتراخيص](docs/OPEN_SOURCE_BROWSER_RESEARCH.md).
-- [خطة ترحيل التخزين الآمن إلى Room وDataStore](docs/STORAGE_MIGRATION_PLAN.md) — خطة فقط؛ لم يتغير محرك التخزين الحالي بعد.
+- [خطة ترحيل التخزين الآمن إلى Room وDataStore](docs/STORAGE_MIGRATION_PLAN.md) — Room schema ومستورِد snapshot جاهزان، لكن محرك التخزين التشغيلي ما زال SharedPreferences.
 - [تقييم واعتماد اتجاه أولي لخادم الحسابات والمزامنة](docs/decisions/ADR-004-account-sync-backend.md) — Supabase مرشح موصى به، وليس خدمة منشورة أو مهيأة بعد.

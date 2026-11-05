@@ -1,5 +1,12 @@
 # BrowseX — تثبيت APK واستكشاف الأخطاء
 
+## متطلبات البناء الحالية
+
+- JDK 17
+- Android SDK Platform 36 وBuild Tools 36.0.0
+- Gradle 8.13
+- Android Gradle Plugin 8.13.2 وKotlin 2.3.20 وKSP 2.3.12
+
 ## اختيار الحزمة
 
 لا تحتاج إلى تنزيل كل الملفات. نزّل artifact واحداً فقط من GitHub Actions:
