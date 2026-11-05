@@ -112,10 +112,52 @@ internal class BrowseXPermissionDelegate(
         val origin = safeOrigin(uri)
         val wantsCamera = !video.isNullOrEmpty()
         val wantsMicrophone = !audio.isNullOrEmpty()
-        if (origin == null || !isActiveSession(session) || (!wantsCamera && !wantsMicrophone) ||
-            (wantsCamera && ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) ||
-            (wantsMicrophone && ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
-        ) {
+        if (origin == null || !isActiveSession(session) || (!wantsCamera && !wantsMicrophone)) {
+            callback.reject()
+            return
+        }
+
+        // Android permission and website permission are separate consent layers.
+        // Ask Android first when needed, then show the per-origin browser decision.
+        val requiredAndroidPermissions = buildList {
+            if (wantsCamera) add(Manifest.permission.CAMERA)
+            if (wantsMicrophone) add(Manifest.permission.RECORD_AUDIO)
+        }.filter { ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED }
+
+        if (requiredAndroidPermissions.isEmpty()) {
+            requestSiteMediaDecision(origin, session, video, audio, wantsCamera, wantsMicrophone, callback)
+            return
+        }
+
+        activity.requestAndroidPermissions(
+            session,
+            requiredAndroidPermissions.toTypedArray(),
+            object : GeckoSession.PermissionDelegate.Callback {
+                override fun grant() {
+                    if (!isActiveSession(session)) {
+                        callback.reject()
+                        return
+                    }
+                    requestSiteMediaDecision(origin, session, video, audio, wantsCamera, wantsMicrophone, callback)
+                }
+
+                override fun reject() {
+                    callback.reject()
+                }
+            }
+        )
+    }
+
+    private fun requestSiteMediaDecision(
+        origin: String,
+        session: GeckoSession,
+        video: Array<GeckoSession.PermissionDelegate.MediaSource>?,
+        audio: Array<GeckoSession.PermissionDelegate.MediaSource>?,
+        wantsCamera: Boolean,
+        wantsMicrophone: Boolean,
+        callback: GeckoSession.PermissionDelegate.MediaCallback
+    ) {
+        if (!isActiveSession(session) || activity.isFinishing || activity.isDestroyed) {
             callback.reject()
             return
         }
