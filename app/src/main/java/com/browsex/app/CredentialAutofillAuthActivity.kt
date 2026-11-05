@@ -1,6 +1,6 @@
 package com.browsex.app
 
-import android.app.AutofillManager
+import android.view.autofill.AutofillManager
 import android.content.Intent
 import android.os.Bundle
 import android.service.autofill.Dataset
