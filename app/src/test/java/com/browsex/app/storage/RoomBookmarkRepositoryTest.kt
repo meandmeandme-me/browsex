@@ -97,6 +97,35 @@ class RoomBookmarkRepositoryTest {
     }
 
     @Test
+    fun bookmarkPreviewAndReplaceOperateOnRoomSnapshot() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val dao = database.storageDao()
+            dao.putFolders(listOf(
+                BookmarkFolderEntity("unfiled", "Unfiled"),
+                BookmarkFolderEntity("old-folder", "Old")
+            ))
+            val repository = RoomBookmarkRepository(dao)
+            assertTrue(repository.add("https://old.example", "Old bookmark", "old-folder", 1L))
+            val payload = """{"format":"browsex-bookmarks","version":1,"folders":[{"id":"new-folder","name":"New"}],"bookmarks":[{"url":"https://new.example","title":"New bookmark","folderId":"new-folder","createdAt":2}]}"""
+            val preview = repository.previewImport(payload)
+            assertEquals(1, preview.totalItems)
+            assertEquals(1, preview.validItems)
+            assertEquals(0, preview.skippedItems)
+            val result = repository.importBookmarks(payload, merge = false)
+            assertEquals(1, result.importedFolders)
+            assertEquals(1, result.importedBookmarks)
+            assertNull(repository.find("https://old.example"))
+            assertEquals("New bookmark", repository.find("https://new.example")?.title)
+            assertEquals(setOf("unfiled", "new-folder"), repository.folders().map { it.id }.toSet())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun bookmarkBackupRejectsUnsupportedOrOversizedPayloads() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
