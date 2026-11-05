@@ -44,28 +44,29 @@ internal class StreamDownloadCoordinator(
                 val repository = storage.awaitReady().downloads
                 val filename = repository.reserveFileName(candidate)
                     ?: throw IllegalStateException("Could not reserve a download filename")
-                downloadId = repository.beginStream(
+                val createdId = repository.beginStream(
                     displayName = filename,
                     mimeType = mime ?: "application/octet-stream",
                     totalBytes = totalBytes
                 ) ?: throw IllegalStateException("BrowseX download history is full")
+                downloadId = createdId
                 runCatching { response.setReadTimeoutMillis(120_000L) }
                 writer.write(
-                    id = downloadId,
+                    id = createdId,
                     body = body,
                     displayName = filename,
                     mimeType = mime,
                     onProgress = { bytes ->
-                        scope.launch { repository.updateProgress(downloadId, bytes) }
+                        scope.launch { repository.updateProgress(createdId, bytes) }
                     }
                 ) { result, error, cancelled ->
                     scope.launch {
                         if (result != null) {
-                            repository.complete(downloadId, result.uri.toString(), result.bytesWritten)
+                            repository.complete(createdId, result.uri.toString(), result.bytesWritten)
                             onCompleted(result)
                         } else {
-                            if (cancelled) repository.cancel(downloadId)
-                            else repository.fail(downloadId, error?.message ?: "Download failed")
+                            if (cancelled) repository.cancel(createdId)
+                            else repository.fail(createdId, error?.message ?: "Download failed")
                             onFailed(error, cancelled)
                         }
                     }
