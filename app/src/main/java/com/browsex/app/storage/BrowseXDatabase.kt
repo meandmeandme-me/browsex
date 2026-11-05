@@ -419,6 +419,13 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM browser_state")
     suspend fun browserState(): List<BrowserStateEntity>
 
+    @Transaction
+    suspend fun saveOpenTabSnapshot(state: BrowserStateEntity, tabs: List<OpenTabEntity>) {
+        clearOpenTabs()
+        putOpenTabs(tabs)
+        putBrowserState(listOf(state))
+    }
+
     @Query("SELECT * FROM open_tabs ORDER BY position")
     suspend fun openTabs(): List<OpenTabEntity>
 

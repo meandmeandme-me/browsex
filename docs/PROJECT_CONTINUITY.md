@@ -20,6 +20,7 @@
 - Added a Room site-permission repository using the shared canonical-origin policy, camera/microphone-only decisions, explicit allow/deny/ask semantics, per-origin clearing, and a 100-decision cap. This is persistence groundwork; platform permission prompts and website notification subscriptions remain separate runtime integrations.
 - Added a Room download repository with bounded metadata, explicit queued/running/completed/failed/cancelled transitions, interrupted-download recovery, collision-safe filename reservations, and BrowseX-owned platform download ID tracking. It stores metadata only, not downloaded file contents.
 - Added a Room history repository with URL validation, latest-visit deduplication, a 300-entry cap, removal, and clear operations. Private visits must be excluded by the caller before persistence.
+- Added a Room tab-state repository for validated regular-tab snapshots, active-tab restoration, and safe home fallback. The UI/runtime caller must exclude private tabs before saving.
 - Added a Room session repository for named sessions (10 max, replace-by-name, validated/restorable tab snapshots) and recently closed tabs (10 max, deduplicated by URL, one-time consume). The repository does not infer whether a URL came from a private tab; callers must never pass private tabs to persistence APIs.
 - The latest changes intentionally have not triggered a manual test/review pass yet; finish the remaining implementation first, then perform one consolidated verification pass.
 
