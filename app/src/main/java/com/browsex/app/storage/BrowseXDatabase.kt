@@ -429,12 +429,6 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM open_tabs ORDER BY position")
     suspend fun openTabs(): List<OpenTabEntity>
 
-    @Query("SELECT * FROM download_name_reservations ORDER BY position")
-    suspend fun downloadNameReservations(): List<DownloadNameReservationEntity>
-
-    @Query("SELECT * FROM platform_download_ids ORDER BY position")
-    suspend fun platformDownloadIds(): List<PlatformDownloadIdEntity>
-
     @Query("UPDATE bookmarks SET folder_id = 'unfiled' WHERE folder_id = :folderId")
     suspend fun moveFolderItemsToUnfiled(folderId: String)
 
