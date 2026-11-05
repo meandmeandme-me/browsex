@@ -66,7 +66,8 @@ The following details were checked against the four focused store implementation
 - `LegacyStorageSnapshotParser` parses an immutable copy of the legacy SharedPreferences snapshot. It validates navigable URLs/origins, normalizes bounds, repairs missing folders to Unfiled, separates DownloadManager IDs from stream records, and uses deterministic IDs for legacy URL-only records.
 - `LegacyStorageMigrator` copies the parsed snapshot in one Room transaction, verifies primary collection counts, writes a versioned completion marker only after commit, and never clears or modifies the original `browsex.browser` preferences.
 - Parser JVM tests cover legacy fallback, deterministic IDs, invalid schemes, missing folders, empty/invalid sessions, permission filtering, download interruption and malformed JSON.
-- **Not yet a production migration:** no app startup call, no Room-backed feature reads/writes and no Preferences DataStore dependency. SharedPreferences is still authoritative. This is intentional until Android-backed upgrade, process-death, rollback and downgrade tests pass.
+- Robolectric integration tests open an actual in-memory Room/SQLite database, import the legacy snapshot, verify rows/relations and source preservation, repeat after marker removal to prove idempotency, and inject an SQLite trigger failure to prove transaction rollback and marker safety.
+- **Not yet a production migration:** no app startup call, no Room-backed feature reads/writes and no Preferences DataStore dependency. SharedPreferences is still authoritative. Physical-device upgrade, process-death, downgrade and rollback checks remain pending.
 
 ## Proposed Room schema
 

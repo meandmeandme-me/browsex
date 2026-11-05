@@ -31,6 +31,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Generate independent random verifier, S256 challenge, state and nonce values.
 - [x] Require exact redirect base and one matching state in the authorization-code callback.
 - [x] Reject duplicate parameters, fragments, provider errors, missing codes, implicit-flow tokens and unsafe redirects.
+- [x] Build HTTPS-only OIDC Authorization Code requests with openid scope, exact registered redirect URI, S256 challenge, state and nonce; never put the verifier in the URL.
 - [ ] Verify the full provider/browser redirect, code exchange, issuer/audience/signature/nonce validation, secure session storage and revocation after real OAuth applications are configured.
 
 ## Room staging migration
@@ -39,7 +40,8 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Parser unit tests cover legacy URL-only fallback, deterministic IDs, invalid schemes, missing folders, empty sessions, permission filtering and download states.
 - [x] Snapshot importer performs table replacement in one Room transaction and writes its version marker only after successful commit.
 - [x] Legacy `browsex.browser` values are not cleared or rewritten by the importer.
-- [ ] Verify Room open/upgrade, migration transaction, process death, retry and rollback on Android 8/API 26, API 29 and current Android.
+- [x] Robolectric/Room integration tests verify migration into real SQLite, legacy-source preservation, counts/relations, repeated-launch no-op, retry after a committed transaction without its marker, and SQLite-triggered transaction rollback.
+- [ ] Verify Room open/upgrade, migration transaction, process death, retry and rollback on physical Android 8/API 26, API 29 and current Android.
 - [ ] Complete Room-backed reader/writer cutover and Preferences DataStore migration; do not enable until upgrade/downgrade and compatibility coverage passes.
 
 ## Android password Autofill
@@ -82,7 +84,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [ ] GeckoView 159 is not accepted in this branch yet: its AAR requires compileSdk 37 and AGP 9.1.0-class build tooling; Kotlin/KSP toolchain compatibility must be upgraded and tested separately.
 - [x] Keep GeckoView 150 as the last-known-good engine for the current AGP 8.13.2 / compileSdk 36 build until the toolchain migration is complete.
 
-## Final automated CI gates (verified on commit `7fe3b458a352ec89b7731c519d3b1fb4f2501e13`)
+## Final automated CI gates (verified on commit `34d0aa8f8341373d0951837db4b7944a6edd8e9f`)
 
 - [x] Gradle configuration resolves.
 - [x] Kotlin compilation and JVM unit tests pass.

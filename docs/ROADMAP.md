@@ -40,6 +40,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Add a Room 2.8.5 staging schema and KSP code generation for browser library, sessions, permissions and download metadata.
 - [x] Add a non-destructive, transaction-based SharedPreferences snapshot importer with parser tests, stable legacy IDs and a versioned completion marker; keep SharedPreferences authoritative until device migration QA is complete.
 - [x] Extract tab snapshot persistence policy into BrowserTabPersistenceCoordinator and BrowserTabPersistencePolicy; tab membership, selection, activation, popup, restoration and Android permission queue orchestration are isolated.
+- [x] Add Robolectric-backed Room migration tests for table import, source preservation, idempotent retry and transaction rollback; production storage cutover and physical-device upgrade checks remain pending.
 - [ ] Migrate the focused stores from SharedPreferences to Room/DataStore with versioned, non-destructive migrations and Android-backed upgrade tests.
 - [x] Restore existing tabs before opening a new external HTTP(S) link, without exceeding the 20-tab limit.
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
@@ -133,7 +134,7 @@ This file records implementation state separately from device verification. A ch
 - [x] Define future Windows, macOS, Linux and Android TV product boundaries without creating empty app modules.
 - [x] Define the account center, provider connection, sync overview, category consent, device management, conflict resolution and privacy/data screen flows for Uizard.
 - [ ] Define backend API, account lifecycle, retention policy, threat model, encryption/key ownership and recovery.
-- [x] Add tested provider-neutral PKCE verifier/challenge/state/nonce generation and exact callback/state validation primitives; this does not enable provider login or token exchange.
+- [x] Add tested provider-neutral PKCE verifier/challenge/state/nonce generation, an HTTPS-only Authorization Code request builder, and exact callback/state validation; this does not enable provider login, token exchange or ID-token verification.
 - [ ] Implement a secure platform credential vault and verified OIDC Authorization Code + PKCE provider adapter, including ID-token validation and revocation.
 - [ ] Build real account UI and device registration/revocation; keep unsupported providers unavailable rather than fake.
 - [ ] Implement opt-in encrypted bookmark sync first, then offline queue, idempotency, conflict resolution and schema migration.
