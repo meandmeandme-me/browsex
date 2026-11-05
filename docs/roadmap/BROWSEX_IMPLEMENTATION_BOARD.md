@@ -69,6 +69,16 @@ This is the repository-side phase board for the A–F implementation. Each phase
 **Important:** This file is a repository-side implementation board. GitHub Project V2 board creation is not exposed by the connected GitHub actions in this workspace; the live task cards are the linked Issues above.
 
 
+## Current branch checkpoint — 2026-11-05
+
+- Current audited HEAD before the next corrective commit: `871c84192431a1a55fc656cc050e1e92715ddb45`.
+- Push CI run `42121854379` and PR CI run `42121859399` both passed on that exact HEAD.
+- PR #4 remains open and unmerged. Continue on `rewrite-v2`.
+- Current Room/DataStore production paths cover bookmarks/history, regular tab snapshots, named/recent sessions, stream-download metadata and site permissions. The earlier continuity notes that describe Room as staging-only are obsolete.
+- DownloadManager enqueue/registration/reconciliation is still absent. Existing tracked-ID query UI is not proof of an enqueue path. Gecko one-shot response downloads must continue using the original response-body writer.
+- A tracked Android download cancellation bug was identified: only remove the Room tracking row after `DownloadManager.remove(id)` returns a positive count. Follow-up fix is included in the next commit.
+- Device installation, Android API matrix, release signing, tablet/accessibility and live uBlock verification remain outstanding.
+
 ## Latest implementation and verification — 2026-11-05
 
 - CI run [#42088452485](https://github.com/meandmeandme-me/browsex/actions/runs/42088452485) passed for code commit `99c381744694148846068b36e9bff6b0f5f64da1`: unit tests, lint, locale validation, debug APK assembly, ABI/package/signature verification and artifact upload.

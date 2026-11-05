@@ -469,8 +469,19 @@ internal class DownloadsPage(
                                     .setMessage(if (removingActive) t("Cancel this download?", "إلغاء هذا التنزيل؟") else t("Remove this download record?", "حذف سجل هذا التنزيل؟"))
                                     .setNegativeButton(t("Keep", "احتفاظ"), null)
                                     .setPositiveButton(t("Remove", "حذف")) { _, _ ->
-                                        runCatching { manager.remove(id) }
-                                        activity.lifecycleScope.launch { repository.removeTrackedPlatformDownload(id); reloadRoomRecords() }
+                                        val removed = runCatching { manager.remove(id) }.getOrDefault(0)
+                                        if (removed > 0) {
+                                            activity.lifecycleScope.launch {
+                                                repository.removeTrackedPlatformDownload(id)
+                                                reloadRoomRecords()
+                                            }
+                                        } else {
+                                            android.widget.Toast.makeText(
+                                                activity,
+                                                t("Android could not cancel this download. It is still listed so you can try again.", "تعذّر على أندرويد إلغاء هذا التنزيل. سيبقى ظاهرًا لتتمكن من المحاولة مجددًا."),
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }.show()
                             }
                         }

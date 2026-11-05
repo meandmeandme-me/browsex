@@ -1,155 +1,95 @@
-# BrowseX — Project Continuity & Handoff
+# BrowseX — Project Continuity
 
-> Update this file in the same commit as every meaningful implementation change. This is the handoff source of truth when a work session or model context ends.
+> **Source of truth:** this checkpoint reflects branch `rewrite-v2` at the time recorded below. Update it with every meaningful implementation commit. Older phase notes from earlier sessions are intentionally not carried forward as current status.
 
 ## Current checkpoint
-- Site permission precedence: `0bb2d7bf62ca194bcc88b88faa5adbc8a79da09b` now honors a saved per-origin camera/microphone block before requesting Android runtime access, avoiding unnecessary OS prompts for a site already blocked by the user.
 
-- Permission queue recovery: `1b131032ced3329eac7f29ef6878d51fb94ac23c` rejects a request if Android's permission launcher throws, then continues queued requests instead of leaving the queue stuck.
-- Download response cleanup: `27beab55d16467fef5213da95768bd80700a143b` closes the one-shot Gecko response stream if the host cannot start the download, and continues processing remaining permission-approved downloads.
+- Repository: `meandmeandme-me/browsex`
+- Working branch: `rewrite-v2`
+- Current HEAD before the follow-up fix: `871c84192431a1a55fc656cc050e1e92715ddb45`
+- Last commit: `perf(downloads): throttle Room progress writes for large files`
+- Pull request: [#4 — Rewrite v2](https://github.com/meandmeandme-me/browsex/pull/4), open and not merged. Do not merge to `main` without owner approval and final release/device gates.
+- CI for HEAD: push run [42121854379](https://github.com/meandmeandme-me/browsex/actions/runs/42121854379) and PR run [42121859399](https://github.com/meandmeandme-me/browsex/actions/runs/42121859399) both completed with **success**. These are automated CI results, not physical-device verification.
+- Compare with `main`: branch is substantially ahead and has diverged; preserve the rewrite branch and do not reset/rebase/merge without review.
 
-- Latest permission-flow fix: `df5ed8fc8d39c4a9b7260375a05ef5205b0bd7a4` — media requests now request missing Android camera/microphone runtime permissions before asking for per-site consent; private sessions still never persist per-origin choices.
-- This is a staged implementation change only; the consolidated build/test/schema/APK verification remains intentionally deferred until feature wiring is complete.
+## Product and collaboration constraints
 
-- Branch: `rewrite-v2`
-- Latest implementation commit: `5117b2913cbcfdda909d4ce5ef3a256938775f7b` (Room repository composition root).
-- Previous implementation commits in this phase:
-  - `290478080bcfcc5ab4a99deac16a73800f3a6298`: validate completed download URI schemes.
-  - `600f785e8810cd3a320ca175f712b6263bd503d3`: stable ordering for pruned filename reservations and tracked download IDs.
-  - `0fee2a71e3669dd2f9d36d44feca5fec779df251`: atomic DataStore read-modify-write updates.
-  - `9a658ec4a2e5a23241dd6d0daaf966c9073b7842`: remove duplicate DAO declarations discovered during static review.
-  - `866fc1389ac8cebbe58b850d212c4543abc1cf0f`: download filename sanitization.
-  - `9cbe2d0a2ab14dd8155fe1827193d6f0a6f4ffa8`: canonical Room site permission repository.
-  - `ad03d18d1192e2082c740c950831f53b14bd06aa`: bounded download records, filename reservations, and platform download IDs.
-  - `f225ffe06860b85d251aac88960b3ea985ae16c2`: Room history repository.
-  - `c9f6961bdd0032e7276f6a8ab01167526595ea9d`: atomic saved-session deletion and privacy boundary documentation.
-  - `2ecf5a4597036f8472803477c875c2051906bbe1`: Room named sessions and recently closed tabs.
-  - `b96163a693736486fe76ca0feec052e80ca0598d`: bounded legacy folder parsing and added versioned Room bookmark backup import/export.
-  - `3b9de5ed2d820fc26f42138e64fb7347187f244b`: capped legacy folder imports at 50 including Unfiled.
-  - `0129e8e880fa9e6157b9be953de7ae3f151fda33`: isolated folder capacity assertions in repository tests.
-- Last verified successful CI commit: `0129e8e880fa9e6157b9be953de7ae3f151fda33` (both build runs succeeded: [42065031924](https://github.com/meandmeandme-me/browsex/actions/runs/42065031924), [42065040085](https://github.com/meandmeandme-me/browsex/actions/runs/42065040085)).
-- **Verification boundary:** commits `3b9de5e`, `b96163a`, and `26dd424` have not yet been treated as verified. Do not claim their tests/build pass until CI completes successfully.
-- Current phase: **Phase 2 — Storage foundation and safe migration**
-- Current task: finish repository parity and harden backup/import before any production cutover.
-- `BrowserStorageGraph` is the composition root for all Room repositories. It is intentionally not connected to MainActivity yet; use it for feature-by-feature cutover only after parity and verification.
-- Room groundwork now includes dedicated repositories for bookmarks/folders and backup, regular tab snapshots, named sessions/recently closed tabs, history, downloads (including 300-record retention, safe filename reservations, and platform download ID tracking), and per-origin camera/microphone decisions. These are persistence layers and tests, not yet connected to production UI/runtime controllers.
-- Room is still **not wired as the production source of truth**. Legacy SharedPreferences remains active; do not delete or clear legacy keys.
-- Room bookmark repository now has versioned bookmark-only JSON export/import matching the legacy portable backup contract (`format=browsex-bookmarks`, `version=1`, `folders`, `bookmarks`). Import is merge-only, validates web URLs, deduplicates folder names/URLs, remaps folders by case-insensitive name, never overwrites existing bookmark URLs, and enforces 50 folders / 200 stored bookmarks. It excludes history, sessions, cookies, credentials, and private browsing data.
-- Legacy storage parser now caps folders at 50 total including the protected `unfiled` row while continuing past malformed/duplicate rows until the cap is reached.
-- Added a Room site-permission repository using the shared canonical-origin policy, camera/microphone-only decisions, explicit allow/deny/ask semantics, per-origin clearing, and a 100-decision cap. This is persistence groundwork; platform permission prompts and website notification subscriptions remain separate runtime integrations.
-- Added a Room download repository with bounded metadata, explicit queued/running/completed/failed/cancelled transitions, interrupted-download recovery, collision-safe filename reservations, and BrowseX-owned platform download ID tracking. It stores metadata only, not downloaded file contents.
-- Added a Room history repository with URL validation, latest-visit deduplication, a 300-entry cap, removal, and clear operations. Private visits must be excluded by the caller before persistence.
-- Added a Room tab-state repository for validated regular-tab snapshots, active-tab restoration, and safe home fallback. The UI/runtime caller must exclude private tabs before saving.
-- Added a Room session repository for named sessions (10 max, replace-by-name, validated/restorable tab snapshots) and recently closed tabs (10 max, deduplicated by URL, one-time consume). The repository does not infer whether a URL came from a private tab; callers must never pass private tabs to persistence APIs.
-- The owner requested one consolidated verification pass only after the implementation batch is complete. Do not pause after each small change to report tests; finish the remaining storage/runtime wiring and documentation first, then run the complete test/lint/APK/schema verification once.
+- Android browser using GeckoView (Firefox engine); this is not a Firefox app fork or an extension-only project.
+- Future product name direction: **Falak (فلك)**, tagline “Your orbit on the web”. Keep repository/package/application identity and current branding unchanged until the owner explicitly approves a rename.
+- Owner is not a programmer and prefers the assistant to work directly in the connected GitHub repository, explain results in simple Arabic, and avoid asking for repeated approvals between safe implementation steps.
+- Claude owns UI/UX and the new visual design. Do not change screen layouts, colors, visual hierarchy, labels, or branding until the owner supplies the new approved design.
+- Keep all work on `rewrite-v2`; never merge to `main` without explicit approval.
+- Preserve the existing implementation and Room user data. The owner confirmed there is no pre-existing user data to migrate: do not reintroduce legacy import or unnecessary dual-write. Keep forward Room schema migrations for future app upgrades.
+- No blocked-request counter. Shield UI is on/off only.
+- No live account login or cloud sync now. Google/Microsoft/OIDC foundations are planning only; real provider configuration/backend is deferred.
+- Target Android API 26+, including Android 10/API 29 and low-memory devices. CI ABI builds cover ARM32, ARM64 and universal outputs; device behavior remains unverified.
 
-- Branch: `rewrite-v2`
-- Latest implementation commit: `af7ed3d270b6cdb65faed34331922b77a5a38e38` (bookmark-folder lifecycle).
-- Last verified successful CI commit: `af7ed3d270b6cdb65faed34331922b77a5a38e38`
-- Current phase: **Phase 2 — Storage foundation and safe migration**
-- Current task: complete bookmark repository parity and establish safe production cutover boundaries.
-- Last verified CI success: run [42062106037](https://github.com/meandmeandme-me/browsex/actions/runs/42062106037) on `af7ed3d270b6cdb65faed34331922b77a5a38e38` (tests, lint, APK builds and schema artifact succeeded).
-- CI on previous HEAD `ac161663a58932007e963d4b66a2db6e7f0b2880`:
-  - Push run [42060084325](https://github.com/meandmeandme-me/browsex/actions/runs/42060084325): **failure** at Kotlin compilation.
-  - PR run [42060091076](https://github.com/meandmeandme-me/browsex/actions/runs/42060091076): **failure** at the same Kotlin compilation error.
-  - Root cause: suspend DAO method was passed as a non-suspending function reference in `find`.
-- Product direction: stable multilingual browser core first; replace transitional chrome UI later using the approved product map/Uizard workflow.
-- User confirmed no user data exists at present. Keep migrations defensive and non-destructive anyway.
+## What is implemented at current HEAD
 
-## Phase map
+### Storage and core data
+- Application-scoped `BrowserStorageRuntime` initializes the Room graph and recovers interrupted stream-download records.
+- Room v2 schema snapshot is committed at `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json` (identity hash `a8bb5bdfbd75a05ec09fb4f5ee8c5062`).
+- Room-backed repositories are used for bookmarks/folders, history, regular tab snapshots, named sessions/recently closed tabs, download metadata and per-origin site permissions.
+- DataStore is the primary source for core settings and Android permission-denial history. Some compatibility mirroring/read paths remain; remove them only after call-site audit.
+- Legacy SharedPreferences-to-Room/DataStore import has been removed as agreed. Do not add it back.
+- No production `runBlocking` was found in the previous source audit; keep database work off the UI thread.
 
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | Repository baseline, product direction, compatibility constraints | Complete |
-| 1 | Core policies, permissions, notifications, adaptive runtime foundations, defensive preference handling | Foundations present; audit remains |
-| 2 | DataStore, Room, safe import, repository cutover | **Current** |
-| 3 | Sessions/tabs, bookmarks/folders/history, downloads on one source of truth | Not started |
-| 4 | Decompose MainActivity into lifecycle/navigation/permission/download coordinators | Not started |
-| 5 | Privacy/security, site permissions, notifications, ad-block integration and recovery | Not started |
-| 6 | Localization/RTL, accessibility, adaptive layouts and weak-device performance | Not started |
-| 7 | Google/Microsoft/OIDC account and sync architecture | Planning only; live auth needs backend/client configuration |
-| 8 | Release signing, APK/AAB validation and Android device matrix | Not started |
-| 9 | New Uizard UI implementation after core behavior stabilizes | Planned |
+### Tabs and sessions
+- Regular tab snapshots are persisted through Room; private tabs and their URLs are excluded.
+- Startup restore is asynchronous and guarded against persisting an empty snapshot before restore completes.
+- Named sessions and recently closed regular tabs use Room; recently closed consumption is transactional.
+- Tab cap is 20; inactive Gecko sessions are released under the live-session budget and memory-pressure policies.
+- Remaining: expand restore/process-death/race tests, verify lifecycle callbacks and memory pressure on real low-memory hardware, and inspect remaining fallback paths.
 
-## Implemented foundations
+### Downloads
+- Gecko `WebResponse` downloads preserve the original one-shot response body and use BrowseX's bounded background writer. Do not replace this path with a simple URL re-fetch: cookies, headers, POST bodies and response fidelity may be lost.
+- Stream metadata, filename reservation, progress, completion/failure/cancellation and interrupted recovery are persisted through Room.
+- Stream progress Room writes are throttled to 1 MiB increments; UI progress remains more frequent.
+- Completed stream downloads support open/share and guarded deletion of files BrowseX can verify it owns.
+- Android DownloadManager UI can query only explicitly tracked IDs and supports open/share/remove for successful tracked jobs.
+- **Known gap:** there is no production `DownloadManager.enqueue()` plus Room ID-registration/reconciliation path. Do not claim platform-managed download ingestion, restart reconciliation, retry or resume is complete. Only add DownloadManager for requests that can be faithfully represented; keep original Gecko response bodies on the stream writer.
+- A cancellation UI bug was found after HEAD: do not remove a tracked Room ID unless `DownloadManager.remove(id)` reports success. The follow-up fix is being applied.
 
-- Defensive DataStore settings wrapper and normalization policies; not yet the live settings source across the app.
-- Legacy settings migration copies supported scalar preferences without deleting old keys.
-- Room database schema v2, entities and DAOs.
-- Legacy snapshot parser and importer.
-- Room migration completion state is committed atomically with imported rows. SharedPreferences marker is only a mirror and cannot suppress import if Room has no migration-state row.
-- Defensive handling for malformed legacy preferences and permission-denial sets.
-- Adaptive runtime policy considers device profile, battery saver and thermal pressure.
-- Product/UI map: `docs/design/BROWSEX_Uizard_PRODUCT_MAP_AR.md`.
+### Permissions, privacy and notifications
+- Per-origin camera, microphone, geolocation and website-notification decisions use Room.
+- Android runtime permission handling is separate from website permission consent; notification delivery uses Android notification APIs and respects the global DataStore setting.
+- Private sessions avoid persistent per-origin decisions and browsing history.
+- Remaining: Android API-level permission matrix, cancellation/race testing across tab changes, notification delivery/tap/close verification and full privacy-clear audit on devices.
 
-## Current Room bookmark slice
+### Ad blocking
+- Official Mozilla Add-ons uBlock Origin install/enable/disable/uninstall flow, extension identity check, private-mode consent, session attachment and extension action popup are implemented.
+- Gecko Safe Browsing / tracking protection policy remains the fallback where uBlock is not active.
+- Remaining: real-device installation/update/recovery tests, low-memory performance measurements, site-breakage tests and end-to-end verification on real sites.
+- Do not claim universal anti-adblock bypass or show a blocked counter.
 
-- Follow-up parity patch enforces the legacy folder cap (50 total including `unfiled`) transactionally and matches the legacy 40-character folder-name limit. Production cutover remains deferred.
+### Library, settings and localization
+- Room-backed bookmark/history UI supports search, folders, moves, ordering, removal and clear operations; bookmark backup preview/import/export supports merge and replace.
+- Core theme/language/search/homepage/notification/ad-block preferences use DataStore.
+- Arabic and English string resources exist, with fallback behavior for other device locales.
+- Remaining: remove residual compatibility reads/writes after audit, verify mixed RTL/LTR and all dialogs/menus, broaden translated locale packs, and complete TalkBack/large-font/tablet checks.
 
-- Added DAO operations for atomic bookmark insert (IGNORE against the unique URL index), lookup, delete and folder move.
-- Added `RoomBookmarkRepository` with URL and folder validation, title normalization, duplicate rejection, and basic CRUD.
-- Repository lookup now invokes the suspend DAO method directly from a suspend body (not through an incompatible function reference).
-- Long titles are safely normalized to the 160-character storage limit instead of rejecting the bookmark.
-- Added Robolectric coverage for add/find/move/remove, duplicate URLs, invalid schemes, missing folders and long-title normalization.
-- **Not wired to production callers yet.** `BrowserStore` and `MainActivity` still use SharedPreferences for bookmark operations. Do not claim cutover complete.
+## Remaining work — ordered
 
-## Architecture truths — do not misreport
+1. **Downloads correctness:** finish cancellation/removal correctness; decide whether a real DownloadManager adapter is needed. Do not route Gecko one-shot response bodies through URL-only DownloadManager requests. Add safe ID registration/reconciliation only for genuinely platform-managed jobs and tests for missing IDs, process death and terminal transitions.
+2. **Tabs/session reliability:** audit all restore/save entry points, duplicate sessions, popup/private inheritance, recently-closed behavior, lifecycle shutdown and low-memory session release; add regression tests.
+3. **Permissions/notifications/privacy:** finish Android API matrix and callback cancellation/race tests; validate notification delivery, tap navigation and clear-data behavior on devices.
+4. **uBlock:** validate Mozilla XPI install/restore/update, private consent, per-site action and real-site compatibility; measure resource impact on low-end devices.
+5. **Storage cleanup:** audit and remove only demonstrably dead SharedPreferences compatibility paths; keep a single source of truth per feature and retain Room schema migrations.
+6. **Localization/accessibility:** audit all user-visible strings, Arabic RTL and mixed-direction URLs/emails/numbers, font scaling, touch targets, TalkBack and tablet/foldable layouts.
+7. **Release readiness:** configure owner-controlled release-signing secrets, produce signed release APKs, verify signatures/ABIs/upgrades, then install and test on the owner's TECNO SPARK 5 Air (Android 10) and a broader device matrix.
+8. **New UI:** wait for Claude's approved design; then implement it without changing product behavior or inventing unsupported controls.
 
-- Room is not yet the live application source of truth.
-- DataStore is not yet wired as the live settings source throughout the app.
-- Session, library and download persistence still use SharedPreferences and synchronous call sites.
-- MainActivity remains large and contains transitional helpers; old UI removal is partial.
-- Adaptive runtime pressure is sampled for runtime configuration; continuous live monitoring is not implemented.
-- No production Google/Microsoft sign-in is configured.
-- CI success does not prove installation on the user's TECNO SPARK 5 Air (Android 10 / 2 GB RAM).
+## Verification boundary
 
-## Next actions — ordered
+- CI success proves the workflow's tests, lint and debug APK checks for that exact commit only.
+- No physical-device test, signed release APK, installation success on TECNO SPARK 5 Air, or full real-site uBlock verification is claimed.
+- No Android instrumentation/device matrix completion is claimed unless an actual device run is recorded.
 
-1. Room schema v2 was generated and inspected from CI artifact (identity hash `a8bb5bdfbd75a05ec09fb4f5ee8c5062`); it is not yet committed to the repository. Check in the generated JSON before production activation. Every future schema change must add a versioned snapshot and an explicit Room migration; never use destructive fallback.
-2. Complete bookmark repository parity: import/export, restart/round-trip, malformed-data and concurrency tests. Folder create/rename/delete/reorder is implemented in the current pending commit.
-3. Add repository restart/round-trip, malformed-data, rollback and concurrency tests.
-4. Wire bookmark reads and writes through one source of truth; remove legacy bookmark writes only after verified cutover.
-5. Migrate sessions/tabs, history, then downloads through repository interfaces, one feature slice at a time.
-6. Migrate settings to DataStore with lifecycle-aware Flow collection; never use `runBlocking` in UI getters.
-7. Decompose MainActivity incrementally without behavior regressions.
-8. Audit runtime permissions/cancellation, site notifications, downloads, private browsing isolation, content-process recovery, external intents, privacy/security and ad-block behavior.
-9. Audit locale resources, RTL mixed-direction text, accessibility semantics, tablet/foldable layouts and low-memory behavior.
-10. Validate minSdk/targetSdk/GeckoView compatibility, release signing and APK installation on Android 10 and a broader device matrix.
-11. Implement the new UI from the product map after core states and behaviors are stable.
+## Latest work log
 
-## Per-change protocol
-
-1. Re-read branch HEAD before writing.
-2. Update this file in the same commit as every meaningful code change.
-3. Commit against the exact parent and update the branch with expected-SHA protection.
-4. Re-read HEAD after updating.
-5. Check CI for that exact commit and record pending/failure/success accurately.
-6. A phase is complete only after code, tests and relevant runtime validation—not merely because implementation exists.
-
-## Change log
-
-### 2026-11-05 — Room bookmark folder lifecycle
-- Added transactional folder create/rename/delete/reorder operations; names are normalized and checked case-insensitively for duplicates.
-- Deleting a folder moves its bookmarks to `unfiled`; the default folder cannot be deleted.
-- Added tests for folder lifecycle, duplicate/blank names, safe deletion and ordering.
-- CI run [42062106037](https://github.com/meandmeandme-me/browsex/actions/runs/42062106037) passed on `af7ed3d270b6cdb65faed34331922b77a5a38e38`.
-
-### 2026-11-05 — Room bookmark repository compile correction
-- Fixed the suspend DAO lookup invocation that blocked Kotlin compilation.
-- Normalized long titles to the repository's documented 160-character limit.
-- Added a regression assertion for long-title handling.
-- CI run [42060878488](https://github.com/meandmeandme-me/browsex/actions/runs/42060878488) passed on `c0b28ea9a850553bbd97ee1303c4243f31b5c9b5`.
-
-### 2026-11-05 — Room bookmark repository foundation
-- Commit: `7cc0d6301e77b2b433d217d16e3c0f09157f4773`
-- Added DAO atomic insert, lookup, delete and folder-move operations.
-- Added RoomBookmarkRepository and Robolectric CRUD/validation tests.
-- Production cutover deliberately deferred to avoid dual sources of truth.
-
-### 2026-11-05 — Room migration marker authority
-- Commit: `eba399035b79ef652e33433fc0e9a26958c1af1f`
-- Room migration-state row is authoritative; stale SharedPreferences marker cannot skip import into an empty Room database.
-- Added regression coverage.
-
-### 2026-11-05 — Continuity checkpoint
-- Created this durable project handoff record.
+### 2026-11-05 — HEAD audit
+- Confirmed `rewrite-v2` HEAD `871c84192431a1a55fc656cc050e1e92715ddb45`.
+- Confirmed push and pull-request CI runs `42121854379` and `42121859399` both succeeded.
+- Confirmed PR #4 remains open and unmerged.
+- Audited implementation board, open issues #5–#10, tab/session lifecycle, Room/DataStore paths, downloads, permissions and uBlock integration.
+- Found and fixed a DownloadsPage cancellation bookkeeping bug in the follow-up commit: only forget a tracked platform download after Android confirms removal.
