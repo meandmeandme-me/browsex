@@ -510,6 +510,39 @@ internal class DownloadsPage(
                             }
                         })
                     }
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        item.addView(TextView(activity).apply {
+                            text = "×"
+                            textSize = 20f
+                            gravity = Gravity.CENTER
+                            setTextColor(colors.danger)
+                            minimumWidth = dp(40)
+                            minimumHeight = dp(48)
+                            contentDescription = t("Delete downloaded file", "حذف الملف المنزّل")
+                            isClickable = true
+                            isFocusable = true
+                            setOnClickListener {
+                                AlertDialog.Builder(activity)
+                                    .setMessage(t("Delete this downloaded file from your device?", "حذف هذا الملف المنزّل من جهازك؟"))
+                                    .setNegativeButton(t("Keep", "احتفاظ"), null)
+                                    .setPositiveButton(t("Delete", "حذف")) { _, _ ->
+                                        val removed = runCatching { manager.remove(id) }.getOrDefault(0)
+                                        if (removed > 0) {
+                                            activity.lifecycleScope.launch {
+                                                repository.removeTrackedPlatformDownload(id)
+                                                reloadRoomRecords()
+                                            }
+                                        } else {
+                                            android.widget.Toast.makeText(
+                                                activity,
+                                                t("Android could not delete this download.", "تعذّر على أندرويد حذف هذا التنزيل."),
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }.show()
+                            }
+                        })
+                    }
                     list.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
                 }
             }
