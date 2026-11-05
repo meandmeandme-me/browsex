@@ -165,6 +165,42 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM bookmark_folders WHERE id = :folderId LIMIT 1")
     suspend fun folder(folderId: String): BookmarkFolderEntity?
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertFolder(folder: BookmarkFolderEntity): Long
+
+    @Query("SELECT COUNT(*) FROM bookmark_folders WHERE lower(name) = lower(:name)")
+    suspend fun folderNameCount(name: String): Int
+
+    @Query("SELECT COUNT(*) FROM bookmark_folders WHERE lower(name) = lower(:name) AND id != :folderId")
+    suspend fun otherFolderNameCount(name: String, folderId: String): Int
+
+    @Query("UPDATE bookmark_folders SET name = :name WHERE id = :folderId")
+    suspend fun renameFolder(folderId: String, name: String): Int
+
+    @Query("UPDATE bookmark_folders SET sort_order = :sortOrder WHERE id = :folderId")
+    suspend fun updateFolderSortOrder(folderId: String, sortOrder: Int): Int
+
+    @Transaction
+    suspend fun createFolderIfNameAvailable(folder: BookmarkFolderEntity): Boolean {
+        if (folder.name.isBlank() || folderNameCount(folder.name) > 0) return false
+        return insertFolder(folder) != -1L
+    }
+
+    @Transaction
+    suspend fun renameFolderIfNameAvailable(folderId: String, name: String): Boolean {
+        if (folder(folderId) == null || name.isBlank()) return false
+        if (otherFolderNameCount(name, folderId) > 0) return false
+        return renameFolder(folderId, name) > 0
+    }
+
+    @Transaction
+    suspend fun reorderBookmarkFolders(folderIds: List<String>): Boolean {
+        val existingIds = folders().map { it.id }.toSet()
+        if (folderIds.size != existingIds.size || folderIds.toSet() != existingIds) return false
+        folderIds.forEachIndexed { index, id -> updateFolderSortOrder(id, index) }
+        return true
+    }
+
     @Query("UPDATE bookmarks SET folder_id = :folderId WHERE url = :url")
     suspend fun moveBookmark(url: String, folderId: String): Int
 
@@ -316,9 +352,11 @@ interface BrowseXStorageDao {
     suspend fun downloadRecordCount(): Int
 
     @Transaction
-    suspend fun removeFolder(folderId: String) {
+    suspend fun removeFolder(folderId: String): Boolean {
+        if (folderId == "unfiled" || folder(folderId) == null) return false
         moveFolderItemsToUnfiled(folderId)
         deleteFolder(folderId)
+        return folder(folderId) == null
     }
 }
 

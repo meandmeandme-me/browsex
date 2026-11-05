@@ -5,10 +5,11 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Latest implementation commit: `TBD` — Room bookmark repository compile fix.
+- Latest implementation commit: pending bookmark-folder lifecycle commit.
 - Last verified successful CI commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c`
 - Current phase: **Phase 2 — Storage foundation and safe migration**
 - Current task: complete bookmark repository parity and establish safe production cutover boundaries.
+- Last verified CI success: run [42060878488](https://github.com/meandmeandme-me/browsex/actions/runs/42060878488) on `c0b28ea9a850553bbd97ee1303c4243f31b5c9b5` (tests, lint, APK builds and schema artifact succeeded).
 - CI on previous HEAD `ac161663a58932007e963d4b66a2db6e7f0b2880`:
   - Push run [42060084325](https://github.com/meandmeandme-me/browsex/actions/runs/42060084325): **failure** at Kotlin compilation.
   - PR run [42060091076](https://github.com/meandmeandme-me/browsex/actions/runs/42060091076): **failure** at the same Kotlin compilation error.
@@ -63,8 +64,8 @@
 
 ## Next actions — ordered
 
-1. Confirm this compile fix on CI; inspect and version-control the Room schema snapshot and define schema migration policy before enabling Room in production.
-2. Complete bookmark repository parity: folder lifecycle, ordering, import/export and robust transaction semantics.
+1. Room schema v2 was generated and inspected from CI artifact (identity hash `a8bb5bdfbd75a05ec09fb4f5ee8c5062`); it is not yet committed to the repository. Check in the generated JSON before production activation. Every future schema change must add a versioned snapshot and an explicit Room migration; never use destructive fallback.
+2. Complete bookmark repository parity: import/export, restart/round-trip, malformed-data and concurrency tests. Folder create/rename/delete/reorder is implemented in the current pending commit.
 3. Add repository restart/round-trip, malformed-data, rollback and concurrency tests.
 4. Wire bookmark reads and writes through one source of truth; remove legacy bookmark writes only after verified cutover.
 5. Migrate sessions/tabs, history, then downloads through repository interfaces, one feature slice at a time.
@@ -86,11 +87,17 @@
 
 ## Change log
 
+### 2026-11-05 — Room bookmark folder lifecycle
+- Added transactional folder create/rename/delete/reorder operations; names are normalized and checked case-insensitively for duplicates.
+- Deleting a folder moves its bookmarks to `unfiled`; the default folder cannot be deleted.
+- Added tests for folder lifecycle, duplicate/blank names, safe deletion and ordering.
+- CI pending for this commit.
+
 ### 2026-11-05 — Room bookmark repository compile correction
 - Fixed the suspend DAO lookup invocation that blocked Kotlin compilation.
 - Normalized long titles to the repository's documented 160-character limit.
 - Added a regression assertion for long-title handling.
-- CI has not yet been run for this correction.
+- CI run [42060878488](https://github.com/meandmeandme-me/browsex/actions/runs/42060878488) passed on `c0b28ea9a850553bbd97ee1303c4243f31b5c9b5`.
 
 ### 2026-11-05 — Room bookmark repository foundation
 - Commit: `7cc0d6301e77b2b433d217d16e3c0f09157f4773`

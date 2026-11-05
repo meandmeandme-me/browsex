@@ -50,4 +50,42 @@ class RoomBookmarkRepositoryTest {
             database.close()
         }
     }
+    @Test
+    fun bookmarkFoldersSupportSafeLifecycleAndOrdering() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(),
+            BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+
+        try {
+            val dao = database.storageDao()
+            dao.putFolders(listOf(BookmarkFolderEntity(id = "unfiled", name = "Unfiled")))
+            val repository = RoomBookmarkRepository(dao)
+
+            val workId = repository.createFolder("  Work  ", createdAt = 20L)
+            val personalId = repository.createFolder("Personal", createdAt = 21L)
+            assertTrue(workId != null)
+            assertTrue(personalId != null)
+            assertNull(repository.createFolder("work", createdAt = 22L))
+            assertNull(repository.createFolder("   ", createdAt = 23L))
+
+            assertTrue(repository.add("https://example.test/task", "Task", workId!!, 24L))
+            assertTrue(repository.renameFolder(workId, "Projects"))
+            assertFalse(repository.renameFolder(personalId!!, "Projects"))
+            assertEquals("Projects", repository.folders().first { it.id == workId }.name)
+
+            assertFalse(repository.deleteFolder("unfiled"))
+            assertTrue(repository.deleteFolder(workId))
+            assertEquals("unfiled", repository.find("https://example.test/task")?.folderId)
+            assertFalse(repository.deleteFolder(workId))
+
+            assertTrue(repository.reorderFolders(listOf(personalId, "unfiled")))
+            assertEquals(listOf(personalId, "unfiled"), repository.folders().map { it.id })
+            assertFalse(repository.reorderFolders(listOf(personalId, personalId)))
+            assertFalse(repository.reorderFolders(listOf(personalId)))
+        } finally {
+            database.close()
+        }
+    }
+
 }
