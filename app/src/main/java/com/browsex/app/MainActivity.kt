@@ -166,6 +166,19 @@ class MainActivity : AppCompatActivity() {
             LocaleListCompat.forLanguageTags(if (settings.languageMode == "system") "" else settings.languageMode)
         )
         BrowserContentProtectionPolicy.configure(settings.adBlockEnabled, settings.adBlockPrivateEnabled)
+        // DataStore loads asynchronously. If GeckoRuntime was created first, apply the
+        // persisted locale and color scheme now instead of leaving the clean-start defaults.
+        browserRuntime?.settings?.setPreferredColorScheme(when (settings.themeMode) {
+            "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
+            "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            else -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
+        })
+        val runtimeLocales = if (settings.languageMode == "system") {
+            resources.configuration.locales.toLanguageTags().split(',').filter { it.isNotBlank() }.toTypedArray()
+        } else {
+            arrayOf(settings.languageMode)
+        }
+        browserRuntime?.settings?.setLocales(runtimeLocales)
         if (!::store.isInitialized) return
         store.adBlockEnabled = settings.adBlockEnabled
         store.adBlockInstalled = settings.adBlockInstalled
