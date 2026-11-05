@@ -35,13 +35,20 @@ internal class BrowserCredentialVault(
     val privateBrowsingActive: Boolean get() = refreshPrivateTabsOpen()
 
     fun setPrivateTabsOpen(open: Boolean) {
+        val pid = android.os.Process.myPid()
         privateTabsOpen = open
-        check(
-            prefs.edit()
-                .putBoolean(PRIVATE_TABS_OPEN_KEY, open)
-                .putInt(PRIVATE_TABS_PROCESS_KEY, android.os.Process.myPid())
-                .commit()
-        )
+        // updateChrome() may run during every navigation/progress callback. Avoid
+        // synchronous disk I/O when the process-scoped state has not changed.
+        if (prefs.getInt(PRIVATE_TABS_PROCESS_KEY, -1) == pid &&
+            prefs.getBoolean(PRIVATE_TABS_OPEN_KEY, false) == open
+        ) return
+
+        // AutofillService runs in the app process and reads the same preference cache.
+        // apply() updates memory immediately without blocking the browser UI thread.
+        prefs.edit()
+            .putBoolean(PRIVATE_TABS_OPEN_KEY, open)
+            .putInt(PRIVATE_TABS_PROCESS_KEY, pid)
+            .apply()
     }
 
     private fun loadPrivateTabsOpen(): Boolean {
@@ -50,7 +57,7 @@ internal class BrowserCredentialVault(
             prefs.edit()
                 .putBoolean(PRIVATE_TABS_OPEN_KEY, false)
                 .putInt(PRIVATE_TABS_PROCESS_KEY, pid)
-                .commit()
+                .apply()
             return false
         }
         return prefs.getBoolean(PRIVATE_TABS_OPEN_KEY, false)
