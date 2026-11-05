@@ -3,11 +3,11 @@ package com.browsex.app
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import android.os.PowerManager
 
 /**
- * Reads stable device capabilities once at startup. Runtime memory pressure is handled
- * separately by the host lifecycle coordinator; available RAM is intentionally not used
- * as a permanent device classification signal.
+ * Reads stable device capabilities and current system pressure at startup.
+ * Memory pressure callbacks remain the host lifecycle coordinator's responsibility.
  */
 internal class DeviceCapabilityProbe(context: Context) {
     private val appContext = context.applicationContext
@@ -42,6 +42,19 @@ internal class DeviceCapabilityProbe(context: Context) {
             smallestWidthDp = smallestWidthDp,
             densityDpi = configuration.densityDpi,
             ramTier = ramTier
+        )
+    }
+
+    fun runtimePressure(): RuntimePressure {
+        val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val thermalStatus = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            powerManager.currentThermalStatus
+        } else {
+            0
+        }
+        return RuntimePressure(
+            batterySaverEnabled = powerManager.isPowerSaveMode,
+            thermalStatus = thermalStatus
         )
     }
 }

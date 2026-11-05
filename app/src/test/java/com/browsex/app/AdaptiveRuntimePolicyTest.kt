@@ -34,6 +34,43 @@ class AdaptiveRuntimePolicyTest {
         assertTrue(config.allowSpeculativeTabPreload)
     }
 
+    @Test
+    fun batterySaverDisablesPreloadAndCapsHighEndDevices() {
+        val config = AdaptiveRuntimePolicy.resolve(
+            profile(DeviceRamTier.HIGH),
+            RuntimePressure(batterySaverEnabled = true)
+        )
+
+        assertEquals(2, config.maxLiveGeckoSessions)
+        assertEquals(2, config.maxParallelResourceLoads)
+        assertFalse(config.allowSpeculativeTabPreload)
+        assertTrue(config.preferReducedMotion)
+    }
+
+    @Test
+    fun severeThermalPressureUsesConstrainedSessionBudget() {
+        val config = AdaptiveRuntimePolicy.resolve(
+            profile(DeviceRamTier.HIGH),
+            RuntimePressure(thermalStatus = 4)
+        )
+
+        assertEquals(1, config.maxLiveGeckoSessions)
+        assertEquals(1, config.maxParallelResourceLoads)
+        assertFalse(config.allowSpeculativeTabPreload)
+        assertTrue(config.useCompactMemoryMode)
+    }
+
+    @Test
+    fun moderateThermalPressureReducesBalancedDeviceBudget() {
+        val config = AdaptiveRuntimePolicy.resolve(
+            profile(DeviceRamTier.BALANCED),
+            RuntimePressure(thermalStatus = 2)
+        )
+
+        assertEquals(2, config.maxLiveGeckoSessions)
+        assertFalse(config.allowSpeculativeTabPreload)
+    }
+
     private fun profile(tier: DeviceRamTier) = DeviceCapabilityProfile(
         sdkInt = 35,
         supportedAbis = listOf("arm64-v8a"),

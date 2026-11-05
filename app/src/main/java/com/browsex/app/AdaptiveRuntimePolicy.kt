@@ -15,6 +15,14 @@ internal data class DeviceCapabilityProfile(
     val ramTier: DeviceRamTier
 )
 
+internal data class RuntimePressure(
+    val batterySaverEnabled: Boolean = false,
+    /** Android PowerManager thermal status: 0 is none, higher values are hotter. */
+    val thermalStatus: Int = 0
+) {
+    init { require(thermalStatus >= 0) }
+}
+
 internal data class AdaptiveRuntimeConfig(
     val maxLiveGeckoSessions: Int,
     val maxParallelResourceLoads: Int,
@@ -24,32 +32,39 @@ internal data class AdaptiveRuntimeConfig(
 )
 
 /**
- * Pure policy: device facts are inputs, never scattered Build checks throughout features.
- * The UI can consume screenClass independently from browser-engine resource decisions.
+ * Pure policy: device facts and transient system pressure are inputs, never scattered
+ * Build or PowerManager checks throughout browser features.
  */
 internal object AdaptiveRuntimePolicy {
-    fun resolve(profile: DeviceCapabilityProfile): AdaptiveRuntimeConfig =
-        when (profile.ramTier) {
-            DeviceRamTier.CONSTRAINED -> AdaptiveRuntimeConfig(
-                maxLiveGeckoSessions = 1,
-                maxParallelResourceLoads = 1,
-                allowSpeculativeTabPreload = false,
-                preferReducedMotion = true,
-                useCompactMemoryMode = true
-            )
-            DeviceRamTier.BALANCED -> AdaptiveRuntimeConfig(
-                maxLiveGeckoSessions = 2,
-                maxParallelResourceLoads = 2,
-                allowSpeculativeTabPreload = false,
-                preferReducedMotion = false,
-                useCompactMemoryMode = false
-            )
-            DeviceRamTier.HIGH -> AdaptiveRuntimeConfig(
-                maxLiveGeckoSessions = 4,
-                maxParallelResourceLoads = 4,
-                allowSpeculativeTabPreload = true,
-                preferReducedMotion = false,
-                useCompactMemoryMode = false
-            )
+    fun resolve(
+        profile: DeviceCapabilityProfile,
+        pressure: RuntimePressure = RuntimePressure()
+    ): AdaptiveRuntimeConfig {
+        val base = when (profile.ramTier) {
+            DeviceRamTier.CONSTRAINED -> AdaptiveRuntimeConfig(1, 1, false, true, true)
+            DeviceRamTier.BALANCED -> AdaptiveRuntimeConfig(2, 2, false, false, false)
+            DeviceRamTier.HIGH -> AdaptiveRuntimeConfig(4, 4, true, false, false)
         }
+
+        // Thermal pressure takes priority over battery saver. Never trade security for speed.
+        val severeThermal = pressure.thermalStatus >= THERMAL_SEVERE
+        val moderateThermal = pressure.thermalStatus >= THERMAL_MODERATE
+        val reduceForPressure = pressure.batterySaverEnabled || moderateThermal
+        if (!reduceForPressure) return base
+
+        val sessionLimit = when {
+            severeThermal -> 1
+            else -> minOf(base.maxLiveGeckoSessions, 2)
+        }
+        return base.copy(
+            maxLiveGeckoSessions = sessionLimit,
+            maxParallelResourceLoads = minOf(base.maxParallelResourceLoads, sessionLimit),
+            allowSpeculativeTabPreload = false,
+            preferReducedMotion = base.preferReducedMotion || pressure.batterySaverEnabled,
+            useCompactMemoryMode = base.useCompactMemoryMode || severeThermal
+        )
+    }
+
+    private const val THERMAL_MODERATE = 2
+    private const val THERMAL_SEVERE = 4
 }
