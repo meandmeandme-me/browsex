@@ -133,7 +133,8 @@ This file records implementation state separately from device verification. A ch
 - [x] Define future Windows, macOS, Linux and Android TV product boundaries without creating empty app modules.
 - [x] Define the account center, provider connection, sync overview, category consent, device management, conflict resolution and privacy/data screen flows for Uizard.
 - [ ] Define backend API, account lifecycle, retention policy, threat model, encryption/key ownership and recovery.
-- [ ] Implement a secure platform credential vault and verified OIDC Authorization Code + PKCE flow.
+- [x] Add tested provider-neutral PKCE verifier/challenge/state/nonce generation and exact callback/state validation primitives; this does not enable provider login or token exchange.
+- [ ] Implement a secure platform credential vault and verified OIDC Authorization Code + PKCE provider adapter, including ID-token validation and revocation.
 - [ ] Build real account UI and device registration/revocation; keep unsupported providers unavailable rather than fake.
 - [ ] Implement opt-in encrypted bookmark sync first, then offline queue, idempotency, conflict resolution and schema migration.
 - [ ] Add cross-device export/deletion, disconnect and local-data-retention flows.

@@ -26,6 +26,13 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
 - [x] CredentialAccessPolicy has JVM tests for locked-by-default state, timed unlock expiry, private-tab override and explicit lock.
 
+## OIDC/PKCE foundation
+
+- [x] Generate independent random verifier, S256 challenge, state and nonce values.
+- [x] Require exact redirect base and one matching state in the authorization-code callback.
+- [x] Reject duplicate parameters, fragments, provider errors, missing codes, implicit-flow tokens and unsafe redirects.
+- [ ] Verify the full provider/browser redirect, code exchange, issuer/audience/signature/nonce validation, secure session storage and revocation after real OAuth applications are configured.
+
 ## Room staging migration
 
 - [x] Room 2.8.5 KSP processor generates the staging schema successfully in CI.

@@ -44,6 +44,13 @@ Domain models: app/src/main/java/com/browsex/app/AccountDomainModels.kt. They co
 5. Handle account removal, provider revocation, expiry, device loss, clock skew, offline mode and interrupted sign-in.
 6. Define account-linking collision and recovery rules before supporting multiple linked identities.
 
+## Shared PKCE primitives
+
+
+- `OidcPkce` creates independent cryptographically random verifier, state and nonce values and derives an `S256` code challenge.
+- The callback parser requires the exact registered redirect base, a single authorization code, one matching state value, and rejects fragments, implicit-flow tokens, provider errors and duplicate parameters.
+- This is a tested protocol primitive only. It does not open a system browser, exchange the authorization code, validate an ID token's issuer/audience/signature/nonce, or store provider sessions. Provider adapters remain disabled until OAuth client registrations and backend credentials are configured and reviewed.
+
 ## Sync protocol requirements
 - TLS for transport. Decide end-to-end encryption before selecting the backend; do not claim E2EE if the service can decrypt user data.
 - Version every record; use stable IDs, revisions, tombstones and idempotency keys.
