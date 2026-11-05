@@ -85,6 +85,8 @@ class LegacyStorageSnapshotParserTest {
     @Test
     fun permissionAndDownloadTablesKeepSeparateSemantics() {
         val permissions = JSONObject().put("https://example.com|camera", "allow")
+            .put("https://example.com|notifications", "deny")
+            .put("https://example.com|geolocation", "allow")
             .put("https://example.com|location", "allow").put("file:///bad|camera", "allow")
         val downloads = JSONArray().put(
             JSONObject().put("id", "stream-1").put("displayName", "video.mp4")
@@ -95,7 +97,8 @@ class LegacyStorageSnapshotParserTest {
             "stream_downloads_v1" to downloads.toString(),
             "browsex_download_ids" to JSONArray().put(100L).toString()
         ))
-        assertEquals(1, parsed.permissions.size)
+        assertEquals(3, parsed.permissions.size)
+        assertEquals(setOf("camera", "notifications", "geolocation"), parsed.permissions.map { it.feature }.toSet())
         assertEquals("failed", parsed.downloads.single().status)
         assertEquals(1, parsed.platformIds.size)
     }
