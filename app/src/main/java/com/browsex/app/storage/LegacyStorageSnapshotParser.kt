@@ -92,7 +92,7 @@ internal object LegacyStorageSnapshotParser {
             parseStrings(legacy, 500).forEach { rawUrl ->
                 val url = validUrl(rawUrl) ?: return@forEach
                 rows.add(BookmarkRow(stableId("bookmark", url), url,
-                    Uri.parse(url).host.orEmpty().ifBlank { url }, "unfiled", 0L))
+                    hostOf(url).ifBlank { url }, "unfiled", 0L))
             }
         }
         return rows.distinctBy { it.url }.take(200).mapIndexed { index, item ->
@@ -109,14 +109,14 @@ internal object LegacyStorageSnapshotParser {
                 val url = validUrl(item.optString("url")) ?: continue
                 rows.add(HistoryEntryEntity(
                     stableId("history", url), url,
-                    item.optString("title").trim().take(160).ifBlank { Uri.parse(url).host.orEmpty() },
+                    item.optString("title").trim().take(160).ifBlank { hostOf(url) },
                     item.optLong("visitedAt", 0L).coerceAtLeast(0L), 1
                 ))
             }
         } else {
             parseStrings(legacy, 600).forEach { rawUrl ->
                 val url = validUrl(rawUrl) ?: return@forEach
-                rows.add(HistoryEntryEntity(stableId("history", url), url, Uri.parse(url).host.orEmpty(), 0L, 1))
+                rows.add(HistoryEntryEntity(stableId("history", url), url, hostOf(url), 0L, 1))
             }
         }
         return rows.distinctBy { it.url }.take(300)
@@ -151,7 +151,7 @@ internal object LegacyStorageSnapshotParser {
             val url = validUrl(item.optString("url")) ?: return@mapNotNull null
             if (id.isBlank()) return@mapNotNull null
             RecentlyClosedTabEntity(id, url,
-                item.optString("title").trim().take(180).ifBlank { Uri.parse(url).host.orEmpty() },
+                item.optString("title").trim().take(180).ifBlank { hostOf(url) },
                 item.optLong("closedAt", 0L).coerceAtLeast(0L))
         }.distinctBy { it.id }
     }
