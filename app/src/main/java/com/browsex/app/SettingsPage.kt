@@ -31,7 +31,8 @@ internal class SettingsPage(
     private val importBookmarks: () -> Unit,
     private val exportBookmarks: () -> Unit,
     private val showHomePreferences: () -> Unit,
-    private val openPrivacyCenter: () -> Unit
+    private val openPrivacyCenter: () -> Unit,
+    private val manageUBlockOrigin: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val ink get() = colors.ink
@@ -266,6 +267,15 @@ internal class SettingsPage(
             dialog.dismiss()
             openPrivacyCenter()
         })
+
+        row(
+            "uBlock Origin",
+            if (store.adBlockEnabled) "Installed and enabled" else if (store.adBlockPrivateEnabled) "Installed but disabled" else "Install and manage real ad and tracker blocking",
+            t("Manage")
+        ) {
+            dialog.dismiss()
+            manageUBlockOrigin()
+        }
         row("Clear browsing history", "Remove the browsing history stored by Browse X", "Clear") {
             AlertDialog.Builder(activity)
                  .setTitle(t("Clear browsing history?"))

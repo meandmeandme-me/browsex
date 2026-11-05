@@ -14,6 +14,10 @@ class BrowserStore(context: Context) {
         get() = preferences.adBlockEnabled
         set(value) { preferences.adBlockEnabled = value }
 
+    var adBlockPrivateEnabled: Boolean
+        get() = preferences.adBlockPrivateEnabled
+        set(value) { preferences.adBlockPrivateEnabled = value }
+
     var themeMode: String
         get() = preferences.themeMode
         set(value) { preferences.themeMode = value }

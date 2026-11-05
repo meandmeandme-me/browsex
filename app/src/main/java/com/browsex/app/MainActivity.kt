@@ -18,6 +18,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -92,7 +93,10 @@ class MainActivity : AppCompatActivity() {
             updateChrome = ::updateChrome,
             showMessage = ::toast,
             recordRecentlyClosed = { tab -> store.recordRecentlyClosedTab(tab.url, tab.title) },
-            dispatchToMain = { action -> runOnUiThread(action) }
+            dispatchToMain = { action -> runOnUiThread(action) },
+            setExtensionTabActive = { session, active ->
+                uBlockOriginManager?.setTabActive(session, active)
+            }
         )
     }
     private val tabs: List<BrowserTab> get() = tabController.tabs
@@ -132,6 +136,7 @@ class MainActivity : AppCompatActivity() {
                         tab.session.setFocused(false)
                         tab.session.setActive(false)
                     }
+                    uBlockOriginManager?.setTabActive(tab.session, active)
                 }
             },
             releaseForMemoryPressure = sessionLifecycleCoordinator::releaseForMemoryPressure
@@ -145,9 +150,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
     private lateinit var tabsButton: TextView
+    private lateinit var uBlockButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
+    private var initialBrowserTabsRestored = false
     private var browserRuntime: GeckoRuntime? = null
+    private var uBlockOriginManager: UBlockOriginManager? = null
     private var notificationBridge: BrowseXNotificationBridge? = null
     private var dataClearDialog: AlertDialog? = null
     private val browsingDataCoordinator by lazy {
@@ -184,6 +192,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        BrowserContentProtectionPolicy.configure(store.adBlockEnabled, store.adBlockPrivateEnabled)
         credentialVault = BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
             runOnUiThread {
                 if (isFinishing || isDestroyed) {
@@ -366,10 +375,53 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        val snapshot = tabPersistenceCoordinator.restoreOpenTabs()
-        val externalUrl = intent?.data?.let(::safeExternalUrl)
-        tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
-        handleSiteNotificationIntent(intent)
+        val extensionRuntime = browserRuntime
+        if (extensionRuntime == null) {
+            BrowserContentProtectionPolicy.configure(store.adBlockEnabled, store.adBlockPrivateEnabled)
+            restoreInitialBrowserTabs(intent)
+        } else {
+            uBlockOriginManager = UBlockOriginManager(
+                activity = this,
+                runtime = extensionRuntime,
+                activeSession = { activeTab?.session },
+                existingSessions = { tabs.filter { it.sessionOpened }.map { it.session } },
+                createTab = { parentSession ->
+                    val parent = tabs.firstOrNull { it.session === parentSession } ?: activeTab
+                    parent?.let { tabController.onNewSession(it) }
+                },
+                closeTab = { session ->
+                    val tab = tabs.firstOrNull { it.session === session }
+                    if (tab == null) false else {
+                        closeTab(tab)
+                        true
+                    }
+                },
+                onActionChanged = {
+                    if (!isFinishing && !isDestroyed) {
+                        runOnUiThread { syncUBlockButton() }
+                    }
+                }
+            ).also { manager ->
+                manager.refresh(
+                    onComplete = { installed ->
+                        val enabled = installed?.metaData?.enabled == true
+                        val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
+                        store.adBlockEnabled = enabled
+                        store.adBlockPrivateEnabled = privateAllowed
+                        BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                        restoreInitialBrowserTabs(intent)
+                    },
+                    onFailure = { error ->
+                        android.util.Log.w("BrowseX", "Could not discover uBlock Origin", error)
+                        BrowserContentProtectionPolicy.configure(
+                            store.adBlockEnabled,
+                            store.adBlockPrivateEnabled
+                        )
+                        restoreInitialBrowserTabs(intent)
+                    }
+                )
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -421,6 +473,8 @@ class MainActivity : AppCompatActivity() {
         if (::credentialVault.isInitialized) credentialVault.lock()
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
+        uBlockOriginManager?.destroy()
+        uBlockOriginManager = null
         dataClearDialog?.dismiss()
         dataClearDialog = null
         browserRuntime?.setWebNotificationDelegate(null)
@@ -533,6 +587,16 @@ class MainActivity : AppCompatActivity() {
         topBar.addView(tabsButton, LinearLayout.LayoutParams(dp(44), dp(48)).apply {
             marginEnd = dp(4)
         })
+        uBlockButton = actionButton("uB", "uBlock Origin controls") {
+            uBlockOriginManager?.clickBrowserAction(activeTab?.session)
+        }.apply {
+            textSize = 14f
+            visibility = View.GONE
+            background = rounded(colors.card, 10)
+        }
+        topBar.addView(uBlockButton, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            marginEnd = dp(4)
+        })
         val menu = actionButton("⋮", "Browser menu") { showBrowserMenu() }.apply {
             background = rounded(colors.card, 10)
             textSize = 22f
@@ -598,6 +662,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateChrome() {
         if (::credentialVault.isInitialized) credentialVault.setPrivateTabsOpen(tabs.any { it.privateMode })
+        syncUBlockButton()
         val tab = activeTab ?: return
         address.hint = tr(if (tab.privateMode) "Private browsing · Search or enter URL" else "Search or enter URL")
         address.setHintTextColor(if (tab.privateMode) colors.accent else colors.muted)
@@ -606,6 +671,13 @@ class MainActivity : AppCompatActivity() {
         progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
         tabsButton.text = "▢ ${tabs.size}"
         tabsButton.contentDescription = "${tr("Open tabs")}: ${tabs.size}"
+    }
+
+    private fun syncUBlockButton() {
+        if (!::uBlockButton.isInitialized) return
+        val manager = uBlockOriginManager
+        val available = manager?.hasBrowserAction(activeTab?.session) == true
+        uBlockButton.visibility = if (available) View.VISIBLE else View.GONE
     }
 
     private fun updateAddress() {
@@ -647,6 +719,7 @@ class MainActivity : AppCompatActivity() {
         )
         tab.session.permissionDelegate = tab.permissionDelegate
         sessionDelegateFactory.attach(tab)
+        uBlockOriginManager?.attachSession(tab.session)
         tab.session.promptDelegate = BrowserCredentialPromptDelegate(
             activity = this,
             privateMode = tab.privateMode,
@@ -858,8 +931,134 @@ class MainActivity : AppCompatActivity() {
             importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
             exportBookmarks = { bookmarkExportLauncher.launch("browsex-bookmarks.json") },
             showHomePreferences = { showHomePreferences() },
-            openPrivacyCenter = { showPrivacyCenter() }
+            openPrivacyCenter = { showPrivacyCenter() },
+            manageUBlockOrigin = { showUBlockOriginSettings() }
         ).show()
+    }
+
+
+    private fun restoreInitialBrowserTabs(startupIntent: Intent?) {
+        if (initialBrowserTabsRestored || isFinishing || isDestroyed) return
+        initialBrowserTabsRestored = true
+        val snapshot = tabPersistenceCoordinator.restoreOpenTabs()
+        val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
+        tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
+        handleSiteNotificationIntent(startupIntent)
+        syncUBlockButton()
+    }
+
+    private fun showUBlockOriginSettings() {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+
+        if (!manager.isInstalled) {
+            val privateConsent = CheckBox(this).apply {
+                text = tr("Allow uBlock Origin in private browsing")
+                isChecked = false
+                setPadding(dp(20), dp(8), dp(20), dp(8))
+                minHeight = dp(48)
+            }
+            val explanation = TextView(this).apply {
+                text = tr("uBlock Origin can read and modify website content and requests to block ads, trackers and known anti-blocker scripts.")
+                textSize = 14f
+                setTextColor(colors.ink)
+                setPadding(dp(20), dp(14), dp(20), dp(8))
+            }
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(explanation)
+                addView(privateConsent)
+            }
+            AlertDialog.Builder(this)
+                .setTitle(tr("Install uBlock Origin?"))
+                .setView(content)
+                .setNegativeButton(tr("Cancel"), null)
+                .setPositiveButton(tr("Install")) { _, _ ->
+                    manager.install(privateConsent.isChecked) { installed, error ->
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            if (error != null || installed == null) {
+                                android.util.Log.w("BrowseX", "uBlock Origin installation failed", error)
+                                toast("Could not install uBlock Origin")
+                            } else {
+                                val enabled = installed.metaData?.enabled == true
+                                val privateAllowed = enabled && installed.metaData?.allowedInPrivateBrowsing == true
+                                store.adBlockEnabled = enabled
+                                store.adBlockPrivateEnabled = privateAllowed
+                                BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                                toast("uBlock Origin installed")
+                                recreate()
+                            }
+                        }
+                    }
+                }
+                .show()
+            return
+        }
+
+        val enabled = manager.isEnabled
+        val message = if (enabled) {
+            tr("uBlock Origin is enabled. Use its site control to pause blocking only for a site that refuses to load.")
+        } else {
+            tr("uBlock Origin is installed but disabled.")
+        }
+        AlertDialog.Builder(this)
+            .setTitle(tr("uBlock Origin"))
+            .setMessage(message)
+            .setPositiveButton(tr(if (enabled) "Disable" else "Enable")) { _, _ ->
+                manager.setEnabled(!enabled) { updated, error ->
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        if (error != null || updated == null) {
+                            android.util.Log.w("BrowseX", "Could not update uBlock Origin", error)
+                            toast("Could not update uBlock Origin")
+                        } else {
+                            val nowEnabled = updated.metaData?.enabled == true
+                            val privateAllowed = nowEnabled && updated.metaData?.allowedInPrivateBrowsing == true
+                            store.adBlockEnabled = nowEnabled
+                            store.adBlockPrivateEnabled = privateAllowed
+                            BrowserContentProtectionPolicy.configure(nowEnabled, privateAllowed)
+                            toast(if (nowEnabled) "uBlock Origin enabled" else "uBlock Origin disabled")
+                            recreate()
+                        }
+                    }
+                }
+            }
+            .setNeutralButton(tr("Open site controls")) { _, _ ->
+                if (activeTab?.session != null && manager.hasBrowserAction(activeTab?.session)) {
+                    manager.clickBrowserAction(activeTab?.session)
+                } else {
+                    toast("uBlock Origin controls are unavailable for this site")
+                }
+            }
+            .setNegativeButton(tr("Remove uBlock Origin")) { _, _ ->
+                AlertDialog.Builder(this)
+                    .setTitle(tr("Uninstall uBlock Origin?"))
+                    .setMessage(tr("uBlock Origin will be removed. GeckoView tracking protection will be restored."))
+                    .setNegativeButton(tr("Cancel"), null)
+                    .setPositiveButton(tr("Remove")) { _, _ ->
+                        manager.uninstall { error ->
+                            runOnUiThread {
+                                if (isFinishing || isDestroyed) return@runOnUiThread
+                                if (error != null) {
+                                    android.util.Log.w("BrowseX", "Could not uninstall uBlock Origin", error)
+                                    toast("Could not uninstall uBlock Origin")
+                                } else {
+                                    store.adBlockEnabled = false
+                                    store.adBlockPrivateEnabled = false
+                                    BrowserContentProtectionPolicy.configure(false, false)
+                                    toast("uBlock Origin removed")
+                                    recreate()
+                                }
+                            }
+                        }
+                    }
+                    .show()
+            }
+            .show()
     }
 
     private fun showHomePreferences() {
