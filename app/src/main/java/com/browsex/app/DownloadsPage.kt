@@ -263,6 +263,36 @@ internal class DownloadsPage(
                     }
                 }
                 item.addView(action)
+                if (!recordIsActive && !recordIsFailed && !recordIsCancelled) {
+                    item.addView(TextView(activity).apply {
+                        text = t("Share", "مشاركة")
+                        textSize = 12f
+                        gravity = Gravity.CENTER
+                        setTextColor(colors.accent)
+                        setPadding(dp(7), dp(8), dp(7), dp(8))
+                        minimumHeight = dp(48)
+                        isClickable = true
+                        isFocusable = true
+                        contentDescription = t("Share downloaded file", "مشاركة الملف المنزّل")
+                        setOnClickListener {
+                            val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
+                            if (uri == null || uri.scheme !in setOf("content", "file")) {
+                                android.widget.Toast.makeText(activity, t("File location is unavailable", "موقع الملف غير متاح"), android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = record.mimeType.ifBlank { "*/*" }
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                try {
+                                    activity.startActivity(Intent.createChooser(share, t("Share download", "مشاركة التنزيل")))
+                                } catch (_: Exception) {
+                                    android.widget.Toast.makeText(activity, t("No app can share this file", "لا يوجد تطبيق لمشاركة هذا الملف"), android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    })
+                }
                 if (!recordIsActive) item.addView(TextView(activity).apply {
                     text = "×"
                     textSize = 20f
