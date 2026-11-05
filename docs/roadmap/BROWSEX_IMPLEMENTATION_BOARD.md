@@ -104,3 +104,13 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - ARM32, ARM64 and universal debug APK artifacts were uploaded. Release APK steps were skipped because signing secrets are not configured.
 - The schema commit step succeeded and found the committed schema current; the branch head remained `42ddf62e5706a4c767a015015819754c8f1b4140`.
 - Important download audit correction: the current code has no production `DownloadManager.enqueue()` call. The Room platform-ID repository and DownloadsPage query support exist, but the enqueue/registration/reconciliation path remains unimplemented. Gecko response-body downloads currently use the exact-response bounded stream writer.
+
+
+## Latest CI verification — 2026-11-05 (commit `27a07b081cc473ebba84601ff57f5c6dd7413bce`)
+
+- Push workflow run [#42093465872](https://github.com/meandmeandme-me/browsex/actions/runs/42093465872) completed successfully.
+- Locale validation, unit tests, lint, debug APK assembly, APK output/checksum verification, Room schema upload and schema commit step all passed.
+- CI uploaded ARM32 (`browsex-armeabi-v7a-debug`), ARM64 (`browsex-arm64-v8a-debug`) and universal (`browsex-universal-debug`) debug APK artifacts.
+- Release APK signing/verification/upload were skipped because release signing is not configured. These are debug artifacts, not signed release builds.
+- The new PR-only Room schema drift gate is present in the workflow. This push run correctly skipped that PR-only step; it still needs to be exercised by the open pull request before that gate is called verified.
+- This CI result verifies the exact branch commit above. It does not replace Android 10/device installation, runtime, tablet or accessibility testing.
