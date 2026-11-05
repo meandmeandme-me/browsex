@@ -1,6 +1,7 @@
 package com.browsex.app.storage
 
 import android.content.Context
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -9,7 +10,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.datastore.preferences.SharedPreferencesMigration
+import android.content.SharedPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -94,27 +95,60 @@ internal data class BrowserSettings(
     val deniedPlatformPermissions: Set<String> = emptySet()
 )
 
+/**
+ * Copies only missing scalar preferences and deliberately keeps the legacy file intact.
+ * DataStore's built-in SharedPreferencesMigration removes migrated keys during cleanup,
+ * which is unsafe while older code paths may still read those keys during staged cutover.
+ */
+internal class LegacySettingsMigration(
+    context: Context,
+    private val legacyName: String = "browsex.browser"
+) : DataMigration<Preferences> {
+    private val legacy: SharedPreferences =
+        context.applicationContext.getSharedPreferences(legacyName, Context.MODE_PRIVATE)
+
+    private val booleanKeys = setOf(
+        "ad_block_enabled", "ad_block_installed", "ad_block_private_enabled",
+        "site_notifications_enabled", "home_show_quick_links", "home_show_discovery"
+    )
+    private val stringKeys = setOf(
+        "theme_mode", "language_mode", "home_layout", "search_engine"
+    )
+    private val setKeys = setOf("denied_platform_permissions")
+
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean =
+        (booleanKeys + stringKeys + setKeys).any { key ->
+            legacy.contains(key) && when (key) {
+                in booleanKeys -> currentData[booleanPreferencesKey(key)] == null
+                in stringKeys -> currentData[stringPreferencesKey(key)] == null
+                else -> currentData[stringSetPreferencesKey(key)] == null
+            }
+        }
+
+    override suspend fun migrate(currentData: Preferences): Preferences {
+        val migrated = currentData.toMutablePreferences()
+        booleanKeys.forEach { key ->
+            if (migrated[booleanPreferencesKey(key)] == null && legacy.contains(key)) {
+                migrated[booleanPreferencesKey(key)] = legacy.getBoolean(key, false)
+            }
+        }
+        stringKeys.forEach { key ->
+            if (migrated[stringPreferencesKey(key)] == null && legacy.contains(key)) {
+                legacy.getString(key, null)?.let { migrated[stringPreferencesKey(key)] = it }
+            }
+        }
+        setKeys.forEach { key ->
+            if (migrated[stringSetPreferencesKey(key)] == null && legacy.contains(key)) {
+                migrated[stringSetPreferencesKey(key)] = legacy.getStringSet(key, emptySet()).orEmpty().toSet()
+            }
+        }
+        return migrated
+    }
+
+    override suspend fun cleanUp() = Unit
+}
+
 private val Context.browserSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "browsex.settings",
-    produceMigrations = { context ->
-        listOf(
-            SharedPreferencesMigration(
-                context,
-                "browsex.browser",
-                keysToMigrate = setOf(
-                    "ad_block_enabled",
-                    "ad_block_installed",
-                    "ad_block_private_enabled",
-                    "theme_mode",
-                    "language_mode",
-                    "site_notifications_enabled",
-                    "home_show_quick_links",
-                    "home_show_discovery",
-                    "home_layout",
-                    "search_engine",
-                    "denied_platform_permissions"
-                )
-            )
-        )
-    }
+    produceMigrations = { context -> listOf(LegacySettingsMigration(context)) }
 )
