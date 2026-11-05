@@ -47,6 +47,7 @@ internal object OidcAuthorizationRequestBuilder {
         if (!endpoint.scheme.equals("https", true) ||
             endpoint.host.isNullOrBlank() ||
             endpoint.rawUserInfo != null ||
+            endpoint.rawQuery != null ||
             endpoint.rawFragment != null
         ) return null
         if (config.clientId.isBlank() || config.clientId.length > 512) return null
@@ -57,7 +58,6 @@ internal object OidcAuthorizationRequestBuilder {
             pkce.state.isBlank() || pkce.nonce.isBlank()
         ) return null
 
-        val existingQuery = endpoint.rawQuery?.takeIf { it.isNotBlank() }
         val parameters = linkedMapOf(
             "response_type" to "code",
             "client_id" to config.clientId,
@@ -68,22 +68,11 @@ internal object OidcAuthorizationRequestBuilder {
             "code_challenge" to pkce.codeChallenge,
             "code_challenge_method" to "S256"
         )
-        val query = buildString {
-            if (existingQuery != null) {
-                append(existingQuery)
-                append('&')
-            }
-            append(parameters.entries.joinToString("&") { (key, value) ->
-                encodeQuery(key) + "=" + encodeQuery(value)
-            })
+        val query = parameters.entries.joinToString("&") { (key, value) ->
+            encodeQuery(key) + "=" + encodeQuery(value)
         }
-        URI(
-            endpoint.scheme,
-            endpoint.rawAuthority,
-            endpoint.rawPath.ifBlank { "/" },
-            query,
-            null
-        ).toASCIIString()
+        val base = endpoint.toASCIIString().substringBefore('#')
+        URI("$base?$query").toASCIIString()
     }.getOrNull()
 
     private fun isRegisteredRedirect(value: String): Boolean = runCatching {
