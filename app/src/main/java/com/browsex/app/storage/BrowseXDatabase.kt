@@ -324,6 +324,56 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM site_permission_decisions ORDER BY origin, feature")
     suspend fun permissionDecisions(): List<SitePermissionDecisionEntity>
 
+    @Query("SELECT * FROM download_records WHERE id = :id LIMIT 1")
+    suspend fun downloadRecord(id: String): DownloadRecordEntity?
+
+    @Query("DELETE FROM download_records WHERE id = :id")
+    suspend fun deleteDownloadRecord(id: String): Int
+
+    @Query("DELETE FROM download_records WHERE id IN (SELECT id FROM download_records ORDER BY created_at DESC LIMIT -1 OFFSET :keep)")
+    suspend fun pruneDownloadRecords(keep: Int)
+
+    @Transaction
+    suspend fun createDownloadRecord(record: DownloadRecordEntity, keep: Int = 300): Boolean {
+        if (downloadRecordCount() >= keep) return false
+        putDownloads(listOf(record))
+        pruneDownloadRecords(keep)
+        return true
+    }
+
+    @Query("SELECT * FROM download_name_reservations ORDER BY position")
+    suspend fun downloadNameReservations(): List<DownloadNameReservationEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertDownloadNameReservation(item: DownloadNameReservationEntity): Long
+
+    @Transaction
+    suspend fun reserveDownloadName(candidate: String, now: Long): String {
+        val dot = candidate.lastIndexOf('.').takeIf { it > 0 } ?: candidate.length
+        val stem = candidate.substring(0, dot)
+        val extension = candidate.substring(dot)
+        var suffix = 0
+        while (suffix < 10_000) {
+            val display = if (suffix == 0) candidate else "$stem ($suffix)$extension"
+            val normalized = display.lowercase(java.util.Locale.ROOT)
+            val inserted = insertDownloadNameReservation(DownloadNameReservationEntity(
+                normalizedName = normalized,
+                displayName = display,
+                position = downloadNameReservationCount(),
+                reservedAt = now
+            ))
+            if (inserted != -1L) return display
+            suffix++
+        }
+        throw IllegalStateException("Unable to reserve a unique download filename")
+    }
+
+    @Query("SELECT * FROM platform_download_ids ORDER BY position")
+    suspend fun platformDownloadIds(): List<PlatformDownloadIdEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPlatformDownloadId(item: PlatformDownloadIdEntity): Long
+
     @Query("SELECT * FROM download_records ORDER BY created_at DESC")
     suspend fun downloads(): List<DownloadRecordEntity>
 
