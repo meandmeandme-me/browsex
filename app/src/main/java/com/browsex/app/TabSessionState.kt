@@ -45,7 +45,7 @@ object TabSessionState {
         // If the selected original tab was rejected (for example a private or unsafe URL),
         // restore the nearest surviving tab. Prefer the next tab when distances are equal.
         val selectedIndex = accepted.indices.minWithOrNull(
-            compareBy<Int> { abs(accepted[it].first - requestedIndex) }
+            compareBy<Int> { abs(accepted[it].first.toLong() - requestedIndex.toLong()) }
                 .thenBy { if (accepted[it].first >= requestedIndex) 0 else 1 }
         ) ?: 0
         return Snapshot(accepted.map { it.second }, selectedIndex)
