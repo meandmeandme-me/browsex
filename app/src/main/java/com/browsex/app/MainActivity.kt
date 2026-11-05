@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity() {
             enforceSessionBudget = ::enforceLiveSessionBudget,
             updateChrome = ::updateChrome,
             showMessage = ::toast,
-            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title) },
+            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title) { store.recordRecentlyClosedTab(tab.url, tab.title) } },
             dispatchToMain = { action -> runOnUiThread(action) },
             setExtensionTabActive = { session, active ->
                 uBlockOriginManager?.setTabActive(session, active)
@@ -580,7 +580,7 @@ class MainActivity : AppCompatActivity() {
             activeIndex = selectedIndex,
             homeUrl = homePageUrl()
         )
-        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex)
+        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex) { store.saveOpenTabs(snapshot.urls, snapshot.activeIndex) }
     }
 
     override fun onDestroy() {

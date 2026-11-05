@@ -49,7 +49,7 @@ internal class BrowserStorageRuntime(context: Context) {
      * Tab state is captured by the Activity, then persisted on the application scope so
      * onStop/onDestroy cannot cancel the final snapshot with the Activity lifecycle.
      */
-    fun persistOpenTabs(urls: List<String>, activeIndex: Int) {
+    fun persistOpenTabs(urls: List<String>, activeIndex: Int, onFailure: () -> Unit = {}) {
         val safeUrls = urls.toList()
         scope.launch {
             runCatching {
@@ -59,15 +59,17 @@ internal class BrowserStorageRuntime(context: Context) {
                 }
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not persist regular tab snapshot", error)
+                onFailure()
             }
         }
     }
 
-    fun recordRecentlyClosed(url: String, title: String) {
+    fun recordRecentlyClosed(url: String, title: String, onFailure: () -> Unit = {}) {
         scope.launch {
             runCatching { awaitReady().sessions.recordRecentlyClosed(url, title) }
                 .onFailure { error ->
                     android.util.Log.e("BrowseX", "Could not persist recently closed tab", error)
+                    onFailure()
                 }
         }
     }
