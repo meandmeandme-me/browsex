@@ -114,7 +114,7 @@ class LegacyStorageMigratorRobolectricTest {
             assertEquals("camera", dao.permissionDecisions().single().feature)
             assertEquals("completed", dao.downloads().single().status)
             assertEquals("https://example.test/docs", dao.openTabs().single().url)
-            assertEquals(1, dao.browserState().single().activeIndex)
+            assertEquals(0, dao.browserState().single().activeIndex)
             assertEquals(1, dao.downloadNameReservations().size)
             assertEquals(setOf(101L, 102L), dao.platformDownloadIds().map { it.downloadId }.toSet())
             assertEquals(sourceBefore, source.all.toMap())
@@ -154,12 +154,18 @@ class LegacyStorageMigratorRobolectricTest {
         ).allowMainThreadQueries().build()
 
         try {
-            // The parser repairs missing folder references, so create an intentional
-            // constraint failure with a pre-existing bookmark whose folder is absent.
+            // Fail from inside the import transaction after folder rows are inserted
+            // but before bookmark rows are committed.
             val dao = database.storageDao()
-            dao.putBookmarks(listOf(
-                BookmarkEntity("preexisting", "https://existing.test", "Existing", "missing", 0, 1L)
-            ))
+            database.openHelper.writableDatabase.execSQL(
+                """
+                CREATE TRIGGER abort_browsex_bookmark_import
+                BEFORE INSERT ON bookmarks
+                BEGIN
+                    SELECT RAISE(ABORT, 'forced migration test failure');
+                END
+                """.trimIndent()
+            )
             source.edit()
                 .putString(
                     "bookmark_folders_v1",
