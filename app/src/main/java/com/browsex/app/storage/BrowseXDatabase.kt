@@ -162,6 +162,18 @@ interface BrowseXStorageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putDownloads(items: List<DownloadRecordEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putBrowserState(items: List<BrowserStateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putOpenTabs(items: List<OpenTabEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putDownloadNameReservations(items: List<DownloadNameReservationEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putPlatformDownloadIds(items: List<PlatformDownloadIdEntity>)
+
     @Query("SELECT * FROM bookmarks ORDER BY sort_order, created_at DESC")
     suspend fun bookmarks(): List<BookmarkEntity>
 
