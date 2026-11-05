@@ -33,6 +33,23 @@ class RoomSitePermissionRepositoryTest {
     }
 
     @Test
+    fun websiteNotificationsHaveIndependentPerOriginDecisions() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSitePermissionRepository(database.storageDao())
+            assertTrue(repository.setDecision("https://news.example/article", "notifications", "deny", 10L))
+            assertEquals("deny", repository.decision("https://news.example", "notifications"))
+            assertNull(repository.decision("https://other.example", "notifications"))
+            assertTrue(repository.setDecision("https://news.example", "notifications", "ask", 11L))
+            assertNull(repository.decision("https://news.example", "notifications"))
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun rejectsUnsafeOriginsFeaturesAndDecisions() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java

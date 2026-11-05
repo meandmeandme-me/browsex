@@ -2,7 +2,13 @@ package com.browsex.app.storage
 
 import com.browsex.app.BrowserSiteOriginPolicy
 
-/** Persisted per-origin camera/microphone choices. "ask" means no stored decision. */
+/**
+ * Persisted per-origin website permission choices.
+ *
+ * Android's runtime notification permission is still handled by the platform coordinator;
+ * this repository stores the separate website-level choice so a site's notification request
+ * can be allowed, denied, or returned to the ask state independently of the Android toggle.
+ */
 internal class RoomSitePermissionRepository(
     private val dao: BrowseXStorageDao
 ) {
@@ -43,7 +49,8 @@ internal class RoomSitePermissionRepository(
     suspend fun all(): List<SitePermissionDecisionEntity> = dao.permissionDecisions()
 
     private companion object {
-        val FEATURES = setOf("camera", "microphone")
+        // Keep these values aligned with the browser's site-permission feature identifiers.
+        val FEATURES = setOf("camera", "microphone", "notifications")
         val DECISIONS = setOf("allow", "deny", "ask")
         const val MAX_DECISIONS = 100
     }
