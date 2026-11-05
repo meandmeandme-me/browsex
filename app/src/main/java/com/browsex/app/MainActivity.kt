@@ -541,6 +541,21 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private val uBlockSettings by lazy {
+        BrowserUBlockSettingsCoordinator(
+            activity = this,
+            manager = { uBlockOriginManager },
+            store = store,
+            activeSession = { activeTab?.session },
+            isHostUnavailable = { isFinishing || isDestroyed },
+            showMessage = ::toast,
+            translate = ::tr,
+            dp = ::dp,
+            textColor = colors.ink,
+            onSettingsChanged = ::recreate
+        )
+    }
+
     private val pageActions by lazy {
         BrowserPageActionsCoordinator(
             activity = this,
@@ -995,122 +1010,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun showUBlockOriginSettings() {
-        val manager = uBlockOriginManager
-        if (manager == null) {
-            toast("uBlock Origin controls are unavailable")
-            return
-        }
-
-        if (!manager.isInstalled) {
-            val privateConsent = CheckBox(this).apply {
-                text = tr("Allow uBlock Origin in private browsing")
-                isChecked = false
-                setPadding(dp(20), dp(8), dp(20), dp(8))
-                minHeight = dp(48)
-            }
-            val explanation = TextView(this).apply {
-                text = tr("uBlock Origin can read and modify website content and requests to block ads, trackers and known anti-blocker scripts.")
-                textSize = 14f
-                setTextColor(colors.ink)
-                setPadding(dp(20), dp(14), dp(20), dp(8))
-            }
-            val content = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(explanation)
-                addView(privateConsent)
-            }
-            AlertDialog.Builder(this)
-                .setTitle(tr("Install uBlock Origin?"))
-                .setView(content)
-                .setNegativeButton(tr("Cancel"), null)
-                .setPositiveButton(tr("Install")) { _, _ ->
-                    manager.install(privateConsent.isChecked) { installed, error ->
-                        runOnUiThread {
-                            if (isFinishing || isDestroyed) return@runOnUiThread
-                            if (error != null || installed == null) {
-                                android.util.Log.w("BrowseX", "uBlock Origin installation failed", error)
-                                toast("Could not install uBlock Origin")
-                            } else {
-                                val enabled = installed.metaData?.enabled == true
-                                val privateAllowed = enabled && installed.metaData?.allowedInPrivateBrowsing == true
-                                store.adBlockInstalled = true
-                                store.adBlockEnabled = enabled
-                                store.adBlockPrivateEnabled = privateAllowed
-                                BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
-                                toast("uBlock Origin installed")
-                                recreate()
-                            }
-                        }
-                    }
-                }
-                .show()
-            return
-        }
-
-        val enabled = manager.isEnabled
-        val message = if (enabled) {
-            tr("uBlock Origin is enabled. Use its site control to pause blocking only for a site that refuses to load.")
-        } else {
-            tr("uBlock Origin is installed but disabled.")
-        }
-        AlertDialog.Builder(this)
-            .setTitle(tr("uBlock Origin"))
-            .setMessage(message)
-            .setPositiveButton(tr(if (enabled) "Disable" else "Enable")) { _, _ ->
-                manager.setEnabled(!enabled) { updated, error ->
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed) return@runOnUiThread
-                        if (error != null || updated == null) {
-                            android.util.Log.w("BrowseX", "Could not update uBlock Origin", error)
-                            toast("Could not update uBlock Origin")
-                        } else {
-                            val nowEnabled = updated.metaData?.enabled == true
-                            val privateAllowed = nowEnabled && updated.metaData?.allowedInPrivateBrowsing == true
-                            store.adBlockInstalled = true
-                            store.adBlockEnabled = nowEnabled
-                            store.adBlockPrivateEnabled = privateAllowed
-                            BrowserContentProtectionPolicy.configure(nowEnabled, privateAllowed)
-                            toast(if (nowEnabled) "uBlock Origin enabled" else "uBlock Origin disabled")
-                            recreate()
-                        }
-                    }
-                }
-            }
-            .setNeutralButton(tr("Open site controls")) { _, _ ->
-                if (activeTab?.session != null && manager.hasBrowserAction(activeTab?.session)) {
-                    manager.clickBrowserAction(activeTab?.session)
-                } else {
-                    toast("uBlock Origin controls are unavailable for this site")
-                }
-            }
-            .setNegativeButton(tr("Remove uBlock Origin")) { _, _ ->
-                AlertDialog.Builder(this)
-                    .setTitle(tr("Uninstall uBlock Origin?"))
-                    .setMessage(tr("uBlock Origin will be removed. GeckoView tracking protection will be restored."))
-                    .setNegativeButton(tr("Cancel"), null)
-                    .setPositiveButton(tr("Remove")) { _, _ ->
-                        manager.uninstall { error ->
-                            runOnUiThread {
-                                if (isFinishing || isDestroyed) return@runOnUiThread
-                                if (error != null) {
-                                    android.util.Log.w("BrowseX", "Could not uninstall uBlock Origin", error)
-                                    toast("Could not uninstall uBlock Origin")
-                                } else {
-                                    store.adBlockInstalled = false
-                                    store.adBlockEnabled = false
-                                    store.adBlockPrivateEnabled = false
-                                    BrowserContentProtectionPolicy.configure(false, false)
-                                    toast("uBlock Origin removed")
-                                    recreate()
-                                }
-                            }
-                        }
-                    }
-                    .show()
-            }
-            .show()
-    }
+    private fun showUBlockOriginSettings() = uBlockSettings.show()
 
     private fun showHomePreferences() {
         val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
