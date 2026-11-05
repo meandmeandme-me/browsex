@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import org.mozilla.geckoview.WebResponse
 
 /**
@@ -54,13 +55,23 @@ internal class StreamDownloadCoordinator(
                     "Could not start the persisted download record"
                 }
                 runCatching { response.setReadTimeoutMillis(120_000L) }
+                val lastPersistedProgress = AtomicLong(0L)
                 writer.write(
                     id = createdId,
                     body = body,
                     displayName = filename,
                     mimeType = mime,
                     onProgress = { bytes ->
-                        scope.launch { repository.updateProgress(createdId, bytes) }
+                        // The writer reports frequently for responsive UI, but Room does not
+                        // need a transaction for every small chunk of a large file.
+                        while (true) {
+                            val previous = lastPersistedProgress.get()
+                            if (bytes - previous < PROGRESS_PERSIST_INTERVAL_BYTES) break
+                            if (lastPersistedProgress.compareAndSet(previous, bytes)) {
+                                scope.launch { repository.updateProgress(createdId, bytes) }
+                                break
+                            }
+                        }
                     }
                 ) { result, error, cancelled ->
                     scope.launch {
@@ -113,5 +124,9 @@ internal class StreamDownloadCoordinator(
     fun shutdown() {
         writer.shutdown()
         scope.cancel()
+    }
+
+    private companion object {
+        const val PROGRESS_PERSIST_INTERVAL_BYTES = 1024L * 1024L
     }
 }

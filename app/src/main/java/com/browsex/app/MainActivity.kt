@@ -166,25 +166,13 @@ class MainActivity : AppCompatActivity() {
             LocaleListCompat.forLanguageTags(if (settings.languageMode == "system") "" else settings.languageMode)
         )
         BrowserContentProtectionPolicy.configure(settings.adBlockEnabled, settings.adBlockPrivateEnabled)
-        // DataStore loads asynchronously. If GeckoRuntime was created first, apply the
-        // persisted locale and color scheme now instead of leaving the clean-start defaults.
-        browserRuntime?.settings?.setPreferredColorScheme(when (settings.themeMode) {
-            "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
-            "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
-            else -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
-        })
-        val runtimeLocales = if (settings.languageMode == "system") {
-            resources.configuration.locales.toLanguageTags().split(',').filter { it.isNotBlank() }.toTypedArray()
-        } else {
-            arrayOf(settings.languageMode)
-        }
-        browserRuntime?.settings?.setLocales(runtimeLocales)
         if (!::store.isInitialized) return
         store.adBlockEnabled = settings.adBlockEnabled
         store.adBlockInstalled = settings.adBlockInstalled
         store.adBlockPrivateEnabled = settings.adBlockPrivateEnabled
         store.themeMode = settings.themeMode
         store.languageMode = settings.languageMode
+        store.siteNotificationsEnabled = settings.siteNotificationsEnabled
         store.homeShowQuickLinks = settings.homeShowQuickLinks
         store.homeShowDiscovery = settings.homeShowDiscovery
         store.homeLayout = settings.homeLayout
@@ -430,7 +418,7 @@ class MainActivity : AppCompatActivity() {
         }
         notificationPermissionCoordinator = BrowserNotificationPermissionCoordinator(
             apiLevel = Build.VERSION.SDK_INT,
-            featureEnabled = { browserSettingsSnapshot.siteNotificationsEnabled },
+            featureEnabled = { store.siteNotificationsEnabled },
             permissionGranted = {
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED
@@ -473,7 +461,7 @@ class MainActivity : AppCompatActivity() {
             arrayOf(store.languageMode)
         }
         browserRuntime?.settings?.setLocales(requestedLocales)
-        notificationBridge = BrowseXNotificationBridge(this, ::requestSiteNotificationPermission)
+        notificationBridge = BrowseXNotificationBridge(this, store, ::requestSiteNotificationPermission)
         browserRuntime?.setWebNotificationDelegate(notificationBridge)
         // Temporary engine-only host: the legacy chrome is intentionally detached while the
         // browser engine and feature services are reorganized for the new UI architecture.
@@ -1116,6 +1104,7 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             setWebsiteNotifications = { enabled ->
+                store.siteNotificationsEnabled = enabled
                 if (!enabled) NotificationManagerCompat.from(this).cancelAll()
             },
             importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
