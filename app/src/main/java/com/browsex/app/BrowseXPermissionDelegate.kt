@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
 
@@ -38,8 +40,6 @@ internal class BrowseXPermissionDelegate(
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
             return result
         }
-        // The global switch and the user's saved per-origin choice are evaluated
-        // before Gecko's transient value. Private sessions never read persistent choices.
         val isSiteNotification =
             perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION
         if (isSiteNotification && !store.siteNotificationsEnabled) {
@@ -55,75 +55,84 @@ internal class BrowseXPermissionDelegate(
             perm.permission == GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "geolocation"
             else -> null
         }
-        if (persistedFeature != null) {
-            when (store.siteMediaDecision(origin, persistedFeature)) {
+        activity.lifecycleScope.launch {
+            val savedDecision = persistedFeature?.let { readDecision(origin, it) }
+            if (!isActiveSession(session) || activity.isFinishing || activity.isDestroyed) {
+                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
+                return@launch
+            }
+            when (savedDecision) {
                 "allow" -> {
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
-                    return result
+                    return@launch
                 }
                 "deny" -> {
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
-                    return result
+                    return@launch
                 }
             }
+            if (perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW ||
+                perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
+            ) {
+                result.complete(perm.value)
+                return@launch
+            }
+            showContentPermissionPrompt(session, origin, persistedFeature, isSiteNotification, result)
         }
-        if (perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW ||
-            perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY) {
-            result.complete(perm.value)
-            return result
-        }
-        val feature = when (perm.permission) {
-            GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "your location"
-            GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "notifications"
-            GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE -> "persistent storage"
-            GeckoSession.PermissionDelegate.PERMISSION_XR -> "extended reality features"
-            GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE -> "autoplay with sound"
-            GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE -> "silent autoplay"
-            GeckoSession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS -> "protected media"
+        return result
+    }
+
+    private fun showContentPermissionPrompt(
+        session: GeckoSession,
+        origin: String,
+        persistedFeature: String?,
+        isSiteNotification: Boolean,
+        result: GeckoResult<Int>
+    ) {
+        val permission = when (persistedFeature) {
+            "geolocation" -> "your location"
+            "notifications" -> "notifications"
             else -> "a browser feature"
         }
-        activity.runOnUiThread {
-            if (!isActiveSession(session) || activity.isFinishing || activity.isDestroyed) {
-                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
-                return@runOnUiThread
-            }
-            val dialog = AlertDialog.Builder(activity)
-                .setTitle("Allow $origin?")
-                .setMessage("This website wants to use $feature.")
-                .setPositiveButton("Allow") { _, _ ->
-                    if (perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION) {
-                        activity.requestSiteNotificationPermission { granted ->
+        val dialog = AlertDialog.Builder(activity)
+            .setTitle("Allow $origin?")
+            .setMessage("This website wants to use $permission.")
+            .setPositiveButton("Allow") { _, _ ->
+                if (isSiteNotification) {
+                    activity.requestSiteNotificationPermission { granted ->
+                        activity.lifecycleScope.launch {
                             val allowed = granted && store.siteNotificationsEnabled && isActiveSession(session)
-                            if (allowed) store.setSiteMediaDecision(origin, "notifications", "allow")
+                            if (allowed) persistDecision(origin, "notifications", "allow")
                             result.complete(
                                 if (allowed) GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
                                 else GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
                             )
                         }
-                    } else {
-                        if (persistedFeature != null) {
-                            store.setSiteMediaDecision(origin, persistedFeature, "allow")
-                        }
+                    }
+                } else {
+                    activity.lifecycleScope.launch {
+                        if (persistedFeature != null) persistDecision(origin, persistedFeature, "allow")
                         result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
                     }
                 }
-                .setNegativeButton("Block") { _, _ ->
-                    persistedFeature?.let { store.setSiteMediaDecision(origin, it, "deny") }
+            }
+            .setNegativeButton("Block") { _, _ ->
+                activity.lifecycleScope.launch {
+                    if (persistedFeature != null) persistDecision(origin, persistedFeature, "deny")
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
                 }
-                .setNeutralButton("Not now") { _, _ ->
-                    result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
-                }
-                .create()
-            dialogs.add(dialog)
-            dialog.setOnCancelListener {
-                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
-                dialogs.remove(dialog)
             }
-            dialog.setOnDismissListener { dialogs.remove(dialog) }
-            dialog.show()
+            .setNeutralButton("Not now") { _, _ ->
+                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
+            }
+            .create()
+        dialogs.add(dialog)
+        dialog.setOnCancelListener {
+            result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
+            dialogs.remove(dialog)
         }
-        return result
+        dialog.setOnDismissListener { dialogs.remove(dialog) }
+        dialog.show()
     }
 
     override fun onMediaPermissionRequest(
@@ -141,48 +150,48 @@ internal class BrowseXPermissionDelegate(
             return
         }
 
-        // A saved website-level block must win before prompting Android. This avoids
-        // asking for device access when this origin has already been denied by the user.
-        if (!privateMode &&
-            ((wantsCamera && store.siteMediaDecision(origin, "camera") == "deny") ||
-                (wantsMicrophone && store.siteMediaDecision(origin, "microphone") == "deny"))
-        ) {
-            callback.reject()
-            return
-        }
-
-        // Android permission and website permission are separate consent layers.
-        // Ask Android first when needed, then show the per-origin browser decision.
-        val requiredAndroidPermissions = buildList {
-            if (wantsCamera) add(Manifest.permission.CAMERA)
-            if (wantsMicrophone) add(Manifest.permission.RECORD_AUDIO)
-        }.filter { ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED }
-
-        if (requiredAndroidPermissions.isEmpty()) {
-            requestSiteMediaDecision(origin, session, video, audio, wantsCamera, wantsMicrophone, callback)
-            return
-        }
-
-        activity.requestAndroidPermissions(
-            session,
-            requiredAndroidPermissions.toTypedArray(),
-            object : GeckoSession.PermissionDelegate.Callback {
-                override fun grant() {
-                    if (!isActiveSession(session)) {
-                        callback.reject()
-                        return
-                    }
-                    requestSiteMediaDecision(origin, session, video, audio, wantsCamera, wantsMicrophone, callback)
-                }
-
-                override fun reject() {
-                    callback.reject()
-                }
+        activity.lifecycleScope.launch {
+            // Resolve persisted site-level blocks before asking Android for device access.
+            val cameraDecision = if (!wantsCamera || privateMode) null else readDecision(origin, "camera")
+            val microphoneDecision = if (!wantsMicrophone || privateMode) null else readDecision(origin, "microphone")
+            if (!isActiveSession(session) || cameraDecision == "deny" || microphoneDecision == "deny") {
+                callback.reject()
+                return@launch
             }
-        )
+
+            val requiredAndroidPermissions = buildList {
+                if (wantsCamera) add(Manifest.permission.CAMERA)
+                if (wantsMicrophone) add(Manifest.permission.RECORD_AUDIO)
+            }.filter { ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED }
+
+            if (requiredAndroidPermissions.isEmpty()) {
+                requestSiteMediaDecision(origin, session, video, audio, wantsCamera, wantsMicrophone, callback)
+                return@launch
+            }
+
+            activity.requestAndroidPermissions(
+                session,
+                requiredAndroidPermissions.toTypedArray(),
+                object : GeckoSession.PermissionDelegate.Callback {
+                    override fun grant() {
+                        if (!isActiveSession(session)) {
+                            callback.reject()
+                            return
+                        }
+                        activity.lifecycleScope.launch {
+                            requestSiteMediaDecision(origin, session, video, audio, wantsCamera, wantsMicrophone, callback)
+                        }
+                    }
+
+                    override fun reject() {
+                        callback.reject()
+                    }
+                }
+            )
+        }
     }
 
-    private fun requestSiteMediaDecision(
+    private suspend fun requestSiteMediaDecision(
         origin: String,
         session: GeckoSession,
         video: Array<GeckoSession.PermissionDelegate.MediaSource>?,
@@ -195,9 +204,8 @@ internal class BrowseXPermissionDelegate(
             callback.reject()
             return
         }
-        // Private sessions never read or persist BrowseX's per-origin media decisions.
-        val camera = if (!wantsCamera) "allow" else if (privateMode) null else store.siteMediaDecision(origin, "camera")
-        val microphone = if (!wantsMicrophone) "allow" else if (privateMode) null else store.siteMediaDecision(origin, "microphone")
+        val camera = if (!wantsCamera) "allow" else if (privateMode) null else readDecision(origin, "camera")
+        val microphone = if (!wantsMicrophone) "allow" else if (privateMode) null else readDecision(origin, "microphone")
         if (camera == "deny" || microphone == "deny") {
             callback.reject()
             return
@@ -206,36 +214,44 @@ internal class BrowseXPermissionDelegate(
             callback.grant(video?.firstOrNull(), audio?.firstOrNull())
             return
         }
-        activity.runOnUiThread {
-            if (!isActiveSession(session) || activity.isFinishing || activity.isDestroyed) {
-                callback.reject()
-                return@runOnUiThread
-            }
-            val features = buildList {
-                if (wantsCamera) add("camera")
-                if (wantsMicrophone) add("microphone")
-            }.joinToString(" and ")
-            val dialog = AlertDialog.Builder(activity)
-                .setTitle("Allow device access?")
-                .setMessage("$origin wants to use your $features.")
-                .setPositiveButton("Allow") { _, _ ->
-                    if (!privateMode && wantsCamera) store.setSiteMediaDecision(origin, "camera", "allow")
-                    if (!privateMode && wantsMicrophone) store.setSiteMediaDecision(origin, "microphone", "allow")
+        val features = buildList {
+            if (wantsCamera) add("camera")
+            if (wantsMicrophone) add("microphone")
+        }.joinToString(" and ")
+        val dialog = AlertDialog.Builder(activity)
+            .setTitle("Allow device access?")
+            .setMessage("$origin wants to use your $features.")
+            .setPositiveButton("Allow") { _, _ ->
+                activity.lifecycleScope.launch {
+                    if (!privateMode && wantsCamera) persistDecision(origin, "camera", "allow")
+                    if (!privateMode && wantsMicrophone) persistDecision(origin, "microphone", "allow")
                     if (isActiveSession(session)) callback.grant(video?.firstOrNull(), audio?.firstOrNull())
                     else callback.reject()
                 }
-                .setNegativeButton("Block") { _, _ ->
-                    if (!privateMode && wantsCamera) store.setSiteMediaDecision(origin, "camera", "deny")
-                    if (!privateMode && wantsMicrophone) store.setSiteMediaDecision(origin, "microphone", "deny")
+            }
+            .setNegativeButton("Block") { _, _ ->
+                activity.lifecycleScope.launch {
+                    if (!privateMode && wantsCamera) persistDecision(origin, "camera", "deny")
+                    if (!privateMode && wantsMicrophone) persistDecision(origin, "microphone", "deny")
                     callback.reject()
                 }
-                .setNeutralButton("Not now") { _, _ -> callback.reject() }
-                .create()
-            dialogs.add(dialog)
-            dialog.setOnCancelListener { callback.reject(); dialogs.remove(dialog) }
-            dialog.setOnDismissListener { dialogs.remove(dialog) }
-            dialog.show()
-        }
+            }
+            .setNeutralButton("Not now") { _, _ -> callback.reject() }
+            .create()
+        dialogs.add(dialog)
+        dialog.setOnCancelListener { callback.reject(); dialogs.remove(dialog) }
+        dialog.setOnDismissListener { dialogs.remove(dialog) }
+        dialog.show()
+    }
+
+    private suspend fun readDecision(origin: String, feature: String): String? =
+        runCatching { activity.storageRuntime.awaitReady().sitePermissions.decision(origin, feature) }
+            .onFailure { android.util.Log.e("BrowseX", "Could not read saved site permission", it) }
+            .getOrNull()
+
+    private suspend fun persistDecision(origin: String, feature: String, decision: String) {
+        runCatching { activity.storageRuntime.awaitReady().sitePermissions.setDecision(origin, feature, decision) }
+            .onFailure { android.util.Log.e("BrowseX", "Could not save site permission", it) }
     }
 
     fun cancelPending() {
