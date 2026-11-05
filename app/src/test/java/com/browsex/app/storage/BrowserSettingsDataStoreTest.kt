@@ -21,7 +21,7 @@ import java.util.UUID
 @Config(sdk = [35])
 class BrowserSettingsDataStoreTest {
     @Test
-    fun cleanStartDoesNotImportLegacySharedPreferences() = runBlocking {
+    fun cleanStartDoesNotImportLegacySharedPreferences(): Unit = runBlocking {
         val context = RuntimeEnvironment.getApplication()
         val legacyName = "browsex.browser.test.${UUID.randomUUID()}"
         val legacy = context.getSharedPreferences(legacyName, Context.MODE_PRIVATE)
