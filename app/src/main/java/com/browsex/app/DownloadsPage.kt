@@ -51,6 +51,55 @@ internal class DownloadsPage(
         }
     }
 
+    /**
+     * Deletes only files that BrowseX can prove it created: its own FileProvider URI,
+     * or a MediaStore Downloads row owned by this package. Unknown content URIs are
+     * deliberately left untouched.
+     */
+    private fun deleteOwnedDownloadFile(uri: Uri): Boolean {
+        return try {
+            when (uri.scheme?.lowercase()) {
+                "content" -> when (uri.authority) {
+                    "${activity.packageName}.files" ->
+                        activity.contentResolver.delete(uri, null, null) > 0
+
+                    "media" -> {
+                        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+                            false
+                        } else {
+                            val ownerColumn = android.provider.MediaStore.MediaColumns.OWNER_PACKAGE_NAME
+                            val owner = activity.contentResolver.query(
+                                uri, arrayOf(ownerColumn), null, null, null
+                            )?.use { cursor ->
+                                if (cursor.moveToFirst()) {
+                                    cursor.getString(cursor.getColumnIndexOrThrow(ownerColumn))
+                                } else null
+                            }
+                            owner == activity.packageName &&
+                                activity.contentResolver.delete(uri, null, null) > 0
+                        }
+                    }
+
+                    else -> false
+                }
+
+                "file" -> {
+                    val path = uri.path ?: return false
+                    val file = java.io.File(path).canonicalFile
+                    val downloads = android.os.Environment
+                        .getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                        .canonicalFile
+                    file.parentFile?.canonicalFile == downloads && file.isFile && file.delete()
+                }
+
+                else -> false
+            }
+        } catch (error: Exception) {
+            android.util.Log.w("BrowseX", "Could not delete owned download file", error)
+            false
+        }
+    }
+
     private fun showWithRepository(repository: RoomDownloadRepository, initialRecords: List<DownloadRecordEntity>, initialPlatformIds: Set<Long>) {
         var streamRecords = initialRecords
         var platformIds = initialPlatformIds
@@ -308,10 +357,36 @@ internal class DownloadsPage(
                     isFocusable = true
                     setOnClickListener {
                         AlertDialog.Builder(activity)
-                            .setMessage(t("Remove this download from BrowseX? The saved file will remain on your device.", "إزالة هذا التنزيل من BrowseX؟ سيبقى الملف محفوظًا على جهازك."))
+                            .setMessage(
+                                if (recordIsFailed || recordIsCancelled) {
+                                    t("Remove this download record from BrowseX?", "إزالة سجل هذا التنزيل من BrowseX؟")
+                                } else {
+                                    t("Delete this downloaded file from your device and remove its record?", "حذف الملف المنزّل من جهازك وإزالة سجله؟")
+                                }
+                            )
                             .setNegativeButton(t("Keep", "احتفاظ"), null)
-                            .setPositiveButton(t("Remove", "حذف")) { _, _ ->
-                                activity.lifecycleScope.launch { repository.remove(record.id); reloadRoomRecords() }
+                            .setPositiveButton(
+                                if (recordIsFailed || recordIsCancelled) t("Remove", "إزالة")
+                                else t("Delete file", "حذف الملف")
+                            ) { _, _ ->
+                                activity.lifecycleScope.launch {
+                                    val fileDeleted = if (recordIsFailed || recordIsCancelled) {
+                                        true
+                                    } else {
+                                        val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
+                                        uri != null && deleteOwnedDownloadFile(uri)
+                                    }
+                                    if (fileDeleted) {
+                                        repository.remove(record.id)
+                                        reloadRoomRecords()
+                                    } else {
+                                        android.widget.Toast.makeText(
+                                            activity,
+                                            t("BrowseX could not verify ownership or delete this file. The record was kept.", "تعذّر على BrowseX التحقق من ملكية الملف أو حذفه. تم الاحتفاظ بالسجل."),
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
                             }.show()
                     }
                 })
