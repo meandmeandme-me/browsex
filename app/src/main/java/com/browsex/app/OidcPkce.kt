@@ -42,7 +42,8 @@ internal object OidcAuthorizationRequestBuilder {
     fun build(
         config: OidcAuthorizationRequestConfig,
         pkce: OidcPkceRequest
-    ): String? = runCatching {
+    ): String? {
+        return runCatching {
         val endpoint = URI(config.authorizationEndpoint)
         if (!endpoint.scheme.equals("https", true) ||
             endpoint.host.isNullOrBlank() ||
@@ -73,9 +74,11 @@ internal object OidcAuthorizationRequestBuilder {
         }
         val base = endpoint.toASCIIString().substringBefore('#')
         URI("$base?$query").toASCIIString()
-    }.getOrNull()
+        }.getOrNull()
+    }
 
-    private fun isRegisteredRedirect(value: String): Boolean = runCatching {
+    private fun isRegisteredRedirect(value: String): Boolean {
+        return runCatching {
         val uri = URI(value)
         val scheme = uri.scheme?.lowercase() ?: return false
         if (uri.rawUserInfo != null || uri.rawQuery != null || uri.rawFragment != null) return false
@@ -84,7 +87,8 @@ internal object OidcAuthorizationRequestBuilder {
             else -> scheme.matches(Regex("^[a-z][a-z0-9+.-]*$")) &&
                 uri.rawAuthority == null && !uri.rawPath.isNullOrBlank()
         }
-    }.getOrDefault(false)
+        }.getOrDefault(false)
+    }
 
     private fun encodeQuery(value: String): String =
         java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.name())
