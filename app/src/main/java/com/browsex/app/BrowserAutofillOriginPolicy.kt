@@ -7,8 +7,11 @@ internal object BrowserAutofillOriginPolicy {
         val usernameMatchesPasswordOrigin: Boolean
     )
 
-    fun canonicalOrigin(raw: String?): String? =
-        raw?.takeIf { it.isNotBlank() }?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
+    fun canonicalOrigin(raw: String?): String? {
+        val domain = raw?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        val candidate = if (domain.contains("://")) domain else "https://$domain"
+        return CredentialOriginPolicy.canonicalHttpsOrigin(candidate)
+    }
 
     fun resolve(passwordDomain: String?, usernameDomain: String?): Match? {
         val passwordOrigin = canonicalOrigin(passwordDomain) ?: return null
