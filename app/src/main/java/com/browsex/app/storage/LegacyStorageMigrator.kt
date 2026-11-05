@@ -42,8 +42,8 @@ internal class LegacyStorageMigrator(
 
     suspend fun migrateIfNeeded(): LegacyStorageMigrationReport? = migrationMutex.withLock {
         withContext(Dispatchers.IO) {
-            if (marker.getInt(KEY_VERSION, 0) >= VERSION) return@withContext null
-
+            // Always consult Room before honoring the SharedPreferences mirror. The Room
+            // migration row is authoritative; the mirror may outlive a cleared/recreated DB.
             val immutableSnapshot = source.all.mapValues { (_, value) ->
                 if (value is Set<*>) value.filterIsInstance<String>().toSet() else value
             }

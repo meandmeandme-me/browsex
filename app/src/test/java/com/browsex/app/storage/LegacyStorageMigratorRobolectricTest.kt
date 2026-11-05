@@ -202,4 +202,42 @@ class LegacyStorageMigratorRobolectricTest {
             marker.edit().clear().commit()
         }
     }
+
+    @Test
+    fun stalePreferencesMarkerDoesNotSkipImportIntoAnEmptyRoomDatabase() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val suffix = UUID.randomUUID().toString()
+        val source = context.getSharedPreferences("migration-stale-source-$suffix", Context.MODE_PRIVATE)
+        val marker = context.getSharedPreferences("migration-stale-marker-$suffix", Context.MODE_PRIVATE)
+        val database = Room.inMemoryDatabaseBuilder(
+            context,
+            BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+
+        try {
+            source.edit()
+                .putString("bookmarks", JSONArray().put("https://restored.test/page").toString())
+                .commit()
+            // Simulate a stale mirror left behind after the Room database was removed.
+            marker.edit()
+                .putInt("completed_version", 1)
+                .putLong("completed_at", 123L)
+                .putString("snapshot_sha256", "stale-database-digest")
+                .commit()
+
+            val migrator = LegacyStorageMigrator(context, source, marker, database)
+            val report = migrator.migrateIfNeeded()
+
+            assertNotNull("Room must be authoritative even when the mirror says complete", report)
+            assertEquals(1, report?.bookmarkCount)
+            assertEquals("https://restored.test/page", database.storageDao().bookmarks().single().url)
+            assertEquals(1, marker.getInt("completed_version", 0))
+            assertNotNull(database.storageDao().migrationState())
+        } finally {
+            database.close()
+            source.edit().clear().commit()
+            marker.edit().clear().commit()
+        }
+    }
+
 }

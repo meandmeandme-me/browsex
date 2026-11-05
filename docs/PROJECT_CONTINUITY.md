@@ -5,7 +5,7 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Last verified base commit: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
+- Last verified base commit: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`\n- Latest implementation checkpoint: stale SharedPreferences migration marker no longer skips the authoritative Room-state check; regression test added (CI result pending for this change).
 - Current phase: **Phase 2 — Storage foundation and safe migration**
 - Current status: CI passed for the base commit; storage foundation exists but is not yet wired as the application's live source of truth.
 - Product direction: rebuild the browser experience around a stable, multilingual browser core; old chrome UI is transitional/partly removed. New visual UI is planned separately via Uizard.
@@ -39,7 +39,7 @@
 - Legacy settings migration copies supported scalar preferences without deleting old keys.
 - Room database, entities and DAOs are present; schema is version 2.
 - Legacy storage snapshot parser and Room importer are present.
-- Import completion state is written in the same Room transaction as imported rows, preventing marker loss from triggering a destructive re-import.
+- Import completion state is written in the same Room transaction as imported rows, preventing marker loss from triggering a destructive re-import. The SharedPreferences marker is now strictly a mirror and cannot suppress import when the Room database has no migration-state row.
 - Defensive handling for malformed legacy preference values and permission-denial sets.
 - Adaptive runtime policy considers device profile, battery saver and thermal pressure.
 - Product/UI map: `docs/design/BROWSEX_Uizard_PRODUCT_MAP_AR.md`.
@@ -82,7 +82,7 @@ For every meaningful code or documentation change:
 
 ## Change log
 
-### 2026-11-05 — Continuity checkpoint created
+### 2026-11-05 — Storage migration marker authority fix\n- Removed the early return based only on the SharedPreferences marker; every migration attempt now checks the Room migration-state row.\n- Added a Robolectric regression test for a stale marker with an empty Room database.\n- CI status for this commit: pending verification.\n\n### 2026-11-05 — Continuity checkpoint created
 - Base: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
 - Confirmed branch HEAD is `rewrite-v2`.
 - Confirmed GitHub Actions run 42055302138 completed successfully for the base commit.
