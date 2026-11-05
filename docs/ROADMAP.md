@@ -108,6 +108,10 @@ This file records implementation state separately from device verification. A ch
 - [x] Add a basic lifecycle-aware inactive-tab policy: keep the active tab, bound warm sessions, and close/recreate inactive sessions under memory pressure.
 - [ ] Measure cold start, tab switching, peak memory and recovery on low-RAM devices; tune the policy from measurements.
 
+## Browser engine updates
+
+- [ ] Upgrade from GeckoView 150 to 159 only together with a separately verified toolchain transition: GeckoView 159 requires compileSdk 37 and its resolved AndroidX Core dependency requires AGP 9.1.0; Kotlin 2.3.20's fully supported AGP range currently ends at 9.0.0. Keep the last-known-good engine until AGP/Kotlin/KSP/Gradle compatibility and Android 8+ device smoke tests are complete.
+
 ## uBlock Origin protection
 
 - [x] Add the GeckoView WebExtension installation and lifecycle manager for the official Mozilla-signed uBlock Origin XPI.

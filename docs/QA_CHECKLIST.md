@@ -68,6 +68,11 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] CI skips signed release artifacts when no key is configured and fails on partial secret configuration.
 - [ ] Configure real protected signing secrets and verify release APK signatures, ABI contents and in-place upgrade behavior.
 
+## Browser engine upgrade
+
+- [ ] GeckoView 159 is not accepted in this branch yet: its AAR requires compileSdk 37 and AGP 9.1.0-class build tooling; Kotlin/KSP toolchain compatibility must be upgraded and tested separately.
+- [x] Keep GeckoView 150 as the last-known-good engine for the current AGP 8.13.2 / compileSdk 36 build until the toolchain migration is complete.
+
 ## Final automated CI gates (verified on commit `7fe3b458a352ec89b7731c519d3b1fb4f2501e13`)
 
 - [x] Gradle configuration resolves.
