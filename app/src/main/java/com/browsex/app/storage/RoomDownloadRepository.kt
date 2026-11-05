@@ -82,6 +82,7 @@ internal class RoomDownloadRepository(
         val safe = candidate.trim()
             .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "_")
             .trim()
+            .trimStart('.')
             .take(MAX_DISPLAY_NAME)
         if (safe.isBlank() || safe == "." || safe == ".." || now < 0L) return null
         return dao.reserveDownloadName(safe, now)
