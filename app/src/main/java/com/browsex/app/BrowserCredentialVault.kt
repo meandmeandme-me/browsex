@@ -32,6 +32,24 @@ internal class BrowserCredentialVault(
     fun unlockForSession() = accessPolicy.unlock()
     fun lock() = accessPolicy.lock()
 
+    /** One-shot external Autofill authorization; no secret leaves the vault before auth. */
+    fun authenticateForExternalAutofill(
+        onAuthenticated: () -> Unit,
+        onRejected: () -> Unit
+    ) {
+        if (privateTabsOpen) {
+            onRejected()
+            return
+        }
+        requestAuthentication(
+            {
+                unlockForSession()
+                if (privateTabsOpen) onRejected() else onAuthenticated()
+            },
+            onRejected
+        )
+    }
+
     @Synchronized
     fun entries(): List<StoredCredentialSummary> {
         if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return emptyList()
