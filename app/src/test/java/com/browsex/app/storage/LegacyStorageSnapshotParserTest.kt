@@ -53,6 +53,17 @@ class LegacyStorageSnapshotParserTest {
     }
 
     @Test
+    fun emptyOrInvalidNamedSessionsAreNotRecreatedAsHomeSessions() {
+        val sessions = JSONArray()
+            .put(JSONObject().put("id", "empty").put("name", "Empty").put("urls", JSONArray()))
+            .put(JSONObject().put("id", "invalid").put("name", "Invalid")
+                .put("urls", JSONArray().put("file:///private")))
+        val parsed = LegacyStorageSnapshotParser.parse(mapOf("named_sessions_v1" to sessions.toString()))
+        assertTrue(parsed.sessions.isEmpty())
+        assertTrue(parsed.sessionTabs.isEmpty())
+    }
+
+    @Test
     fun permissionAndDownloadTablesKeepSeparateSemantics() {
         val permissions = JSONObject().put("https://example.com|camera", "allow")
             .put("https://example.com|location", "allow").put("file:///bad|camera", "allow")

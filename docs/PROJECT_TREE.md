@@ -106,7 +106,7 @@ BrowseX/
 
 ## Current implementation files
 
-The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `BrowserSessionDelegateFactory`, `BrowserAndroidPermissionCoordinator`, `BrowserAndroidPermissionQueue`, `BrowserNotificationPermissionCoordinator`, `BrowserCredentialVault`, `BrowserCredentialPromptDelegate`, `BrowserDeviceAuthenticator`, `CredentialOriginPolicy`, `CredentialAccessPolicy`, `BrowserTabPersistencePolicy`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
+The current application is intentionally still a single package under `com.browsex.app`. Real files now present include `MainActivity`, `TabsPage`, `BrowserTabRegistry`, `BrowserSessionDelegateFactory`, `BrowserAndroidPermissionCoordinator`, `BrowserAndroidPermissionQueue`, `BrowserNotificationPermissionCoordinator`, `BrowserCredentialVault`, `BrowserCredentialPromptDelegate`, `BrowserDeviceAuthenticator`, `BrowseXAutofillService`, `CredentialAutofillAuthActivity`, `BrowserAutofillFieldPolicy`, `CredentialOriginPolicy`, `CredentialAccessPolicy`, `BrowserTabPersistencePolicy`, `TabLifecyclePolicy`, `BrowserPreferencesStore`, `BrowserPreferencePolicy`, `BrowserSessionStore`, `BrowserLibraryStore`, `BrowserDownloadStore`, `BrowserStore`, `BrowserStorePolicy`, `TabSessionState`, `NavigationInput`, `BrowserTextNormalizer`, `BrowseXStrings`, `BrowserPalette`, `BrowseXPermissionDelegate`, `BrowseXNotificationBridge`, `SiteNotificationActionReceiver`, `DownloadResponseWriter`, `DownloadFileNamePolicy`, `StreamDownloadRecord`, `BookmarkImportPreview`, `RecentlyClosedTab`, `DownloadsPage`, `SiteInfoPage`, `SettingsPage`, `SavedPagesPage`, `RecallPage` and `ReaderPage`. The deeper package tree above remains a target for gradual extraction; it is not a description of current package layout.
 
 ## Dependency direction
 
@@ -151,7 +151,7 @@ Accessibility and font scaling; RTL/localization; responsive layouts; offline/er
 5. Every new feature includes loading, empty, error, permission-denied and success states where applicable.
 6. Every new package comes with a clear owner, dependency direction and tests.
 7. Keep Android 8/API 26+ compatibility, explicitly smoke-test Android 10/API 29, ARM32/ARM64, 720px phone layouts and tablets.
-8. Ad blocking remains deferred until a supported engine integration is implemented and verified end-to-end.
+8. uBlock Origin has an official GeckoView WebExtension integration; its installation, popup, per-site and private-mode behavior still require physical-device end-to-end verification.
 9. Do not split Gradle modules or introduce frameworks just to match this diagram. 
 
 ## Cross-platform target boundary
@@ -160,9 +160,9 @@ The current shipping target remains Android in the single :app module. Future Wi
 
 Current account foundation file: app/src/main/java/com/browsex/app/AccountDomainModels.kt. It defines provider-neutral identity, connection state, sync consent, device, platform and record metadata types only. It does not authenticate users, store tokens or synchronize data.
 - `BrowserSessionLifecycleCoordinator.kt`: owns GeckoSession release/reset/close policy for the tab registry; Activity retains view attachment and platform launchers.
-- `BrowserCredentialVault.kt`: encrypted, HTTPS-origin-scoped GeckoView login storage; no account sync or system-wide AutofillService.
+- `BrowserCredentialVault.kt`: encrypted, HTTPS-origin-scoped GeckoView login storage. `BrowseXAutofillService.kt` and `CredentialAutofillAuthActivity.kt` add optional, authenticated, exact-origin HTTPS filling for other apps; credential capture is disabled and account sync is not implemented.
 - `BrowserNotificationPermissionCoordinator.kt`: serializes/coalesces Android notification permission requests separately from Gecko media/location permissions.
 - `StreamDownloadCoordinator.kt`: owns stream-download record creation, progress/terminal persistence and cancellation; Activity owns Android permission prompts and user notifications.
-- `STORAGE_MIGRATION_PLAN.md`: concrete legacy key inventory, proposed Room/DataStore schema and idempotent migration/rollback requirements; no backend migration yet.
+- `storage/BrowseXDatabase.kt`, `storage/LegacyStorageSnapshotParser.kt` and `storage/LegacyStorageMigrator.kt`: staged Room v1 schema and transactional snapshot importer. Production reads/writes still use SharedPreferences; DataStore and Room cutover are not enabled. See `STORAGE_MIGRATION_PLAN.md`.
 
 - `AccountSyncContracts.kt`: platform-neutral repository/gateway interfaces for provider auth, account session, consent, devices, encrypted sync transport/cipher, sync status and account export/deletion; interfaces only, no live integration.

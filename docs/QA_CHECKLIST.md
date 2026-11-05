@@ -26,6 +26,15 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
 - [x] CredentialAccessPolicy has JVM tests for locked-by-default state, timed unlock expiry, private-tab override and explicit lock.
 
+## Room staging migration
+
+- [x] Room 2.8.5 KSP processor generates the staging schema successfully in CI.
+- [x] Parser unit tests cover legacy URL-only fallback, deterministic IDs, invalid schemes, missing folders, empty sessions, permission filtering and download states.
+- [x] Snapshot importer performs table replacement in one Room transaction and writes its version marker only after successful commit.
+- [x] Legacy `browsex.browser` values are not cleared or rewritten by the importer.
+- [ ] Verify Room open/upgrade, migration transaction, process death, retry and rollback on Android 8/API 26, API 29 and current Android.
+- [ ] Complete Room-backed reader/writer cutover and Preferences DataStore migration; do not enable until upgrade/downgrade and compatibility coverage passes.
+
 ## Android password Autofill
 
 - [x] Register BrowseX as an optional Android 8+ AutofillService, enabled only by the user in Android Settings.
@@ -59,7 +68,7 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] CI skips signed release artifacts when no key is configured and fails on partial secret configuration.
 - [ ] Configure real protected signing secrets and verify release APK signatures, ABI contents and in-place upgrade behavior.
 
-## Final automated CI gates (verified on commit `ecc071e2e5ac2c86ed9d7e38a069c0dc84715d1f`)
+## Final automated CI gates (verified on commit `7fe3b458a352ec89b7731c519d3b1fb4f2501e13`)
 
 - [x] Gradle configuration resolves.
 - [x] Kotlin compilation and JVM unit tests pass.

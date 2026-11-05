@@ -1,6 +1,6 @@
 # BrowseX storage migration plan
 
-Status: schema and rollout proposal only. Current production storage remains SharedPreferences. No DataStore/Room dependency or migration has been introduced by this document.
+Status: Room 2.8.5 schema and a non-destructive legacy snapshot importer are implemented and compile under KSP. The importer is not invoked by production startup; current feature reads/writes still use SharedPreferences and no DataStore migration or authoritative storage cutover is active.
 
 ## Existing storage inventory
 
@@ -58,6 +58,15 @@ The following details were checked against the four focused store implementation
 - DownloadManager IDs are references to Android-owned records, not complete download records. Do not attempt to recreate or claim ownership of those downloads from Room alone.
 - The current download-name reservation and stream-download JSON lists are bounded and ordered. Preserve ordering/retention semantics or document an explicit product-level change.
 - The migration must never include private-tab URLs, GeckoSession state, cookies, credentials, notification payloads, or raw form data.
+
+## Implemented staging state (2026-11-05)
+
+- Room 2.8.5 entities/DAO: bookmark folders/items, history, named sessions/tabs, recently closed tabs, site media decisions, stream download records, open-tab snapshot, filename reservations and BrowseX-owned DownloadManager IDs.
+- Room uses KSP (not KAPT) with Kotlin 2.3.20; CI uses AGP 8.13.2 and Gradle 8.13. The Room schema export path is `app/schemas`.
+- `LegacyStorageSnapshotParser` parses an immutable copy of the legacy SharedPreferences snapshot. It validates navigable URLs/origins, normalizes bounds, repairs missing folders to Unfiled, separates DownloadManager IDs from stream records, and uses deterministic IDs for legacy URL-only records.
+- `LegacyStorageMigrator` copies the parsed snapshot in one Room transaction, verifies primary collection counts, writes a versioned completion marker only after commit, and never clears or modifies the original `browsex.browser` preferences.
+- Parser JVM tests cover legacy fallback, deterministic IDs, invalid schemes, missing folders, empty/invalid sessions, permission filtering, download interruption and malformed JSON.
+- **Not yet a production migration:** no app startup call, no Room-backed feature reads/writes and no Preferences DataStore dependency. SharedPreferences is still authoritative. This is intentional until Android-backed upgrade, process-death, rollback and downgrade tests pass.
 
 ## Proposed Room schema
 
