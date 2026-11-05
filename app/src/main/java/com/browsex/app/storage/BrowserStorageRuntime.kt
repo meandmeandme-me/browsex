@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Application-scoped entry point for Room storage.
@@ -25,6 +26,7 @@ internal class BrowserStorageRuntime(context: Context) {
     private val started = AtomicBoolean(false)
     private val ready = CompletableDeferred<Result<BrowserStorageGraph>>()
     private val tabSnapshotMutex = Mutex()
+    private val tabSnapshotGeneration = AtomicLong(0L)
 
     suspend fun awaitReady(): BrowserStorageGraph {
         if (started.compareAndSet(false, true)) {
@@ -49,11 +51,16 @@ internal class BrowserStorageRuntime(context: Context) {
      */
     fun persistOpenTabs(urls: List<String>, activeIndex: Int, onFailure: () -> Unit = {}) {
         val safeUrls = urls.toList()
+        val generation = tabSnapshotGeneration.incrementAndGet()
         scope.launch {
             runCatching {
                 val storage = awaitReady()
                 tabSnapshotMutex.withLock {
-                    storage.tabs.save(safeUrls, activeIndex)
+                    // Activity lifecycle callbacks can enqueue snapshots close together. Only
+                    // the newest requested snapshot may commit, even if older IO starts late.
+                    if (generation == tabSnapshotGeneration.get()) {
+                        storage.tabs.save(safeUrls, activeIndex)
+                    }
                 }
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not persist regular tab snapshot", error)
