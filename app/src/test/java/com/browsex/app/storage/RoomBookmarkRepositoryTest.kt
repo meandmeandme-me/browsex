@@ -72,7 +72,7 @@ class RoomBookmarkRepositoryTest {
                 ?.let { id -> repository.folders().first { it.id == id }.name.length })
 
             // The legacy limit is 50 folders including the protected "unfiled" folder.
-            repeat(46) { index ->
+            repeat(47) { index ->
                 assertTrue(repository.createFolder("Folder $index", createdAt = 30L + index) != null)
             }
             assertNull(repository.createFolder("One too many", createdAt = 100L))
