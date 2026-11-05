@@ -56,8 +56,13 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         prefs.edit().remove("home_show_quick_links").remove("home_show_discovery").remove("home_layout").apply()
     }
 
+    private fun platformPermissionDenials(): MutableSet<String> =
+        runCatching {
+            prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
+        }.getOrDefault(mutableSetOf())
+
     fun wasPlatformPermissionDenied(permission: String): Boolean =
-        prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().contains(permission)
+        permission in platformPermissionDenials()
 
     /**
      * SharedPreferences protects individual reads and writes, not a read-modify-write
@@ -65,7 +70,7 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
      * callbacks from overwriting each other's additions.
      */
     fun markPlatformPermissionDenied(permission: String) = synchronized(prefs) {
-        val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
+        val values = platformPermissionDenials()
         values.add(permission)
         prefs.edit().putStringSet("denied_platform_permissions", values).apply()
     }

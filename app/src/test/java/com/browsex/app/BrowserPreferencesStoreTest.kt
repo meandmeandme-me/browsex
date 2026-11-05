@@ -88,4 +88,16 @@ class BrowserPreferencesStoreTest {
             assertEquals("allow", store.siteMediaDecision("https://site-$index.example", "camera"))
         }
     }
+    @Test
+    fun malformedPlatformPermissionSetFallsBackAndCanBeRepaired() {
+        val context = RuntimeEnvironment.getApplication()
+        val preferences = context.getSharedPreferences("browser-preferences-test", 0)
+        preferences.edit().putString("denied_platform_permissions", "invalid").commit()
+
+        assertEquals(false, store.wasPlatformPermissionDenied("android.permission.CAMERA"))
+
+        store.markPlatformPermissionDenied("android.permission.CAMERA")
+        assertEquals(true, store.wasPlatformPermissionDenied("android.permission.CAMERA"))
+    }
+
 }
