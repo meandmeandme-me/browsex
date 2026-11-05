@@ -85,7 +85,7 @@ class BrowserSettingsDataStoreTest {
     @Test
     fun malformedLegacyPreferenceTypesFallBackToSafeDefaults() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
-        val legacyName = "browsex.browser.invalid.\${UUID.randomUUID()}"
+        val legacyName = "browsex.browser.invalid.${UUID.randomUUID()}"
         val legacy = context.getSharedPreferences(legacyName, Context.MODE_PRIVATE)
         legacy.edit()
             .putString("ad_block_enabled", "not-a-boolean")
@@ -95,7 +95,7 @@ class BrowserSettingsDataStoreTest {
 
         val isolatedFile = File(
             context.filesDir,
-            "datastore/browsex-invalid-\${UUID.randomUUID()}.preferences_pb"
+            "datastore/browsex-invalid-${UUID.randomUUID()}.preferences_pb"
         )
         val isolatedStore = PreferenceDataStoreFactory.create(
             migrations = listOf(LegacySettingsMigration(context, legacyName)),
