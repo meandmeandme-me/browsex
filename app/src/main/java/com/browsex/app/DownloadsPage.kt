@@ -407,8 +407,13 @@ internal class DownloadsPage(
         }
         fun reloadRoomRecords() {
             activity.lifecycleScope.launch {
+                val scrollY = scroll.scrollY
                 runCatching { repository.all() }
-                    .onSuccess { streamRecords = it; render() }
+                    .onSuccess {
+                        streamRecords = it
+                        render()
+                        scroll.post { scroll.scrollTo(0, scrollY) }
+                    }
                     .onFailure { error -> android.util.Log.e("BrowseX", "Could not refresh Room downloads", error) }
             }
         }
@@ -417,9 +422,7 @@ internal class DownloadsPage(
             override fun run() {
                 if (!dialog.isShowing) return
                 if (streamRecords.any { it.status == "queued" || it.status == "running" }) {
-                    val scrollY = scroll.scrollY
-                    render()
-                    scroll.post { scroll.scrollTo(0, scrollY) }
+                    reloadRoomRecords()
                     refreshHandler.postDelayed(this, 900L)
                 }
             }
