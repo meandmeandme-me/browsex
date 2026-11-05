@@ -282,6 +282,9 @@ internal class DownloadsPage(
                                 val share = Intent(Intent.ACTION_SEND).apply {
                                     type = record.mimeType.ifBlank { "*/*" }
                                     putExtra(Intent.EXTRA_STREAM, uri)
+                                    clipData = android.content.ClipData.newUri(
+                                        activity.contentResolver, record.displayName, uri
+                                    )
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
                                 try {
@@ -418,6 +421,9 @@ internal class DownloadsPage(
                                     val share = Intent(Intent.ACTION_SEND).apply {
                                         type = mime
                                         putExtra(Intent.EXTRA_STREAM, uri)
+                                        clipData = android.content.ClipData.newUri(
+                                            activity.contentResolver, title, uri
+                                        )
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
                                     try {
