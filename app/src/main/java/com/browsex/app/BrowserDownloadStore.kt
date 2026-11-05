@@ -44,6 +44,7 @@ internal class BrowserDownloadStore(private val prefs: SharedPreferences) {
         }
     } catch (_: Exception) { emptySet() }
 
+    @Synchronized
     fun addBrowseXDownload(id: Long) {
         if (id <= 0L) return
         val ids = browseXDownloadIds().toMutableList()
@@ -54,6 +55,7 @@ internal class BrowserDownloadStore(private val prefs: SharedPreferences) {
         prefs.edit().putString("browsex_download_ids", array.toString()).apply()
     }
 
+    @Synchronized
     fun removeBrowseXDownload(id: Long) {
         val array = JSONArray()
         browseXDownloadIds().filterNot { it == id }.forEach { array.put(it) }
@@ -84,32 +86,42 @@ internal class BrowserDownloadStore(private val prefs: SharedPreferences) {
 
     @Synchronized
     fun updateStreamDownloadProgress(id: String, bytesWritten: Long) {
-        updateStreamDownload(id) { it.copy(
-            bytesWritten = bytesWritten.coerceAtLeast(it.bytesWritten),
-            status = "running"
-        ) }
+        if (bytesWritten < 0L) return
+        updateStreamDownload(id) { current ->
+            if (!current.isActive) current else current.copy(
+                bytesWritten = maxOf(current.bytesWritten, bytesWritten),
+                status = "running"
+            )
+        }
     }
 
     @Synchronized
     fun completeStreamDownload(id: String, uri: String, bytesWritten: Long) {
-        updateStreamDownload(id) { it.copy(
-            uri = uri.take(2048),
-            bytesWritten = bytesWritten.coerceAtLeast(0L),
-            failed = false,
-            error = "",
-            status = "completed"
-        ) }
+        val scheme = runCatching { android.net.Uri.parse(uri).scheme?.lowercase() }.getOrNull()
+        if (scheme !in setOf("content", "file") || uri.length > 2048 || bytesWritten < 0L) return
+        updateStreamDownload(id) { current ->
+            if (!current.isActive) current else current.copy(
+                uri = uri,
+                bytesWritten = maxOf(current.bytesWritten, bytesWritten),
+                failed = false,
+                error = "",
+                status = "completed"
+            )
+        }
     }
 
     @Synchronized
     fun failStreamDownload(id: String, error: String, cancelled: Boolean = false, bytesWritten: Long? = null) {
-        updateStreamDownload(id) { it.copy(
-            uri = "",
-            bytesWritten = (bytesWritten ?: it.bytesWritten).coerceAtLeast(0L),
-            failed = !cancelled,
-            error = error.take(240),
-            status = if (cancelled) "cancelled" else "failed"
-        ) }
+        if (bytesWritten != null && bytesWritten < 0L) return
+        updateStreamDownload(id) { current ->
+            if (!current.isActive) current else current.copy(
+                uri = "",
+                bytesWritten = bytesWritten?.let { maxOf(current.bytesWritten, it) } ?: current.bytesWritten,
+                failed = !cancelled,
+                error = error.take(240),
+                status = if (cancelled) "cancelled" else "failed"
+            )
+        }
     }
 
     @Synchronized
