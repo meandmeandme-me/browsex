@@ -101,7 +101,7 @@ internal class BrowserUBlockSettingsCoordinator(
                     }
                 }
             }
-            .setNeutralButton(translate("Open site controls")) {
+            .setNeutralButton(translate("Open site controls")) { _, _ ->
                 val session = activeSession()
                 if (session != null && extensionManager.hasBrowserAction(session)) {
                     extensionManager.clickBrowserAction(session)
@@ -109,7 +109,7 @@ internal class BrowserUBlockSettingsCoordinator(
                     showMessage("uBlock Origin controls are unavailable for this site")
                 }
             }
-            .setNegativeButton(translate("Remove uBlock Origin")) {
+            .setNegativeButton(translate("Remove uBlock Origin")) { _, _ ->
                 AlertDialog.Builder(activity)
                     .setTitle(translate("Uninstall uBlock Origin?"))
                     .setMessage(translate("uBlock Origin will be removed. GeckoView tracking protection will be restored."))
