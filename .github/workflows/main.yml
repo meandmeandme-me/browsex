@@ -140,6 +140,19 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Verify generated Room schema snapshot is committed on pull requests
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json"
+          test -s "$SCHEMA"
+          if ! git diff --quiet -- "$SCHEMA"; then
+            echo "::error::Room schema changed. Commit the generated schema JSON and its migration in this pull request."
+            git diff -- "$SCHEMA"
+            exit 1
+          fi
+
       - name: Commit generated Room schema snapshot
         if: ${{ github.event_name == 'push' }}
         shell: bash
