@@ -117,6 +117,16 @@ internal class BrowseXPermissionDelegate(
             return
         }
 
+        // A saved website-level block must win before prompting Android. This avoids
+        // asking for device access when this origin has already been denied by the user.
+        if (!privateMode &&
+            ((wantsCamera && store.siteMediaDecision(origin, "camera") == "deny") ||
+                (wantsMicrophone && store.siteMediaDecision(origin, "microphone") == "deny"))
+        ) {
+            callback.reject()
+            return
+        }
+
         // Android permission and website permission are separate consent layers.
         // Ask Android first when needed, then show the per-origin browser decision.
         val requiredAndroidPermissions = buildList {
