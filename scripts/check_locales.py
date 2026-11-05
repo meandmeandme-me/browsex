@@ -83,6 +83,14 @@ def main() -> int:
         translated, duplicates = resources(path)
         errors.extend(f"{path}: duplicate resource {name}" for name in duplicates)
 
+        for (kind, name), values in translated.items():
+            for quantity, value in values.items():
+                if not value.strip():
+                    suffix = f"/{quantity}" if quantity else ""
+                    errors.append(
+                        f"{path}: empty translation for {kind}/{name}{suffix}"
+                    )
+
         missing = sorted(set(base) - set(translated))
         extra = sorted(set(translated) - set(base))
         if missing:
