@@ -443,7 +443,7 @@ interface BrowseXStorageDao {
     @Query("UPDATE download_records SET status = 'running' WHERE id = :id AND status = 'queued'")
     suspend fun markDownloadRunning(id: String): Int
 
-    @Query("UPDATE download_records SET bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END WHERE id = :id AND status = 'running'")
+    @Query("UPDATE download_records SET bytes_written = :bytesWritten WHERE id = :id AND status = 'running' AND bytes_written < :bytesWritten")
     suspend fun updateRunningDownloadProgress(id: String, bytesWritten: Long): Int
 
     @Query("UPDATE download_records SET uri = :uri, bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END, status = 'completed', error = '' WHERE id = :id AND status IN ('queued', 'running')")

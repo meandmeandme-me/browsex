@@ -16,6 +16,16 @@ class TabSessionStateTest {
         assertEquals(1, state.activeIndex)
     }
 
+    @Test fun selectsNearestSurvivingTabWhenOriginalActiveTabWasRejected() {
+        val state = TabSessionState.normalize(
+            listOf("https://before.example", "file:///private", "https://after.example"),
+            1,
+            home
+        )
+        assertEquals(listOf("https://before.example", "https://after.example"), state.urls)
+        assertEquals(1, state.activeIndex)
+    }
+
     @Test fun acceptsOnlyKnownHomePreferenceParameters() {
         val localized = "$home?bxlang=ar&bxtheme=dark"
         val invalid = "$home?bxlang=ar&bxtheme=dark&redirect=https://evil.example"
