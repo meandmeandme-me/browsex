@@ -321,9 +321,10 @@ interface BrowseXStorageDao {
         BrowserStateEntity::class,
         OpenTabEntity::class,
         DownloadNameReservationEntity::class,
-        PlatformDownloadIdEntity::class
+        PlatformDownloadIdEntity::class,
+        StorageMigrationStateEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class BrowseXDatabase : RoomDatabase() {

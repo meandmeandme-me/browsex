@@ -23,8 +23,9 @@ internal data class LegacyStorageMigrationReport(
 )
 
 /**
- * Copies a single immutable legacy snapshot. It never clears legacy keys or
- * changes production readers; the migration marker is saved only after Room commits.
+ * Imports one immutable legacy snapshot. The completion state is committed in Room
+ * alongside the imported rows, so losing the SharedPreferences mirror cannot cause
+ * a second import to erase data created after the first import.
  */
 internal class LegacyStorageMigrator(
     context: Context,
@@ -42,61 +43,77 @@ internal class LegacyStorageMigrator(
     suspend fun migrateIfNeeded(): LegacyStorageMigrationReport? = migrationMutex.withLock {
         withContext(Dispatchers.IO) {
             if (marker.getInt(KEY_VERSION, 0) >= VERSION) return@withContext null
+
             val immutableSnapshot = source.all.mapValues { (_, value) ->
                 if (value is Set<*>) value.filterIsInstance<String>().toSet() else value
             }
             val parsed = LegacyStorageSnapshotParser.parse(immutableSnapshot)
             val db = database
-            db.withTransaction {
+            var imported = false
+            val state = db.withTransaction {
                 val dao = db.storageDao()
-                dao.clearBookmarks()
-                dao.clearFolders()
-                dao.clearHistory()
-                dao.clearSessionTabs()
-                dao.clearSessions()
-                dao.clearRecentlyClosed()
-                dao.clearPermissionDecisions()
-                dao.clearDownloads()
-                dao.clearBrowserState()
-                dao.clearOpenTabs()
-                dao.clearDownloadNameReservations()
-                dao.clearPlatformDownloadIds()
+                val previous = dao.migrationState()
+                if (previous != null && previous.version >= VERSION) {
+                    previous
+                } else {
+                    dao.clearBookmarks()
+                    dao.clearFolders()
+                    dao.clearHistory()
+                    dao.clearSessionTabs()
+                    dao.clearSessions()
+                    dao.clearRecentlyClosed()
+                    dao.clearPermissionDecisions()
+                    dao.clearDownloads()
+                    dao.clearBrowserState()
+                    dao.clearOpenTabs()
+                    dao.clearDownloadNameReservations()
+                    dao.clearPlatformDownloadIds()
 
-                // The Unfiled parent row must exist before bookmark foreign keys are inserted.
-                dao.putFolders(parsed.folders)
-                dao.putBookmarks(parsed.bookmarks)
-                dao.putHistory(parsed.history)
-                dao.putSessions(parsed.sessions)
-                dao.putSessionTabs(parsed.sessionTabs)
-                dao.putRecentlyClosed(parsed.recentlyClosed)
-                dao.putPermissionDecisions(parsed.permissions)
-                dao.putDownloads(parsed.downloads)
-                dao.putBrowserState(parsed.browserState)
-                dao.putOpenTabs(parsed.openTabs)
-                dao.putDownloadNameReservations(parsed.reservations)
-                dao.putPlatformDownloadIds(parsed.platformIds)
+                    // The Unfiled parent row must exist before bookmark foreign keys are inserted.
+                    dao.putFolders(parsed.folders)
+                    dao.putBookmarks(parsed.bookmarks)
+                    dao.putHistory(parsed.history)
+                    dao.putSessions(parsed.sessions)
+                    dao.putSessionTabs(parsed.sessionTabs)
+                    dao.putRecentlyClosed(parsed.recentlyClosed)
+                    dao.putPermissionDecisions(parsed.permissions)
+                    dao.putDownloads(parsed.downloads)
+                    dao.putBrowserState(parsed.browserState)
+                    dao.putOpenTabs(parsed.openTabs)
+                    dao.putDownloadNameReservations(parsed.reservations)
+                    dao.putPlatformDownloadIds(parsed.platformIds)
 
-                check(dao.folderCount() == parsed.folders.size)
-                check(dao.bookmarkCount() == parsed.bookmarks.size)
-                check(dao.historyCount() == parsed.history.size)
-                check(dao.savedSessionCount() == parsed.sessions.size)
-                check(dao.sessionTabCount() == parsed.sessionTabs.size)
-                check(dao.recentlyClosedCount() == parsed.recentlyClosed.size)
-                check(dao.permissionDecisionCount() == parsed.permissions.size)
-                check(dao.downloadRecordCount() == parsed.downloads.size)
-                check(dao.openTabCount() == parsed.openTabs.size)
-                check(dao.downloadNameReservationCount() == parsed.reservations.size)
-                check(dao.platformDownloadIdCount() == parsed.platformIds.size)
+                    check(dao.folderCount() == parsed.folders.size)
+                    check(dao.bookmarkCount() == parsed.bookmarks.size)
+                    check(dao.historyCount() == parsed.history.size)
+                    check(dao.savedSessionCount() == parsed.sessions.size)
+                    check(dao.sessionTabCount() == parsed.sessionTabs.size)
+                    check(dao.recentlyClosedCount() == parsed.recentlyClosed.size)
+                    check(dao.permissionDecisionCount() == parsed.permissions.size)
+                    check(dao.downloadRecordCount() == parsed.downloads.size)
+                    check(dao.openTabCount() == parsed.openTabs.size)
+                    check(dao.downloadNameReservationCount() == parsed.reservations.size)
+                    check(dao.platformDownloadIdCount() == parsed.platformIds.size)
+
+                    imported = true
+                    StorageMigrationStateEntity(
+                        version = VERSION,
+                        digest = parsed.digest,
+                        completedAt = System.currentTimeMillis()
+                    ).also { dao.putMigrationState(it) }
+                }
             }
 
+            // This marker is only a fast-path mirror; the Room row is authoritative.
             check(
                 marker.edit()
-                    .putInt(KEY_VERSION, VERSION)
-                    .putLong(KEY_COMPLETED_AT, System.currentTimeMillis())
-                    .putString(KEY_DIGEST, parsed.digest)
+                    .putInt(KEY_VERSION, state.version)
+                    .putLong(KEY_COMPLETED_AT, state.completedAt)
+                    .putString(KEY_DIGEST, state.digest)
                     .commit()
             ) { "Could not commit storage migration marker" }
 
+            if (!imported) return@withContext null
             LegacyStorageMigrationReport(
                 parsed.bookmarks.size, parsed.folders.size, parsed.history.size,
                 parsed.sessions.size, parsed.recentlyClosed.size, parsed.permissions.size,
