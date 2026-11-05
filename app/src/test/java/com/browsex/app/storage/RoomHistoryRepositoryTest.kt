@@ -30,6 +30,7 @@ class RoomHistoryRepositoryTest {
             assertEquals("https://example.test", entries.first().url)
             assertEquals("Updated", entries.first().title)
             assertEquals(30L, entries.first().visitedAt)
+            assertEquals(2, entries.first().visitCount)
         } finally {
             database.close()
         }

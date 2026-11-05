@@ -256,16 +256,21 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM bookmarks ORDER BY sort_order, created_at DESC")
     suspend fun bookmarks(): List<BookmarkEntity>
 
-    @Query("DELETE FROM history_entries WHERE url = :url")
-    suspend fun deleteHistoryByUrl(url: String): Int
+    @Query("SELECT * FROM history_entries WHERE url = :url LIMIT 1")
+    suspend fun historyEntryByUrl(url: String): HistoryEntryEntity?
 
     @Query("DELETE FROM history_entries WHERE id IN (SELECT id FROM history_entries ORDER BY visited_at DESC LIMIT -1 OFFSET :keep)")
     suspend fun pruneHistory(keep: Int)
 
     @Transaction
     suspend fun recordHistoryEntry(entry: HistoryEntryEntity, keep: Int = 300) {
-        deleteHistoryByUrl(entry.url)
-        putHistory(listOf(entry))
+        val previous = historyEntryByUrl(entry.url)
+        val updated = if (previous == null) entry else previous.copy(
+            title = entry.title,
+            visitedAt = maxOf(previous.visitedAt, entry.visitedAt),
+            visitCount = (previous.visitCount + 1).coerceAtMost(Int.MAX_VALUE)
+        )
+        putHistory(listOf(updated))
         pruneHistory(keep.coerceAtLeast(0))
     }
 
