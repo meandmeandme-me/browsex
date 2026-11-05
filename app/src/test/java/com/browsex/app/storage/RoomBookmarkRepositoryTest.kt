@@ -68,6 +68,15 @@ class RoomBookmarkRepositoryTest {
             assertTrue(personalId != null)
             assertNull(repository.createFolder("work", createdAt = 22L))
             assertNull(repository.createFolder("   ", createdAt = 23L))
+            assertEquals(40, repository.createFolder("N".repeat(60), createdAt = 23L)
+                ?.let { id -> repository.folders().first { it.id == id }.name.length })
+
+            // The legacy limit is 50 folders including the protected "unfiled" folder.
+            repeat(46) { index ->
+                assertTrue(repository.createFolder("Folder $index", createdAt = 30L + index) != null)
+            }
+            assertNull(repository.createFolder("One too many", createdAt = 100L))
+            assertEquals(50, repository.folders().size)
 
             assertTrue(repository.add("https://example.test/task", "Task", workId!!, 24L))
             assertTrue(repository.renameFolder(workId, "Projects"))

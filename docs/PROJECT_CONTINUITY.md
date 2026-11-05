@@ -5,11 +5,11 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Latest implementation commit: pending bookmark-folder lifecycle commit.
-- Last verified successful CI commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c`
+- Latest implementation commit: `af7ed3d270b6cdb65faed34331922b77a5a38e38` (bookmark-folder lifecycle).
+- Last verified successful CI commit: `af7ed3d270b6cdb65faed34331922b77a5a38e38`
 - Current phase: **Phase 2 — Storage foundation and safe migration**
 - Current task: complete bookmark repository parity and establish safe production cutover boundaries.
-- Last verified CI success: run [42060878488](https://github.com/meandmeandme-me/browsex/actions/runs/42060878488) on `c0b28ea9a850553bbd97ee1303c4243f31b5c9b5` (tests, lint, APK builds and schema artifact succeeded).
+- Last verified CI success: run [42062106037](https://github.com/meandmeandme-me/browsex/actions/runs/42062106037) on `af7ed3d270b6cdb65faed34331922b77a5a38e38` (tests, lint, APK builds and schema artifact succeeded).
 - CI on previous HEAD `ac161663a58932007e963d4b66a2db6e7f0b2880`:
   - Push run [42060084325](https://github.com/meandmeandme-me/browsex/actions/runs/42060084325): **failure** at Kotlin compilation.
   - PR run [42060091076](https://github.com/meandmeandme-me/browsex/actions/runs/42060091076): **failure** at the same Kotlin compilation error.
@@ -44,6 +44,8 @@
 - Product/UI map: `docs/design/BROWSEX_Uizard_PRODUCT_MAP_AR.md`.
 
 ## Current Room bookmark slice
+
+- Follow-up parity patch enforces the legacy folder cap (50 total including `unfiled`) transactionally and matches the legacy 40-character folder-name limit. Production cutover remains deferred.
 
 - Added DAO operations for atomic bookmark insert (IGNORE against the unique URL index), lookup, delete and folder move.
 - Added `RoomBookmarkRepository` with URL and folder validation, title normalization, duplicate rejection, and basic CRUD.
@@ -91,7 +93,7 @@
 - Added transactional folder create/rename/delete/reorder operations; names are normalized and checked case-insensitively for duplicates.
 - Deleting a folder moves its bookmarks to `unfiled`; the default folder cannot be deleted.
 - Added tests for folder lifecycle, duplicate/blank names, safe deletion and ordering.
-- CI pending for this commit.
+- CI run [42062106037](https://github.com/meandmeandme-me/browsex/actions/runs/42062106037) passed on `af7ed3d270b6cdb65faed34331922b77a5a38e38`.
 
 ### 2026-11-05 — Room bookmark repository compile correction
 - Fixed the suspend DAO lookup invocation that blocked Kotlin compilation.

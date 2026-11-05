@@ -147,6 +147,10 @@ data class StorageMigrationStateEntity(
 
 @Dao
 interface BrowseXStorageDao {
+    companion object {
+        const val MAX_BOOKMARK_FOLDERS = 50
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putFolders(items: List<BookmarkFolderEntity>)
 
@@ -182,7 +186,9 @@ interface BrowseXStorageDao {
 
     @Transaction
     suspend fun createFolderIfNameAvailable(folder: BookmarkFolderEntity): Boolean {
-        if (folder.name.isBlank() || folderNameCount(folder.name) > 0) return false
+        // Legacy BrowserLibraryStore allows 50 folders total, including "unfiled".
+        if (folder.name.isBlank() || folderCount() >= MAX_BOOKMARK_FOLDERS) return false
+        if (folderNameCount(folder.name) > 0) return false
         return insertFolder(folder) != -1L
     }
 

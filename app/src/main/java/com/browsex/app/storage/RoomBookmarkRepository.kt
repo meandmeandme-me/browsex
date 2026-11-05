@@ -81,6 +81,6 @@ internal class RoomBookmarkRepository(
         const val DEFAULT_FOLDER_ID = "unfiled"
         const val MAX_URL_LENGTH = 4096
         const val MAX_TITLE_LENGTH = 160
-        const val MAX_FOLDER_NAME_LENGTH = 48
+        const val MAX_FOLDER_NAME_LENGTH = 40
     }
 }
