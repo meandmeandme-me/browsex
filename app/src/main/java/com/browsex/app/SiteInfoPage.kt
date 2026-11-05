@@ -111,6 +111,7 @@ class SiteInfoPage(
             GeckoSession.PermissionDelegate.PERMISSION_LOCAL_DEVICE_ACCESS to "Local device"
         )
         val unique = permissions.distinctBy { it.permission to it.uri }
+        val liveStoredFeatures = unique.mapNotNull { storedFeatureForPermission(it.permission) }.toSet()
         if (unique.isEmpty()) {
             root.addView(TextView(activity).apply {
                 text = t("No site permissions have been requested on this page.", "لم يطلب هذا الموقع أي أذونات حتى الآن.")
@@ -136,7 +137,14 @@ class SiteInfoPage(
                     textSize = 14f
                     setTextColor(colors.ink)
                 }, LinearLayout.LayoutParams(0, -2, 1f))
-                val effectiveValue = valueOf(permission)
+                val storedDecision = storedFeatureForPermission(permission.permission)?.let(siteDecisions::get)
+                val effectiveValue = localPermissionValues[permission.permission to permission.uri]
+                    ?: when (storedDecision) {
+                        "allow" -> GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
+                        "deny" -> GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
+                        "ask" -> GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+                        else -> permission.value
+                    }
                 val status = when (effectiveValue) {
                     GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW -> t("Allowed", "مسموح")
                     GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY -> t("Blocked", "محظور")
@@ -152,10 +160,15 @@ class SiteInfoPage(
                     })
                 })
                 row.contentDescription = t("Change ", "تغيير إذن ") + name + ", " + status
-                row.setOnClickListener { showPermissionChoices(permission, name) }
+                row.setOnClickListener { showPermissionChoices(permission, name, siteDecisions) }
                 root.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
             }
         }
+        listOf(
+            "geolocation" to t("Location", "الموقع"),
+            "notifications" to t("Notifications", "الإشعارات")
+        ).filterNot { (feature, _) -> feature in liveStoredFeatures }
+            .forEach { (feature, name) -> addStoredPermissionRow(root, feature, name, siteDecisions) }
         listOf("camera", "microphone").forEach { feature ->
             val decision = siteDecisions[feature]
             val row = LinearLayout(activity).apply {
@@ -259,7 +272,8 @@ class SiteInfoPage(
 
     private fun showPermissionChoices(
         permission: GeckoSession.PermissionDelegate.ContentPermission,
-        name: String
+        name: String,
+        siteDecisions: Map<String, String>
     ) {
         val labels = arrayOf(t("Ask every time", "اسأل في كل مرة"), t("Allow", "سماح"), t("Block", "حظر"))
         val values = intArrayOf(
@@ -267,7 +281,15 @@ class SiteInfoPage(
             GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW,
             GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
         )
-        val selected = values.indexOf(valueOf(permission)).coerceAtLeast(0)
+        val storedDecision = storedFeatureForPermission(permission.permission)?.let(siteDecisions::get)
+        val effectiveValue = localPermissionValues[permission.permission to permission.uri]
+            ?: when (storedDecision) {
+                "allow" -> GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
+                "deny" -> GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
+                "ask" -> GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+                else -> permission.value
+            }
+        val selected = values.indexOf(effectiveValue).coerceAtLeast(0)
         val cannotRevoke = permission.permission ==
             GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE &&
             valueOf(permission) == GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
@@ -287,12 +309,67 @@ class SiteInfoPage(
             .setSingleChoiceItems(labels, selected) { dialog, index ->
                 localPermissionValues[permission.permission to permission.uri] = values[index]
                 onPermissionChange(permission, values[index])
+                val storedFeature = storedFeatureForPermission(permission.permission)
                 dialog.dismiss()
                 activePageDialog?.dismiss()
-                show()
+                if (storedFeature == null) {
+                    show()
+                } else {
+                    activity.lifecycleScope.launch {
+                        runCatching {
+                            activity.storageRuntime.awaitReady().sitePermissions.setDecision(
+                                originForStore(), storedFeature, arrayOf("ask", "allow", "deny")[index]
+                            )
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not update saved site permission", it)
+                        }
+                        show()
+                    }
+                }
             }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
             .show()
+    }
+
+    private fun addStoredPermissionRow(
+        root: LinearLayout,
+        feature: String,
+        name: String,
+        siteDecisions: Map<String, String>
+    ) {
+        val decision = siteDecisions[feature]
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            background = cardBackground()
+            minimumHeight = dp(54)
+            isClickable = true
+            isFocusable = true
+        }
+        row.addView(TextView(activity).apply {
+            text = name
+            textSize = 14f
+            setTextColor(colors.ink)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        row.addView(TextView(activity).apply {
+            text = when (decision) {
+                "allow" -> t("Allowed", "مسموح")
+                "deny" -> t("Blocked", "محظور")
+                else -> t("Ask", "اسأل")
+            } + "  ›"
+            textSize = 12f
+            setTextColor(colors.muted)
+        })
+        row.contentDescription = t("Change ", "تغيير إذن ") + name
+        row.setOnClickListener { showMediaPermissionChoices(feature, name, siteDecisions) }
+        root.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
+    }
+
+    private fun storedFeatureForPermission(permission: Int): String? = when (permission) {
+        GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "geolocation"
+        GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "notifications"
+        else -> null
     }
 
     private fun showMediaPermissionChoices(feature: String, name: String, siteDecisions: Map<String, String>) {
