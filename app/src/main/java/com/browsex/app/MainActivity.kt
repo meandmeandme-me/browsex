@@ -1304,7 +1304,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
         if (!started) {
-            body.close()
+            closeDownloadBodySafely { body.close() }
             toast("This download response is not supported")
         }
     }

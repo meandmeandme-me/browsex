@@ -28,22 +28,22 @@ internal class BrowserDownloadRequestCoordinator(
 
     fun enqueue(response: WebResponse) {
         if (!isHostAvailable()) {
-            response.body?.close()
+            closeResponseBody(response)
             return
         }
         if (!isSupported(response)) {
-            response.body?.close()
+            closeResponseBody(response)
             showIfAvailable("This download response is not supported")
             return
         }
         if (apiLevel <= 28 && !hasLegacyStoragePermission()) {
             if (!canRequestLegacyStoragePermission() || !isHostAvailable()) {
-                response.body?.close()
+                closeResponseBody(response)
                 showIfAvailable("Storage permission is unavailable")
                 return
             }
             if (waiting.size >= maxQueuedResponses) {
-                response.body?.close()
+                closeResponseBody(response)
                 showIfAvailable("Too many downloads are waiting for storage permission")
                 return
             }
@@ -59,13 +59,13 @@ internal class BrowserDownloadRequestCoordinator(
         val pending = waiting.toList()
         waiting.clear()
         if (!granted || !isHostAvailable() || !hasLegacyStoragePermission()) {
-            pending.forEach { it.body?.close() }
+            pending.forEach(::closeResponseBody)
             showIfAvailable("Storage permission was denied; download cancelled")
             return
         }
         pending.forEach { response ->
             if (isSupported(response)) startSafely(response)
-            else response.body?.close()
+            else closeResponseBody(response)
         }
     }
 
@@ -97,10 +97,15 @@ internal class BrowserDownloadRequestCoordinator(
         try {
             startDownload(response)
         } catch (error: RuntimeException) {
-            runCatching { response.body?.close() }
+            closeResponseBody(response)
             android.util.Log.e("BrowseX", "Could not start response download", error)
             showIfAvailable("Could not start this download")
         }
+    }
+
+    private fun closeResponseBody(response: WebResponse) {
+        val closed = closeDownloadBodySafely { response.body?.close() }
+        if (!closed) android.util.Log.w("BrowseX", "Could not close a rejected Gecko download response body")
     }
 
     private fun isSupported(response: WebResponse): Boolean =
@@ -115,6 +120,16 @@ internal class BrowserDownloadRequestCoordinator(
     }
 }
 
+
+
+/** Closes one-shot Gecko response bodies without allowing cleanup failures to abort a queue. */
+internal fun closeDownloadBodySafely(closeBody: () -> Unit): Boolean =
+    try {
+        closeBody()
+        true
+    } catch (_: Exception) {
+        false
+    }
 
 /** Pure validation policy for external Gecko download responses. */
 internal object BrowserDownloadResponsePolicy {
