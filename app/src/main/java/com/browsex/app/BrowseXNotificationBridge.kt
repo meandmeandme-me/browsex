@@ -10,6 +10,8 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import org.mozilla.geckoview.WebNotification
 import org.mozilla.geckoview.WebNotificationDelegate
 
@@ -27,17 +29,42 @@ internal class BrowseXNotificationBridge(
             val source = notification.source
             if (notification.privateBrowsing || !store.siteNotificationsEnabled ||
                 !isSafeWebOrigin(notification.origin) ||
-                store.siteMediaDecision(notification.origin, "notifications") == "deny" ||
                 (source != null && !isSafeWebOrigin(source))
             ) {
                 notification.dismiss()
                 return@post
             }
-            requestRuntimePermission { granted ->
-                main.post {
-                    if (!granted || activity.isFinishing || activity.isDestroyed ||
-                        notification.privateBrowsing || !store.siteNotificationsEnabled
-                    ) notification.dismiss() else showInAndroid(notification)
+            activity.lifecycleScope.launch {
+                val siteAllows = runCatching {
+                    activity.storageRuntime.awaitReady().sitePermissions.decision(
+                        notification.origin, "notifications"
+                    ) != "deny"
+                }.onFailure {
+                    android.util.Log.e("BrowseX", "Could not verify website notification permission", it)
+                }.getOrDefault(false)
+                if (!siteAllows || activity.isFinishing || activity.isDestroyed) {
+                    notification.dismiss()
+                    return@launch
+                }
+                requestRuntimePermission { granted ->
+                    main.post {
+                        if (!granted || activity.isFinishing || activity.isDestroyed ||
+                            notification.privateBrowsing || !store.siteNotificationsEnabled
+                        ) {
+                            notification.dismiss()
+                        } else {
+                            activity.lifecycleScope.launch {
+                                val stillAllowed = runCatching {
+                                    activity.storageRuntime.awaitReady().sitePermissions.decision(
+                                        notification.origin, "notifications"
+                                    ) != "deny"
+                                }.getOrDefault(false)
+                                if (stillAllowed && !activity.isFinishing && !activity.isDestroyed) {
+                                    showInAndroid(notification)
+                                } else notification.dismiss()
+                            }
+                        }
+                    }
                 }
             }
         }
