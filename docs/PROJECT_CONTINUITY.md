@@ -4,6 +4,9 @@
 
 ## Current checkpoint
 
+- Permission queue recovery: `1b131032ced3329eac7f29ef6878d51fb94ac23c` rejects a request if Android's permission launcher throws, then continues queued requests instead of leaving the queue stuck.
+- Download response cleanup: `27beab55d16467fef5213da95768bd80700a143b` closes the one-shot Gecko response stream if the host cannot start the download, and continues processing remaining permission-approved downloads.
+
 - Latest permission-flow fix: `df5ed8fc8d39c4a9b7260375a05ef5205b0bd7a4` — media requests now request missing Android camera/microphone runtime permissions before asking for per-site consent; private sessions still never persist per-origin choices.
 - This is a staged implementation change only; the consolidated build/test/schema/APK verification remains intentionally deferred until feature wiring is complete.
 
