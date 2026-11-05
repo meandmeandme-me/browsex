@@ -73,11 +73,12 @@ class RoomDownloadRepositoryTest {
         ).allowMainThreadQueries().build()
         try {
             val repository = RoomDownloadRepository(database.storageDao())
-            repeat(300) { index ->
+            repeat(301) { index ->
                 assertNotNull(repository.beginStream("file-$index.bin", "application/octet-stream", createdAt = index.toLong()))
             }
             assertEquals(300, repository.all().size)
-            assertEquals(null, repository.beginStream("overflow.bin", "application/octet-stream", createdAt = 400L))
+            assertTrue(repository.all().none { it.displayName == "file-0.bin" })
+            assertTrue(repository.all().any { it.displayName == "file-300.bin" })
         } finally {
             database.close()
         }

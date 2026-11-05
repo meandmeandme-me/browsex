@@ -335,7 +335,6 @@ interface BrowseXStorageDao {
 
     @Transaction
     suspend fun createDownloadRecord(record: DownloadRecordEntity, keep: Int = 300): Boolean {
-        if (downloadRecordCount() >= keep) return false
         putDownloads(listOf(record))
         pruneDownloadRecords(keep)
         return true
@@ -346,6 +345,9 @@ interface BrowseXStorageDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDownloadNameReservation(item: DownloadNameReservationEntity): Long
+
+    @Query("DELETE FROM download_name_reservations WHERE normalized_name IN (SELECT normalized_name FROM download_name_reservations ORDER BY position ASC LIMIT -1 OFFSET :keep)")
+    suspend fun pruneDownloadNameReservations(keep: Int)
 
     @Transaction
     suspend fun reserveDownloadName(candidate: String, now: Long): String {
@@ -362,7 +364,10 @@ interface BrowseXStorageDao {
                 position = downloadNameReservationCount(),
                 reservedAt = now
             ))
-            if (inserted != -1L) return display
+            if (inserted != -1L) {
+                pruneDownloadNameReservations(300)
+                return display
+            }
             suffix++
         }
         throw IllegalStateException("Unable to reserve a unique download filename")
@@ -373,6 +378,19 @@ interface BrowseXStorageDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPlatformDownloadId(item: PlatformDownloadIdEntity): Long
+
+    @Query("DELETE FROM platform_download_ids WHERE download_id IN (SELECT download_id FROM platform_download_ids ORDER BY position ASC LIMIT -1 OFFSET :keep)")
+    suspend fun prunePlatformDownloadIds(keep: Int)
+
+    @Transaction
+    suspend fun trackPlatformDownloadId(item: PlatformDownloadIdEntity): Boolean {
+        if (item.downloadId <= 0L) return false
+        if (platformDownloadIds().any { it.downloadId == item.downloadId }) return true
+        val inserted = insertPlatformDownloadId(item.copy(position = platformDownloadIdCount()))
+        if (inserted == -1L) return false
+        prunePlatformDownloadIds(300)
+        return true
+    }
 
     @Query("SELECT * FROM download_records ORDER BY created_at DESC")
     suspend fun downloads(): List<DownloadRecordEntity>

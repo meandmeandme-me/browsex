@@ -87,9 +87,7 @@ internal class RoomDownloadRepository(
 
     suspend fun trackPlatformDownload(id: Long, trackedAt: Long = System.currentTimeMillis()): Boolean {
         if (id <= 0L || trackedAt < 0L) return false
-        if (dao.platformDownloadIds().any { it.downloadId == id }) return true
-        val nextPosition = dao.platformDownloadIds().size
-        return dao.insertPlatformDownloadId(PlatformDownloadIdEntity(id, nextPosition, trackedAt)) != -1L
+        return dao.trackPlatformDownloadId(PlatformDownloadIdEntity(id, 0, trackedAt))
     }
 
     suspend fun trackedPlatformDownloadIds(): Set<Long> =
