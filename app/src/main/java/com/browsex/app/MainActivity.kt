@@ -37,6 +37,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.browsex.app.storage.BrowserStorageRuntime
+import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -133,6 +134,38 @@ class MainActivity : AppCompatActivity() {
     private lateinit var store: BrowserStore
     internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
+    internal fun updateBrowserSettings(
+        transform: (BrowserSettings) -> BrowserSettings,
+        onUpdated: (BrowserSettings) -> Unit = {}
+    ) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.settings.update(transform)
+                storageRuntime.settings.snapshot()
+            }.onSuccess { updated ->
+                mirrorBrowserSettings(updated)
+                onUpdated(updated)
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not update browser settings", error)
+                toast("Could not save settings")
+            }
+        }
+    }
+
+    private fun mirrorBrowserSettings(settings: BrowserSettings) {
+        if (!::store.isInitialized) return
+        store.adBlockEnabled = settings.adBlockEnabled
+        store.adBlockInstalled = settings.adBlockInstalled
+        store.adBlockPrivateEnabled = settings.adBlockPrivateEnabled
+        store.themeMode = settings.themeMode
+        store.languageMode = settings.languageMode
+        store.siteNotificationsEnabled = settings.siteNotificationsEnabled
+        store.homeShowQuickLinks = settings.homeShowQuickLinks
+        store.homeShowDiscovery = settings.homeShowDiscovery
+        store.homeLayout = settings.homeLayout
+        store.searchEngine = settings.searchEngine
+    }
+
     private lateinit var credentialVault: BrowserCredentialVault
     private val hostLifecycleCoordinator by lazy {
         BrowserHostLifecycleCoordinator(
@@ -219,6 +252,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
+        lifecycleScope.launch {
+            runCatching { storageRuntime.settings.snapshot() }
+                .onSuccess(::mirrorBrowserSettings)
+                .onFailure { error -> android.util.Log.e("BrowseX", "Could not load browser settings", error) }
+        }
         BrowserContentProtectionPolicy.configure(store.adBlockEnabled, store.adBlockPrivateEnabled)
         credentialVault = BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
             runOnUiThread {

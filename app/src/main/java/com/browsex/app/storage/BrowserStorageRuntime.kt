@@ -21,6 +21,7 @@ internal class BrowserStorageRuntime(context: Context) {
     private val appContext = context.applicationContext
     private val graph = BrowserStorageGraph(appContext)
     private val migrator = LegacyStorageMigrator(appContext, databaseOverride = graph.database)
+    val settings = BrowserSettingsDataStore(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val started = AtomicBoolean(false)
     private val ready = CompletableDeferred<Result<BrowserStorageGraph>>()
