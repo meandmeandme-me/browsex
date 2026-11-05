@@ -65,6 +65,13 @@ class BrowserSettingsDataStoreTest {
         assertEquals("light", updated.themeMode)
         assertEquals("Bing", updated.searchEngine)
 
+        repository.update { current -> current.copy(themeMode = "dark") }
+        repository.update { current -> current.copy(languageMode = "fr-FR") }
+        val atomicUpdates = repository.snapshot()
+        assertEquals("dark", atomicUpdates.themeMode)
+        assertEquals("fr-FR", atomicUpdates.languageMode)
+        assertEquals("Bing", atomicUpdates.searchEngine)
+
         repository.update(
             updated.copy(
                 themeMode = "neon",

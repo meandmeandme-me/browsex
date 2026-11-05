@@ -34,38 +34,54 @@ internal class BrowserSettingsDataStore(
         .catch { cause ->
             if (cause is IOException) emit(emptyPreferences()) else throw cause
         }
-        .map { p ->
-            BrowserSettings(
-                adBlockEnabled = p[Keys.adBlockEnabled] ?: false,
-                adBlockInstalled = p[Keys.adBlockInstalled] ?: false,
-                adBlockPrivateEnabled = p[Keys.adBlockPrivateEnabled] ?: false,
-                themeMode = BrowserPreferencePolicy.normalizeTheme(p[Keys.themeMode]),
-                languageMode = BrowserPreferencePolicy.normalizeLanguageTag(p[Keys.languageMode]),
-                siteNotificationsEnabled = p[Keys.siteNotificationsEnabled] ?: true,
-                homeShowQuickLinks = p[Keys.homeShowQuickLinks] ?: true,
-                homeShowDiscovery = p[Keys.homeShowDiscovery] ?: true,
-                homeLayout = BrowserPreferencePolicy.normalizeHomeLayout(p[Keys.homeLayout]),
-                searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
-                deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
-            )
-        }
+        .map(::decodeSettings)
 
     suspend fun snapshot(): BrowserSettings = data.first()
 
+    /** Full replacement for controlled settings screens. */
     suspend fun update(settings: BrowserSettings) {
-        store.edit { p ->
-            p[Keys.adBlockEnabled] = settings.adBlockEnabled
-            p[Keys.adBlockInstalled] = settings.adBlockInstalled
-            p[Keys.adBlockPrivateEnabled] = settings.adBlockPrivateEnabled
-            p[Keys.themeMode] = BrowserPreferencePolicy.normalizeTheme(settings.themeMode)
-            p[Keys.languageMode] = BrowserPreferencePolicy.normalizeLanguageTag(settings.languageMode)
-            p[Keys.siteNotificationsEnabled] = settings.siteNotificationsEnabled
-            p[Keys.homeShowQuickLinks] = settings.homeShowQuickLinks
-            p[Keys.homeShowDiscovery] = settings.homeShowDiscovery
-            p[Keys.homeLayout] = BrowserPreferencePolicy.normalizeHomeLayout(settings.homeLayout)
-            p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
-            p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
+        update { settings }
+    }
+
+    /**
+     * Atomic read-modify-write for one or more settings. Feature controllers should
+     * use this form so concurrent updates do not overwrite unrelated preferences.
+     */
+    suspend fun update(transform: (BrowserSettings) -> BrowserSettings) {
+        store.edit { preferences ->
+            writeSettings(preferences, transform(decodeSettings(preferences)))
         }
+    }
+
+    private fun decodeSettings(p: Preferences): BrowserSettings = BrowserSettings(
+        adBlockEnabled = p[Keys.adBlockEnabled] ?: false,
+        adBlockInstalled = p[Keys.adBlockInstalled] ?: false,
+        adBlockPrivateEnabled = p[Keys.adBlockPrivateEnabled] ?: false,
+        themeMode = BrowserPreferencePolicy.normalizeTheme(p[Keys.themeMode]),
+        languageMode = BrowserPreferencePolicy.normalizeLanguageTag(p[Keys.languageMode]),
+        siteNotificationsEnabled = p[Keys.siteNotificationsEnabled] ?: true,
+        homeShowQuickLinks = p[Keys.homeShowQuickLinks] ?: true,
+        homeShowDiscovery = p[Keys.homeShowDiscovery] ?: true,
+        homeLayout = BrowserPreferencePolicy.normalizeHomeLayout(p[Keys.homeLayout]),
+        searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
+        deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
+    )
+
+    private fun writeSettings(
+        p: androidx.datastore.preferences.core.MutablePreferences,
+        settings: BrowserSettings
+    ) {
+        p[Keys.adBlockEnabled] = settings.adBlockEnabled
+        p[Keys.adBlockInstalled] = settings.adBlockInstalled
+        p[Keys.adBlockPrivateEnabled] = settings.adBlockPrivateEnabled
+        p[Keys.themeMode] = BrowserPreferencePolicy.normalizeTheme(settings.themeMode)
+        p[Keys.languageMode] = BrowserPreferencePolicy.normalizeLanguageTag(settings.languageMode)
+        p[Keys.siteNotificationsEnabled] = settings.siteNotificationsEnabled
+        p[Keys.homeShowQuickLinks] = settings.homeShowQuickLinks
+        p[Keys.homeShowDiscovery] = settings.homeShowDiscovery
+        p[Keys.homeLayout] = BrowserPreferencePolicy.normalizeHomeLayout(settings.homeLayout)
+        p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
+        p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
     }
 
     private object Keys {
