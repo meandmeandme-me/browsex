@@ -12,7 +12,7 @@ BrowseX/
 │   │   ├── java/com/browsex/app/
 │   │   │   ├── BrowseXApplication.kt     # process-wide setup (when needed)
 │   │   │   ├── MainActivity.kt           # host/navigation shell; keep thin
-│   │   │   ├── BrowserTabRegistry.kt     # identity-safe open-tab membership and selection
+│   │   │   ├── DeviceCapabilityProbe.kt # physical/API/display capability snapshot\n│   │   │   ├── AdaptiveRuntimePolicy.kt # pure device-tier resource policy\n│   │   │   ├── BrowserTabRegistry.kt     # identity-safe open-tab membership and selection
 │   │   │   ├── BrowserTabController.kt   # tab creation, activation, popup and close lifecycle
 │   │   │   ├── BrowserTabEventCoordinator.kt # Gecko page/navigation/crash event routing
 │   │   │   ├── BrowserSessionLifecycleCoordinator.kt # session close/reset/memory budget

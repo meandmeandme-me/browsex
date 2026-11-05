@@ -46,12 +46,13 @@ import org.mozilla.geckoview.WebResponse
 import org.mozilla.geckoview.WebNotification
 
 internal const val HOME_URL = "resource://android/assets/home.html"
-private const val MAX_LIVE_GECKO_SESSIONS = 3
 
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
 class MainActivity : AppCompatActivity() {
     private val tabRegistry = BrowserTabRegistry<BrowserTab>()
+    private val deviceCapabilityProfile by lazy { DeviceCapabilityProbe(this).snapshot() }
+    private val adaptiveRuntimeConfig by lazy { AdaptiveRuntimePolicy.resolve(deviceCapabilityProfile) }
     private val tabEventCoordinator by lazy {
         BrowserTabEventCoordinator(
             isActiveTab = { tab -> tab === activeTab },
@@ -77,7 +78,7 @@ class MainActivity : AppCompatActivity() {
                 cancelPlatformPermissionRequests(tab.session)
             },
             createSession = ::newBrowserSession,
-            maxLiveSessions = MAX_LIVE_GECKO_SESSIONS
+            maxLiveSessions = adaptiveRuntimeConfig.maxLiveGeckoSessions
         )
     }
     private val tabController by lazy {
