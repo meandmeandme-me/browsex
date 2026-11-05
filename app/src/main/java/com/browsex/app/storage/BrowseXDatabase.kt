@@ -298,6 +298,16 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM recently_closed_tabs WHERE id = :id")
     suspend fun deleteRecentlyClosedById(id: String): Int
 
+    @Query("SELECT * FROM recently_closed_tabs WHERE id = :id LIMIT 1")
+    suspend fun recentlyClosedTab(id: String): RecentlyClosedTabEntity?
+
+    @Transaction
+    suspend fun consumeRecentlyClosedTab(id: String): RecentlyClosedTabEntity? {
+        if (id.isBlank()) return null
+        val item = recentlyClosedTab(id) ?: return null
+        return item.takeIf { deleteRecentlyClosedById(id) > 0 }
+    }
+
     @Transaction
     suspend fun saveNamedSession(session: SavedSessionEntity, tabs: List<SavedSessionTabEntity>): Boolean {
         val existing = savedSessions().firstOrNull { it.name.equals(session.name, ignoreCase = true) }

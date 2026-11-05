@@ -62,11 +62,8 @@ internal class RoomSessionRepository(
         return true
     }
 
-    suspend fun consumeRecentlyClosed(id: String): RecentlyClosedTabEntity? {
-        if (id.isBlank()) return null
-        val item = dao.recentlyClosedTabs().firstOrNull { it.id == id } ?: return null
-        return if (dao.deleteRecentlyClosedById(id) > 0) item else null
-    }
+    suspend fun consumeRecentlyClosed(id: String): RecentlyClosedTabEntity? =
+        dao.consumeRecentlyClosedTab(id)
 
     private fun isSafeRestorableUrl(url: String): Boolean =
         url.length <= MAX_URL_LENGTH && (
