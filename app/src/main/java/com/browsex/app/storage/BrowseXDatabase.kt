@@ -261,6 +261,27 @@ interface BrowseXStorageDao {
     @Query("SELECT COUNT(*) FROM saved_sessions")
     suspend fun savedSessionCount(): Int
 
+    @Query("SELECT COUNT(*) FROM bookmark_folders")
+    suspend fun folderCount(): Int
+
+    @Query("SELECT COUNT(*) FROM saved_session_tabs")
+    suspend fun sessionTabCount(): Int
+
+    @Query("SELECT COUNT(*) FROM recently_closed_tabs")
+    suspend fun recentlyClosedCount(): Int
+
+    @Query("SELECT COUNT(*) FROM site_permission_decisions")
+    suspend fun permissionDecisionCount(): Int
+
+    @Query("SELECT COUNT(*) FROM open_tabs")
+    suspend fun openTabCount(): Int
+
+    @Query("SELECT COUNT(*) FROM download_name_reservations")
+    suspend fun downloadNameReservationCount(): Int
+
+    @Query("SELECT COUNT(*) FROM platform_download_ids")
+    suspend fun platformDownloadIdCount(): Int
+
     @Query("SELECT COUNT(*) FROM download_records")
     suspend fun downloadRecordCount(): Int
 

@@ -76,10 +76,17 @@ internal class LegacyStorageMigrator(
                 dao.putDownloadNameReservations(parsed.reservations)
                 dao.putPlatformDownloadIds(parsed.platformIds)
 
+                check(dao.folderCount() == parsed.folders.size)
                 check(dao.bookmarkCount() == parsed.bookmarks.size)
                 check(dao.historyCount() == parsed.history.size)
                 check(dao.savedSessionCount() == parsed.sessions.size)
+                check(dao.sessionTabCount() == parsed.sessionTabs.size)
+                check(dao.recentlyClosedCount() == parsed.recentlyClosed.size)
+                check(dao.permissionDecisionCount() == parsed.permissions.size)
                 check(dao.downloadRecordCount() == parsed.downloads.size)
+                check(dao.openTabCount() == parsed.openTabs.size)
+                check(dao.downloadNameReservationCount() == parsed.reservations.size)
+                check(dao.platformDownloadIdCount() == parsed.platformIds.size)
             }
 
             check(
