@@ -109,6 +109,7 @@ class BrowserSettingsDataStoreTest {
         assertTrue(settings.deniedPlatformPermissions.isEmpty())
 
         legacy.edit().clear().commit()
+        Unit
     }
 
 }
