@@ -959,7 +959,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openAutofillServiceSettings() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            toast("Password autofill requires Android 8 or newer")
+            toast(tr("Password autofill requires Android 8 or newer"))
             return
         }
         val request = Intent(
@@ -969,7 +969,7 @@ class MainActivity : AppCompatActivity() {
         runCatching { startActivity(request) }
             .onFailure {
                 android.util.Log.w("BrowseX", "Could not open Android Autofill settings", it)
-                toast("Could not open Android Autofill settings")
+                toast(tr("Could not open Android Autofill settings"))
             }
     }
 

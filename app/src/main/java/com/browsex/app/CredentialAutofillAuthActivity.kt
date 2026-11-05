@@ -20,8 +20,8 @@ internal class CredentialAutofillAuthActivity : AppCompatActivity() {
             runOnUiThread {
                 BrowserDeviceAuthenticator.authenticate(
                     activity = this,
-                    title = "Unlock BrowseX passwords",
-                    subtitle = "Verify your identity before filling a saved sign-in",
+                    title = BrowseXStrings.text(this, "Unlock BrowseX passwords"),
+                    subtitle = BrowseXStrings.text(this, "Verify your identity before filling a saved sign-in"),
                     onAuthenticated = onAuthenticated,
                     onRejected = onRejected
                 )
@@ -66,7 +66,7 @@ internal class CredentialAutofillAuthActivity : AppCompatActivity() {
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Choose a saved sign-in")
+            .setTitle(BrowseXStrings.text(this, "Choose a saved sign-in"))
             .setMessage(origin)
             .setItems(matches.map { it.username }.toTypedArray()) { _, index ->
                 val credential = matches.getOrNull(index)
