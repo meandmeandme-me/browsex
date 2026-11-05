@@ -65,6 +65,20 @@ class BrowserSettingsDataStoreTest {
         assertEquals("light", updated.themeMode)
         assertEquals("Bing", updated.searchEngine)
 
+        repository.update(
+            updated.copy(
+                themeMode = "neon",
+                languageMode = "not a locale!",
+                homeLayout = "carousel",
+                searchEngine = "Unknown"
+            )
+        )
+        val normalized = repository.snapshot()
+        assertEquals("system", normalized.themeMode)
+        assertEquals("system", normalized.languageMode)
+        assertEquals("grid", normalized.homeLayout)
+        assertEquals("Google", normalized.searchEngine)
+
         legacy.edit().clear().commit()
         Unit
     }
