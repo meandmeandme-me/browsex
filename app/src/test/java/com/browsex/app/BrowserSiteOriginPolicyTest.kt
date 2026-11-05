@@ -18,6 +18,20 @@ class BrowserSiteOriginPolicyTest {
         assertEquals("https://example.com:8443", BrowserSiteOriginPolicy.canonicalOrigin("https://Example.com:8443"))
     }
 
+    @Test fun convertsInternationalizedDomainNamesToIdna() {
+        assertEquals(
+            "https://xn--mgbh0fb.xn--kgbechtv",
+            BrowserSiteOriginPolicy.canonicalOrigin("https://مثال.إختبار/صفحة")
+        )
+    }
+
+    @Test fun preservesBracketedIpv6Origins() {
+        assertEquals(
+            "https://[2001:db8::1]",
+            BrowserSiteOriginPolicy.canonicalOrigin("https://[2001:DB8::1]:443/path")
+        )
+    }
+
     @Test fun rejectsCredentialsAndNonWebSchemes() {
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://user:secret@example.com/path"))
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("javascript:alert(1)"))
@@ -27,6 +41,7 @@ class BrowserSiteOriginPolicyTest {
 
     @Test fun rejectsMalformedAndOutOfRangePorts() {
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://example.com:99999"))
+        assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://example.com:"))
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("not a url"))
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin(null))
     }
