@@ -180,6 +180,36 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM history_entries ORDER BY visited_at DESC LIMIT :limit")
     suspend fun history(limit: Int): List<HistoryEntryEntity>
 
+    @Query("SELECT * FROM bookmark_folders ORDER BY sort_order, name")
+    suspend fun folders(): List<BookmarkFolderEntity>
+
+    @Query("SELECT * FROM saved_sessions ORDER BY saved_at DESC")
+    suspend fun savedSessions(): List<SavedSessionEntity>
+
+    @Query("SELECT * FROM saved_session_tabs ORDER BY session_id, position")
+    suspend fun savedSessionTabs(): List<SavedSessionTabEntity>
+
+    @Query("SELECT * FROM recently_closed_tabs ORDER BY closed_at DESC")
+    suspend fun recentlyClosedTabs(): List<RecentlyClosedTabEntity>
+
+    @Query("SELECT * FROM site_permission_decisions ORDER BY origin, feature")
+    suspend fun permissionDecisions(): List<SitePermissionDecisionEntity>
+
+    @Query("SELECT * FROM download_records ORDER BY created_at DESC")
+    suspend fun downloads(): List<DownloadRecordEntity>
+
+    @Query("SELECT * FROM browser_state")
+    suspend fun browserState(): List<BrowserStateEntity>
+
+    @Query("SELECT * FROM open_tabs ORDER BY position")
+    suspend fun openTabs(): List<OpenTabEntity>
+
+    @Query("SELECT * FROM download_name_reservations ORDER BY position")
+    suspend fun downloadNameReservations(): List<DownloadNameReservationEntity>
+
+    @Query("SELECT * FROM platform_download_ids ORDER BY position")
+    suspend fun platformDownloadIds(): List<PlatformDownloadIdEntity>
+
     @Query("UPDATE bookmarks SET folder_id = 'unfiled' WHERE folder_id = :folderId")
     suspend fun moveFolderItemsToUnfiled(folderId: String)
 

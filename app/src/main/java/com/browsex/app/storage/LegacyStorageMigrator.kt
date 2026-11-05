@@ -1,6 +1,7 @@
 package com.browsex.app.storage
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -25,11 +26,18 @@ internal data class LegacyStorageMigrationReport(
  * Copies a single immutable legacy snapshot. It never clears legacy keys or
  * changes production readers; the migration marker is saved only after Room commits.
  */
-internal class LegacyStorageMigrator(context: Context) {
+internal class LegacyStorageMigrator(
+    context: Context,
+    sourcePreferences: SharedPreferences? = null,
+    markerPreferences: SharedPreferences? = null,
+    databaseOverride: BrowseXDatabase? = null
+) {
     private val app = context.applicationContext
-    private val source = app.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
-    private val marker = app.getSharedPreferences(MARKER_PREFS, Context.MODE_PRIVATE)
-    private val database by lazy { BrowseXDatabase.getInstance(app) }
+    private val source = sourcePreferences
+        ?: app.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
+    private val marker = markerPreferences
+        ?: app.getSharedPreferences(MARKER_PREFS, Context.MODE_PRIVATE)
+    private val database by lazy { databaseOverride ?: BrowseXDatabase.getInstance(app) }
 
     suspend fun migrateIfNeeded(): LegacyStorageMigrationReport? = migrationMutex.withLock {
         withContext(Dispatchers.IO) {

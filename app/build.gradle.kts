@@ -99,6 +99,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true
@@ -126,5 +130,6 @@ dependencies {
     implementation("org.mozilla.geckoview:geckoview-omni:150.0.20260511200624")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     androidTestImplementation("androidx.room:room-testing:2.8.5")
 }
