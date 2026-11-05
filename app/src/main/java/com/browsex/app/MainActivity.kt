@@ -703,9 +703,8 @@ class MainActivity : AppCompatActivity() {
         bottomButton("›", "Go forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
         bottomButton("＋", "New tab") { createTab(homePageUrl()) }
         bottomButton("☆", "Bookmark page") {
-            activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                val added = store.toggleBookmark(it, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
-                toast(if (added) "Saved to favorites" else "Removed from favorites")
+            activeTab?.url?.takeIf { it.startsWith("http") }?.let { url ->
+                toggleBookmarkInRoom(url, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
             }
         }
 
@@ -824,47 +823,76 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showBrowserMenu() {
-        val actions = arrayOf(
-            if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
-            "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
-            "Site information", "Search engine", "Clear browsing history", "Settings",
-            "New private tab", "Close private tabs", "Find anything", "Passwords"
-        ).map(::tr).toTypedArray()
-        AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
-            when (index) {
-                0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                    val added = store.toggleBookmark(it, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
-                    toast(if (added) "Bookmark saved" else "Bookmark removed")
-                }
-                1 -> showSavedPages("Bookmarks", store.bookmarks())
-                2 -> showSavedPages("History", store.history())
-                3 -> openDownloads()
-                4 -> pageActions.shareCurrentPage()
-                5 -> pageActions.copyCurrentAddress()
-                6 -> pageActions.findInPage()
-                7 -> openReaderMode()
-                8 -> showSiteInformation()
-                9 -> pageActions.chooseSearchEngine()
-                10 -> AlertDialog.Builder(this).setMessage(tr("Delete all browsing history?"))
-                    .setNegativeButton(tr("Cancel"), null)
-                    .setPositiveButton(tr("Clear")) { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                11 -> showSettings()
-                12 -> createTab(homePageUrl(), privateMode = true)
-                13 -> {
-                    val privateTabs = tabs.filter { it.privateMode }
-                    if (privateTabs.isEmpty()) toast("No private tabs are open")
-                    else AlertDialog.Builder(this)
-                        .setMessage(tr("Close all private tabs? Their browsing data will be discarded."))
+        lifecycleScope.launch {
+            val url = activeTab?.url.orEmpty()
+            val bookmarked = url.startsWith("http") && runCatching {
+                storageRuntime.awaitReady().bookmarks.find(url) != null
+            }.getOrDefault(false)
+            val actions = arrayOf(
+                if (bookmarked) "Remove bookmark" else "Add bookmark",
+                "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
+                "Site information", "Search engine", "Clear browsing history", "Settings",
+                "New private tab", "Close private tabs", "Find anything", "Passwords"
+            ).map(::tr).toTypedArray()
+            AlertDialog.Builder(this@MainActivity).setTitle("BrowseX").setItems(actions) { _, index ->
+                when (index) {
+                    0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let { pageUrl ->
+                        toggleBookmarkInRoom(pageUrl, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
+                    }
+                    1 -> showSavedPages("Bookmarks", emptyList())
+                    2 -> showSavedPages("History", emptyList())
+                    3 -> openDownloads()
+                    4 -> pageActions.shareCurrentPage()
+                    5 -> pageActions.copyCurrentAddress()
+                    6 -> pageActions.findInPage()
+                    7 -> openReaderMode()
+                    8 -> showSiteInformation()
+                    9 -> pageActions.chooseSearchEngine()
+                    10 -> AlertDialog.Builder(this@MainActivity).setMessage(tr("Delete all browsing history?"))
                         .setNegativeButton(tr("Cancel"), null)
-                        .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
-                        .show()
+                        .setPositiveButton(tr("Clear")) { _, _ ->
+                            lifecycleScope.launch {
+                                runCatching { storageRuntime.awaitReady().history.clear() }
+                                    .onSuccess { toast("History cleared") }
+                                    .onFailure { toast("Could not clear history") }
+                            }
+                        }.show()
+                    11 -> showSettings()
+                    12 -> createTab(homePageUrl(), privateMode = true)
+                    13 -> {
+                        val privateTabs = tabs.filter { it.privateMode }
+                        if (privateTabs.isEmpty()) toast("No private tabs are open")
+                        else AlertDialog.Builder(this@MainActivity)
+                            .setMessage(tr("Close all private tabs? Their browsing data will be discarded."))
+                            .setNegativeButton(tr("Cancel"), null)
+                            .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
+                            .show()
+                    }
+                    14 -> showRecall()
+                    15 -> passwordManager.show()
                 }
-                14 -> showRecall()
-                15 -> passwordManager.show()
-            }
-        }.show()
+            }.show()
+        }
     }
 
+    private fun toggleBookmarkInRoom(url: String, title: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val bookmarks = storageRuntime.awaitReady().bookmarks
+                if (bookmarks.find(url) != null) {
+                    bookmarks.remove(url)
+                    false
+                } else {
+                    bookmarks.add(url, title)
+                }
+            }.onSuccess { added ->
+                toast(if (added) "Bookmark saved" else "Bookmark removed")
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not update bookmark", error)
+                toast("Could not update bookmark")
+            }
+        }
+    }
 
     /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
     private fun openReaderMode() {
@@ -981,12 +1009,15 @@ class MainActivity : AppCompatActivity() {
         SettingsPage(
             activity = this,
             store = store,
-            openBookmarks = { showSavedPages("Bookmarks", store.bookmarks()) },
-            openHistory = { showSavedPages("History", store.history()) },
+            openBookmarks = { showSavedPages("Bookmarks", emptyList()) },
+            openHistory = { showSavedPages("History", emptyList()) },
             openDownloads = { openDownloads() },
             clearHistory = {
-                store.clearHistory()
-                toast("History cleared")
+                lifecycleScope.launch {
+                    runCatching { storageRuntime.awaitReady().history.clear() }
+                        .onSuccess { toast("History cleared") }
+                        .onFailure { toast("Could not clear history") }
+                }
             },
             setWebsiteNotifications = { enabled ->
                 store.siteNotificationsEnabled = enabled
@@ -1119,13 +1150,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
-        val isHistory = title.contains("History", ignoreCase = true)
-        SavedPagesPage(
+        RoomSavedPagesPage(
             activity = this,
             store = store,
             title = title,
-            initialPages = pages,
-            isHistory = isHistory,
             onOpen = { url -> createTab(url) }
         ).show()
     }
