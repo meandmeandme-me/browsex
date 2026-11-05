@@ -419,6 +419,21 @@ interface BrowseXStorageDao {
         return true
     }
 
+    @Query("UPDATE download_records SET status = 'running' WHERE id = :id AND status = 'queued'")
+    suspend fun markDownloadRunning(id: String): Int
+
+    @Query("UPDATE download_records SET bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END WHERE id = :id AND status = 'running'")
+    suspend fun updateRunningDownloadProgress(id: String, bytesWritten: Long): Int
+
+    @Query("UPDATE download_records SET uri = :uri, bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END, status = 'completed', error = '' WHERE id = :id AND status IN ('queued', 'running')")
+    suspend fun completeActiveDownload(id: String, uri: String, bytesWritten: Long): Int
+
+    @Query("UPDATE download_records SET uri = '', bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END, status = :status, error = :error WHERE id = :id AND status IN ('queued', 'running')")
+    suspend fun finishActiveDownload(id: String, status: String, error: String, bytesWritten: Long): Int
+
+    @Query("UPDATE download_records SET uri = '', status = 'failed', error = 'Download interrupted before BrowseX could finish it' WHERE status IN ('queued', 'running')")
+    suspend fun failInterruptedDownloads(): Int
+
     @Query("SELECT * FROM download_records ORDER BY created_at DESC")
     suspend fun downloads(): List<DownloadRecordEntity>
 

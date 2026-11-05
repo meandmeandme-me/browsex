@@ -32,31 +32,20 @@ internal class RoomDownloadRepository(
         return id.takeIf { created }
     }
 
-    suspend fun markRunning(id: String): Boolean = updateActive(id) { current ->
-        if (current.status !in ACTIVE_STATUSES) null else current.copy(status = "running")
-    }
+    suspend fun markRunning(id: String): Boolean =
+        id.isNotBlank() && dao.markDownloadRunning(id) > 0
 
-    suspend fun updateProgress(id: String, bytesWritten: Long): Boolean {
-        if (bytesWritten < 0L) return false
-        return updateActive(id) { current ->
-            if (current.status != "running") null
-            else current.copy(bytesWritten = maxOf(current.bytesWritten, bytesWritten))
-        }
-    }
+    suspend fun updateProgress(id: String, bytesWritten: Long): Boolean =
+        id.isNotBlank() && bytesWritten >= 0L &&
+            dao.updateRunningDownloadProgress(id, bytesWritten) > 0
 
     suspend fun complete(id: String, uri: String, bytesWritten: Long): Boolean {
         val safeUri = uri.trim().take(MAX_URI_LENGTH)
         val uriScheme = android.net.Uri.parse(safeUri).scheme?.lowercase()
-        if (safeUri.isBlank() || uriScheme !in COMPLETED_URI_SCHEMES || bytesWritten < 0L) return false
-        return updateActive(id) { current ->
-            if (current.status !in ACTIVE_STATUSES) null
-            else current.copy(
-                uri = safeUri,
-                bytesWritten = maxOf(current.bytesWritten, bytesWritten),
-                status = "completed",
-                error = ""
-            )
-        }
+        if (id.isBlank() || safeUri.isBlank() ||
+            uriScheme !in COMPLETED_URI_SCHEMES || bytesWritten < 0L
+        ) return false
+        return dao.completeActiveDownload(id, safeUri, bytesWritten) > 0
     }
 
     suspend fun fail(id: String, error: String, bytesWritten: Long? = null): Boolean =
@@ -65,16 +54,7 @@ internal class RoomDownloadRepository(
     suspend fun cancel(id: String, bytesWritten: Long? = null): Boolean =
         finishActive(id, "cancelled", "", bytesWritten)
 
-    suspend fun recoverInterrupted(): Int {
-        val active = dao.downloads().filter { it.status in ACTIVE_STATUSES }
-        if (active.isEmpty()) return 0
-        dao.putDownloads(active.map { it.copy(
-            uri = "",
-            status = "failed",
-            error = "Download interrupted before BrowseX could finish it"
-        ) })
-        return active.size
-    }
+    suspend fun recoverInterrupted(): Int = dao.failInterruptedDownloads()
 
     suspend fun remove(id: String): Boolean =
         id.isNotBlank() && dao.deleteDownloadRecord(id) > 0
@@ -103,27 +83,13 @@ internal class RoomDownloadRepository(
         error: String,
         bytesWritten: Long?
     ): Boolean {
-        if (bytesWritten != null && bytesWritten < 0L) return false
-        return updateActive(id) { current ->
-            if (current.status !in ACTIVE_STATUSES) null
-            else current.copy(
-                uri = "",
-                bytesWritten = bytesWritten?.let { maxOf(current.bytesWritten, it) } ?: current.bytesWritten,
-                status = status,
-                error = error.trim().take(MAX_ERROR_LENGTH)
-            )
-        }
-    }
-
-    private suspend fun updateActive(
-        id: String,
-        transform: (DownloadRecordEntity) -> DownloadRecordEntity?
-    ): Boolean {
-        if (id.isBlank()) return false
-        val current = dao.downloadRecord(id) ?: return false
-        val updated = transform(current) ?: return false
-        dao.putDownloads(listOf(updated))
-        return true
+        if (id.isBlank() || bytesWritten != null && bytesWritten < 0L) return false
+        return dao.finishActiveDownload(
+            id = id,
+            status = status,
+            error = error.trim().take(MAX_ERROR_LENGTH),
+            bytesWritten = bytesWritten ?: 0L
+        ) > 0
     }
 
     private companion object {
