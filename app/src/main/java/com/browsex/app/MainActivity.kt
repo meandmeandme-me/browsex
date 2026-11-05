@@ -175,12 +175,24 @@ class MainActivity : AppCompatActivity() {
         else store.wasPlatformPermissionDenied(permission)
 
     internal fun markPlatformPermissionDenied(permission: String) {
+        if (browserSettingsLoaded) {
+            browserSettingsSnapshot = browserSettingsSnapshot.copy(
+                deniedPlatformPermissions = browserSettingsSnapshot.deniedPlatformPermissions + permission
+            )
+        }
+        if (::store.isInitialized) store.markPlatformPermissionDenied(permission)
         updateBrowserSettings {
             it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions + permission)
         }
     }
 
     internal fun clearPlatformPermissionDenial(permission: String) {
+        if (browserSettingsLoaded) {
+            browserSettingsSnapshot = browserSettingsSnapshot.copy(
+                deniedPlatformPermissions = browserSettingsSnapshot.deniedPlatformPermissions - permission
+            )
+        }
+        if (::store.isInitialized) store.clearPlatformPermissionDenial(permission)
         updateBrowserSettings {
             it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions - permission)
         }
