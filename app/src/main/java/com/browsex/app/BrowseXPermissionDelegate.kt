@@ -38,15 +38,29 @@ internal class BrowseXPermissionDelegate(
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
             return result
         }
-        // The global site-notification switch overrides previously persisted site grants.
-        if (perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION &&
-            !store.siteNotificationsEnabled) {
+        // The global switch and the user's saved per-origin choice are evaluated
+        // before Gecko's transient value. Private sessions never read persistent choices.
+        val isSiteNotification =
+            perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION
+        if (isSiteNotification && !store.siteNotificationsEnabled) {
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
             return result
         }
         if (perm.privateMode) {
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
             return result
+        }
+        if (isSiteNotification) {
+            when (store.siteMediaDecision(origin, "notifications")) {
+                "allow" -> {
+                    result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
+                    return result
+                }
+                "deny" -> {
+                    result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+                    return result
+                }
+            }
         }
         if (perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW ||
             perm.value == GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY) {
@@ -74,9 +88,10 @@ internal class BrowseXPermissionDelegate(
                 .setPositiveButton("Allow") { _, _ ->
                     if (perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION) {
                         activity.requestSiteNotificationPermission { granted ->
+                            val allowed = granted && store.siteNotificationsEnabled && isActiveSession(session)
+                            if (allowed) store.setSiteMediaDecision(origin, "notifications", "allow")
                             result.complete(
-                                if (granted && store.siteNotificationsEnabled && isActiveSession(session))
-                                    GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
+                                if (allowed) GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
                                 else GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
                             )
                         }
@@ -85,6 +100,7 @@ internal class BrowseXPermissionDelegate(
                     }
                 }
                 .setNegativeButton("Block") { _, _ ->
+                    if (isSiteNotification) store.setSiteMediaDecision(origin, "notifications", "deny")
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
                 }
                 .setNeutralButton("Not now") { _, _ ->
