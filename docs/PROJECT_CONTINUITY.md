@@ -1,99 +1,99 @@
 # BrowseX — Project Continuity & Handoff
 
-> Living engineering checkpoint. Update this file in the same commit as every meaningful code/documentation change. It is the authoritative handoff note when a work session or model context ends.
+> Update this file in the same commit as every meaningful implementation change. This is the handoff source of truth when a work session or model context ends.
 
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
+- Latest implementation commit: `7cc0d6301e77b2b433d217d16e3c0f09157f4773`
 - Last verified successful CI commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c`
-- Latest verified branch commit: `ac7c27f90b6335775ad4c82fc40702c2f6b9a50c` (CI completed successfully).\n- Latest implementation checkpoint: stale SharedPreferences migration marker no longer skips the authoritative Room-state check; regression test added (CI result pending for this change).
 - Current phase: **Phase 2 — Storage foundation and safe migration**
-- Current status: CI passed for the base commit; storage foundation exists but is not yet wired as the application's live source of truth.
-- Product direction: rebuild the browser experience around a stable, multilingual browser core; old chrome UI is transitional/partly removed. New visual UI is planned separately via Uizard.
-- User data: project owner confirmed there is no user data to preserve at this stage. Still keep migrations defensive and non-destructive.
-
-## Latest verified checks
-
-- GitHub Actions run: [42055302138](https://github.com/meandmeandme-me/browsex/actions/runs/42055302138)
-- Commit tested: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
-- Result: **completed / success**
-- This confirms the workflow for that commit only; it is not a claim that the app has passed device installation or manual runtime testing.
+- Current task: build the first Room-backed repository slice and establish safe production cutover boundaries.
+- Current CI for latest implementation:
+- Run [42059964060](https://github.com/meandmeandme-me/browsex/actions/runs/42059964060): in_progress
+- Run [42059954735](https://github.com/meandmeandme-me/browsex/actions/runs/42059954735): in_progress
+- Product direction: stable multilingual browser core first; replace transitional chrome UI later using the approved product map/Uizard workflow.
+- User confirmed no user data exists at present. Keep migrations defensive and non-destructive anyway.
 
 ## Phase map
 
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Repository baseline, product direction, compatibility constraints | Complete |
-| 1 | Core policies, permissions, notifications, adaptive runtime foundations, defensive preference handling | In progress / foundations present |
-| 2 | Storage architecture: DataStore settings, Room entities/DAOs, safe legacy import, repository cutover | **Current** |
-| 3 | Session/tab lifecycle, restore, bookmarks/folders/history, downloads on a single source of truth | Not started |
-| 4 | MainActivity decomposition into focused lifecycle/navigation/permission/download coordinators | Not started |
-| 5 | Privacy/security, site permissions, notification behavior, ad-block integration and recovery paths | Not started |
-| 6 | Accessibility, localization/RTL, adaptive layouts and weak-device performance | Not started |
-| 7 | Account/sync contracts (Google/Microsoft/OIDC architecture; real sign-in requires backend/client configuration) | Foundations/planning only |
-| 8 | Release engineering, APK/AAB validation, signing, Android-version/device matrix | Not started |
+| 1 | Core policies, permissions, notifications, adaptive runtime foundations, defensive preference handling | Foundations present; audit remains |
+| 2 | DataStore, Room, safe import, repository cutover | **Current** |
+| 3 | Sessions/tabs, bookmarks/folders/history, downloads on one source of truth | Not started |
+| 4 | Decompose MainActivity into lifecycle/navigation/permission/download coordinators | Not started |
+| 5 | Privacy/security, site permissions, notifications, ad-block integration and recovery | Not started |
+| 6 | Localization/RTL, accessibility, adaptive layouts and weak-device performance | Not started |
+| 7 | Google/Microsoft/OIDC account and sync architecture | Planning only; live auth needs backend/client configuration |
+| 8 | Release signing, APK/AAB validation and Android device matrix | Not started |
 | 9 | New Uizard UI implementation after core behavior stabilizes | Planned |
 
-## Completed foundations (verify before changing)
+## Implemented foundations
 
-- DataStore settings wrapper and defensive normalization policies.
+- Defensive DataStore settings wrapper and normalization policies; not yet the live settings source across the app.
 - Legacy settings migration copies supported scalar preferences without deleting old keys.
-- Room database, entities and DAOs are present; schema is version 2.
-- Legacy storage snapshot parser and Room importer are present.
-- Import completion state is written in the same Room transaction as imported rows, preventing marker loss from triggering a destructive re-import. The SharedPreferences marker is now strictly a mirror and cannot suppress import when the Room database has no migration-state row.
-- Defensive handling for malformed legacy preference values and permission-denial sets.
+- Room database schema v2, entities and DAOs.
+- Legacy snapshot parser and importer.
+- Room migration completion state is committed atomically with imported rows. SharedPreferences marker is only a mirror and cannot suppress import if Room has no migration-state row.
+- Defensive handling for malformed legacy preferences and permission-denial sets.
 - Adaptive runtime policy considers device profile, battery saver and thermal pressure.
 - Product/UI map: `docs/design/BROWSEX_Uizard_PRODUCT_MAP_AR.md`.
-- Account/sync domain contracts exist but do not imply a working login provider or backend.
 
-## Important architecture truth / do not misreport
+## Current Room bookmark slice
 
-- Room is **not yet the live application source of truth**. Do not claim storage cutover is complete. A first Room-backed bookmark repository now provides validated add/find/remove/move operations, but production callers still use the legacy store.
-- DataStore exists but is not yet wired as the live settings source throughout the app.
-- BrowserStore and its session/library/download stores still rely on SharedPreferences and synchronous call sites.
-- MainActivity still contains transitional/legacy helpers and is large; the old UI is only partly removed.
-- Adaptive runtime pressure is currently sampled as a startup/runtime configuration input; do not claim continuous live thermal monitoring.
+- Added DAO operations for atomic bookmark insert (IGNORE against the unique URL index), lookup, delete and folder move.
+- Added `RoomBookmarkRepository` with URL and folder validation, title normalization, duplicate rejection, and basic CRUD.
+- Added Robolectric coverage for add/find/move/remove, duplicate URLs, invalid schemes and missing folders.
+- **Not wired to production callers yet.** `BrowserStore` and `MainActivity` still use SharedPreferences for bookmark operations. Do not claim cutover complete.
+
+## Architecture truths — do not misreport
+
+- Room is not yet the live application source of truth.
+- DataStore is not yet wired as the live settings source throughout the app.
+- Session, library and download persistence still use SharedPreferences and synchronous call sites.
+- MainActivity remains large and contains transitional helpers; old UI removal is partial.
+- Adaptive runtime pressure is sampled for runtime configuration; continuous live monitoring is not implemented.
 - No production Google/Microsoft sign-in is configured.
-- CI success does not prove APK installation on the user's TECNO SPARK 5 Air (Android 10 / 2 GB RAM).
+- CI success does not prove installation on the user's TECNO SPARK 5 Air (Android 10 / 2 GB RAM).
 
 ## Next actions — ordered
 
-1. Confirm the Room schema snapshot from CI is checked into version control and establish schema migration policy before Room is enabled for production.
-2. Complete bookmark repository parity (folders, import/export, ordering) and test rollback/restart behavior.
-3. Wire bookmark reads and writes through one repository source of truth; remove legacy bookmark writes only after cutover tests pass.
-4. Keep UI/main-thread code non-blocking: no `runBlocking` in activity/UI getters. Use lifecycle-aware coroutine/Flow collection and explicit suspend operations.
-5. Add round-trip, process-restart, malformed-data, duplicate-import, rollback and concurrency tests for each migrated slice.
-6. Migrate settings to DataStore through a repository and remove legacy reads only after a verified transition.
-7. Migrate sessions/tabs, bookmarks/history/folders, then downloads; document source-of-truth and migration behavior for each.
-8. Decompose MainActivity incrementally into testable coordinators without changing browser behavior unintentionally.
-9. Complete runtime audits: permission prompts and cancellation, site notifications, downloads, private browsing isolation, content-process recovery, navigation/external intents, security and ad-block behavior.
-10. Audit locale resources, RTL mixed-direction text, accessibility semantics, tablet/foldable layouts and low-memory behavior.
-11. Validate minSdk/targetSdk/GeckoView compatibility, release signing and APK/AAB installation on Android 10 and a broader device matrix.
-12. Implement the new UI from the product map only after core capabilities and states are accurately represented.
+1. Confirm the current Room schema snapshot is version-controlled and define schema migration policy before enabling Room in production. The current generated schema is version 2; Room has not been wired as production storage.
+2. Complete bookmark repository parity: folder lifecycle, ordering, import/export and robust transaction semantics.
+3. Add repository restart/round-trip, malformed-data, rollback and concurrency tests.
+4. Wire bookmark reads and writes through one source of truth; remove legacy bookmark writes only after verified cutover.
+5. Migrate sessions/tabs, history, then downloads through repository interfaces, one feature slice at a time.
+6. Migrate settings to DataStore with lifecycle-aware Flow collection; never use `runBlocking` in UI getters.
+7. Decompose MainActivity incrementally without behavior regressions.
+8. Audit runtime permissions/cancellation, site notifications, downloads, private browsing isolation, content-process recovery, external intents, privacy/security and ad-block behavior.
+9. Audit locale resources, RTL mixed-direction text, accessibility semantics, tablet/foldable layouts and low-memory behavior.
+10. Validate minSdk/targetSdk/GeckoView compatibility, release signing and APK installation on Android 10 and a broader device matrix.
+11. Implement the new UI from the product map after core states and behaviors are stable.
 
-## Per-change update protocol
+## Per-change protocol
 
-For every meaningful code or documentation change:
-1. Re-read branch HEAD and ensure it matches the expected parent.
-2. Update this file in the same commit: current phase, what changed, what remains, tests/checks and current commit.
-3. Commit against the exact current parent and update the branch with an expected-SHA lease.
-4. Re-read HEAD after the update.
-5. Check the workflow run for that exact commit. Record pending/failure/success accurately.
-6. Never mark a phase complete based only on code being written; require tests and relevant runtime validation.
+1. Re-read branch HEAD before writing.
+2. Update this file in the same commit as every meaningful code change.
+3. Commit against the exact parent and update the branch with expected-SHA protection.
+4. Re-read HEAD after updating.
+5. Check CI for that exact commit and record pending/failure/success accurately.
+6. A phase is complete only after code, tests and relevant runtime validation—not merely because implementation exists.
 
 ## Change log
 
-### 2026-11-05 — First Room bookmark repository slice
-- Added Room DAO operations for atomic bookmark insert (unique URL constraint), lookup, delete and folder move.
-- Added `RoomBookmarkRepository` with URL validation, folder validation, safe title handling and duplicate rejection.
-- Added Robolectric coverage for add/find/move/remove, duplicate URLs, invalid schemes and missing folders.
-- Production `BrowserStore`/`MainActivity` callers are intentionally not switched yet; no duplicate source of truth has been introduced.
-- CI status: pending for this change.
+### 2026-11-05 — Room bookmark repository foundation
+- Commit: `7cc0d6301e77b2b433d217d16e3c0f09157f4773`
+- Added DAO atomic insert, lookup, delete and folder-move operations.
+- Added RoomBookmarkRepository and Robolectric CRUD/validation tests.
+- Production cutover deliberately deferred to avoid dual sources of truth.
+- Latest implementation CI is listed in the current checkpoint above.
 
-### 2026-11-05 — Storage migration marker authority fix\n- Removed the early return based only on the SharedPreferences marker; every migration attempt now checks the Room migration-state row.\n- Added a Robolectric regression test for a stale marker with an empty Room database.\n- Implementation commit: `eba399035b79ef652e33433fc0e9a26958c1af1f`
-- CI runs: [push](https://github.com/meandmeandme-me/browsex/actions/runs/42056985725) and [pull request](https://github.com/meandmeandme-me/browsex/actions/runs/42056999656), both pending at last check.\n\n### 2026-11-05 — Continuity checkpoint created
-- Base: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
-- Confirmed branch HEAD is `rewrite-v2`.
-- Confirmed GitHub Actions run 42055302138 completed successfully for the base commit.
-- Current phase set to storage foundation and safe migration.
-- Next: inspect the storage architecture and move one feature slice safely toward repository-backed persistence.
+### 2026-11-05 — Room migration marker authority
+- Commit: `eba399035b79ef652e33433fc0e9a26958c1af1f`
+- Room migration-state row is authoritative; stale SharedPreferences marker cannot skip import into an empty Room database.
+- Added regression coverage.
+
+### 2026-11-05 — Continuity checkpoint
+- Created this durable project handoff record.
