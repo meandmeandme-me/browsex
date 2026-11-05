@@ -3,6 +3,7 @@
 > Update this file in the same commit as every meaningful implementation change. This is the handoff source of truth when a work session or model context ends.
 
 ## Current checkpoint
+- Site permission precedence: `0bb2d7bf62ca194bcc88b88faa5adbc8a79da09b` now honors a saved per-origin camera/microphone block before requesting Android runtime access, avoiding unnecessary OS prompts for a site already blocked by the user.
 
 - Permission queue recovery: `1b131032ced3329eac7f29ef6878d51fb94ac23c` rejects a request if Android's permission launcher throws, then continues queued requests instead of leaving the queue stuck.
 - Download response cleanup: `27beab55d16467fef5213da95768bd80700a143b` closes the one-shot Gecko response stream if the host cannot start the download, and continues processing remaining permission-approved downloads.
