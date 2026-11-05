@@ -21,8 +21,11 @@ import java.io.IOException
  * the legacy preference file. Structured collections remain in their own
  * migration path and are never discarded by this migration.
  */
-internal class BrowserSettingsDataStore(context: Context) {
-    private val store = context.applicationContext.browserSettingsDataStore
+internal class BrowserSettingsDataStore(
+    context: Context,
+    storeOverride: DataStore<Preferences>? = null
+) {
+    private val store = storeOverride ?: context.applicationContext.browserSettingsDataStore
 
     val data: Flow<BrowserSettings> = store.data
         .catch { cause ->
