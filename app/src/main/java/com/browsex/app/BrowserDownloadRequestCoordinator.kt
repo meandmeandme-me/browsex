@@ -51,7 +51,7 @@ internal class BrowserDownloadRequestCoordinator(
             launchPermissionIfNeeded()
             return
         }
-        startDownload(response)
+        startSafely(response)
     }
 
     fun onLegacyPermissionResult(granted: Boolean) {
@@ -64,7 +64,7 @@ internal class BrowserDownloadRequestCoordinator(
             return
         }
         pending.forEach { response ->
-            if (isSupported(response)) startDownload(response)
+            if (isSupported(response)) startSafely(response)
             else response.body?.close()
         }
     }
@@ -86,6 +86,20 @@ internal class BrowserDownloadRequestCoordinator(
             cancelPending()
             showIfAvailable("Storage permission could not be requested")
             android.util.Log.w("BrowseX", "Could not launch legacy download permission", error)
+        }
+    }
+
+    /**
+     * A host failure must close the one-shot Gecko response body. Permission-result batches
+     * continue processing later items even if one individual download cannot be started.
+     */
+    private fun startSafely(response: WebResponse) {
+        try {
+            startDownload(response)
+        } catch (error: RuntimeException) {
+            runCatching { response.body?.close() }
+            android.util.Log.e("BrowseX", "Could not start response download", error)
+            showIfAvailable("Could not start this download")
         }
     }
 
