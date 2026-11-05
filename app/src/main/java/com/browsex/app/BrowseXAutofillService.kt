@@ -86,11 +86,6 @@ internal class BrowseXAutofillService : AutofillService() {
         callback.onSuccess()
     }
 
-    private fun canonicalWebOrigin(raw: String): String? {
-        val candidate = if (raw.contains("://")) raw else "https://$raw"
-        return CredentialOriginPolicy.canonicalHttpsOrigin(candidate)
-    }
-
     private fun findLoginFields(structure: AssistStructure): LoginFields {
         val result = LoginFields()
         for (windowIndex in 0 until structure.windowNodeCount) {

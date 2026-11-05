@@ -126,7 +126,7 @@ This file records implementation state separately from device verification. A ch
 
 - [x] Add provider-neutral account/sync domain models with stable identity subjects, connection states, per-category consent, device metadata and versioned sync-record metadata.
 - [x] Bind the password vault AES-GCM key to Android Keystore user authentication with a 60-second authorization window; migrate legacy v1 ciphertext after successful authentication.
-- [x] Add a user-enabled Android AutofillService for HTTPS web forms, with authenticated account selection and exact-origin credential matching; private-tab state is shared with the service process-safely.
+- [x] Add a user-enabled Android AutofillService for HTTPS web forms, with authenticated account selection, frame-bound exact-origin matching and private-tab enforcement; the external authentication Activity relocks the vault when it closes.
 - [ ] Add authenticated saving of credentials from other Android apps; this first Android-wide service release is intentionally fill-only.
 - [ ] Evaluate WebAuthn/passkey support through the Android credential ecosystem and GeckoView capabilities; do not advertise passkeys before end-to-end tests.
 - [ ] Define secure credential sync separately from bookmarks, including end-to-end encryption, device enrollment, recovery, rotation and revocation; credentials remain local until this is approved.

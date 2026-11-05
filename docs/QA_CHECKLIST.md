@@ -44,6 +44,8 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Use only username/email and existing-password autofill hints; never treat one-time codes or new-password fields as existing credentials.
 - [x] Keep password capture from other apps disabled; this integration is fill-only.
 - [x] Synchronize private-tab access state across vault instances in the same app process and reset it after process replacement.
+- [x] Bind password-field origin to its WebView frame ancestry; fill a username only when its canonical HTTPS origin is identical, and reject mixed-origin password fields.
+- [x] Lock the credential vault when the external Autofill authentication Activity closes.
 - [ ] Verify system provider enablement, web form parsing, account choice, cancellation, and exact-origin behavior on API 26, 29, 33 and current Android.
 - [ ] Verify inline suggestions, browser compatibility and process-death behavior on real devices.
 
