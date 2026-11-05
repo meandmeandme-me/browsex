@@ -72,7 +72,7 @@ internal class BrowserDownloadRequestCoordinator(
     /** Called by the host before its Activity and Gecko runtime are torn down. */
     fun cancelPending() {
         permissionInFlight = false
-        waiting.toList().forEach { it.body?.close() }
+        waiting.toList().forEach(::closeResponseBody)
         waiting.clear()
     }
 
