@@ -12,6 +12,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
+import com.browsex.app.storage.BrowserSettings
+import kotlinx.coroutines.launch
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.core.app.NotificationManagerCompat
@@ -52,6 +55,17 @@ internal class SettingsPage(
     }
 
     fun show() {
+        activity.lifecycleScope.launch {
+            val settings = runCatching { activity.storageRuntime.settings.snapshot() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load settings page state", it)
+                android.widget.Toast.makeText(activity, t("Settings are temporarily unavailable", "الإعدادات غير متاحة مؤقتًا"), android.widget.Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            show(settings)
+        }
+    }
+
+    private fun show(settings: BrowserSettings) {
         lateinit var dialog: AlertDialog
         val page = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -154,64 +168,69 @@ internal class SettingsPage(
         }
 
         section("General", "Choose how you browse")
-        row("Search engine", "Currently: ${store.searchEngine}", "Change") {
+        row("Search engine", "Currently: ${settings.searchEngine}", "Change") {
             val engines = arrayOf("Google", "DuckDuckGo", "Bing")
             AlertDialog.Builder(activity)
                 .setTitle("Default search engine")
-                .setSingleChoiceItems(engines, engines.indexOf(store.searchEngine).coerceAtLeast(0)) { choice, index ->
-                    store.searchEngine = engines[index]
-                    choice.dismiss()
-                    dialog.dismiss()
-                    show()
+                .setSingleChoiceItems(engines, engines.indexOf(settings.searchEngine).coerceAtLeast(0)) { choice, index ->
+                    activity.updateBrowserSettings({ it.copy(searchEngine = engines[index]) }) {
+                        choice.dismiss()
+                        dialog.dismiss()
+                        show()
+                    }
                 }
                 .setNegativeButton(t("Cancel"), null)
                 .show()
         }
 
-        row("Theme", "Choose the browser appearance", t(when (store.themeMode) {
+        row("Theme", "Choose the browser appearance", t(when (settings.themeMode) {
             "dark" -> "Dark"; "light" -> "Light"; else -> "System default"
         })) {
             val values = arrayOf("system", "light", "dark")
             val labels = arrayOf(t("System default"), t("Light"), t("Dark"))
             AlertDialog.Builder(activity)
                 .setTitle(t("Theme"))
-                .setSingleChoiceItems(labels, values.indexOf(store.themeMode).coerceAtLeast(0)) { choice, index ->
-                    store.themeMode = values[index]
-                    AppCompatDelegate.setDefaultNightMode(when (store.themeMode) {
-                        "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-                        "light" -> AppCompatDelegate.MODE_NIGHT_NO
-                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    })
-                    choice.dismiss()
-                    dialog.dismiss()
-                    activity.recreate()
+                .setSingleChoiceItems(labels, values.indexOf(settings.themeMode).coerceAtLeast(0)) { choice, index ->
+                    activity.updateBrowserSettings({ it.copy(themeMode = values[index]) }) { updated ->
+                        AppCompatDelegate.setDefaultNightMode(when (updated.themeMode) {
+                            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+                            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                        })
+                        choice.dismiss()
+                        dialog.dismiss()
+                        activity.recreate()
+                    }
                 }
                 .setNegativeButton(t("Cancel"), null)
                 .show()
         }
-        row("Language", "Choose the app language", t(when (store.languageMode) {
+        row("Language", "Choose the app language", t(when (settings.languageMode) {
             "ar" -> "Arabic"; "en" -> "English"; else -> "System language"
         })) {
             val values = arrayOf("system", "ar", "en")
             val labels = arrayOf(t("System language"), t("Arabic"), t("English"))
             AlertDialog.Builder(activity)
                 .setTitle(t("Language"))
-                .setSingleChoiceItems(labels, values.indexOf(store.languageMode).coerceAtLeast(0)) { choice, index ->
-                    store.languageMode = values[index]
-                    AppCompatDelegate.setApplicationLocales(
-                        LocaleListCompat.forLanguageTags(if (store.languageMode == "system") "" else store.languageMode)
-                    )
-                    choice.dismiss()
-                    dialog.dismiss()
-                    activity.recreate()
+                .setSingleChoiceItems(labels, values.indexOf(settings.languageMode).coerceAtLeast(0)) { choice, index ->
+                    activity.updateBrowserSettings({ it.copy(languageMode = values[index]) }) { updated ->
+                        AppCompatDelegate.setApplicationLocales(
+                            LocaleListCompat.forLanguageTags(if (updated.languageMode == "system") "" else updated.languageMode)
+                        )
+                        choice.dismiss()
+                        dialog.dismiss()
+                        activity.recreate()
+                    }
                 }
                 .setNegativeButton(t("Cancel"), null)
                 .show()
         }
-        row("Website notifications", "Allow websites to send Android notifications", t(if (store.siteNotificationsEnabled) "On" else "Off")) {
-            setWebsiteNotifications(!store.siteNotificationsEnabled)
-            dialog.dismiss()
-            show()
+        row("Website notifications", "Allow websites to send Android notifications", t(if (settings.siteNotificationsEnabled) "On" else "Off")) {
+            activity.updateBrowserSettings({ it.copy(siteNotificationsEnabled = !settings.siteNotificationsEnabled) }) { updated ->
+                setWebsiteNotifications(updated.siteNotificationsEnabled)
+                dialog.dismiss()
+                show()
+            }
         }
         row(
             "Android notification permission",
@@ -272,8 +291,8 @@ internal class SettingsPage(
         row(
             "uBlock Origin",
             when {
-                !store.adBlockInstalled -> "Install and manage real ad and tracker blocking"
-                store.adBlockEnabled -> "Installed and enabled"
+                !settings.adBlockInstalled -> "Install and manage real ad and tracker blocking"
+                settings.adBlockEnabled -> "Installed and enabled"
                 else -> "Installed but disabled"
             },
             t("Manage")
