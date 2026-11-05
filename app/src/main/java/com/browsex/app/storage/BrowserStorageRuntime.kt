@@ -61,4 +61,13 @@ internal class BrowserStorageRuntime(context: Context) {
             }
         }
     }
+
+    fun recordRecentlyClosed(url: String, title: String) {
+        scope.launch {
+            runCatching { awaitReady().sessions.recordRecentlyClosed(url, title) }
+                .onFailure { error ->
+                    android.util.Log.e("BrowseX", "Could not persist recently closed tab", error)
+                }
+        }
+    }
 }
