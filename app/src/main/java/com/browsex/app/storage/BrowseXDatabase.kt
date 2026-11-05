@@ -108,6 +108,34 @@ data class DownloadRecordEntity(
     @ColumnInfo(name = "created_at") val createdAt: Long
 )
 
+@Entity(tableName = "browser_state")
+data class BrowserStateEntity(
+    @PrimaryKey val id: String = "open_tabs",
+    @ColumnInfo(name = "active_index") val activeIndex: Int,
+    @ColumnInfo(name = "saved_at") val savedAt: Long
+)
+
+@Entity(tableName = "open_tabs", indices = [Index("position")])
+data class OpenTabEntity(
+    @PrimaryKey val position: Int,
+    val url: String
+)
+
+@Entity(tableName = "download_name_reservations", indices = [Index("position")])
+data class DownloadNameReservationEntity(
+    @PrimaryKey @ColumnInfo(name = "normalized_name") val normalizedName: String,
+    @ColumnInfo(name = "display_name") val displayName: String,
+    val position: Int,
+    @ColumnInfo(name = "reserved_at") val reservedAt: Long
+)
+
+@Entity(tableName = "platform_download_ids", indices = [Index("position")])
+data class PlatformDownloadIdEntity(
+    @PrimaryKey @ColumnInfo(name = "download_id") val downloadId: Long,
+    val position: Int,
+    @ColumnInfo(name = "tracked_at") val trackedAt: Long
+)
+
 @Dao
 interface BrowseXStorageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -146,6 +174,30 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM bookmark_folders WHERE id = :folderId AND id != 'unfiled'")
     suspend fun deleteFolder(folderId: String)
 
+    @Query("DELETE FROM browser_state")
+    suspend fun clearBrowserState()
+
+    @Query("DELETE FROM open_tabs")
+    suspend fun clearOpenTabs()
+
+    @Query("DELETE FROM download_name_reservations")
+    suspend fun clearDownloadNameReservations()
+
+    @Query("DELETE FROM platform_download_ids")
+    suspend fun clearPlatformDownloadIds()
+
+    @Query("SELECT COUNT(*) FROM bookmarks")
+    suspend fun bookmarkCount(): Int
+
+    @Query("SELECT COUNT(*) FROM history_entries")
+    suspend fun historyCount(): Int
+
+    @Query("SELECT COUNT(*) FROM saved_sessions")
+    suspend fun savedSessionCount(): Int
+
+    @Query("SELECT COUNT(*) FROM download_records")
+    suspend fun downloadRecordCount(): Int
+
     @Transaction
     suspend fun removeFolder(folderId: String) {
         moveFolderItemsToUnfiled(folderId)
@@ -166,7 +218,11 @@ interface BrowseXStorageDao {
         SavedSessionTabEntity::class,
         RecentlyClosedTabEntity::class,
         SitePermissionDecisionEntity::class,
-        DownloadRecordEntity::class
+        DownloadRecordEntity::class,
+        BrowserStateEntity::class,
+        OpenTabEntity::class,
+        DownloadNameReservationEntity::class,
+        PlatformDownloadIdEntity::class
     ],
     version = 1,
     exportSchema = true
