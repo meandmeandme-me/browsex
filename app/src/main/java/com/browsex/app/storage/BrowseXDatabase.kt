@@ -402,6 +402,9 @@ interface BrowseXStorageDao {
         throw IllegalStateException("Unable to reserve a unique download filename")
     }
 
+    @Query("DELETE FROM platform_download_ids WHERE download_id = :downloadId")
+    suspend fun removePlatformDownloadId(downloadId: Long): Int
+
     @Query("SELECT * FROM platform_download_ids ORDER BY position")
     suspend fun platformDownloadIds(): List<PlatformDownloadIdEntity>
 

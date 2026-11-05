@@ -46,12 +46,14 @@ internal class DownloadsPage(
                 return@launch
             }
             val records = repository.all()
-            showWithRepository(repository, records)
+            val platformIds = repository.trackedPlatformDownloadIds()
+            showWithRepository(repository, records, platformIds)
         }
     }
 
-    private fun showWithRepository(repository: RoomDownloadRepository, initialRecords: List<DownloadRecordEntity>) {
+    private fun showWithRepository(repository: RoomDownloadRepository, initialRecords: List<DownloadRecordEntity>, initialPlatformIds: Set<Long>) {
         var streamRecords = initialRecords
+        var platformIds = initialPlatformIds
         lateinit var dialog: AlertDialog
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -137,7 +139,7 @@ internal class DownloadsPage(
 
         fun render() {
             list.removeAllViews()
-            val ownedIds = store.browseXDownloadIds()
+            val ownedIds = platformIds
             val seenIds = mutableSetOf<Long>()
             var querySucceeded = ownedIds.isEmpty()
             // Query only IDs registered by BrowseX; never enumerate other apps' downloads.
@@ -352,8 +354,7 @@ internal class DownloadsPage(
                                     .setNegativeButton(t("Keep", "احتفاظ"), null)
                                     .setPositiveButton(t("Remove", "حذف")) { _, _ ->
                                         runCatching { manager.remove(id) }
-                                        store.removeBrowseXDownload(id)
-                                        render()
+                                        activity.lifecycleScope.launch { repository.removeTrackedPlatformDownload(id); reloadRoomRecords() }
                                     }.show()
                             }
                         }
@@ -392,7 +393,7 @@ internal class DownloadsPage(
                     contentDescription = t("Remove unavailable download", "حذف التنزيل غير المتاح")
                     setTextColor(colors.danger)
                     setPadding(dp(12), dp(8), dp(6), dp(8))
-                    setOnClickListener { store.removeBrowseXDownload(id); render() }
+                    setOnClickListener { activity.lifecycleScope.launch { repository.removeTrackedPlatformDownload(id); reloadRoomRecords() } }
                 })
                 list.addView(stale, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
                 count++
@@ -408,9 +409,11 @@ internal class DownloadsPage(
         fun reloadRoomRecords() {
             activity.lifecycleScope.launch {
                 val scrollY = scroll.scrollY
-                runCatching { repository.all() }
+                runCatching {
+                    streamRecords = repository.all()
+                    platformIds = repository.trackedPlatformDownloadIds()
+                }
                     .onSuccess {
-                        streamRecords = it
                         render()
                         scroll.post { scroll.scrollTo(0, scrollY) }
                     }

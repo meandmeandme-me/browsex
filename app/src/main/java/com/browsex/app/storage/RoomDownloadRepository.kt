@@ -77,6 +77,9 @@ internal class RoomDownloadRepository(
     suspend fun trackedPlatformDownloadIds(): Set<Long> =
         dao.platformDownloadIds().map { it.downloadId }.toSet()
 
+    suspend fun removeTrackedPlatformDownload(id: Long): Boolean =
+        id > 0L && dao.removePlatformDownloadId(id) > 0
+
     private suspend fun finishActive(
         id: String,
         status: String,

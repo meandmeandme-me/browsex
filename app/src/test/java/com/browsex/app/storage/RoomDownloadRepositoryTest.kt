@@ -67,6 +67,9 @@ class RoomDownloadRepositoryTest {
             assertTrue(repository.trackPlatformDownload(123L, 4L))
             assertTrue(repository.trackPlatformDownload(123L, 5L))
             assertEquals(setOf(123L), repository.trackedPlatformDownloadIds())
+            assertTrue(repository.removeTrackedPlatformDownload(123L))
+            assertEquals(emptySet<Long>(), repository.trackedPlatformDownloadIds())
+            assertFalse(repository.removeTrackedPlatformDownload(123L))
         } finally {
             database.close()
         }
