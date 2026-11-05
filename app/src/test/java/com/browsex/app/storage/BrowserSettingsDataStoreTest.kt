@@ -1,6 +1,12 @@
 package com.browsex.app.storage
 
 import android.content.Context
+import androidx.datastore.preferences.SharedPreferencesMigration
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -10,6 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
+import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -17,7 +24,8 @@ class BrowserSettingsDataStoreTest {
     @Test
     fun importsOnlySettingsAndKeepsLegacyKeysUntilFullCutover() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
-        val legacy = context.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
+        val legacyName = "browsex.browser.test.${UUID.randomUUID()}"
+        val legacy = context.getSharedPreferences(legacyName, Context.MODE_PRIVATE)
         legacy.edit()
             .putBoolean("ad_block_enabled", true)
             .putBoolean("ad_block_private_enabled", true)
@@ -25,12 +33,25 @@ class BrowserSettingsDataStoreTest {
             .putString("language_mode", "ar-MA")
             .putString("search_engine", "DuckDuckGo")
             .putStringSet("denied_platform_permissions", setOf("android.permission.CAMERA"))
-            .putString("bookmark_items_v1", "[{\"url\":\"https://kept.test\"}]")
+            .putString("bookmark_items_v1", "[{\\"url\\":\\"https://kept.test\\"}]")
             .commit()
 
-        // The test uses a fresh DataStore file so its migration is deterministic.
-        File(context.filesDir, "datastore/browsex.settings.preferences_pb").delete()
-        val repository = BrowserSettingsDataStore(context)
+        val migrationKeys = setOf(
+            "ad_block_enabled", "ad_block_installed", "ad_block_private_enabled",
+            "theme_mode", "language_mode", "site_notifications_enabled",
+            "home_show_quick_links", "home_show_discovery", "home_layout",
+            "search_engine", "denied_platform_permissions"
+        )
+        val isolatedStore = PreferenceDataStoreFactory.create(
+            migrations = listOf(
+                SharedPreferencesMigration(context, legacyName, keysToMigrate = migrationKeys)
+            ),
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            produceFile = {
+                File(context.filesDir, "datastore/browsex-test-${UUID.randomUUID()}.preferences_pb")
+            }
+        )
+        val repository = BrowserSettingsDataStore(context, isolatedStore)
         val initial = repository.snapshot()
 
         assertTrue(initial.adBlockEnabled)
@@ -40,15 +61,15 @@ class BrowserSettingsDataStoreTest {
         assertEquals("DuckDuckGo", initial.searchEngine)
         assertEquals(setOf("android.permission.CAMERA"), initial.deniedPlatformPermissions)
 
-        // The compatibility facade still reads these keys during staged cutover.
         assertTrue(legacy.getBoolean("ad_block_enabled", false))
         assertTrue(legacy.getBoolean("ad_block_private_enabled", false))
         assertEquals("dark", legacy.getString("theme_mode", null))
-        assertEquals("[{\"url\":\"https://kept.test\"}]", legacy.getString("bookmark_items_v1", null))
+        assertEquals("[{\\"url\\":\\"https://kept.test\\"}]", legacy.getString("bookmark_items_v1", null))
 
         repository.update(initial.copy(themeMode = "light", searchEngine = "Bing"))
         val updated = repository.snapshot()
         assertEquals("light", updated.themeMode)
         assertEquals("Bing", updated.searchEngine)
+        legacy.edit().clear().commit()
     }
 }
