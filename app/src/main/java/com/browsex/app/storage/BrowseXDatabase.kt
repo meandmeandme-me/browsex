@@ -262,6 +262,37 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM bookmark_folders ORDER BY sort_order, name")
     suspend fun folders(): List<BookmarkFolderEntity>
 
+    @Query("DELETE FROM saved_session_tabs WHERE session_id = :sessionId")
+    suspend fun clearTabsForSession(sessionId: String)
+
+    @Query("DELETE FROM saved_sessions WHERE id = :sessionId")
+    suspend fun deleteSavedSession(sessionId: String): Int
+
+    @Query("DELETE FROM recently_closed_tabs WHERE url = :url")
+    suspend fun deleteRecentlyClosedByUrl(url: String)
+
+    @Query("DELETE FROM recently_closed_tabs WHERE id = :id")
+    suspend fun deleteRecentlyClosedById(id: String): Int
+
+    @Transaction
+    suspend fun saveNamedSession(session: SavedSessionEntity, tabs: List<SavedSessionTabEntity>): Boolean {
+        val existing = savedSessions().firstOrNull { it.name.equals(session.name, ignoreCase = true) }
+        if (existing == null && savedSessionCount() >= 10) return false
+        val stableId = existing?.id ?: session.id
+        clearTabsForSession(stableId)
+        putSessions(listOf(session.copy(id = stableId)))
+        putSessionTabs(tabs.map { it.copy(sessionId = stableId) })
+        return true
+    }
+
+    @Transaction
+    suspend fun recordRecentlyClosed(tab: RecentlyClosedTabEntity) {
+        deleteRecentlyClosedByUrl(tab.url)
+        putRecentlyClosed(listOf(tab))
+        val overflow = recentlyClosedTabs().drop(10)
+        overflow.forEach { deleteRecentlyClosedById(it.id) }
+    }
+
     @Query("SELECT * FROM saved_sessions ORDER BY saved_at DESC")
     suspend fun savedSessions(): List<SavedSessionEntity>
 
