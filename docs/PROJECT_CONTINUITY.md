@@ -5,7 +5,8 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Last verified base commit: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`\n- Latest implementation checkpoint: stale SharedPreferences migration marker no longer skips the authoritative Room-state check; regression test added (CI result pending for this change).
+- Last verified successful CI commit: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
+- Latest implementation commit: `eba399035b79ef652e33433fc0e9a26958c1af1f` (CI pending at last check).\n- Latest implementation checkpoint: stale SharedPreferences migration marker no longer skips the authoritative Room-state check; regression test added (CI result pending for this change).
 - Current phase: **Phase 2 — Storage foundation and safe migration**
 - Current status: CI passed for the base commit; storage foundation exists but is not yet wired as the application's live source of truth.
 - Product direction: rebuild the browser experience around a stable, multilingual browser core; old chrome UI is transitional/partly removed. New visual UI is planned separately via Uizard.
@@ -82,7 +83,8 @@ For every meaningful code or documentation change:
 
 ## Change log
 
-### 2026-11-05 — Storage migration marker authority fix\n- Removed the early return based only on the SharedPreferences marker; every migration attempt now checks the Room migration-state row.\n- Added a Robolectric regression test for a stale marker with an empty Room database.\n- CI status for this commit: pending verification.\n\n### 2026-11-05 — Continuity checkpoint created
+### 2026-11-05 — Storage migration marker authority fix\n- Removed the early return based only on the SharedPreferences marker; every migration attempt now checks the Room migration-state row.\n- Added a Robolectric regression test for a stale marker with an empty Room database.\n- Implementation commit: `eba399035b79ef652e33433fc0e9a26958c1af1f`
+- CI runs: [push](https://github.com/meandmeandme-me/browsex/actions/runs/42056985725) and [pull request](https://github.com/meandmeandme-me/browsex/actions/runs/42056999656), both pending at last check.\n\n### 2026-11-05 — Continuity checkpoint created
 - Base: `2ac9b8a48e2767e082c48a75437bf87d148fe12e`
 - Confirmed branch HEAD is `rewrite-v2`.
 - Confirmed GitHub Actions run 42055302138 completed successfully for the base commit.
