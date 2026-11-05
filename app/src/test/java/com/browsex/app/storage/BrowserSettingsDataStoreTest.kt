@@ -66,5 +66,6 @@ class BrowserSettingsDataStoreTest {
         assertEquals("Bing", updated.searchEngine)
 
         legacy.edit().clear().commit()
+        Unit
     }
 }
