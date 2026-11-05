@@ -52,6 +52,7 @@ class RoomDownloadRepositoryTest {
             assertEquals("video.mp4", first)
             assertEquals("video (1).mp4", second)
             assertNotEquals(first, second)
+            assertEquals("_private_.txt", repository.reserveFileName("../private.txt", 3L))
 
             val id = repository.beginStream("video.mp4", "video/mp4", createdAt = 3L)!!
             assertTrue(repository.markRunning(id))

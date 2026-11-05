@@ -1,6 +1,5 @@
 package com.browsex.app.storage
 
-import java.util.Locale
 import java.util.UUID
 
 /** Validated metadata lifecycle for streamed and platform-managed downloads. */
@@ -80,8 +79,11 @@ internal class RoomDownloadRepository(
         id.isNotBlank() && dao.deleteDownloadRecord(id) > 0
 
     suspend fun reserveFileName(candidate: String, now: Long = System.currentTimeMillis()): String? {
-        val safe = candidate.trim().take(MAX_DISPLAY_NAME)
-        if (safe.isBlank() || now < 0L) return null
+        val safe = candidate.trim()
+            .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "_")
+            .trim()
+            .take(MAX_DISPLAY_NAME)
+        if (safe.isBlank() || safe == "." || safe == ".." || now < 0L) return null
         return dao.reserveDownloadName(safe, now)
     }
 
