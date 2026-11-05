@@ -65,8 +65,30 @@ internal class StreamDownloadCoordinator(
                 ) { result, error, cancelled ->
                     scope.launch {
                         if (result != null) {
-                            repository.complete(createdId, result.uri.toString(), result.bytesWritten)
-                            onCompleted(result)
+                            val persisted = runCatching {
+                                repository.complete(createdId, result.uri.toString(), result.bytesWritten)
+                            }.getOrElse { persistenceError ->
+                                android.util.Log.e(
+                                    "BrowseX",
+                                    "File was written but its completed state could not be persisted",
+                                    persistenceError
+                                )
+                                onFailed(
+                                    IllegalStateException(
+                                        "File was saved, but BrowseX could not update its download history",
+                                        persistenceError
+                                    ),
+                                    false
+                                )
+                                return@launch
+                            }
+                            if (persisted) onCompleted(result)
+                            else onFailed(
+                                IllegalStateException(
+                                    "File was saved, but BrowseX could not update its download history"
+                                ),
+                                false
+                            )
                         } else {
                             if (cancelled) repository.cancel(createdId)
                             else repository.fail(createdId, error?.message ?: "Download failed")

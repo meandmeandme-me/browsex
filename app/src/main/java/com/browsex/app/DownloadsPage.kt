@@ -138,8 +138,10 @@ internal class DownloadsPage(
         }
 
         lateinit var reloadRoomRecords: () -> Unit
+        var platformDownloadsActive = false
 
         fun render() {
+            platformDownloadsActive = false
             list.removeAllViews()
             val ownedIds = platformIds
             val seenIds = mutableSetOf<Long>()
@@ -297,6 +299,10 @@ internal class DownloadsPage(
                     count++
                     val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
                     val status = if (statusCol >= 0) c.getInt(statusCol) else -1
+                    if (status == DownloadManager.STATUS_PENDING ||
+                        status == DownloadManager.STATUS_RUNNING ||
+                        status == DownloadManager.STATUS_PAUSED
+                    ) platformDownloadsActive = true
                     val total = if (totalCol >= 0) c.getLong(totalCol) else -1L
                     val soFar = if (soFarCol >= 0) c.getLong(soFarCol) else 0L
                     val date = if (dateCol >= 0) c.getLong(dateCol) else 0L
@@ -426,7 +432,10 @@ internal class DownloadsPage(
         val refreshRunnable = object : Runnable {
             override fun run() {
                 if (!dialog.isShowing) return
-                if (streamRecords.any { it.status == "queued" || it.status == "running" }) {
+                val streamDownloadsActive = streamRecords.any {
+                    it.status == "queued" || it.status == "running"
+                }
+                if (streamDownloadsActive || platformDownloadsActive) {
                     reloadRoomRecords()
                     refreshHandler.postDelayed(this, 900L)
                 }
@@ -438,7 +447,9 @@ internal class DownloadsPage(
         dialog.setOnShowListener {
             dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-            if (streamRecords.any { it.status == "queued" || it.status == "running" }) refreshHandler.postDelayed(refreshRunnable, 900L)
+            if (streamRecords.any { it.status == "queued" || it.status == "running" } ||
+                platformDownloadsActive
+            ) refreshHandler.postDelayed(refreshRunnable, 900L)
         }
         dialog.setOnDismissListener { refreshHandler.removeCallbacks(refreshRunnable) }
         dialog.show()
