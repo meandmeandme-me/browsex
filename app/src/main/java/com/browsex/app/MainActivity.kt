@@ -531,6 +531,20 @@ class MainActivity : AppCompatActivity() {
 
     private val colors get() = BrowseXColors.resolve(this, store)
 
+    private val pageActions by lazy {
+        BrowserPageActionsCoordinator(
+            activity = this,
+            activeSession = { activeTab?.session },
+            activeUrl = { activeTab?.url },
+            currentSearchEngine = { store.searchEngine },
+            updateSearchEngine = { store.searchEngine = it },
+            showMessage = ::toast,
+            mutedColor = { colors.muted },
+            dp = ::dp
+        )
+    }
+
+
     private fun tr(value: String): String = BrowseXStrings.text(this, value)
 
     private fun homePageUrl(): String =
@@ -782,12 +796,12 @@ class MainActivity : AppCompatActivity() {
                 1 -> showSavedPages("Bookmarks", store.bookmarks())
                 2 -> showSavedPages("History", store.history())
                 3 -> openDownloads()
-                4 -> shareCurrentPage()
-                5 -> copyCurrentAddress()
-                6 -> findInPage()
+                4 -> pageActions.shareCurrentPage()
+                5 -> pageActions.copyCurrentAddress()
+                6 -> pageActions.findInPage()
                 7 -> openReaderMode()
                 8 -> showSiteInformation()
-                9 -> chooseSearchEngine()
+                9 -> pageActions.chooseSearchEngine()
                 10 -> AlertDialog.Builder(this).setMessage(tr("Delete all browsing history?"))
                     .setNegativeButton(tr("Cancel"), null)
                     .setPositiveButton(tr("Clear")) { _, _ -> store.clearHistory(); toast("History cleared") }.show()
@@ -1268,86 +1282,6 @@ class MainActivity : AppCompatActivity() {
             },
             onRejected = { if (!isFinishing && !isDestroyed) toast("Authentication required") }
         )
-    }
-
-    private fun chooseSearchEngine() {
-        val choices = arrayOf("Google", "DuckDuckGo", "Bing")
-        AlertDialog.Builder(this).setTitle("Default search engine")
-            .setSingleChoiceItems(choices, choices.indexOf(store.searchEngine).coerceAtLeast(0)) { dialog, which ->
-                store.searchEngine = choices[which]
-                dialog.dismiss()
-                toast("Search engine: ${store.searchEngine}")
-            }.setNegativeButton("Cancel", null).show()
-    }
-
-    private fun shareCurrentPage() {
-        val tab = activeTab ?: return
-        val url = tab.url
-        if (!url.startsWith("http")) return
-        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, url)
-        }, "Share page"))
-    }
-
-    /** Uses GeckoView's native finder so matches are highlighted in page content. */
-    private fun findInPage() {
-        val session = activeTab?.session ?: return
-        val field = EditText(this).apply {
-            hint = "Find text on this page"
-            setSingleLine(true)
-            inputType = InputType.TYPE_CLASS_TEXT
-        }
-        val count = TextView(this).apply {
-            text = "Type to search"
-            setTextColor(colors.muted)
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-        }
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), 0)
-            addView(field)
-            addView(count)
-        }
-        lateinit var dialog: AlertDialog
-        field.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, countBefore: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, countAfter: Int) {
-                val query = s?.toString().orEmpty()
-                if (query.isBlank()) {
-                    session.getFinder().clear()
-                    count.text = "Type to search"
-                } else {
-                    session.getFinder().find(query, GeckoSession.FINDER_FIND_FORWARD)
-                    count.text = "Searching page…"
-                }
-            }
-            override fun afterTextChanged(s: android.text.Editable?) = Unit
-        })
-        dialog = AlertDialog.Builder(this).setTitle("Find in page").setView(panel)
-            .setNegativeButton("Close") { _, _ -> session.getFinder().clear() }
-            .setNeutralButton("Next", null)
-            .setPositiveButton("Previous", null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                session.getFinder().find(null, GeckoSession.FINDER_FIND_FORWARD)
-            }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                session.getFinder().find(null, GeckoSession.FINDER_FIND_BACKWARDS)
-            }
-        }
-        dialog.show()
-        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
-        field.requestFocus()
-    }
-
-    private fun copyCurrentAddress() {
-        val url = activeTab?.url.orEmpty()
-        if (!url.startsWith("http")) return
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Page address", url))
-        toast("Address copied")
     }
 
     private fun toast(message: String) {
