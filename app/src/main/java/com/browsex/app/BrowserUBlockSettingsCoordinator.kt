@@ -143,12 +143,12 @@ internal class BrowserUBlockSettingsCoordinator(
             store.adBlockPrivateEnabled = privateAllowed
             return
         }
-        host.updateBrowserSettings {
+        host.updateBrowserSettings(transform = {
             it.copy(
                 adBlockInstalled = installed,
                 adBlockEnabled = enabled,
                 adBlockPrivateEnabled = privateAllowed
             )
-        }
+        })
     }
 }

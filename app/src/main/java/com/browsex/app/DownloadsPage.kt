@@ -137,6 +137,8 @@ internal class DownloadsPage(
             else -> ""
         }
 
+        lateinit var reloadRoomRecords: () -> Unit
+
         fun render() {
             list.removeAllViews()
             val ownedIds = platformIds
@@ -406,7 +408,7 @@ internal class DownloadsPage(
                 setPadding(dp(22), dp(40), dp(22), dp(40))
             })
         }
-        fun reloadRoomRecords() {
+        reloadRoomRecords = {
             activity.lifecycleScope.launch {
                 val scrollY = scroll.scrollY
                 runCatching {

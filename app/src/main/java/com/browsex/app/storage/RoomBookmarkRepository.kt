@@ -96,7 +96,7 @@ internal class RoomBookmarkRepository(
         val (importedFolders, importedBookmarks) = if (merge) {
             dao.mergeBookmarkBackup(folders, bookmarks)
         } else {
-            dao.replaceBookmarkBackup(folders, bookmarks, MAX_BOOKMARKS)
+            dao.replaceBookmarkBackup(folders, bookmarks, BrowseXStorageDao.MAX_BOOKMARKS)
         }
         return BookmarkBackupImportResult(
             importedFolders = importedFolders,

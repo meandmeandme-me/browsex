@@ -44,7 +44,7 @@ internal class SettingsPage(
     private val accent get() = colors.accent
     private val canvas get() = colors.canvas
 
-    private fun t(value: String): String = BrowseXStrings.text(activity, value)
+    private fun t(value: String, fallback: String = value): String = BrowseXStrings.text(activity, value, fallback)
 
 
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()

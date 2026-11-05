@@ -91,7 +91,7 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
 
     fun setSiteMediaDecision(origin: String, feature: String, decision: String) {
         val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return
-        if (feature !in MEDIA_FEATURES || decision !in PERMISSION_DECISIONS) return
+        if (feature !in SITE_PERMISSION_FEATURES || decision !in PERMISSION_DECISIONS) return
         synchronized(prefs) {
             val key = "$canonicalOrigin|$feature"
             val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }

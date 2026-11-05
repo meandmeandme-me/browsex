@@ -181,9 +181,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
         if (::store.isInitialized) store.markPlatformPermissionDenied(permission)
-        updateBrowserSettings {
+        updateBrowserSettings(transform = {
             it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions + permission)
-        }
+        })
     }
 
     internal fun clearPlatformPermissionDenial(permission: String) {
@@ -193,9 +193,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
         if (::store.isInitialized) store.clearPlatformPermissionDenial(permission)
-        updateBrowserSettings {
+        updateBrowserSettings(transform = {
             it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions - permission)
-        }
+        })
     }
 
     private lateinit var credentialVault: BrowserCredentialVault

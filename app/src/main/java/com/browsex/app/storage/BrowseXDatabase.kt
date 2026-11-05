@@ -259,6 +259,9 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM history_entries WHERE url = :url LIMIT 1")
     suspend fun historyEntryByUrl(url: String): HistoryEntryEntity?
 
+    @Query("DELETE FROM history_entries WHERE url = :url")
+    suspend fun deleteHistoryByUrl(url: String): Int
+
     @Query("DELETE FROM history_entries WHERE id IN (SELECT id FROM history_entries ORDER BY visited_at DESC LIMIT -1 OFFSET :keep)")
     suspend fun pruneHistory(keep: Int)
 
