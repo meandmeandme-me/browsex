@@ -76,7 +76,7 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
     }
 
     fun clearPlatformPermissionDenial(permission: String) = synchronized(prefs) {
-        val values = prefs.getStringSet("denied_platform_permissions", emptySet()).orEmpty().toMutableSet()
+        val values = platformPermissionDenials()
         if (values.remove(permission)) prefs.edit().putStringSet("denied_platform_permissions", values).apply()
     }
 

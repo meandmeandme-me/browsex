@@ -88,6 +88,7 @@ class BrowserPreferencesStoreTest {
             assertEquals("allow", store.siteMediaDecision("https://site-$index.example", "camera"))
         }
     }
+
     @Test
     fun malformedPlatformPermissionSetFallsBackAndCanBeRepaired() {
         val context = RuntimeEnvironment.getApplication()
