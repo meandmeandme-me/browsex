@@ -26,6 +26,7 @@ class RoomDownloadRepositoryTest {
             val id = repository.beginStream(" video.mp4 ", "video/mp4", 100L, 1L)
             assertNotNull(id)
             assertFalse(repository.complete(id!!, "", 10L))
+            assertFalse(repository.complete(id, "javascript:alert(1)", 10L))
             assertTrue(repository.markRunning(id))
             assertTrue(repository.updateProgress(id, 40L))
             assertFalse(repository.updateProgress(id, 20L))

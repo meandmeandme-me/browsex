@@ -46,7 +46,8 @@ internal class RoomDownloadRepository(
 
     suspend fun complete(id: String, uri: String, bytesWritten: Long): Boolean {
         val safeUri = uri.trim().take(MAX_URI_LENGTH)
-        if (safeUri.isBlank() || bytesWritten < 0L) return false
+        val uriScheme = android.net.Uri.parse(safeUri).scheme?.lowercase()
+        if (safeUri.isBlank() || uriScheme !in COMPLETED_URI_SCHEMES || bytesWritten < 0L) return false
         return updateActive(id) { current ->
             if (current.status !in ACTIVE_STATUSES) null
             else current.copy(
@@ -133,5 +134,6 @@ internal class RoomDownloadRepository(
         const val MAX_ERROR_LENGTH = 240
         const val DEFAULT_MIME = "application/octet-stream"
         val ACTIVE_STATUSES = setOf("queued", "running")
+        val COMPLETED_URI_SCHEMES = setOf("content", "file")
     }
 }
