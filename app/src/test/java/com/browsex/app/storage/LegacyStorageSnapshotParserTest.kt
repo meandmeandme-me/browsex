@@ -82,6 +82,33 @@ class LegacyStorageSnapshotParserTest {
     }
 
     @Test
+    fun duplicatePrimaryIdsNeverOverwriteDistinctLegacyRows() {
+        val bookmarks = JSONArray()
+            .put(JSONObject().put("id", "duplicate").put("url", "https://one.example"))
+            .put(JSONObject().put("id", "duplicate").put("url", "https://two.example"))
+        val sessions = JSONArray()
+            .put(JSONObject().put("id", "same-session").put("name", "First")
+                .put("urls", JSONArray().put("https://one.example")))
+            .put(JSONObject().put("id", "same-session").put("name", "Second")
+                .put("urls", JSONArray().put("https://two.example")))
+        val downloads = JSONArray()
+            .put(JSONObject().put("id", "same-download").put("displayName", "one.bin")
+                .put("status", "failed"))
+            .put(JSONObject().put("id", "same-download").put("displayName", "two.bin")
+                .put("status", "failed"))
+        val parsed = LegacyStorageSnapshotParser.parse(mapOf(
+            "bookmark_items_v1" to bookmarks.toString(),
+            "named_sessions_v1" to sessions.toString(),
+            "stream_downloads_v1" to downloads.toString()
+        ))
+        assertEquals(2, parsed.bookmarks.size)
+        assertEquals(2, parsed.bookmarks.map { it.id }.distinct().size)
+        assertEquals(1, parsed.sessions.size)
+        assertEquals(1, parsed.sessionTabs.size)
+        assertEquals(1, parsed.downloads.size)
+    }
+
+    @Test
     fun malformedJsonFailsClosedWithoutChangingTheInputSnapshot() {
         val source = mapOf("bookmark_items_v1" to "{broken", "history_entries_v1" to "{broken")
         val parsed = LegacyStorageSnapshotParser.parse(source)

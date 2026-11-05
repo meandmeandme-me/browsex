@@ -95,8 +95,16 @@ internal object LegacyStorageSnapshotParser {
                     hostOf(url).ifBlank { url }, "unfiled", 0L))
             }
         }
+        val usedIds = mutableSetOf<String>()
         return rows.distinctBy { it.url }.take(200).mapIndexed { index, item ->
-            BookmarkEntity(item.id, item.url, item.title, item.folderId, index, item.createdAt)
+            var id = item.id
+            if (!usedIds.add(id)) {
+                var suffix = 0
+                do {
+                    id = stableId("bookmark-duplicate", "${item.url}#${index}#${suffix++}")
+                } while (!usedIds.add(id))
+            }
+            BookmarkEntity(id, item.url, item.title, item.folderId, index, item.createdAt)
         }
     }
 
@@ -126,11 +134,12 @@ internal object LegacyStorageSnapshotParser {
         val array = parseArray(raw, 10) ?: return emptyList<SavedSessionEntity>() to emptyList()
         val sessions = mutableListOf<SavedSessionEntity>()
         val tabs = mutableListOf<SavedSessionTabEntity>()
+        val usedIds = mutableSetOf<String>()
         for (index in 0 until array.length()) {
             val item = array.optJSONObject(index) ?: continue
             val id = item.optString("id").take(100)
             val name = item.optString("name").trim().take(40)
-            if (id.isBlank() || name.isBlank()) continue
+            if (id.isBlank() || name.isBlank() || !usedIds.add(id)) continue
             val urlArray = item.optJSONArray("urls") ?: JSONArray()
             val rawUrls = (0 until minOf(urlArray.length(), 20))
                 .mapNotNull { urlArray.optString(it).takeIf(String::isNotBlank) }
@@ -197,7 +206,7 @@ internal object LegacyStorageSnapshotParser {
                 if (interrupted) "Download interrupted before storage migration" else item.optString("error").take(240),
                 item.optLong("createdAt", 0L).coerceAtLeast(0L)
             )
-        }
+        }.distinctBy { it.id }
     }
 
     private fun parseReservedNames(raw: String?): List<DownloadNameReservationEntity> {
