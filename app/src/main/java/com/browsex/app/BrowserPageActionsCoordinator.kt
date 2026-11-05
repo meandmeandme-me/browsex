@@ -33,7 +33,6 @@ internal class BrowserPageActionsCoordinator(
             .setSingleChoiceItems(choices, choices.indexOf(currentSearchEngine()).coerceAtLeast(0)) { dialog, which ->
                 updateSearchEngine(choices[which])
                 dialog.dismiss()
-                showMessage("Search engine: ${currentSearchEngine()}")
             }.setNegativeButton("Cancel", null).show()
     }
 

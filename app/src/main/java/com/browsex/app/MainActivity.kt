@@ -642,7 +642,11 @@ class MainActivity : AppCompatActivity() {
             activeSession = { activeTab?.session },
             activeUrl = { activeTab?.url },
             currentSearchEngine = { store.searchEngine },
-            updateSearchEngine = { store.searchEngine = it },
+            updateSearchEngine = { engine ->
+                updateBrowserSettings({ it.copy(searchEngine = engine) }) { updated ->
+                    toast("Search engine: ${updated.searchEngine}")
+                }
+            },
             showMessage = ::toast,
             mutedColor = { colors.muted },
             dp = ::dp
