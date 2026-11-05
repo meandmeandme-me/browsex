@@ -1,15 +1,23 @@
 package com.browsex.app
 
+import com.browsex.app.storage.BrowserStorageRuntime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.mozilla.geckoview.WebResponse
 
 /**
  * Owns the metadata and completion lifecycle for original Gecko response streams.
- * Android permission prompting and user-facing notifications remain in the Activity.
+ * Metadata is committed to Room before the response body is handed to the writer.
  */
 internal class StreamDownloadCoordinator(
-    private val store: BrowserStore,
+    private val storage: BrowserStorageRuntime,
     private val writer: DownloadResponseWriter
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     fun start(
         response: WebResponse,
         onCompleted: (DownloadResponseWriter.Result) -> Unit,
@@ -26,43 +34,58 @@ internal class StreamDownloadCoordinator(
         val candidate = DownloadFileNamePolicy.sanitize(
             android.webkit.URLUtil.guessFileName(url, disposition, mime)
         )
-        val filename = store.reserveDownloadFileName(candidate)
         val totalBytes = response.headers.entries.firstOrNull {
             it.key.equals("content-length", ignoreCase = true)
         }?.value?.toLongOrNull()?.takeIf { it >= 0L } ?: -1L
-        val downloadId = store.beginStreamDownload(
-            displayName = filename,
-            mimeType = mime ?: "application/octet-stream",
-            totalBytes = totalBytes
-        )
-        runCatching { response.setReadTimeoutMillis(120_000L) }
-        writer.write(
-            id = downloadId,
-            body = body,
-            displayName = filename,
-            mimeType = mime,
-            onProgress = { bytes -> store.updateStreamDownloadProgress(downloadId, bytes) }
-        ) { result, error, cancelled ->
-            if (result != null) {
-                store.completeStreamDownload(downloadId, result.uri.toString(), result.bytesWritten)
-                onCompleted(result)
-            } else {
-                store.failStreamDownload(
-                    downloadId,
-                    if (cancelled) "Cancelled by user" else error?.message ?: "Download failed",
-                    cancelled = cancelled
-                )
-                onFailed(error, cancelled)
+
+        scope.launch {
+            var downloadId: String? = null
+            try {
+                val repository = storage.awaitReady().downloads
+                val filename = repository.reserveFileName(candidate)
+                    ?: throw IllegalStateException("Could not reserve a download filename")
+                downloadId = repository.beginStream(
+                    displayName = filename,
+                    mimeType = mime ?: "application/octet-stream",
+                    totalBytes = totalBytes
+                ) ?: throw IllegalStateException("BrowseX download history is full")
+                runCatching { response.setReadTimeoutMillis(120_000L) }
+                writer.write(
+                    id = downloadId,
+                    body = body,
+                    displayName = filename,
+                    mimeType = mime,
+                    onProgress = { bytes ->
+                        scope.launch { repository.updateProgress(downloadId, bytes) }
+                    }
+                ) { result, error, cancelled ->
+                    scope.launch {
+                        if (result != null) {
+                            repository.complete(downloadId, result.uri.toString(), result.bytesWritten)
+                            onCompleted(result)
+                        } else {
+                            if (cancelled) repository.cancel(downloadId)
+                            else repository.fail(downloadId, error?.message ?: "Download failed")
+                            onFailed(error, cancelled)
+                        }
+                    }
+                }
+            } catch (error: Throwable) {
+                runCatching { body.close() }
+                if (downloadId != null) {
+                    runCatching { storage.awaitReady().downloads.fail(downloadId, error.message ?: "Download failed") }
+                }
+                onFailed(error, false)
             }
         }
         return true
     }
 
-    /**
-     * Requests cancellation only. The writer owns the terminal callback and persists
-     * exactly one final state after the response stream has actually stopped.
-     */
+    /** The writer owns the terminal callback and persists exactly one final state. */
     fun cancel(downloadId: String): Boolean = writer.cancel(downloadId)
 
-    fun shutdown() = writer.shutdown()
+    fun shutdown() {
+        writer.shutdown()
+        scope.cancel()
+    }
 }

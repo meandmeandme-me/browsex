@@ -229,7 +229,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         store.recoverInterruptedStreamDownloads()
-        streamDownloadCoordinator = StreamDownloadCoordinator(store, DownloadResponseWriter(applicationContext))
+        streamDownloadCoordinator = StreamDownloadCoordinator(storageRuntime, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             if (uri != null) lifecycleScope.launch {
                 runCatching {
