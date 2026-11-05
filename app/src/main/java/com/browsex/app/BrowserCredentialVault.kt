@@ -25,10 +25,42 @@ internal class BrowserCredentialVault(
 ) : Autocomplete.StorageDelegate {
     private val prefs = context.applicationContext.getSharedPreferences("browsex_credentials_v1", Context.MODE_PRIVATE)
     private val accessPolicy = CredentialAccessPolicy({ SystemClock.elapsedRealtime() })
-    @Volatile private var privateTabsOpen = false
+    @Volatile private var privateTabsOpen = loadPrivateTabsOpen()
 
-    val privateBrowsingActive: Boolean get() = privateTabsOpen
-    fun setPrivateTabsOpen(open: Boolean) { privateTabsOpen = open }
+    /**
+     * The Android Autofill service runs through a separate Service/Activity instance.
+     * Read the process-scoped private-tab marker on every access so that it cannot
+     * bypass the browser's "private tabs override password access" rule.
+     */
+    val privateBrowsingActive: Boolean get() = refreshPrivateTabsOpen()
+
+    fun setPrivateTabsOpen(open: Boolean) {
+        privateTabsOpen = open
+        check(
+            prefs.edit()
+                .putBoolean(PRIVATE_TABS_OPEN_KEY, open)
+                .putInt(PRIVATE_TABS_PROCESS_KEY, android.os.Process.myPid())
+                .commit()
+        )
+    }
+
+    private fun loadPrivateTabsOpen(): Boolean {
+        val pid = android.os.Process.myPid()
+        if (prefs.getInt(PRIVATE_TABS_PROCESS_KEY, -1) != pid) {
+            prefs.edit()
+                .putBoolean(PRIVATE_TABS_OPEN_KEY, false)
+                .putInt(PRIVATE_TABS_PROCESS_KEY, pid)
+                .commit()
+            return false
+        }
+        return prefs.getBoolean(PRIVATE_TABS_OPEN_KEY, false)
+    }
+
+    private fun refreshPrivateTabsOpen(): Boolean {
+        val current = loadPrivateTabsOpen()
+        privateTabsOpen = current
+        return current
+    }
     fun unlockForSession() = accessPolicy.unlock()
     fun lock() = accessPolicy.lock()
 
@@ -37,14 +69,14 @@ internal class BrowserCredentialVault(
         onAuthenticated: () -> Unit,
         onRejected: () -> Unit
     ) {
-        if (privateTabsOpen) {
+        if (privateBrowsingActive) {
             onRejected()
             return
         }
         requestAuthentication(
             {
                 unlockForSession()
-                if (privateTabsOpen) onRejected() else onAuthenticated()
+                if (privateBrowsingActive) onRejected() else onAuthenticated()
             },
             onRejected
         )
@@ -52,7 +84,7 @@ internal class BrowserCredentialVault(
 
     @Synchronized
     fun entries(): List<StoredCredentialSummary> {
-        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return emptyList()
+        if (!accessPolicy.canFetchCredentials(privateBrowsingActive)) return emptyList()
         return runCatching {
         read().map { StoredCredentialSummary(it.optString("id"), it.optString("origin"),
             it.optString("username")) }
@@ -61,7 +93,7 @@ internal class BrowserCredentialVault(
 
     @Synchronized
     fun passwordFor(id: String): String? {
-        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return null
+        if (!accessPolicy.canFetchCredentials(privateBrowsingActive)) return null
         return runCatching {
             read().firstOrNull { it.optString("id") == id }
                 ?.optString("secret")?.takeIf { it.isNotEmpty() }
@@ -70,7 +102,7 @@ internal class BrowserCredentialVault(
 
     @Synchronized
     fun delete(id: String): Boolean {
-        if (!accessPolicy.canFetchCredentials(privateTabsOpen)) return false
+        if (!accessPolicy.canFetchCredentials(privateBrowsingActive)) return false
         val rows = runCatching { read() }.getOrElse { return false }
         val filtered = rows.filterNot { it.optString("id") == id }
         if (filtered.size == rows.size) return false
@@ -84,8 +116,8 @@ internal class BrowserCredentialVault(
 
     @Synchronized
     override fun onLoginFetch(domain: String): GeckoResult<Array<Autocomplete.LoginEntry>> {
-        if (privateTabsOpen) return GeckoResult.fromValue(emptyArray<Autocomplete.LoginEntry>())
-        if (accessPolicy.canFetchCredentials(privateTabsOpen)) {
+        if (privateBrowsingActive) return GeckoResult.fromValue(emptyArray<Autocomplete.LoginEntry>())
+        if (accessPolicy.canFetchCredentials(privateBrowsingActive)) {
             return GeckoResult.fromValue(loadEntriesForDomain(domain))
         }
 
@@ -96,7 +128,7 @@ internal class BrowserCredentialVault(
             {
                 unlockForSession()
                 val entries = synchronized(this) {
-                    if (accessPolicy.canFetchCredentials(privateTabsOpen)) loadEntriesForDomain(domain)
+                    if (accessPolicy.canFetchCredentials(privateBrowsingActive)) loadEntriesForDomain(domain)
                     else emptyArray()
                 }
                 result.complete(entries)
@@ -122,7 +154,7 @@ internal class BrowserCredentialVault(
 
     @Synchronized
     override fun onLoginSave(login: Autocomplete.LoginEntry) {
-        if (privateTabsOpen || !accessPolicy.canFetchCredentials(privateTabsOpen)) return
+        if (privateBrowsingActive || !accessPolicy.canFetchCredentials(privateBrowsingActive)) return
         val origin = CredentialOriginPolicy.canonicalHttpsOrigin(login.origin) ?: return
         val action = login.formActionOrigin?.takeIf { it.isNotBlank() }?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
         if (login.formActionOrigin?.isNotBlank() == true && action != origin) return
@@ -216,5 +248,7 @@ internal class BrowserCredentialVault(
     private companion object {
         const val KEY_ALIAS = "browsex.credentials.aes.v2.auth"
         const val LEGACY_KEY_ALIAS = "browsex.credentials.aes.v1"
+        const val PRIVATE_TABS_OPEN_KEY = "private_tabs_open"
+        const val PRIVATE_TABS_PROCESS_KEY = "private_tabs_process"
     }
 }

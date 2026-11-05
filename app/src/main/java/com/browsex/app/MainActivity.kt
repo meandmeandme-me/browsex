@@ -476,7 +476,10 @@ class MainActivity : AppCompatActivity() {
         shuttingDown = true
         if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
         if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
-        if (::credentialVault.isInitialized) credentialVault.lock()
+        if (::credentialVault.isInitialized) {
+            credentialVault.lock()
+            credentialVault.setPrivateTabsOpen(false)
+        }
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         uBlockOriginManager?.destroy()

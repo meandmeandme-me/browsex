@@ -26,6 +26,18 @@ Implementation and verification are tracked separately. Items under “implement
 - [x] Open-tab snapshot filtering, active-index remapping, duplicate URL preservation and BrowserSessionStore round-trip/recovery have JVM tests.
 - [x] CredentialAccessPolicy has JVM tests for locked-by-default state, timed unlock expiry, private-tab override and explicit lock.
 
+## Android password Autofill
+
+- [x] Register BrowseX as an optional Android 8+ AutofillService, enabled only by the user in Android Settings.
+- [x] Return an authentication-required response; do not decrypt passwords inside the Service.
+- [x] Authenticate with the device and require explicit account selection before returning a Dataset.
+- [x] Match HTTPS origins exactly; reject non-HTTPS, ambiguous, BrowseX-owned and unsupported fields.
+- [x] Use only username/email and existing-password autofill hints; never treat one-time codes or new-password fields as existing credentials.
+- [x] Keep password capture from other apps disabled; this integration is fill-only.
+- [x] Synchronize private-tab access state across vault instances in the same app process and reset it after process replacement.
+- [ ] Verify system provider enablement, web form parsing, account choice, cancellation, and exact-origin behavior on API 26, 29, 33 and current Android.
+- [ ] Verify inline suggestions, browser compatibility and process-death behavior on real devices.
+
 ## uBlock Origin integration
 
 - [x] Install the official Mozilla Add-ons XPI through GeckoView WebExtensionController only after explicit user action.
