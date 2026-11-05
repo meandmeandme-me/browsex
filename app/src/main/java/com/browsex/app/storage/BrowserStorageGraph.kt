@@ -5,9 +5,9 @@ import android.content.Context
 /**
  * Single composition root for the Room-backed repositories.
  *
- * This graph deliberately does not replace BrowserStore in the Activity yet.
- * Production cutover must migrate each feature's reads and writes together,
- * then switch its controller to this graph without maintaining two sources of truth.
+ * BrowserStorageRuntime owns this graph and exposes it only after the legacy snapshot
+ * migration completes. Features are cut over as complete read/write slices; BrowserStore
+ * remains a compatibility façade only for features that have not yet moved to Room/DataStore.
  */
 internal class BrowserStorageGraph(
     context: Context,

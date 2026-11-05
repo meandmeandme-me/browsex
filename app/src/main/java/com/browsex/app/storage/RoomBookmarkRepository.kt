@@ -5,8 +5,8 @@ import com.browsex.app.BookmarkImportPreview
 import java.util.UUID
 
 /**
- * Room-backed bookmark operations. This is the first repository slice; production callers
- * remain on the legacy store until the complete read/write cutover is explicitly wired.
+ * Room-backed bookmark and folder operations. The Activity's library and backup flows
+ * use this repository after BrowserStorageRuntime completes the legacy snapshot migration.
  */
 internal class RoomBookmarkRepository(
     private val dao: BrowseXStorageDao
