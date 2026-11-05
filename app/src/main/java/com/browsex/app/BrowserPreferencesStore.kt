@@ -82,7 +82,7 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
 
     fun siteMediaDecision(origin: String, feature: String): String? {
         val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return null
-        if (feature !in MEDIA_FEATURES) return null
+        if (feature !in SITE_PERMISSION_FEATURES) return null
         return try {
             JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}")
                 .optString("$canonicalOrigin|$feature").takeIf { it == "allow" || it == "deny" }
@@ -123,7 +123,7 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         BrowserSiteOriginPolicy.canonicalOrigin(origin)
 
     private companion object {
-        val MEDIA_FEATURES = setOf("camera", "microphone", "notifications", "geolocation")
+        val SITE_PERMISSION_FEATURES = setOf("camera", "microphone", "notifications", "geolocation")
         val PERMISSION_DECISIONS = setOf("allow", "deny", "ask")
         const val MAX_ORIGIN_MEDIA_DECISIONS = 100
     }
