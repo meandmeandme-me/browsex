@@ -5,6 +5,21 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
+- Latest implementation commit: `26dd424d2c2a51b33fac63e2118ecca32c3632c0` (bookmark import capacity and safe merge).
+- Previous implementation commits in this phase:
+  - `b96163a693736486fe76ca0feec052e80ca0598d`: bounded legacy folder parsing and added versioned Room bookmark backup import/export.
+  - `3b9de5ed2d820fc26f42138e64fb7347187f244b`: capped legacy folder imports at 50 including Unfiled.
+  - `0129e8e880fa9e6157b9be953de7ae3f151fda33`: isolated folder capacity assertions in repository tests.
+- Last verified successful CI commit: `0129e8e880fa9e6157b9be953de7ae3f151fda33` (both build runs succeeded: [42065031924](https://github.com/meandmeandme-me/browsex/actions/runs/42065031924), [42065040085](https://github.com/meandmeandme-me/browsex/actions/runs/42065040085)).
+- **Verification boundary:** commits `3b9de5e`, `b96163a`, and `26dd424` have not yet been treated as verified. Do not claim their tests/build pass until CI completes successfully.
+- Current phase: **Phase 2 — Storage foundation and safe migration**
+- Current task: finish repository parity and harden backup/import before any production cutover.
+- Room is still **not wired as the production source of truth**. Legacy SharedPreferences remains active; do not delete or clear legacy keys.
+- Room bookmark repository now has versioned bookmark-only JSON export/import matching the legacy portable backup contract (`format=browsex-bookmarks`, `version=1`, `folders`, `bookmarks`). Import is merge-only, validates web URLs, deduplicates folder names/URLs, remaps folders by case-insensitive name, never overwrites existing bookmark URLs, and enforces 50 folders / 200 stored bookmarks. It excludes history, sessions, cookies, credentials, and private browsing data.
+- Legacy storage parser now caps folders at 50 total including the protected `unfiled` row while continuing past malformed/duplicate rows until the cap is reached.
+- The latest changes intentionally have not triggered a manual test/review pass yet; finish the remaining implementation first, then perform one consolidated verification pass.
+
+- Branch: `rewrite-v2`
 - Latest implementation commit: `af7ed3d270b6cdb65faed34331922b77a5a38e38` (bookmark-folder lifecycle).
 - Last verified successful CI commit: `af7ed3d270b6cdb65faed34331922b77a5a38e38`
 - Current phase: **Phase 2 — Storage foundation and safe migration**
