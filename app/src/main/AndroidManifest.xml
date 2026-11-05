@@ -13,6 +13,7 @@
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
+        android:name=".BrowseXApplication"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:icon="@drawable/ic_browsex"

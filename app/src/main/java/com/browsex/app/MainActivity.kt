@@ -34,6 +34,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.browsex.app.storage.BrowserStorageRuntime
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -59,7 +62,14 @@ class MainActivity : AppCompatActivity() {
         BrowserTabEventCoordinator(
             isActiveTab = { tab -> tab === activeTab },
             updateChrome = ::updateChrome,
-            recordHistory = { url, title -> store.addHistory(url, title) },
+            recordHistory = { url, title ->
+                lifecycleScope.launch {
+                    runCatching { storageRuntime.awaitReady().history.recordVisit(url, title) }
+                        .onFailure { error ->
+                            android.util.Log.e("BrowseX", "Could not persist browsing history", error)
+                        }
+                }
+            },
             openPopupTab = { parent -> tabController.onNewSession(parent) },
             setFullscreen = ::setFullscreen,
             closeTab = ::closeTab,
@@ -121,6 +131,8 @@ class MainActivity : AppCompatActivity() {
         )
     }
     private lateinit var store: BrowserStore
+    private val storageRuntime: BrowserStorageRuntime
+        get() = (application as BrowseXApplication).storageRuntime
     private lateinit var credentialVault: BrowserCredentialVault
     private val tabPersistenceCoordinator by lazy {
         BrowserTabPersistenceCoordinator(store, { tabs }, { activeTab })
@@ -172,7 +184,14 @@ class MainActivity : AppCompatActivity() {
             activateRestoredSelection = tabController::activateRestoredSelection,
             persistTabs = ::persistTabs,
             storageController = { browserRuntime?.storageController },
-            clearHistory = store::clearHistory,
+            clearHistory = {
+                lifecycleScope.launch {
+                    runCatching { storageRuntime.awaitReady().history.clear() }
+                        .onFailure { error ->
+                            android.util.Log.e("BrowseX", "Could not clear browsing history", error)
+                        }
+                }
+            },
             clearSiteMediaDecisions = { origin ->
                 if (origin == null) store.clearAllSiteMediaDecisions()
                 else store.clearSiteMediaDecisions(origin)
