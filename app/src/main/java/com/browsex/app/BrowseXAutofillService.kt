@@ -44,16 +44,21 @@ internal class BrowseXAutofillService : AutofillService() {
             }
 
             val fields = findLoginFields(structure)
-            val origin = fields.webDomain?.let(::canonicalWebOrigin)
+            val originMatch = BrowserAutofillOriginPolicy.resolve(
+                passwordDomain = fields.passwordDomain,
+                usernameDomain = fields.usernameDomain
+            )
             val passwordId = fields.passwordId
-            if (origin == null || passwordId == null) {
+            if (originMatch == null || passwordId == null || fields.hasAmbiguousPasswordOrigins) {
                 callback.onSuccess(null)
                 return
             }
-            val autofillIds = listOfNotNull(fields.usernameId, passwordId).toTypedArray()
+            // A username in a different frame/origin is never included in this Dataset.
+            val usernameId = fields.usernameId.takeIf { originMatch.usernameMatchesPasswordOrigin }
+            val autofillIds = listOfNotNull(usernameId, passwordId).toTypedArray()
             val authIntent = Intent(this, CredentialAutofillAuthActivity::class.java)
-                .putExtra(CredentialAutofillAuthActivity.EXTRA_ORIGIN, origin)
-                .putExtra(CredentialAutofillAuthActivity.EXTRA_USERNAME_ID, fields.usernameId)
+                .putExtra(CredentialAutofillAuthActivity.EXTRA_ORIGIN, originMatch.passwordOrigin)
+                .putExtra(CredentialAutofillAuthActivity.EXTRA_USERNAME_ID, usernameId)
                 .putExtra(CredentialAutofillAuthActivity.EXTRA_PASSWORD_ID, passwordId)
             val pendingIntent = PendingIntent.getActivity(
                 this,
@@ -89,32 +94,50 @@ internal class BrowseXAutofillService : AutofillService() {
     private fun findLoginFields(structure: AssistStructure): LoginFields {
         val result = LoginFields()
         for (windowIndex in 0 until structure.windowNodeCount) {
-            visit(structure.getWindowNodeAt(windowIndex).rootViewNode, result)
+            visit(structure.getWindowNodeAt(windowIndex).rootViewNode, null, result)
         }
         return result
     }
 
-    private fun visit(node: AssistStructure.ViewNode, result: LoginFields) {
-        if (result.webDomain.isNullOrBlank()) {
-            result.webDomain = node.webDomain?.takeIf { it.isNotBlank() }
-        }
+    private fun visit(
+        node: AssistStructure.ViewNode,
+        inheritedWebDomain: String?,
+        result: LoginFields
+    ) {
+        // WebView providers commonly put webDomain on a frame/root node rather than
+        // on each input. Carry it down the tree, but let nested frames override it.
+        val effectiveDomain = node.webDomain?.takeIf { it.isNotBlank() } ?: inheritedWebDomain
         val hints = node.autofillHints?.toList().orEmpty()
         val id = node.autofillId
-        if (id != null && result.usernameId == null && BrowserAutofillFieldPolicy.isUsername(hints)) {
-            result.usernameId = id
+
+        if (id != null && BrowserAutofillFieldPolicy.isUsername(hints)) {
+            if (result.usernameId == null) {
+                result.usernameId = id
+                result.usernameDomain = effectiveDomain
+            }
         }
-        if (id != null && result.passwordId == null && BrowserAutofillFieldPolicy.isExistingPassword(hints)) {
-            result.passwordId = id
+        if (id != null && BrowserAutofillFieldPolicy.isExistingPassword(hints)) {
+            if (result.passwordId == null) {
+                result.passwordId = id
+                result.passwordDomain = effectiveDomain
+            } else if (
+                BrowserAutofillOriginPolicy.canonicalOrigin(result.passwordDomain) !=
+                BrowserAutofillOriginPolicy.canonicalOrigin(effectiveDomain)
+            ) {
+                result.hasAmbiguousPasswordOrigins = true
+            }
         }
         for (index in 0 until node.childCount) {
-            visit(node.getChildAt(index), result)
+            visit(node.getChildAt(index), effectiveDomain, result)
         }
     }
 
     private data class LoginFields(
         var usernameId: android.view.autofill.AutofillId? = null,
+        var usernameDomain: String? = null,
         var passwordId: android.view.autofill.AutofillId? = null,
-        var webDomain: String? = null
+        var passwordDomain: String? = null,
+        var hasAmbiguousPasswordOrigins: Boolean = false
     )
 
     private fun nextRequestCode(): Int {
