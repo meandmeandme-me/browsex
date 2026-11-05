@@ -3,11 +3,12 @@ package com.browsex.app.storage
 import android.content.Context
 
 /**
- * Single composition root for the Room-backed repositories.
+ * Single composition root for Room-backed repositories.
  *
- * BrowserStorageRuntime owns this graph and exposes it only after the legacy snapshot
- * migration completes. Features are cut over as complete read/write slices; BrowserStore
- * remains a compatibility façade only for features that have not yet moved to Room/DataStore.
+ * BrowserStorageRuntime owns this graph and initializes it on first use. No legacy
+ * user-data import is performed because BrowseX is being rebuilt before launch.
+ * Features still using BrowserStore are being moved to their final repositories in
+ * focused slices; this graph remains the single entry point for durable browser data.
  */
 internal class BrowserStorageGraph(
     context: Context,
