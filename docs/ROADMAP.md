@@ -100,9 +100,9 @@ This file records implementation state separately from device verification. A ch
 - [x] Accept validated BCP 47 app language tags and preserve device locale/RTL direction in the home page.
 - [ ] Add professionally reviewed locale packs beyond English/Arabic; complete plural/number/date formatting and translation coverage for every feature screen. Unsupported locales currently fall back to English.
 - [ ] Complete locale-aware mixed RTL/LTR rendering, font fallback, Unicode search normalization and accessibility verification.
-- [ ] Define provider-neutral account identity and consent boundaries before adding Google, Microsoft, Apple or other identity providers.
+- [x] Define provider-neutral account identity and consent boundaries before adding Google, Microsoft, Apple or other identity providers; models/contracts and the account/sync foundation document are in place, while provider adapters remain unimplemented.
 - [ ] Define opt-in, per-data-type sync contracts, encryption/key ownership, conflict resolution, offline queue and account deletion/export before any cloud sync.
-- [ ] Research and prioritize user-facing capabilities using `WORLD_BROWSER_PRODUCT_REQUIREMENTS.md`; do not clone feature lists without validating value, cost and privacy.
+- [x] Research and prioritize user-facing capabilities using `WORLD_BROWSER_PRODUCT_REQUIREMENTS.md`; the competitor/user-behavior snapshot and P0/P1/P2 priorities are recorded. Revisit priorities when product telemetry or new research is available.
 - [x] Extract the response-stream download writer and its persistence model from MainActivity.
 - [ ] Continue extracting tab/session, privacy, library and preference coordinators; reduce MainActivity's remaining orchestration responsibilities.
 - [x] Add a basic lifecycle-aware inactive-tab policy: keep the active tab, bound warm sessions, and close/recreate inactive sessions under memory pressure.
