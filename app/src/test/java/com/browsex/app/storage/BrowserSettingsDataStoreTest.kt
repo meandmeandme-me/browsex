@@ -1,7 +1,6 @@
 package com.browsex.app.storage
 
 import android.content.Context
-import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.CoroutineScope
@@ -36,20 +35,11 @@ class BrowserSettingsDataStoreTest {
             .putString("bookmark_items_v1", "[{\\"url\\":\\"https://kept.test\\"}]")
             .commit()
 
-        val migrationKeys = setOf(
-            "ad_block_enabled", "ad_block_installed", "ad_block_private_enabled",
-            "theme_mode", "language_mode", "site_notifications_enabled",
-            "home_show_quick_links", "home_show_discovery", "home_layout",
-            "search_engine", "denied_platform_permissions"
-        )
+        val isolatedFile = File(context.filesDir, "datastore/browsex-test-${UUID.randomUUID()}.preferences_pb")
         val isolatedStore = PreferenceDataStoreFactory.create(
-            migrations = listOf(
-                SharedPreferencesMigration(context, legacyName, keysToMigrate = migrationKeys)
-            ),
+            migrations = listOf(LegacySettingsMigration(context, legacyName)),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-            produceFile = {
-                File(context.filesDir, "datastore/browsex-test-${UUID.randomUUID()}.preferences_pb")
-            }
+            produceFile = { isolatedFile }
         )
         val repository = BrowserSettingsDataStore(context, isolatedStore)
         val initial = repository.snapshot()
