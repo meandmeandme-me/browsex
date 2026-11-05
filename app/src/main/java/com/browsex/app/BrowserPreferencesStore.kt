@@ -1,7 +1,6 @@
 package com.browsex.app
 
 import android.content.SharedPreferences
-import android.net.Uri
 import org.json.JSONObject
 
 /**
@@ -72,17 +71,18 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
     }
 
     fun siteMediaDecision(origin: String, feature: String): String? {
-        if (!isSafePermissionOrigin(origin) || feature !in MEDIA_FEATURES) return null
+        val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return null
+        if (feature !in MEDIA_FEATURES) return null
         return try {
             JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}")
-                .optString("$origin|$feature").takeIf { it == "allow" || it == "deny" }
+                .optString("$canonicalOrigin|$feature").takeIf { it == "allow" || it == "deny" }
         } catch (_: Exception) { null }
     }
 
     fun setSiteMediaDecision(origin: String, feature: String, decision: String) {
-        if (!isSafePermissionOrigin(origin) || feature !in MEDIA_FEATURES) return
-        if (decision !in PERMISSION_DECISIONS) return
-        val key = "$origin|$feature"
+        val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return
+        if (feature !in MEDIA_FEATURES || decision !in PERMISSION_DECISIONS) return
+        val key = "$canonicalOrigin|$feature"
         val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
         catch (_: Exception) { JSONObject() }
         if (decision == "ask") json.remove(key) else json.put(key, decision)
@@ -94,10 +94,10 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
     }
 
     fun clearSiteMediaDecisions(origin: String) {
-        if (!isSafePermissionOrigin(origin)) return
+        val canonicalOrigin = canonicalPermissionOrigin(origin) ?: return
         val json = try { JSONObject(prefs.getString("site_media_permissions", "{}") ?: "{}") }
         catch (_: Exception) { return }
-        json.keys().asSequence().filter { it.startsWith("$origin|") }.toList().forEach(json::remove)
+        json.keys().asSequence().filter { it.startsWith("$canonicalOrigin|") }.toList().forEach(json::remove)
         prefs.edit().putString("site_media_permissions", json.toString()).apply()
     }
 
@@ -105,11 +105,8 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         prefs.edit().remove("site_media_permissions").apply()
     }
 
-    private fun isSafePermissionOrigin(origin: String): Boolean = try {
-        val uri = Uri.parse(origin)
-        (uri.scheme == "https" || uri.scheme == "http") &&
-            !uri.host.isNullOrBlank() && uri.userInfo == null
-    } catch (_: Exception) { false }
+    private fun canonicalPermissionOrigin(origin: String): String? =
+        BrowserSiteOriginPolicy.canonicalOrigin(origin)
 
     private companion object {
         val MEDIA_FEATURES = setOf("camera", "microphone")
