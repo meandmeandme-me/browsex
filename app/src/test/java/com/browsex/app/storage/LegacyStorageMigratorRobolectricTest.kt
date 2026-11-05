@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class LegacyStorageMigratorRobolectricTest {
     @Test
     fun migratesLegacySnapshotWithoutChangingSourceAndRetriesIdempotently() = runBlocking {
