@@ -234,12 +234,15 @@ class MainActivity : AppCompatActivity() {
         store.recoverInterruptedStreamDownloads()
         streamDownloadCoordinator = StreamDownloadCoordinator(store, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-            if (uri != null) runCatching {
-                contentResolver.openOutputStream(uri)?.use { output ->
-                    output.write(store.exportBookmarks().toByteArray(Charsets.UTF_8))
-                } ?: error("Could not open destination")
-            }.onSuccess { toast("Bookmarks exported") }
-                .onFailure { android.util.Log.e("BrowseX", "Bookmark export failed", it); toast("Could not export bookmarks") }
+            if (uri != null) lifecycleScope.launch {
+                runCatching {
+                    val payload = storageRuntime.awaitReady().bookmarks.exportBookmarks()
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(payload.toByteArray(Charsets.UTF_8))
+                    } ?: error("Could not open destination")
+                }.onSuccess { toast("Bookmarks exported") }
+                    .onFailure { android.util.Log.e("BrowseX", "Bookmark export failed", it); toast("Could not export bookmarks") }
+            }
         }
         bookmarkImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) runCatching {
@@ -258,41 +261,47 @@ class MainActivity : AppCompatActivity() {
                 } ?: error("Could not read backup")
                 String(bytes, Charsets.UTF_8)
             }.onSuccess { payload ->
-                val preview = runCatching { store.previewBookmarkImport(payload) }.getOrElse { error ->
-                    android.util.Log.w("BrowseX", "Bookmark import preview rejected", error)
-                    toast(error.message ?: "Could not read backup")
-                    return@onSuccess
-                }
-                val summary = getString(
-                    R.string.ui_import_preview_message,
-                    preview.totalItems,
-                    preview.validItems,
-                    preview.skippedItems,
-                    preview.duplicateIncomingItems,
-                    preview.existingUrlConflicts,
-                    preview.incomingFolders
-                )
-                AlertDialog.Builder(this)
-                    .setTitle(tr("Import preview"))
-                    .setMessage(summary)
-                    .setPositiveButton(tr("Merge with current bookmarks")) { _, _ ->
-                        runCatching { store.importBookmarks(payload, merge = true) }
-                            .onSuccess { count -> toast("Imported $count bookmarks") }
-                            .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
+                lifecycleScope.launch {
+                    val preview = runCatching { storageRuntime.awaitReady().bookmarks.previewImport(payload) }.getOrElse { error ->
+                        android.util.Log.w("BrowseX", "Bookmark import preview rejected", error)
+                        toast(error.message ?: "Could not read backup")
+                        return@launch
                     }
-                    .setNegativeButton(tr("Replace current bookmarks")) { _, _ ->
-                        AlertDialog.Builder(this)
-                            .setMessage(tr("Replace all current bookmarks and folders?"))
-                            .setNegativeButton(tr("Cancel"), null)
-                            .setPositiveButton(tr("Replace")) { _, _ ->
-                                runCatching { store.importBookmarks(payload, merge = false) }
-                                    .onSuccess { count -> toast("Imported $count bookmarks") }
+                    val summary = getString(
+                        R.string.ui_import_preview_message,
+                        preview.totalItems,
+                        preview.validItems,
+                        preview.skippedItems,
+                        preview.duplicateIncomingItems,
+                        preview.existingUrlConflicts,
+                        preview.incomingFolders
+                    )
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(tr("Import preview"))
+                        .setMessage(summary)
+                        .setPositiveButton(tr("Merge with current bookmarks")) { _, _ ->
+                            lifecycleScope.launch {
+                                runCatching { storageRuntime.awaitReady().bookmarks.importBookmarks(payload, merge = true) }
+                                    .onSuccess { result -> toast("Imported ${result.importedBookmarks} bookmarks") }
                                     .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
                             }
-                            .show()
-                    }
-                    .setNeutralButton(tr("Cancel"), null)
-                    .show()
+                        }
+                        .setNegativeButton(tr("Replace current bookmarks")) { _, _ ->
+                            AlertDialog.Builder(this@MainActivity)
+                                .setMessage(tr("Replace all current bookmarks and folders?"))
+                                .setNegativeButton(tr("Cancel"), null)
+                                .setPositiveButton(tr("Replace")) { _, _ ->
+                                    lifecycleScope.launch {
+                                        runCatching { storageRuntime.awaitReady().bookmarks.importBookmarks(payload, merge = false) }
+                                            .onSuccess { result -> toast("Imported ${result.importedBookmarks} bookmarks") }
+                                            .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
+                                    }
+                                }
+                                .show()
+                        }
+                        .setNeutralButton(tr("Cancel"), null)
+                        .show()
+                }
             }.onFailure { error -> android.util.Log.w("BrowseX", "Bookmark backup read failed", error); toast(error.message ?: "Could not read backup") }
         }
         AppCompatDelegate.setDefaultNightMode(when (store.themeMode) {

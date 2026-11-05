@@ -530,6 +530,24 @@ interface BrowseXStorageDao {
     @Query("SELECT COUNT(*) FROM download_records")
     suspend fun downloadRecordCount(): Int
 
+    @Transaction
+    suspend fun replaceBookmarkBackup(
+        incomingFolders: List<BookmarkFolderEntity>,
+        incomingBookmarks: List<BookmarkEntity>,
+        maxBookmarks: Int = MAX_BOOKMARKS
+    ): Pair<Int, Int> {
+        clearBookmarks()
+        clearFolders()
+        putFolders(listOf(BookmarkFolderEntity("unfiled", "Unfiled", 0, 0L)) +
+            incomingFolders.take((MAX_BOOKMARK_FOLDERS - 1).coerceAtLeast(0)))
+        val availableFolders = folders().map { it.id }.toSet()
+        val accepted = incomingBookmarks.take(maxBookmarks.coerceAtLeast(0)).mapIndexed { index, item ->
+            item.copy(folderId = item.folderId.takeIf(availableFolders::contains) ?: "unfiled", sortOrder = index)
+        }
+        putBookmarks(accepted)
+        return (folderCount() - 1).coerceAtLeast(0) to accepted.size
+    }
+
     /**
      * Merge a validated bookmark backup without overwriting existing URLs.
      * Folder matching is case-insensitive and the operation is one transaction.

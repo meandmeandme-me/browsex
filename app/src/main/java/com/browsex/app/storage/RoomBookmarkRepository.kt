@@ -1,6 +1,7 @@
 package com.browsex.app.storage
 
 import com.browsex.app.NavigationInput
+import com.browsex.app.BookmarkImportPreview
 import java.util.UUID
 
 /**
@@ -37,7 +38,7 @@ internal class RoomBookmarkRepository(
      * Imports a versioned backup as a merge. Existing bookmarks are never overwritten;
      * malformed or unsafe rows are skipped and the payload is size/count bounded.
      */
-    suspend fun importBookmarks(payload: String): BookmarkBackupImportResult {
+    suspend fun importBookmarks(payload: String, merge: Boolean = true): BookmarkBackupImportResult {
         require(payload.length <= MAX_BACKUP_BYTES) { "Backup file is too large" }
         val root = runCatching { org.json.JSONObject(payload) }
             .getOrElse { throw IllegalArgumentException("Invalid bookmark backup", it) }
@@ -91,11 +92,41 @@ internal class RoomBookmarkRepository(
                 createdAt = item.optLong("createdAt", 0L).coerceAtLeast(0L)
             ))
         }
-        val (importedFolders, importedBookmarks) = dao.mergeBookmarkBackup(folders, bookmarks)
+        val (importedFolders, importedBookmarks) = if (merge) {
+            dao.mergeBookmarkBackup(folders, bookmarks)
+        } else {
+            dao.replaceBookmarkBackup(folders, bookmarks, MAX_BOOKMARKS)
+        }
         return BookmarkBackupImportResult(
             importedFolders = importedFolders,
             importedBookmarks = importedBookmarks,
             skippedBookmarks = skipped + (bookmarks.size - importedBookmarks)
+        )
+    }
+
+    suspend fun previewImport(payload: String): BookmarkImportPreview {
+        require(payload.length <= MAX_BACKUP_BYTES) { "Backup file is too large" }
+        val root = runCatching { org.json.JSONObject(payload) }
+            .getOrElse { throw IllegalArgumentException("Invalid bookmark backup", it) }
+        require(root.optString("format") == BACKUP_FORMAT && root.optInt("version") == BACKUP_VERSION) {
+            "Unsupported bookmark backup"
+        }
+        val folders = root.optJSONArray("folders") ?: org.json.JSONArray()
+        val incoming = root.optJSONArray("bookmarks") ?: org.json.JSONArray()
+        require(folders.length() <= MAX_BACKUP_FOLDERS) { "Too many folders in backup" }
+        require(incoming.length() <= MAX_BACKUP_BOOKMARKS) { "Too many bookmarks in backup" }
+        val validUrls = (0 until incoming.length()).mapNotNull { index ->
+            incoming.optJSONObject(index)?.optString("url")?.trim()?.takeIf(::isSafeUrl)
+        }
+        val unique = validUrls.distinct()
+        val existing = dao.bookmarks().map { it.url }.toSet()
+        return BookmarkImportPreview(
+            totalItems = incoming.length(),
+            validItems = unique.size,
+            skippedItems = incoming.length() - validUrls.size,
+            duplicateIncomingItems = validUrls.size - unique.size,
+            existingUrlConflicts = unique.count(existing::contains),
+            incomingFolders = folders.length()
         )
     }
 
@@ -170,7 +201,7 @@ internal class RoomBookmarkRepository(
         const val MAX_TITLE_LENGTH = 160
         const val MAX_FOLDER_NAME_LENGTH = 40
         const val MAX_BACKUP_BYTES = 1_000_000
-        const val MAX_BACKUP_FOLDERS = 50
+        const val MAX_BACKUP_FOLDERS = 49
         const val MAX_BACKUP_BOOKMARKS = 1000
         const val BACKUP_FORMAT = "browsex-bookmarks"
         const val BACKUP_VERSION = 1
