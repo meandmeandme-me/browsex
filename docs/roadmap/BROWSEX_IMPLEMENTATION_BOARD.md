@@ -66,3 +66,23 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - [ ] Remaining limitations are documented; no unverified device test is claimed.
 
 **Important:** This file is a repository-side implementation board. GitHub Project V2 board creation is not exposed by the connected GitHub actions in this workspace; the live task cards are the linked Issues above.
+
+
+## Latest implementation and verification — 2026-11-05
+
+- CI run [#42088452485](https://github.com/meandmeandme-me/browsex/actions/runs/42088452485) passed for code commit `99c381744694148846068b36e9bff6b0f5f64da1`: unit tests, lint, locale validation, debug APK assembly, ABI/package/signature verification and artifact upload.
+- Debug artifacts produced: ARM32, ARM64 and universal. Signed release APK generation was skipped because release signing is not configured.
+- The exact Room v2 schema was generated and uploaded as CI artifact `browsex-room-schema`, artifact ID `13444985376`; it remains a source-control release gate until the exact generated JSON is committed.
+- Downloads UI now refreshes while Android DownloadManager jobs are active, and stream completion no longer reports success if the Room completion transition fails.
+- Site information exposes stored geolocation and notification decisions even when there is no current Gecko permission row, and persists changes made there.
+- Bookmark ordering is now stable per folder: new bookmarks append, moving folders appends to the destination, and the organization menu supports moving bookmarks up/down within a folder.
+
+## Remaining work (not yet claimed complete)
+
+- [ ] Commit the exact generated Room schema JSON and verify the schema/migration pair.
+- [ ] Finish legacy storage cutover and migration parity review.
+- [ ] Complete DownloadManager enqueue/reconciliation and pause/resume/retry semantics; current Gecko response-body downloads use BrowseX's bounded stream writer.
+- [ ] Complete API-level and device permission/privacy testing.
+- [ ] Finish translation coverage beyond Arabic/English fallback, RTL, TalkBack and large-font audits.
+- [ ] Add BrowseX-owned per-site uBlock exception UX and extension update/recovery coverage.
+- [ ] Verify install/update behavior on Android 10 and the target TECNO device; CI artifact validation is not a substitute for device installation.
