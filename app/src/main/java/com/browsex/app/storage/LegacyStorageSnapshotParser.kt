@@ -143,13 +143,21 @@ internal object LegacyStorageSnapshotParser {
             val urlArray = item.optJSONArray("urls") ?: JSONArray()
             val rawUrls = (0 until minOf(urlArray.length(), 20))
                 .mapNotNull { urlArray.optString(it).takeIf(String::isNotBlank) }
-            if (rawUrls.isEmpty()) continue
+            if (rawUrls.isEmpty() || rawUrls.none(::isPersistableTabUrl)) continue
             val snapshot = TabSessionState.normalize(rawUrls, item.optInt("activeIndex", 0), HOME_URL)
             sessions.add(SavedSessionEntity(id, name, snapshot.activeIndex,
                 item.optLong("savedAt", 0L).coerceAtLeast(0L)))
             snapshot.urls.forEachIndexed { position, url -> tabs.add(SavedSessionTabEntity(id, position, url)) }
         }
         return sessions to tabs
+    }
+
+    private fun isPersistableTabUrl(raw: String): Boolean {
+        val url = raw.trim()
+        return url == HOME_URL || url == "about:blank" ||
+            (url.startsWith("$HOME_URL?") &&
+                TabSessionState.normalize(listOf(url), 0, HOME_URL).urls.firstOrNull() == url) ||
+            NavigationInput.isValidWebUrl(url)
     }
 
     private fun parseRecentlyClosed(raw: String?): List<RecentlyClosedTabEntity> {
