@@ -50,6 +50,9 @@ internal class StreamDownloadCoordinator(
                     totalBytes = totalBytes
                 ) ?: throw IllegalStateException("BrowseX download history is full")
                 downloadId = createdId
+                check(repository.markRunning(createdId)) {
+                    "Could not start the persisted download record"
+                }
                 runCatching { response.setReadTimeoutMillis(120_000L) }
                 writer.write(
                     id = createdId,
