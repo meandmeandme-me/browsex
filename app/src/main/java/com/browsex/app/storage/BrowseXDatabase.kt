@@ -364,6 +364,9 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM download_name_reservations ORDER BY position")
     suspend fun downloadNameReservations(): List<DownloadNameReservationEntity>
 
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM download_name_reservations")
+    suspend fun nextDownloadNameReservationPosition(): Int
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDownloadNameReservation(item: DownloadNameReservationEntity): Long
 
@@ -382,7 +385,7 @@ interface BrowseXStorageDao {
             val inserted = insertDownloadNameReservation(DownloadNameReservationEntity(
                 normalizedName = normalized,
                 displayName = display,
-                position = downloadNameReservationCount(),
+                position = nextDownloadNameReservationPosition(),
                 reservedAt = now
             ))
             if (inserted != -1L) {
@@ -397,6 +400,9 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM platform_download_ids ORDER BY position")
     suspend fun platformDownloadIds(): List<PlatformDownloadIdEntity>
 
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM platform_download_ids")
+    suspend fun nextPlatformDownloadIdPosition(): Int
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPlatformDownloadId(item: PlatformDownloadIdEntity): Long
 
@@ -407,7 +413,7 @@ interface BrowseXStorageDao {
     suspend fun trackPlatformDownloadId(item: PlatformDownloadIdEntity): Boolean {
         if (item.downloadId <= 0L) return false
         if (platformDownloadIds().any { it.downloadId == item.downloadId }) return true
-        val inserted = insertPlatformDownloadId(item.copy(position = platformDownloadIdCount()))
+        val inserted = insertPlatformDownloadId(item.copy(position = nextPlatformDownloadIdPosition()))
         if (inserted == -1L) return false
         prunePlatformDownloadIds(300)
         return true
