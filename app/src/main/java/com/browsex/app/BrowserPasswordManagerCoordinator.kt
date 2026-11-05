@@ -43,7 +43,7 @@ internal class BrowserPasswordManagerCoordinator(
                                 return@authenticate
                             }
                             val dialog = AlertDialog.Builder(activity).setTitle(Uri.parse(item.origin).host.orEmpty())
-                                .setMessage("Username: " + item.username + "\\nPassword: " + secret)
+                                .setMessage("Username: " + item.username + "\nPassword: " + secret)
                                 .setPositiveButton(translate("Copy password")) { _, _ ->
                                     val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                                     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Password", secret))
