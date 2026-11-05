@@ -182,6 +182,10 @@ internal class UBlockOriginManager(
         operation.accept(
             { updated ->
                 if (!destroyed) {
+                    if (updated == null) {
+                        onComplete(null, IllegalStateException("GeckoView returned no updated extension"))
+                        return@accept
+                    }
                     extension = updated
                     registerExtension(updated)
                     onComplete(updated, null)
