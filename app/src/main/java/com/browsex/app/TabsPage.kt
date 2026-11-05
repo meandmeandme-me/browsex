@@ -10,6 +10,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 /** UI-only tab workspace. All browser mutations are injected through callbacks. */
 internal class TabsPage(
@@ -109,76 +111,110 @@ internal class TabsPage(
                     .setNegativeButton(tr("Cancel"), null)
                     .setPositiveButton(tr("Save")) { _, _ ->
                         val name = field.text?.toString().orEmpty().trim()
-                        val save = {
-                            val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
-                            if (store.saveNamedSession(name, regularTabs.map { it.url }, activeIndex)) {
-                                onToast("Session saved")
-                            } else {
-                                onToast("Session name is invalid or the session limit was reached")
+                        activity.lifecycleScope.launch {
+                            val sessions = runCatching { activity.storageRuntime.awaitReady().sessions.sessions() }
+                                .getOrElse {
+                                    android.util.Log.e("BrowseX", "Could not read saved sessions", it)
+                                    onToast("Could not save session")
+                                    return@launch
+                                }
+                            val save = {
+                                activity.lifecycleScope.launch {
+                                    val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+                                    val saved = runCatching {
+                                        activity.storageRuntime.awaitReady().sessions.saveSession(
+                                            name, regularTabs.map { it.url }, activeIndex
+                                        )
+                                    }.getOrDefault(false)
+                                    onToast(if (saved) "Session saved" else "Session name is invalid or the session limit was reached")
+                                }
                             }
+                            val replacesExisting = sessions.any { it.name.equals(name, ignoreCase = true) }
+                            if (replacesExisting) {
+                                AlertDialog.Builder(activity)
+                                    .setMessage(tr("A session with this name already exists. Replace it?"))
+                                    .setNegativeButton(tr("Cancel"), null)
+                                    .setPositiveButton(tr("Replace")) { _, _ -> save() }
+                                    .show()
+                            } else save()
                         }
-                        val replacesExisting = store.savedSessions().any { it.name.equals(name, ignoreCase = true) }
-                        if (replacesExisting) {
-                            AlertDialog.Builder(activity)
-                                .setMessage(tr("A session with this name already exists. Replace it?"))
-                                .setNegativeButton(tr("Cancel"), null)
-                                .setPositiveButton(tr("Replace")) { _, _ -> save() }
-                                .show()
-                        } else save()
                     }
                     .show()
             }
         }
         sessionAction("Saved sessions") {
-            val sessions = store.savedSessions()
-            if (sessions.isEmpty()) {
-                onToast("No saved sessions")
-            } else {
-                AlertDialog.Builder(activity)
-                    .setTitle(tr("Saved sessions"))
-                    .setItems(sessions.map { "${it.name} · ${it.urls.size}" }.toTypedArray()) { _, index ->
-                        val selected = sessions[index]
-                        AlertDialog.Builder(activity)
-                            .setTitle(selected.name)
-                            .setItems(arrayOf(tr("Open session"), tr("Delete session"))) { _, action ->
-                                if (action == 0) {
-                                    val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
-                                    val toOpen = selected.urls.take(available)
-                                    val firstOpenedIndex = tabs.size
-                                    toOpen.forEach { onCreateTab(it) }
-                                    if (toOpen.isEmpty()) onToast("Tab limit reached")
-                                    else {
-                                        onActivateTab(tabs[firstOpenedIndex + selected.activeIndex.coerceIn(0, toOpen.lastIndex)])
-                                        if (toOpen.size < selected.urls.size) onToast("Some tabs were skipped because the tab limit was reached")
-                                    }
-                                } else {
-                                    store.removeNamedSession(selected.id)
-                                    onToast("Session deleted")
-                                }
-                            }
-                            .setNegativeButton(tr("Cancel"), null)
-                            .show()
+            activity.lifecycleScope.launch {
+                val sessions = runCatching { activity.storageRuntime.awaitReady().sessions.sessions() }
+                    .getOrElse {
+                        android.util.Log.e("BrowseX", "Could not load saved sessions", it)
+                        onToast("Could not load saved sessions")
+                        return@launch
                     }
-                    .setNegativeButton(tr("Close"), null)
-                    .show()
+                if (sessions.isEmpty()) {
+                    onToast("No saved sessions")
+                } else {
+                    AlertDialog.Builder(activity)
+                        .setTitle(tr("Saved sessions"))
+                        .setItems(sessions.map { "${it.name} · ${it.urls.size}" }.toTypedArray()) { _, index ->
+                            val selected = sessions[index]
+                            AlertDialog.Builder(activity)
+                                .setTitle(selected.name)
+                                .setItems(arrayOf(tr("Open session"), tr("Delete session"))) { _, action ->
+                                    if (action == 0) {
+                                        val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                                        val toOpen = selected.urls.take(available)
+                                        val firstOpenedIndex = tabs.size
+                                        toOpen.forEach { onCreateTab(it) }
+                                        if (toOpen.isEmpty()) onToast("Tab limit reached")
+                                        else {
+                                            onActivateTab(tabs[firstOpenedIndex + selected.activeIndex.coerceIn(0, toOpen.lastIndex)])
+                                            if (toOpen.size < selected.urls.size) onToast("Some tabs were skipped because the tab limit was reached")
+                                        }
+                                    } else {
+                                        activity.lifecycleScope.launch {
+                                            val removed = runCatching {
+                                                activity.storageRuntime.awaitReady().sessions.deleteSession(selected.id)
+                                            }.getOrDefault(false)
+                                            onToast(if (removed) "Session deleted" else "Could not delete session")
+                                        }
+                                    }
+                                }
+                                .setNegativeButton(tr("Cancel"), null)
+                                .show()
+                        }
+                        .setNegativeButton(tr("Close"), null)
+                        .show()
+                }
             }
         }
         sessionAction("Recently closed") {
-            val recentlyClosed = store.recentlyClosedTabs()
-            if (recentlyClosed.isEmpty()) {
-                onToast("No recently closed tabs")
-            } else {
-                AlertDialog.Builder(activity)
-                    .setTitle(tr("Recently closed"))
-                    .setItems(recentlyClosed.map { "${it.title} · ${Uri.parse(it.url).host.orEmpty()}" }.toTypedArray()) { _, index ->
-                        if (tabs.size >= TabSessionState.MAX_TABS) {
-                            onToast("Tab limit reached")
-                        } else {
-                            store.consumeRecentlyClosedTab(recentlyClosed[index].id)?.let { onCreateTab(it.url) }
-                        }
+            activity.lifecycleScope.launch {
+                val recentlyClosed = runCatching { activity.storageRuntime.awaitReady().sessions.recentlyClosed() }
+                    .getOrElse {
+                        android.util.Log.e("BrowseX", "Could not load recently closed tabs", it)
+                        onToast("Could not load recently closed tabs")
+                        return@launch
                     }
-                    .setNegativeButton(tr("Close"), null)
-                    .show()
+                if (recentlyClosed.isEmpty()) {
+                    onToast("No recently closed tabs")
+                } else {
+                    AlertDialog.Builder(activity)
+                        .setTitle(tr("Recently closed"))
+                        .setItems(recentlyClosed.map { "${it.title} · ${Uri.parse(it.url).host.orEmpty()}" }.toTypedArray()) { _, index ->
+                            if (tabs.size >= TabSessionState.MAX_TABS) {
+                                onToast("Tab limit reached")
+                            } else {
+                                activity.lifecycleScope.launch {
+                                    val restored = runCatching {
+                                        activity.storageRuntime.awaitReady().sessions.consumeRecentlyClosed(recentlyClosed[index].id)
+                                    }.getOrNull()
+                                    restored?.let { onCreateTab(it.url) }
+                                }
+                            }
+                        }
+                        .setNegativeButton(tr("Close"), null)
+                        .show()
+                }
             }
         }
         page.addView(sessionActions)
