@@ -13,7 +13,7 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 
-/** Additive local schema. It is deliberately not wired into production yet. */
+/** Room schema for the production browser storage graph; see BrowserStorageRuntime for migration gating. */
 @Entity(tableName = "bookmark_folders")
 data class BookmarkFolderEntity(
     @PrimaryKey val id: String,

@@ -33,7 +33,7 @@ This is the repository-side phase board for the A–F implementation. Each phase
 ### C — Downloads
 - Streamed download metadata and progress are persisted through Room.
 - SQL state transitions are atomic; queued records move to running before transfer.
-- Downloads UI reads Room stream records and Room platform DownloadManager IDs.
+- Downloads UI reads Room stream records. It can query only explicitly tracked Android DownloadManager IDs, but no production enqueue/registration path currently feeds those IDs; Gecko response downloads use the bounded stream writer.
 - Remaining: complete Android DownloadManager enqueue/reconciliation, resume/retry semantics, cleanup edge cases and device coverage.
 
 ### D — Permissions and privacy
@@ -60,7 +60,7 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - [ ] No production database work blocks the UI thread.
 - [ ] All user-facing controls are connected to real behavior.
 - [ ] Unit/Robolectric/instrumented tests pass on the final commit.
-- [ ] CI passes on the exact final commit.
+- [x] CI passes on the latest verified commit `42ddf62e5706a4c767a015015819754c8f1b4140` (run `42090800528`). This is an intermediate verification, not the final release gate.
 - [ ] Android 10/API 29 and newer Android permission/storage behavior verified.
 - [ ] ARM32, ARM64 and tablet layouts verified where devices are available.
 - [ ] Release APK is reproducible and signed; installation is tested on the target device.
@@ -96,3 +96,11 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - Push CI run `42089582128` passed the same build checks and successfully executed `Commit generated Room schema snapshot`.
 - GitHub branch `rewrite-v2` now contains the generated schema commit `5498121d64cb9f7b09c5fc04a65a14e48a73f697`. This verifies source-control persistence of the generated schema, not Android device installation or runtime behavior.
 - Release APK signing remains skipped because release signing secrets are not configured; the produced artifacts are debug APKs.
+
+
+## Latest branch verification — 2026-11-05
+
+- Push workflow run [#42090800528](https://github.com/meandmeandme-me/browsex/actions/runs/42090800528) passed on commit `42ddf62e5706a4c767a015015819754c8f1b4140`: locale validation, unit tests, lint, debug APK assembly, APK verification/checksums, Room schema upload and schema commit step.
+- ARM32, ARM64 and universal debug APK artifacts were uploaded. Release APK steps were skipped because signing secrets are not configured.
+- The schema commit step succeeded and found the committed schema current; the branch head remained `42ddf62e5706a4c767a015015819754c8f1b4140`.
+- Important download audit correction: the current code has no production `DownloadManager.enqueue()` call. The Room platform-ID repository and DownloadsPage query support exist, but the enqueue/registration/reconciliation path remains unimplemented. Gecko response-body downloads currently use the exact-response bounded stream writer.
