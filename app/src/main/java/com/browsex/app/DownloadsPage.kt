@@ -398,6 +398,37 @@ internal class DownloadsPage(
                         }
                     }
                     item.addView(action)
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        item.addView(TextView(activity).apply {
+                            text = t("Share", "مشاركة")
+                            textSize = 12f
+                            gravity = Gravity.CENTER
+                            setTextColor(colors.accent)
+                            setPadding(dp(7), dp(8), dp(7), dp(8))
+                            minimumHeight = dp(48)
+                            isClickable = true
+                            isFocusable = true
+                            contentDescription = t("Share downloaded file", "مشاركة الملف المنزّل")
+                            setOnClickListener {
+                                val uri = manager.getUriForDownloadedFile(id)
+                                if (uri == null) {
+                                    android.widget.Toast.makeText(activity, t("File location is unavailable", "موقع الملف غير متاح"), android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val mime = activity.contentResolver.getType(uri) ?: "*/*"
+                                    val share = Intent(Intent.ACTION_SEND).apply {
+                                        type = mime
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    try {
+                                        activity.startActivity(Intent.createChooser(share, t("Share download", "مشاركة التنزيل")))
+                                    } catch (_: Exception) {
+                                        android.widget.Toast.makeText(activity, t("No app can share this file", "لا يوجد تطبيق لمشاركة هذا الملف"), android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        })
+                    }
                     list.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
                 }
             }
