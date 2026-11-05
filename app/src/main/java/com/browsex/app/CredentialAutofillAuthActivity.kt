@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 internal class CredentialAutofillAuthActivity : AppCompatActivity() {
     private var finished = false
 
-    private val vault by lazy {
+    private val vaultDelegate = lazy {
         BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
             runOnUiThread {
                 BrowserDeviceAuthenticator.authenticate(
@@ -28,6 +28,7 @@ internal class CredentialAutofillAuthActivity : AppCompatActivity() {
             }
         }
     }
+    private val vault by vaultDelegate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -105,6 +106,11 @@ internal class CredentialAutofillAuthActivity : AppCompatActivity() {
         finished = true
         setResult(RESULT_OK, Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, response))
         finish()
+    }
+
+    override fun onDestroy() {
+        if (vaultDelegate.isInitialized()) vault.lock()
+        super.onDestroy()
     }
 
     private fun finishWithoutDataset() {
