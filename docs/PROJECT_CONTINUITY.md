@@ -4,6 +4,9 @@
 
 ## Current checkpoint
 
+- Latest permission-flow fix: `df5ed8fc8d39c4a9b7260375a05ef5205b0bd7a4` — media requests now request missing Android camera/microphone runtime permissions before asking for per-site consent; private sessions still never persist per-origin choices.
+- This is a staged implementation change only; the consolidated build/test/schema/APK verification remains intentionally deferred until feature wiring is complete.
+
 - Branch: `rewrite-v2`
 - Latest implementation commit: `5117b2913cbcfdda909d4ce5ef3a256938775f7b` (Room repository composition root).
 - Previous implementation commits in this phase:
