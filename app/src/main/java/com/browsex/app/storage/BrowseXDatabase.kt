@@ -241,4 +241,17 @@ interface BrowseXStorageDao {
 )
 abstract class BrowseXDatabase : RoomDatabase() {
     abstract fun storageDao(): BrowseXStorageDao
+
+    companion object {
+        @Volatile private var instance: BrowseXDatabase? = null
+
+        fun getInstance(context: android.content.Context): BrowseXDatabase =
+            instance ?: synchronized(this) {
+                instance ?: androidx.room.Room.databaseBuilder(
+                    context.applicationContext,
+                    BrowseXDatabase::class.java,
+                    "browsex-storage-v1.db"
+                ).build().also { instance = it }
+            }
+    }
 }
