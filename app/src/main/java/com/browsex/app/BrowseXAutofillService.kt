@@ -62,7 +62,7 @@ internal class BrowseXAutofillService : AutofillService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
-                setTextViewText(android.R.id.text1, BrowseXStrings.text(this, "Unlock BrowseX passwords"))
+                setTextViewText(android.R.id.text1, BrowseXStrings.text(this@BrowseXAutofillService, "Unlock BrowseX passwords"))
             }
             val response = FillResponse.Builder()
                 .setAuthentication(autofillIds, pendingIntent.intentSender, presentation)
