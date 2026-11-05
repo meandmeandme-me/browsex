@@ -123,7 +123,7 @@ internal class BrowserPreferencesStore(private val prefs: SharedPreferences) {
         BrowserSiteOriginPolicy.canonicalOrigin(origin)
 
     private companion object {
-        val MEDIA_FEATURES = setOf("camera", "microphone")
+        val MEDIA_FEATURES = setOf("camera", "microphone", "notifications", "geolocation")
         val PERMISSION_DECISIONS = setOf("allow", "deny", "ask")
         const val MAX_ORIGIN_MEDIA_DECISIONS = 100
     }

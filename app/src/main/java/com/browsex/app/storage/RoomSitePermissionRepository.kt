@@ -50,7 +50,7 @@ internal class RoomSitePermissionRepository(
 
     private companion object {
         // Keep these values aligned with the browser's site-permission feature identifiers.
-        val FEATURES = setOf("camera", "microphone", "notifications")
+        val FEATURES = setOf("camera", "microphone", "notifications", "geolocation")
         val DECISIONS = setOf("allow", "deny", "ask")
         const val MAX_DECISIONS = 100
     }

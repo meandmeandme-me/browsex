@@ -198,7 +198,7 @@ internal object LegacyStorageSnapshotParser {
             val origin = key.substring(0, split)
             val feature = key.substring(split + 1)
             val decision = json.optString(key)
-            if (feature !in setOf("camera", "microphone", "notifications") || decision !in setOf("allow", "deny")) continue
+            if (feature !in setOf("camera", "microphone", "notifications", "geolocation") || decision !in setOf("allow", "deny")) continue
             if (!safeOrigin(origin)) continue
             result.add(SitePermissionDecisionEntity(origin, feature, decision, 0L))
         }

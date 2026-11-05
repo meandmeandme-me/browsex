@@ -50,8 +50,13 @@ internal class BrowseXPermissionDelegate(
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
             return result
         }
-        if (isSiteNotification) {
-            when (store.siteMediaDecision(origin, "notifications")) {
+        val persistedFeature = when {
+            isSiteNotification -> "notifications"
+            perm.permission == GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "geolocation"
+            else -> null
+        }
+        if (persistedFeature != null) {
+            when (store.siteMediaDecision(origin, persistedFeature)) {
                 "allow" -> {
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
                     return result
@@ -96,11 +101,14 @@ internal class BrowseXPermissionDelegate(
                             )
                         }
                     } else {
+                        if (persistedFeature != null) {
+                            store.setSiteMediaDecision(origin, persistedFeature, "allow")
+                        }
                         result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
                     }
                 }
                 .setNegativeButton("Block") { _, _ ->
-                    if (isSiteNotification) store.setSiteMediaDecision(origin, "notifications", "deny")
+                    persistedFeature?.let { store.setSiteMediaDecision(origin, it, "deny") }
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
                 }
                 .setNeutralButton("Not now") { _, _ ->
