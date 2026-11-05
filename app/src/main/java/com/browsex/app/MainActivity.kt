@@ -157,6 +157,15 @@ class MainActivity : AppCompatActivity() {
     private fun mirrorBrowserSettings(settings: BrowserSettings) {
         browserSettingsSnapshot = settings
         browserSettingsLoaded = true
+        AppCompatDelegate.setDefaultNightMode(when (settings.themeMode) {
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        })
+        AppCompatDelegate.setApplicationLocales(
+            LocaleListCompat.forLanguageTags(if (settings.languageMode == "system") "" else settings.languageMode)
+        )
+        BrowserContentProtectionPolicy.configure(settings.adBlockEnabled, settings.adBlockPrivateEnabled)
         if (!::store.isInitialized) return
         store.adBlockEnabled = settings.adBlockEnabled
         store.adBlockInstalled = settings.adBlockInstalled
@@ -289,7 +298,6 @@ class MainActivity : AppCompatActivity() {
                 .onSuccess(::mirrorBrowserSettings)
                 .onFailure { error -> android.util.Log.e("BrowseX", "Could not load browser settings", error) }
         }
-        BrowserContentProtectionPolicy.configure(store.adBlockEnabled, store.adBlockPrivateEnabled)
         credentialVault = BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
             runOnUiThread {
                 if (isFinishing || isDestroyed) {
@@ -378,14 +386,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }.onFailure { error -> android.util.Log.w("BrowseX", "Bookmark backup read failed", error); toast(error.message ?: "Could not read backup") }
         }
-        AppCompatDelegate.setDefaultNightMode(when (store.themeMode) {
-            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-            "light" -> AppCompatDelegate.MODE_NIGHT_NO
-            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        })
-        AppCompatDelegate.setApplicationLocales(
-            LocaleListCompat.forLanguageTags(if (store.languageMode == "system") "" else store.languageMode)
-        )
         platformPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { grants ->
