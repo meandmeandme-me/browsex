@@ -186,6 +186,30 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM bookmark_folders WHERE id = :folderId AND id != 'unfiled'")
     suspend fun deleteFolder(folderId: String)
 
+    @Query("DELETE FROM bookmarks")
+    suspend fun clearBookmarks()
+
+    @Query("DELETE FROM bookmark_folders")
+    suspend fun clearFolders()
+
+    @Query("DELETE FROM history_entries")
+    suspend fun clearHistory()
+
+    @Query("DELETE FROM saved_session_tabs")
+    suspend fun clearSessionTabs()
+
+    @Query("DELETE FROM saved_sessions")
+    suspend fun clearSessions()
+
+    @Query("DELETE FROM recently_closed_tabs")
+    suspend fun clearRecentlyClosed()
+
+    @Query("DELETE FROM site_permission_decisions")
+    suspend fun clearPermissionDecisions()
+
+    @Query("DELETE FROM download_records")
+    suspend fun clearDownloads()
+
     @Query("DELETE FROM browser_state")
     suspend fun clearBrowserState()
 

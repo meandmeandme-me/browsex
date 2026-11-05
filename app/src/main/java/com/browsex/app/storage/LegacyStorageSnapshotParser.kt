@@ -1,6 +1,5 @@
 package com.browsex.app.storage
 
-import android.net.Uri
 import com.browsex.app.NavigationInput
 import com.browsex.app.TabSessionState
 import org.json.JSONArray
@@ -84,7 +83,7 @@ internal object LegacyStorageSnapshotParser {
                 rows.add(BookmarkRow(
                     item.optString("id").take(80).ifBlank { stableId("bookmark", url) },
                     url,
-                    item.optString("title").trim().take(160).ifBlank { Uri.parse(url).host.orEmpty() },
+                    item.optString("title").trim().take(160).ifBlank { hostOf(url) },
                     item.optString("folderId").takeIf(folderIds::contains) ?: "unfiled",
                     item.optLong("createdAt", 0L).coerceAtLeast(0L)
                 ))
@@ -135,6 +134,7 @@ internal object LegacyStorageSnapshotParser {
             val urlArray = item.optJSONArray("urls") ?: JSONArray()
             val rawUrls = (0 until minOf(urlArray.length(), 20))
                 .mapNotNull { urlArray.optString(it).takeIf(String::isNotBlank) }
+            if (rawUrls.isEmpty()) continue
             val snapshot = TabSessionState.normalize(rawUrls, item.optInt("activeIndex", 0), HOME_URL)
             sessions.add(SavedSessionEntity(id, name, snapshot.activeIndex,
                 item.optLong("savedAt", 0L).coerceAtLeast(0L)))
@@ -234,6 +234,10 @@ internal object LegacyStorageSnapshotParser {
 
     private fun validUrl(raw: String): String? =
         raw.trim().takeIf { it.length <= 4096 && NavigationInput.isValidWebUrl(it) }
+
+    private fun hostOf(url: String): String = try {
+        URI(url).host.orEmpty()
+    } catch (_: Exception) { "" }
 
     private fun safeOrigin(raw: String): Boolean = try {
         val uri = URI(raw)
