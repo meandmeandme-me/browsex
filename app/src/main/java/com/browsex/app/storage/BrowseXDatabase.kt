@@ -268,6 +268,12 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM saved_sessions WHERE id = :sessionId")
     suspend fun deleteSavedSession(sessionId: String): Int
 
+    @Transaction
+    suspend fun removeSavedSession(sessionId: String): Boolean {
+        clearTabsForSession(sessionId)
+        return deleteSavedSession(sessionId) > 0
+    }
+
     @Query("DELETE FROM recently_closed_tabs WHERE url = :url")
     suspend fun deleteRecentlyClosedByUrl(url: String)
 

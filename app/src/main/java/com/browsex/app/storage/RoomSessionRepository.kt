@@ -4,7 +4,7 @@ import com.browsex.app.NavigationInput
 import com.browsex.app.TabSessionState
 import java.util.UUID
 
-/** Room-backed named-session and recently-closed-tab lifecycle. Private tabs are never accepted. */
+/** Room-backed named-session and recently-closed-tab lifecycle. Callers must pass regular tabs only. */
 internal class RoomSessionRepository(
     private val dao: BrowseXStorageDao
 ) {
@@ -39,8 +39,7 @@ internal class RoomSessionRepository(
 
     suspend fun deleteSession(id: String): Boolean {
         if (id.isBlank()) return false
-        dao.clearTabsForSession(id)
-        return dao.deleteSavedSession(id) > 0
+        return dao.removeSavedSession(id)
     }
 
     suspend fun recentlyClosed(): List<RecentlyClosedTabEntity> = dao.recentlyClosedTabs().take(MAX_RECENTLY_CLOSED)
