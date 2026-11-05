@@ -80,7 +80,15 @@ internal class BrowserAndroidPermissionCoordinator(
     fun launchNext() {
         if (anotherPromptInFlight() || queue.hasActiveRequest || !isHostAvailable()) return
         val next = queue.takeNext(activeSession(), containsSession) ?: return
-        launchRequest(next.permissions.toTypedArray())
+        try {
+            launchRequest(next.permissions.toTypedArray())
+        } catch (error: RuntimeException) {
+            // A failed ActivityResult launch must not strand the active Gecko callback
+            // or permanently block the permission queue.
+            queue.rejectActive()
+            android.util.Log.e("BrowseX", "Could not launch Android permission request", error)
+            launchNext()
+        }
     }
 
     fun cancelSession(session: GeckoSession) = queue.cancelSession(session)

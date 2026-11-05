@@ -80,6 +80,16 @@ internal class BrowserAndroidPermissionQueue {
         }
     }
 
+    /** Rejects only the request whose Android launcher failed, preserving later queued requests. */
+    fun rejectActive() {
+        val request = active
+        active = null
+        if (request != null && !request.completed) {
+            request.completed = true
+            request.callback.reject()
+        }
+    }
+
     /** Rejects all outstanding Gecko callbacks during Activity teardown. */
     fun rejectAll() {
         queued.toList().forEach { request ->
