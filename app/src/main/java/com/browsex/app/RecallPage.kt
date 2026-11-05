@@ -18,6 +18,8 @@ internal class RecallPage(
     private val activity: MainActivity,
     private val store: BrowserStore,
     private val openTabs: List<Pair<String, String>>,
+    private val bookmarkRows: List<Pair<String, String>>,
+    private val historyRows: List<Pair<String, String>>,
     private val onOpen: (String) -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
@@ -133,11 +135,9 @@ internal class RecallPage(
         fun render(raw: String) {
             content.removeAllViews()
             val query = raw.trim()
-            val history = store.historyEntries().take(30).map { it.title to it.url }
-            val bookmarks = store.bookmarkItems().take(30).map { it.title to it.url }
             section(t("Open tabs", "التبويبات المفتوحة"), openTabs, query)
-            section(t("Bookmarks", "المفضلة"), bookmarks, query)
-            section(t("Recent history", "السجل الحديث"), history, query)
+            section(t("Bookmarks", "المفضلة"), bookmarkRows, query)
+            section(t("Recent history", "السجل الحديث"), historyRows, query)
             if (content.childCount == 0) {
                 content.addView(TextView(activity).apply {
                     text = t("No matching pages. Try another search.", "لا توجد صفحات مطابقة. جرّب بحثاً آخر.")

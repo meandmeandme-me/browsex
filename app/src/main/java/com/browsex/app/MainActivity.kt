@@ -1138,15 +1138,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRecall() {
-        RecallPage(
-            activity = this,
-            store = store,
-            openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
-            onOpen = { url ->
-                val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
-                if (existing != null) activateTab(existing) else createTab(url)
+        lifecycleScope.launch {
+            val graph = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load recall library", it)
+                toast("Could not open search library")
+                return@launch
             }
-        ).show()
+            val bookmarkRows = graph.bookmarks.all().take(30).map { it.title to it.url }
+            val historyRows = graph.history.recent(30).map { it.title to it.url }
+            RecallPage(
+                activity = this@MainActivity,
+                store = store,
+                openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
+                bookmarkRows = bookmarkRows,
+                historyRows = historyRows,
+                onOpen = { url ->
+                    val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
+                    if (existing != null) activateTab(existing) else createTab(url)
+                }
+            ).show()
+        }
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
