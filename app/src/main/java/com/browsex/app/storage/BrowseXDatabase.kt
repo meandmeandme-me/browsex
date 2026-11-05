@@ -321,6 +321,27 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM recently_closed_tabs ORDER BY closed_at DESC")
     suspend fun recentlyClosedTabs(): List<RecentlyClosedTabEntity>
 
+    @Query("SELECT * FROM site_permission_decisions WHERE origin = :origin AND feature = :feature LIMIT 1")
+    suspend fun permissionDecision(origin: String, feature: String): SitePermissionDecisionEntity?
+
+    @Query("DELETE FROM site_permission_decisions WHERE origin = :origin AND feature = :feature")
+    suspend fun deletePermissionDecision(origin: String, feature: String): Int
+
+    @Query("DELETE FROM site_permission_decisions WHERE origin = :origin")
+    suspend fun deletePermissionDecisionsForOrigin(origin: String): Int
+
+    @Query("DELETE FROM site_permission_decisions")
+    suspend fun clearAllPermissionDecisions()
+
+    @Query("DELETE FROM site_permission_decisions WHERE (origin, feature) NOT IN (SELECT origin, feature FROM site_permission_decisions ORDER BY updated_at DESC LIMIT :keep)")
+    suspend fun prunePermissionDecisions(keep: Int)
+
+    @Transaction
+    suspend fun setPermissionDecision(item: SitePermissionDecisionEntity, keep: Int = 100) {
+        putPermissionDecisions(listOf(item))
+        prunePermissionDecisions(keep)
+    }
+
     @Query("SELECT * FROM site_permission_decisions ORDER BY origin, feature")
     suspend fun permissionDecisions(): List<SitePermissionDecisionEntity>
 
