@@ -136,8 +136,19 @@ internal class BrowserUBlockSettingsCoordinator(
     }
 
     private fun persistState(installed: Boolean, enabled: Boolean, privateAllowed: Boolean) {
-        store.adBlockInstalled = installed
-        store.adBlockEnabled = enabled
-        store.adBlockPrivateEnabled = privateAllowed
+        val host = activity as? MainActivity
+        if (host == null) {
+            store.adBlockInstalled = installed
+            store.adBlockEnabled = enabled
+            store.adBlockPrivateEnabled = privateAllowed
+            return
+        }
+        host.updateBrowserSettings {
+            it.copy(
+                adBlockInstalled = installed,
+                adBlockEnabled = enabled,
+                adBlockPrivateEnabled = privateAllowed
+            )
+        }
     }
 }
