@@ -1120,34 +1120,48 @@ class MainActivity : AppCompatActivity() {
     private fun showUBlockOriginSettings() = uBlockSettings.show()
 
     private fun showHomePreferences() {
-        val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
-        val checked = booleanArrayOf(store.homeShowQuickLinks, store.homeShowDiscovery)
-        AlertDialog.Builder(this)
-            .setTitle(tr("Home page"))
-            .setMultiChoiceItems(labels, checked) { _, which, enabled ->
-                if (which == 0) store.homeShowQuickLinks = enabled else store.homeShowDiscovery = enabled
+        lifecycleScope.launch {
+            val settings = runCatching { storageRuntime.settings.snapshot() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load homepage preferences", it)
+                toast("Could not load homepage settings")
+                return@launch
             }
-            .setPositiveButton(tr("Next")) { _, _ ->
-                val layouts = arrayOf(tr("Grid layout"), tr("List layout"))
-                val values = arrayOf("grid", "list")
-                AlertDialog.Builder(this)
-                    .setTitle(tr("Shortcut layout"))
-                    .setSingleChoiceItems(layouts, values.indexOf(store.homeLayout).coerceAtLeast(0)) { choice, index ->
-                        store.homeLayout = values[index]
-                        choice.dismiss()
-                        activeTab?.takeIf { it.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
-                    }
-                    .setNeutralButton(tr("Reset")) { _, _ ->
-                        store.resetHomePreferences()
-                        activeTab?.takeIf { it.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
-                    }
-                    .setNegativeButton(tr("Close"), null)
-                    .show()
-            }
-            .setNegativeButton(tr("Cancel"), null)
-            .show()
+            val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
+            val checked = booleanArrayOf(settings.homeShowQuickLinks, settings.homeShowDiscovery)
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(tr("Home page"))
+                .setMultiChoiceItems(labels, checked) { _, which, enabled ->
+                    updateBrowserSettings({
+                        if (which == 0) it.copy(homeShowQuickLinks = enabled)
+                        else it.copy(homeShowDiscovery = enabled)
+                    })
+                }
+                .setPositiveButton(tr("Next")) { _, _ ->
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(tr("Shortcut layout"))
+                        .setSingleChoiceItems(
+                            arrayOf(tr("Grid layout"), tr("List layout")),
+                            arrayOf("grid", "list").indexOf(settings.homeLayout).coerceAtLeast(0)
+                        ) { choice, index ->
+                            updateBrowserSettings({ it.copy(homeLayout = arrayOf("grid", "list")[index]) }) {
+                                choice.dismiss()
+                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
+                            }
+                        }
+                        .setNeutralButton(tr("Reset")) { _, _ ->
+                            updateBrowserSettings({
+                                it.copy(homeShowQuickLinks = true, homeShowDiscovery = true, homeLayout = "grid")
+                            }) {
+                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
+                            }
+                        }
+                        .setNegativeButton(tr("Close"), null)
+                        .show()
+                }
+                .setNegativeButton(tr("Cancel"), null)
+                .show()
+        }
     }
-
 
     private fun showPrivacyCenter() {
         PrivacyPage(
