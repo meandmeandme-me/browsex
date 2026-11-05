@@ -16,6 +16,10 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
+import com.browsex.app.storage.RoomDownloadRepository
+import com.browsex.app.storage.DownloadRecordEntity
+import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
@@ -35,6 +39,19 @@ internal class DownloadsPage(
     }
 
     fun show() {
+        activity.lifecycleScope.launch {
+            val repository = runCatching { activity.storageRuntime.awaitReady().downloads }.getOrElse { error ->
+                android.util.Log.e("BrowseX", "Could not open Room downloads", error)
+                android.widget.Toast.makeText(activity, t("Downloads are temporarily unavailable", "التنزيلات غير متاحة مؤقتًا"), android.widget.Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val records = repository.all()
+            showWithRepository(repository, records)
+        }
+    }
+
+    private fun showWithRepository(repository: RoomDownloadRepository, initialRecords: List<DownloadRecordEntity>) {
+        var streamRecords = initialRecords
         lateinit var dialog: AlertDialog
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -136,8 +153,11 @@ internal class DownloadsPage(
                 null
             }
             var count = 0
-            store.streamDownloads().forEach { record ->
+            streamRecords.forEach { record ->
                 count++
+                val recordIsActive = record.status == "queued" || record.status == "running"
+                val recordIsFailed = record.status == "failed"
+                val recordIsCancelled = record.status == "cancelled"
                 val item = LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -154,20 +174,20 @@ internal class DownloadsPage(
                 })
                 val date = if (record.createdAt > 0L) DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(record.createdAt)) else ""
                 val statusLabel = when {
-                    record.isActive && record.status == "queued" -> t("Waiting in queue", "بانتظار دوره")
-                    record.isActive -> t("Downloading", "جارٍ التنزيل")
-                    record.isCancelled -> t("Cancelled", "تم الإلغاء")
-                    record.isFailed -> t("Failed: ", "فشل: ") + record.error
+                    recordIsActive && record.status == "queued" -> t("Waiting in queue", "بانتظار دوره")
+                    recordIsActive -> t("Downloading", "جارٍ التنزيل")
+                    recordIsCancelled -> t("Cancelled", "تم الإلغاء")
+                    recordIsFailed -> t("Failed: ", "فشل: ") + record.error
                     else -> t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة")
                 }
                 val progressText = if (record.totalBytes > 0L) {
                     " · ${record.bytesWritten / 1024} / ${record.totalBytes / 1024} KB"
-                } else if (record.isActive) {
+                } else if (recordIsActive) {
                     " · ${record.bytesWritten / 1024} KB"
                 } else {
                     " · ${record.bytesWritten / 1024} KB"
                 }
-                val detail = statusLabel + if (record.isActive || !record.isFailed) progressText + " · " + date else ""
+                val detail = statusLabel + if (record.isActive || !recordIsFailed) progressText + " · " + date else ""
                 labels.addView(TextView(activity).apply {
                     text = detail
                     textSize = 10f
@@ -180,7 +200,7 @@ internal class DownloadsPage(
                     setPadding(0, dp(4), 0, 0)
                     maxLines = 3
                 })
-                if (record.isActive) labels.addView(ProgressBar(
+                if (recordIsActive) labels.addView(ProgressBar(
                     activity, null, android.R.attr.progressBarStyleHorizontal
                 ).apply {
                     max = 100
@@ -192,26 +212,26 @@ internal class DownloadsPage(
                 item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
                 val action = TextView(activity).apply {
                     text = when {
-                        record.isActive -> t("Cancel", "إلغاء")
-                        record.isFailed || record.isCancelled -> t("Remove", "حذف")
+                        recordIsActive -> t("Cancel", "إلغاء")
+                        recordIsFailed || recordIsCancelled -> t("Remove", "حذف")
                         else -> t("Open", "فتح")
                     }
                     textSize = 13f
                     gravity = Gravity.CENTER
-                    setTextColor(if (record.isFailed || record.isCancelled) colors.danger else colors.accent)
+                    setTextColor(if (recordIsFailed || recordIsCancelled) colors.danger else colors.accent)
                     setPadding(dp(10), dp(8), dp(6), dp(8))
                     minimumWidth = dp(48)
                     minimumHeight = dp(48)
                     isClickable = true
                     isFocusable = true
                     contentDescription = when {
-                        record.isActive -> t("Cancel download", "إلغاء التنزيل")
-                        record.isFailed || record.isCancelled -> t("Remove download record", "حذف سجل التنزيل")
+                        recordIsActive -> t("Cancel download", "إلغاء التنزيل")
+                        recordIsFailed || recordIsCancelled -> t("Remove download record", "حذف سجل التنزيل")
                         else -> t("Open downloaded file", "فتح الملف المنزّل")
                     }
                     setOnClickListener {
                         when {
-                            record.isActive -> AlertDialog.Builder(activity)
+                            recordIsActive -> AlertDialog.Builder(activity)
                                 .setMessage(t("Cancel this download? The partial file will be discarded.", "إلغاء هذا التنزيل؟ سيتم حذف الملف غير المكتمل."))
                                 .setNegativeButton(t("Keep", "متابعة"), null)
                                 .setPositiveButton(t("Cancel download", "إلغاء التنزيل")) { _, _ ->
@@ -219,9 +239,8 @@ internal class DownloadsPage(
                                         android.widget.Toast.makeText(activity, t("This download can no longer be cancelled", "لم يعد بالإمكان إلغاء هذا التنزيل"), android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 }.show()
-                            record.isFailed || record.isCancelled -> {
-                                store.removeStreamDownload(record.id)
-                                render()
+                            recordIsFailed || recordIsCancelled -> {
+                                activity.lifecycleScope.launch { repository.remove(record.id); reloadRoomRecords() }
                             }
                             else -> {
                                 val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
@@ -238,7 +257,7 @@ internal class DownloadsPage(
                     }
                 }
                 item.addView(action)
-                if (!record.isActive) item.addView(TextView(activity).apply {
+                if (!recordIsActive) item.addView(TextView(activity).apply {
                     text = "×"
                     textSize = 20f
                     gravity = Gravity.CENTER
@@ -253,8 +272,7 @@ internal class DownloadsPage(
                             .setMessage(t("Remove this download from BrowseX? The saved file will remain on your device.", "إزالة هذا التنزيل من BrowseX؟ سيبقى الملف محفوظًا على جهازك."))
                             .setNegativeButton(t("Keep", "احتفاظ"), null)
                             .setPositiveButton(t("Remove", "حذف")) { _, _ ->
-                                store.removeStreamDownload(record.id)
-                                render()
+                                activity.lifecycleScope.launch { repository.remove(record.id); reloadRoomRecords() }
                             }.show()
                     }
                 })
@@ -387,11 +405,18 @@ internal class DownloadsPage(
                 setPadding(dp(22), dp(40), dp(22), dp(40))
             })
         }
+        fun reloadRoomRecords() {
+            activity.lifecycleScope.launch {
+                runCatching { repository.all() }
+                    .onSuccess { streamRecords = it; render() }
+                    .onFailure { error -> android.util.Log.e("BrowseX", "Could not refresh Room downloads", error) }
+            }
+        }
         val refreshHandler = Handler(Looper.getMainLooper())
         val refreshRunnable = object : Runnable {
             override fun run() {
                 if (!dialog.isShowing) return
-                if (store.streamDownloads().any { it.isActive }) {
+                if (streamRecords.any { it.status == "queued" || it.status == "running" }) {
                     val scrollY = scroll.scrollY
                     render()
                     scroll.post { scroll.scrollTo(0, scrollY) }
@@ -399,13 +424,13 @@ internal class DownloadsPage(
                 }
             }
         }
-        refresh.setOnClickListener { render() }
+        refresh.setOnClickListener { reloadRoomRecords() }
         render()
         dialog = AlertDialog.Builder(activity).setView(root).create()
         dialog.setOnShowListener {
             dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-            if (store.streamDownloads().any { it.isActive }) refreshHandler.postDelayed(refreshRunnable, 900L)
+            if (streamRecords.any { it.status == "queued" || it.status == "running" }) refreshHandler.postDelayed(refreshRunnable, 900L)
         }
         dialog.setOnDismissListener { refreshHandler.removeCallbacks(refreshRunnable) }
         dialog.show()
