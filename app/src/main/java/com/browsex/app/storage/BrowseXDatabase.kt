@@ -149,6 +149,7 @@ data class StorageMigrationStateEntity(
 interface BrowseXStorageDao {
     companion object {
         const val MAX_BOOKMARK_FOLDERS = 50
+        const val MAX_BOOKMARKS = 200
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -159,6 +160,12 @@ interface BrowseXStorageDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBookmark(item: BookmarkEntity): Long
+
+    @Transaction
+    suspend fun addBookmarkIfCapacityAvailable(item: BookmarkEntity): Boolean {
+        if (bookmarkCount() >= MAX_BOOKMARKS) return false
+        return insertBookmark(item) != -1L
+    }
 
     @Query("SELECT * FROM bookmarks WHERE url = :url LIMIT 1")
     suspend fun bookmark(url: String): BookmarkEntity?
@@ -390,6 +397,7 @@ interface BrowseXStorageDao {
 
         var importedBookmarks = 0
         incomingBookmarks.forEach { incoming ->
+            if (bookmarkCount() >= MAX_BOOKMARKS) return@forEach
             if (bookmark(incoming.url) != null) return@forEach
             val folderId = folderMap[incoming.folderId] ?: "unfiled"
             if (insertBookmark(incoming.copy(folderId = folderId)) != -1L) {

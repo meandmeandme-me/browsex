@@ -55,6 +55,48 @@ class RoomBookmarkRepositoryTest {
     }
 
     @Test
+    fun bookmarkBackupMapsFoldersByNameAndRespectsBookmarkCapacity() = runBlocking {
+        val sourceDb = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        val targetDb = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val sourceDao = sourceDb.storageDao()
+            sourceDao.putFolders(listOf(
+                BookmarkFolderEntity("unfiled", "Unfiled"),
+                BookmarkFolderEntity("source-work", "Work")
+            ))
+            val source = RoomBookmarkRepository(sourceDao)
+            assertTrue(source.add("https://foldered.example", "Foldered", "source-work", 1L))
+            val backup = source.exportBookmarks()
+
+            val targetDao = targetDb.storageDao()
+            targetDao.putFolders(listOf(
+                BookmarkFolderEntity("unfiled", "Unfiled"),
+                BookmarkFolderEntity("local-work", "work")
+            ))
+            val target = RoomBookmarkRepository(targetDao)
+            val result = target.importBookmarks(backup)
+            assertEquals(1, result.importedBookmarks)
+            assertEquals("local-work", target.find("https://foldered.example")?.folderId)
+
+            repeat(199) { index ->
+                assertTrue(target.add("https://capacity-$index.example", "Item $index", createdAt = index + 10L))
+            }
+            assertEquals(200, target.all().size)
+            assertFalse(target.add("https://over-capacity.example", "Too many"))
+            val overflow = target.importBookmarks(backup)
+            assertEquals(0, overflow.importedBookmarks)
+            assertEquals(200, target.all().size)
+        } finally {
+            sourceDb.close()
+            targetDb.close()
+        }
+    }
+
+    @Test
     fun bookmarkBackupRejectsUnsupportedOrOversizedPayloads() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),

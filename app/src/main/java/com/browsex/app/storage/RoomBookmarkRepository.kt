@@ -147,7 +147,7 @@ internal class RoomBookmarkRepository(
             createdAt = createdAt
         )
         // IGNORE plus the unique URL index makes duplicate prevention atomic.
-        return dao.insertBookmark(entity) != -1L
+        return dao.addBookmarkIfCapacityAvailable(entity)
     }
 
     suspend fun remove(url: String): Boolean =
