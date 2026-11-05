@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
     private lateinit var store: BrowserStore
-    private val storageRuntime: BrowserStorageRuntime
+    internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
     private lateinit var credentialVault: BrowserCredentialVault
     private val hostLifecycleCoordinator by lazy {
