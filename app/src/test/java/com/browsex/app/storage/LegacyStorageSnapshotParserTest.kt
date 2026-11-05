@@ -136,4 +136,22 @@ class LegacyStorageSnapshotParserTest {
         assertEquals("{broken", source["bookmark_items_v1"])
         assertTrue(parsed.digest.isNotBlank())
     }
+
+    @Test
+    fun legacyFolderImportNeverExceedsFiftyIncludingUnfiled() {
+        val folders = JSONArray()
+        repeat(60) { index ->
+            folders.put(JSONObject()
+                .put("id", "folder-$index")
+                .put("name", "Folder $index"))
+        }
+        val parsed = LegacyStorageSnapshotParser.parse(mapOf(
+            "bookmark_folders_v1" to folders.toString()
+        ))
+
+        assertEquals(50, parsed.folders.size)
+        assertEquals("unfiled", parsed.folders.first().id)
+        assertEquals(49, parsed.folders.count { it.id != "unfiled" })
+    }
+
 }

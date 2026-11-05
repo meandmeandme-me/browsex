@@ -58,7 +58,7 @@ internal object LegacyStorageSnapshotParser {
 
     private fun parseFolders(raw: String?): List<BookmarkFolderEntity> {
         val result = mutableListOf(BookmarkFolderEntity("unfiled", "Unfiled", 0, 0L))
-        val array = parseArray(raw, 51) ?: return result
+        val array = parseArray(raw, 49) ?: return result
         val ids = mutableSetOf("unfiled")
         val names = mutableSetOf("unfiled")
         for (index in 0 until array.length()) {
