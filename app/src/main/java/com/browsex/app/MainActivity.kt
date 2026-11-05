@@ -166,6 +166,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var uBlockButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
+    private var initialBrowserTabsRestoreStarted = false
     private var initialBrowserTabsRestored = false
     private var browserRuntime: GeckoRuntime? = null
     private var uBlockOriginManager: UBlockOriginManager? = null
@@ -1043,8 +1044,8 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun restoreInitialBrowserTabs(startupIntent: Intent?) {
-        if (initialBrowserTabsRestored || isFinishing || isDestroyed) return
-        initialBrowserTabsRestored = true
+        if (initialBrowserTabsRestoreStarted || isFinishing || isDestroyed) return
+        initialBrowserTabsRestoreStarted = true
         lifecycleScope.launch {
             val snapshot = runCatching { storageRuntime.restoreOpenTabs() }
                 .onFailure { error ->
@@ -1056,6 +1057,7 @@ class MainActivity : AppCompatActivity() {
             if (isFinishing || isDestroyed) return@launch
             val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
             tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
+            initialBrowserTabsRestored = true
             handleSiteNotificationIntent(startupIntent)
             syncUBlockButton()
         }
