@@ -58,6 +58,8 @@ class RoomSitePermissionRepositoryTest {
             val repository = RoomSitePermissionRepository(database.storageDao())
             assertFalse(repository.setDecision("https://user:pass@example.com", "camera", "allow"))
             assertFalse(repository.setDecision("file:///private", "camera", "allow"))
+            assertTrue(repository.setDecision("https://example.com", "geolocation", "allow", 3L))
+            assertEquals("allow", repository.decision("https://example.com", "geolocation"))
             assertFalse(repository.setDecision("https://example.com", "location", "allow"))
             assertFalse(repository.setDecision("https://example.com", "camera", "prompt"))
             assertNull(repository.decision("file:///private", "camera"))

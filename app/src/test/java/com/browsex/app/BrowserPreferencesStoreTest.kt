@@ -51,11 +51,15 @@ class BrowserPreferencesStoreTest {
     }
 
     @Test
-    fun rejectsUnsupportedFeaturesAndDecisions() {
-        store.setSiteMediaDecision("https://example.com", "geolocation", "allow")
+    fun storesNotificationAndGeolocationChoicesButRejectsUnknownFeatures() {
+        store.setSiteMediaDecision("https://example.com", "notifications", "allow")
+        store.setSiteMediaDecision("https://example.com", "geolocation", "deny")
+        store.setSiteMediaDecision("https://example.com", "unknown", "allow")
         store.setSiteMediaDecision("https://example.com", "camera", "prompt")
 
-        assertNull(store.siteMediaDecision("https://example.com", "geolocation"))
+        assertEquals("allow", store.siteMediaDecision("https://example.com", "notifications"))
+        assertEquals("deny", store.siteMediaDecision("https://example.com", "geolocation"))
+        assertNull(store.siteMediaDecision("https://example.com", "unknown"))
         assertNull(store.siteMediaDecision("https://example.com", "camera"))
     }
 
