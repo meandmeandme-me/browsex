@@ -273,4 +273,7 @@
     <string name="ui_ublock_origin_will_be_removed_geckoview_tracking_protection_will_be_restored">ستتم إزالة uBlock Origin وستعود حماية التتبع المدمجة في GeckoView.</string>
     <string name="ui_could_not_uninstall_ublock_origin">تعذرت إزالة uBlock Origin</string>
     <string name="ui_ublock_origin_removed">تمت إزالة uBlock Origin</string>
+    <string name="ui_password_autofill">التعبئة التلقائية لكلمات المرور</string>
+    <string name="ui_use_browsex_to_fill_saved_passwords_in_supported_android_apps">استخدم BrowseX لتعبئة كلمات المرور المحفوظة في تطبيقات أندرويد المدعومة</string>
+    <string name="autofill_service_description">يعبّئ BrowseX كلمات مرور مواقع HTTPS المحفوظة بعد التحقق من هوية الجهاز. حفظ كلمات المرور من التطبيقات الأخرى غير مفعّل.</string>
 </resources>

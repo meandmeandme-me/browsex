@@ -12,6 +12,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -937,7 +938,8 @@ class MainActivity : AppCompatActivity() {
             exportBookmarks = { bookmarkExportLauncher.launch("browsex-bookmarks.json") },
             showHomePreferences = { showHomePreferences() },
             openPrivacyCenter = { showPrivacyCenter() },
-            manageUBlockOrigin = { showUBlockOriginSettings() }
+            manageUBlockOrigin = { showUBlockOriginSettings() },
+            openAutofillSettings = { openAutofillServiceSettings() }
         ).show()
     }
 
@@ -950,6 +952,22 @@ class MainActivity : AppCompatActivity() {
         tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
         handleSiteNotificationIntent(startupIntent)
         syncUBlockButton()
+    }
+
+    private fun openAutofillServiceSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            toast("Password autofill requires Android 8 or newer")
+            return
+        }
+        val request = Intent(
+            Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE,
+            Uri.parse("package:$packageName")
+        )
+        runCatching { startActivity(request) }
+            .onFailure {
+                android.util.Log.w("BrowseX", "Could not open Android Autofill settings", it)
+                toast("Could not open Android Autofill settings")
+            }
     }
 
     private fun showUBlockOriginSettings() {

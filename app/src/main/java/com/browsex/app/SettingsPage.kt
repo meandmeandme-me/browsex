@@ -32,7 +32,8 @@ internal class SettingsPage(
     private val exportBookmarks: () -> Unit,
     private val showHomePreferences: () -> Unit,
     private val openPrivacyCenter: () -> Unit,
-    private val manageUBlockOrigin: () -> Unit
+    private val manageUBlockOrigin: () -> Unit,
+    private val openAutofillSettings: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val ink get() = colors.ink
@@ -279,6 +280,15 @@ internal class SettingsPage(
         ) {
             dialog.dismiss()
             manageUBlockOrigin()
+        }
+
+        row(
+            "Password autofill",
+            "Use BrowseX to fill saved passwords in supported Android apps",
+            t("Manage")
+        ) {
+            dialog.dismiss()
+            openAutofillSettings()
         }
         row("Clear browsing history", "Remove the browsing history stored by Browse X", "Clear") {
             AlertDialog.Builder(activity)
