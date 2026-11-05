@@ -404,21 +404,25 @@ class MainActivity : AppCompatActivity() {
             ).also { manager ->
                 manager.refresh(
                     onComplete = { installed ->
-                        val enabled = installed?.metaData?.enabled == true
-                        val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
-                        store.adBlockInstalled = installed != null
-                        store.adBlockEnabled = enabled
-                        store.adBlockPrivateEnabled = privateAllowed
-                        BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
-                        restoreInitialBrowserTabs(intent)
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            val enabled = installed?.metaData?.enabled == true
+                            val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
+                            store.adBlockInstalled = installed != null
+                            store.adBlockEnabled = enabled
+                            store.adBlockPrivateEnabled = privateAllowed
+                            BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                            restoreInitialBrowserTabs(intent)
+                        }
                     },
                     onFailure = { error ->
-                        android.util.Log.w("BrowseX", "Could not discover uBlock Origin", error)
-                        BrowserContentProtectionPolicy.configure(
-                            store.adBlockEnabled,
-                            store.adBlockPrivateEnabled
-                        )
-                        restoreInitialBrowserTabs(intent)
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            android.util.Log.w("BrowseX", "Could not discover uBlock Origin", error)
+                            // Unknown extension state must never leave Gecko tracking protection disabled.
+                            BrowserContentProtectionPolicy.configure(enabled = false, privateAllowed = false)
+                            restoreInitialBrowserTabs(intent)
+                        }
                     }
                 )
             }
