@@ -11,6 +11,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import android.content.SharedPreferences
+import com.browsex.app.BrowserPreferencePolicy
+import com.browsex.app.BrowserStorePolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -37,13 +39,13 @@ internal class BrowserSettingsDataStore(
                 adBlockEnabled = p[Keys.adBlockEnabled] ?: false,
                 adBlockInstalled = p[Keys.adBlockInstalled] ?: false,
                 adBlockPrivateEnabled = p[Keys.adBlockPrivateEnabled] ?: false,
-                themeMode = p[Keys.themeMode] ?: "system",
-                languageMode = p[Keys.languageMode] ?: "system",
+                themeMode = BrowserPreferencePolicy.normalizeTheme(p[Keys.themeMode]),
+                languageMode = BrowserPreferencePolicy.normalizeLanguageTag(p[Keys.languageMode]),
                 siteNotificationsEnabled = p[Keys.siteNotificationsEnabled] ?: true,
                 homeShowQuickLinks = p[Keys.homeShowQuickLinks] ?: true,
                 homeShowDiscovery = p[Keys.homeShowDiscovery] ?: true,
-                homeLayout = p[Keys.homeLayout] ?: "grid",
-                searchEngine = p[Keys.searchEngine] ?: "Google",
+                homeLayout = BrowserPreferencePolicy.normalizeHomeLayout(p[Keys.homeLayout]),
+                searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
                 deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
             )
         }
@@ -55,13 +57,13 @@ internal class BrowserSettingsDataStore(
             p[Keys.adBlockEnabled] = settings.adBlockEnabled
             p[Keys.adBlockInstalled] = settings.adBlockInstalled
             p[Keys.adBlockPrivateEnabled] = settings.adBlockPrivateEnabled
-            p[Keys.themeMode] = settings.themeMode
-            p[Keys.languageMode] = settings.languageMode
+            p[Keys.themeMode] = BrowserPreferencePolicy.normalizeTheme(settings.themeMode)
+            p[Keys.languageMode] = BrowserPreferencePolicy.normalizeLanguageTag(settings.languageMode)
             p[Keys.siteNotificationsEnabled] = settings.siteNotificationsEnabled
             p[Keys.homeShowQuickLinks] = settings.homeShowQuickLinks
             p[Keys.homeShowDiscovery] = settings.homeShowDiscovery
-            p[Keys.homeLayout] = settings.homeLayout
-            p[Keys.searchEngine] = settings.searchEngine
+            p[Keys.homeLayout] = BrowserPreferencePolicy.normalizeHomeLayout(settings.homeLayout)
+            p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
             p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
         }
     }
