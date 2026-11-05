@@ -190,6 +190,12 @@ internal class RoomBookmarkRepository(
         return dao.moveBookmark(url, folderId) > 0
     }
 
+    /** Moves one bookmark within its current folder; direction is -1 (up) or +1 (down). */
+    suspend fun moveWithinFolder(url: String, folderId: String, direction: Int): Boolean {
+        if (!isSafeUrl(url) || folderId.isBlank() || direction !in -1..1 || direction == 0) return false
+        return dao.moveBookmarkWithinFolder(url, folderId, direction)
+    }
+
     private fun isSafeUrl(url: String): Boolean =
         url.length <= MAX_URL_LENGTH && NavigationInput.isValidWebUrl(url)
 

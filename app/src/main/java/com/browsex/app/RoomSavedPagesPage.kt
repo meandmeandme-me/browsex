@@ -221,13 +221,37 @@ internal class RoomSavedPagesPage(
                     row.addView(remove)
                     row.setOnClickListener { dialog.dismiss(); onOpen(url) }
                     if (!isHistory) row.setOnLongClickListener {
-                        val currentFolders = folders
-                        val labels = currentFolders.map { if (it.id == "unfiled") t("Unfiled", "غير مصنف") else it.name }.toTypedArray()
-                        AlertDialog.Builder(activity).setTitle(t("Move bookmark to folder", "نقل المفضلة إلى مجلد"))
-                            .setItems(labels) { _, index ->
-                                activity.lifecycleScope.launch {
-                                    bookmarkRepo.move(url, currentFolders[index].id)
-                                    reload(); render(search.text?.toString().orEmpty())
+                        val actions = arrayOf(
+                            t("Move to folder", "نقل إلى مجلد"),
+                            t("Move up in folder", "تحريك للأعلى في المجلد"),
+                            t("Move down in folder", "تحريك للأسفل في المجلد")
+                        )
+                        AlertDialog.Builder(activity).setTitle(t("Organize bookmark", "تنظيم المفضلة"))
+                            .setItems(actions) { _, action ->
+                                if (action == 0) {
+                                    val currentFolders = folders
+                                    val folderLabels = currentFolders.map {
+                                        if (it.id == "unfiled") t("Unfiled", "غير مصنف") else it.name
+                                    }.toTypedArray()
+                                    AlertDialog.Builder(activity)
+                                        .setTitle(t("Move bookmark to folder", "نقل المفضلة إلى مجلد"))
+                                        .setItems(folderLabels) { _, index ->
+                                            activity.lifecycleScope.launch {
+                                                bookmarkRepo.move(url, currentFolders[index].id)
+                                                reload(); render(search.text?.toString().orEmpty())
+                                            }
+                                        }.show()
+                                } else {
+                                    activity.lifecycleScope.launch {
+                                        val direction = if (action == 1) -1 else 1
+                                        val moved = bookmarkRepo.moveWithinFolder(url, folderId, direction)
+                                        if (!moved) android.widget.Toast.makeText(
+                                            activity,
+                                            t("This bookmark is already at the edge of its folder.", "هذه المفضلة في طرف المجلد بالفعل."),
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                        reload(); render(search.text?.toString().orEmpty())
+                                    }
                                 }
                             }.show()
                         true

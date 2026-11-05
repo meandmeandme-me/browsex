@@ -161,10 +161,14 @@ interface BrowseXStorageDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBookmark(item: BookmarkEntity): Long
 
+    @Query("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bookmarks WHERE folder_id = :folderId")
+    suspend fun nextBookmarkSortOrder(folderId: String): Int
+
     @Transaction
     suspend fun addBookmarkIfCapacityAvailable(item: BookmarkEntity): Boolean {
         if (bookmarkCount() >= MAX_BOOKMARKS) return false
-        return insertBookmark(item) != -1L
+        val ordered = item.copy(sortOrder = nextBookmarkSortOrder(item.folderId))
+        return insertBookmark(ordered) != -1L
     }
 
     @Query("SELECT * FROM bookmarks WHERE url = :url LIMIT 1")
@@ -214,8 +218,38 @@ interface BrowseXStorageDao {
         return true
     }
 
-    @Query("UPDATE bookmarks SET folder_id = :folderId WHERE url = :url")
-    suspend fun moveBookmark(url: String, folderId: String): Int
+    @Query("SELECT * FROM bookmarks WHERE folder_id = :folderId ORDER BY sort_order, created_at DESC")
+    suspend fun bookmarksInFolder(folderId: String): List<BookmarkEntity>
+
+    @Query("UPDATE bookmarks SET folder_id = :folderId, sort_order = :sortOrder WHERE url = :url")
+    suspend fun updateBookmarkFolderAndOrder(url: String, folderId: String, sortOrder: Int): Int
+
+    @Query("UPDATE bookmarks SET sort_order = :sortOrder WHERE url = :url AND folder_id = :folderId")
+    suspend fun updateBookmarkSortOrder(url: String, folderId: String, sortOrder: Int): Int
+
+    @Transaction
+    suspend fun moveBookmark(url: String, folderId: String): Int {
+        if (folder(folderId) == null) return 0
+        val item = bookmark(url) ?: return 0
+        if (item.folderId == folderId) return 1
+        return updateBookmarkFolderAndOrder(url, folderId, nextBookmarkSortOrder(folderId))
+    }
+
+    @Transaction
+    suspend fun moveBookmarkWithinFolder(url: String, folderId: String, direction: Int): Boolean {
+        if (direction !in -1..1 || direction == 0) return false
+        val ordered = bookmarksInFolder(folderId).toMutableList()
+        val currentIndex = ordered.indexOfFirst { it.url == url }
+        val targetIndex = currentIndex + direction
+        if (currentIndex < 0 || targetIndex !in ordered.indices) return false
+        val current = ordered[currentIndex]
+        ordered[currentIndex] = ordered[targetIndex]
+        ordered[targetIndex] = current
+        ordered.forEachIndexed { index, bookmark ->
+            updateBookmarkSortOrder(bookmark.url, folderId, index)
+        }
+        return true
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putHistory(items: List<HistoryEntryEntity>)
