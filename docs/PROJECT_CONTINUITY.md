@@ -5,8 +5,12 @@
 ## Current checkpoint
 
 - Branch: `rewrite-v2`
-- Latest implementation commit: `feb11b537f180474d3e45a1115388e999ce5c30a` (safe download filename normalization).
+- Latest implementation commit: `5117b2913cbcfdda909d4ce5ef3a256938775f7b` (Room repository composition root).
 - Previous implementation commits in this phase:
+  - `290478080bcfcc5ab4a99deac16a73800f3a6298`: validate completed download URI schemes.
+  - `600f785e8810cd3a320ca175f712b6263bd503d3`: stable ordering for pruned filename reservations and tracked download IDs.
+  - `0fee2a71e3669dd2f9d36d44feca5fec779df251`: atomic DataStore read-modify-write updates.
+  - `9a658ec4a2e5a23241dd6d0daaf966c9073b7842`: remove duplicate DAO declarations discovered during static review.
   - `866fc1389ac8cebbe58b850d212c4543abc1cf0f`: download filename sanitization.
   - `9cbe2d0a2ab14dd8155fe1827193d6f0a6f4ffa8`: canonical Room site permission repository.
   - `ad03d18d1192e2082c740c950831f53b14bd06aa`: bounded download records, filename reservations, and platform download IDs.
