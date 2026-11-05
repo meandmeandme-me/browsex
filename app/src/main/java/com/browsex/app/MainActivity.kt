@@ -132,6 +132,8 @@ class MainActivity : AppCompatActivity() {
         )
     }
     private lateinit var store: BrowserStore
+    private var browserSettingsSnapshot = BrowserSettings()
+    private var browserSettingsLoaded = false
     internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
     internal fun updateBrowserSettings(
@@ -153,6 +155,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun mirrorBrowserSettings(settings: BrowserSettings) {
+        browserSettingsSnapshot = settings
+        browserSettingsLoaded = true
         if (!::store.isInitialized) return
         store.adBlockEnabled = settings.adBlockEnabled
         store.adBlockInstalled = settings.adBlockInstalled
@@ -164,6 +168,22 @@ class MainActivity : AppCompatActivity() {
         store.homeShowDiscovery = settings.homeShowDiscovery
         store.homeLayout = settings.homeLayout
         store.searchEngine = settings.searchEngine
+    }
+
+    internal fun wasPlatformPermissionDenied(permission: String): Boolean =
+        if (browserSettingsLoaded) permission in browserSettingsSnapshot.deniedPlatformPermissions
+        else store.wasPlatformPermissionDenied(permission)
+
+    internal fun markPlatformPermissionDenied(permission: String) {
+        updateBrowserSettings {
+            it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions + permission)
+        }
+    }
+
+    internal fun clearPlatformPermissionDenial(permission: String) {
+        updateBrowserSettings {
+            it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions - permission)
+        }
     }
 
     private lateinit var credentialVault: BrowserCredentialVault
@@ -367,9 +387,9 @@ class MainActivity : AppCompatActivity() {
             isGranted = { permission ->
                 ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
             },
-            wasDenied = store::wasPlatformPermissionDenied,
-            clearDenial = store::clearPlatformPermissionDenial,
-            markDenied = store::markPlatformPermissionDenied,
+            wasDenied = ::wasPlatformPermissionDenied,
+            clearDenial = ::clearPlatformPermissionDenial,
+            markDenied = ::markPlatformPermissionDenied,
             launchRequest = { permissions -> platformPermissionLauncher.launch(permissions) }
         )
         legacyDownloadPermissionLauncher = registerForActivityResult(
@@ -392,9 +412,9 @@ class MainActivity : AppCompatActivity() {
                     PackageManager.PERMISSION_GRANTED
             },
             notificationsEnabled = { NotificationManagerCompat.from(this).areNotificationsEnabled() },
-            previouslyDenied = { store.wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
-            clearDenial = { store.clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS) },
-            markDenied = { store.markPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
+            previouslyDenied = { wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
+            clearDenial = { clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS) },
+            markDenied = { markPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
             hostAvailable = { !isFinishing && !isDestroyed },
             launchRequest = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
             afterResolved = { platformPermissionCoordinator.launchNext() }
