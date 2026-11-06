@@ -332,6 +332,9 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM recently_closed_tabs WHERE url = :url")
     suspend fun deleteRecentlyClosedByUrl(url: String)
 
+    @Query("DELETE FROM recently_closed_tabs WHERE closed_at < :cutoff")
+    suspend fun deleteRecentlyClosedBefore(cutoff: Long): Int
+
     @Query("DELETE FROM recently_closed_tabs WHERE id = :id")
     suspend fun deleteRecentlyClosedById(id: String): Int
 
