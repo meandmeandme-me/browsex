@@ -421,7 +421,7 @@ class MainActivity : AppCompatActivity() {
         }
         notificationPermissionCoordinator = BrowserNotificationPermissionCoordinator(
             apiLevel = Build.VERSION.SDK_INT,
-            featureEnabled = { store.siteNotificationsEnabled },
+            featureEnabled = ::websiteNotificationsEnabled,
             permissionGranted = {
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED
@@ -1119,7 +1119,7 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             setWebsiteNotifications = { enabled ->
-                store.siteNotificationsEnabled = enabled
+                updateBrowserSettings(transform = { it.copy(siteNotificationsEnabled = enabled) })
                 if (!enabled) NotificationManagerCompat.from(this).cancelAll()
             },
             importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
