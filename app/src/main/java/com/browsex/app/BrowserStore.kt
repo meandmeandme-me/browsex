@@ -1,98 +1,152 @@
 package com.browsex.app
 
 import android.content.Context
-import org.json.JSONArray
 
-/** Small durable store for browser preferences, bookmarks and recent history. */
+/** Compatibility facade over focused preference, session, download and library stores. */
 class BrowserStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("browsex.browser", Context.MODE_PRIVATE)
-
-    private companion object {
-        const val HOME_URL_FOR_STORE = "resource://android/assets/home.html"
-    }
+    private val preferences = BrowserPreferencesStore(prefs)
+    private val sessions = BrowserSessionStore(prefs)
+    private val library = BrowserLibraryStore(prefs)
+    private val downloads = BrowserDownloadStore(prefs)
 
     var adBlockEnabled: Boolean
-        get() = prefs.getBoolean("ad_block_enabled", false)
-        set(value) { prefs.edit().putBoolean("ad_block_enabled", value).apply() }
+        get() = preferences.adBlockEnabled
+        set(value) { preferences.adBlockEnabled = value }
+
+    var adBlockInstalled: Boolean
+        get() = preferences.adBlockInstalled
+        set(value) { preferences.adBlockInstalled = value }
+
+    var adBlockPrivateEnabled: Boolean
+        get() = preferences.adBlockPrivateEnabled
+        set(value) { preferences.adBlockPrivateEnabled = value }
+
+    var themeMode: String
+        get() = preferences.themeMode
+        set(value) { preferences.themeMode = value }
+
+    var languageMode: String
+        get() = preferences.languageMode
+        set(value) { preferences.languageMode = value }
+
+    var siteNotificationsEnabled: Boolean
+        get() = preferences.siteNotificationsEnabled
+        set(value) { preferences.siteNotificationsEnabled = value }
+
+    var homeShowQuickLinks: Boolean
+        get() = preferences.homeShowQuickLinks
+        set(value) { preferences.homeShowQuickLinks = value }
+
+    var homeShowDiscovery: Boolean
+        get() = preferences.homeShowDiscovery
+        set(value) { preferences.homeShowDiscovery = value }
+
+    var homeLayout: String
+        get() = preferences.homeLayout
+        set(value) { preferences.homeLayout = value }
 
     var searchEngine: String
-        get() = prefs.getString("search_engine", "Google") ?: "Google"
-        set(value) { prefs.edit().putString("search_engine", value).apply() }
+        get() = preferences.searchEngine
+        set(value) { preferences.searchEngine = value }
 
-    fun saveOpenTabs(urls: List<String>, activeIndex: Int) {
-        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL_FOR_STORE)
-        writeList("open_tabs", snapshot.urls)
-        prefs.edit().putInt("active_tab_index", snapshot.activeIndex).apply()
-    }
+    fun resetHomePreferences() = preferences.resetHomePreferences()
+    fun wasPlatformPermissionDenied(permission: String): Boolean =
+        preferences.wasPlatformPermissionDenied(permission)
+    fun markPlatformPermissionDenied(permission: String) =
+        preferences.markPlatformPermissionDenied(permission)
+    fun clearPlatformPermissionDenial(permission: String) =
+        preferences.clearPlatformPermissionDenial(permission)
+    fun siteMediaDecision(origin: String, feature: String): String? =
+        preferences.siteMediaDecision(origin, feature)
+    fun setSiteMediaDecision(origin: String, feature: String, decision: String) =
+        preferences.setSiteMediaDecision(origin, feature, decision)
+    fun clearSiteMediaDecisions(origin: String) = preferences.clearSiteMediaDecisions(origin)
+    fun clearAllSiteMediaDecisions() = preferences.clearAllSiteMediaDecisions()
 
-    fun restoreOpenTabs(): TabSessionState.Snapshot = TabSessionState.normalize(
-        readList("open_tabs"),
-        prefs.getInt("active_tab_index", 0),
-        HOME_URL_FOR_STORE
-    )
+    fun reserveDownloadFileName(candidate: String): String =
+        downloads.reserveDownloadFileName(candidate)
 
-    /** DownloadManager IDs explicitly enqueued by BrowseX; excludes other apps' downloads. */
-    fun browseXDownloadIds(): Set<Long> = try {
-        val array = JSONArray(prefs.getString("browsex_download_ids", "[]"))
-        (0 until array.length()).mapNotNull { index ->
-            array.optLong(index, -1L).takeIf { it > 0L }
-        }.toSet()
-    } catch (_: Exception) { emptySet() }
+    fun browseXDownloadIds(): Set<Long> = downloads.browseXDownloadIds()
+    fun addBrowseXDownload(id: Long) = downloads.addBrowseXDownload(id)
+    fun removeBrowseXDownload(id: Long) = downloads.removeBrowseXDownload(id)
 
-    fun addBrowseXDownload(id: Long) {
-        if (id <= 0L) return
-        val ids = browseXDownloadIds().toMutableList()
-        ids.remove(id)
-        ids.add(id)
-        val array = JSONArray()
-        ids.takeLast(300).forEach { array.put(it) }
-        prefs.edit().putString("browsex_download_ids", array.toString()).apply()
-    }
+    fun beginStreamDownload(displayName: String, mimeType: String, totalBytes: Long = -1L): String =
+        downloads.beginStreamDownload(displayName, mimeType, totalBytes)
 
-    fun removeBrowseXDownload(id: Long) {
-        val array = JSONArray()
-        browseXDownloadIds().filterNot { it == id }.forEach { array.put(it) }
-        prefs.edit().putString("browsex_download_ids", array.toString()).apply()
-    }
+    fun updateStreamDownloadProgress(id: String, bytesWritten: Long) =
+        downloads.updateStreamDownloadProgress(id, bytesWritten)
 
-    fun bookmarks(): List<String> = readList("bookmarks")
-    fun history(): List<String> = readList("history")
+    fun completeStreamDownload(id: String, uri: String, bytesWritten: Long) =
+        downloads.completeStreamDownload(id, uri, bytesWritten)
 
-    fun isBookmarked(url: String): Boolean = bookmarks().contains(url)
+    fun failStreamDownload(
+        id: String,
+        error: String,
+        cancelled: Boolean = false,
+        bytesWritten: Long? = null
+    ) = downloads.failStreamDownload(id, error, cancelled, bytesWritten)
 
-    fun toggleBookmark(url: String): Boolean {
-        val values = bookmarks().toMutableList()
-        val added = if (values.contains(url)) { values.remove(url); false } else { values.add(0, url); true }
-        writeList("bookmarks", values.take(200))
-        return added
-    }
+    fun recoverInterruptedStreamDownloads() = downloads.recoverInterruptedStreamDownloads()
 
-    fun addHistory(url: String) {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return
-        val values = history().toMutableList()
-        values.remove(url)
-        values.add(0, url)
-        writeList("history", values.take(300))
-    }
+    fun addStreamDownload(
+        displayName: String,
+        uri: String,
+        mimeType: String,
+        bytesWritten: Long,
+        failed: Boolean = false,
+        error: String = ""
+    ): String = downloads.addStreamDownload(displayName, uri, mimeType, bytesWritten, failed, error)
 
-    fun removeBookmark(url: String) {
-        writeList("bookmarks", bookmarks().filterNot { it == url })
-    }
+    internal fun streamDownloads(): List<StreamDownloadRecord> = downloads.streamDownloads()
+    fun removeStreamDownload(id: String) = downloads.removeStreamDownload(id)
 
-    fun removeHistory(url: String) {
-        writeList("history", history().filterNot { it == url })
-    }
+    fun saveOpenTabs(urls: List<String>, activeIndex: Int) =
+        sessions.saveOpenTabs(urls, activeIndex)
 
-    fun clearHistory() = prefs.edit().remove("history").apply()
+    fun restoreOpenTabs(): TabSessionState.Snapshot = sessions.restoreOpenTabs()
 
-    private fun readList(key: String): List<String> = try {
-        val array = JSONArray(prefs.getString(key, "[]"))
-        (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }
-    } catch (_: Exception) { emptyList() }
+    fun saveNamedSession(rawName: String, urls: List<String>, activeIndex: Int): Boolean =
+        sessions.saveNamedSession(rawName, urls, activeIndex)
 
-    private fun writeList(key: String, values: List<String>) {
-        val array = JSONArray()
-        values.forEach { array.put(it) }
-        prefs.edit().putString(key, array.toString()).apply()
-    }
+    internal fun savedSessions(): List<SavedBrowserSession> = sessions.savedSessions()
+
+    fun removeNamedSession(id: String): Boolean = sessions.removeNamedSession(id)
+
+    fun recordRecentlyClosedTab(url: String, title: String) =
+        sessions.recordRecentlyClosedTab(url, title)
+
+    internal fun recentlyClosedTabs(): List<RecentlyClosedTab> = sessions.recentlyClosedTabs()
+
+    internal fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? =
+        sessions.consumeRecentlyClosedTab(id)
+
+    fun clearRecentlyClosedTabs() = sessions.clearRecentlyClosedTabs()
+
+    fun bookmarks(): List<String> = library.bookmarks()
+    fun history(): List<String> = library.history()
+    internal fun historyEntries(): List<BrowserHistoryEntry> = library.historyEntries()
+    internal fun bookmarkFolders(): List<BookmarkFolder> = library.bookmarkFolders()
+    internal fun bookmarkItems(): List<BookmarkItem> = library.bookmarkItems()
+    internal fun createBookmarkFolder(rawName: String): BookmarkFolder? = library.createBookmarkFolder(rawName)
+    fun renameBookmarkFolder(folderId: String, rawName: String): Boolean =
+        library.renameBookmarkFolder(folderId, rawName)
+    fun removeBookmarkFolder(folderId: String): Boolean = library.removeBookmarkFolder(folderId)
+    fun moveBookmark(url: String, folderId: String): Boolean = library.moveBookmark(url, folderId)
+    fun reorderBookmark(url: String, offset: Int, folderId: String? = null): Boolean =
+        library.reorderBookmark(url, offset, folderId)
+    fun isBookmarked(url: String): Boolean = library.isBookmarked(url)
+    fun toggleBookmark(url: String): Boolean = library.toggleBookmark(url)
+    fun toggleBookmark(url: String, title: String): Boolean = library.toggleBookmark(url, title)
+    fun exportBookmarks(): String = library.exportBookmarks()
+    internal fun previewBookmarkImport(payload: String): BookmarkImportPreview =
+        library.previewBookmarkImport(payload)
+    fun importBookmarks(payload: String, merge: Boolean = true): Int =
+        library.importBookmarks(payload, merge)
+    fun addHistory(url: String) = library.addHistory(url)
+    fun addHistory(url: String, title: String) = library.addHistory(url, title)
+    fun removeBookmark(url: String) = library.removeBookmark(url)
+    fun removeHistory(url: String) = library.removeHistory(url)
+    fun clearHistory() = library.clearHistory()
+
 }

@@ -36,12 +36,50 @@ internal object NavigationInput {
 
     fun externalWebUrl(raw: String): String? = raw.trim().takeIf(::isValidWebUrl)
 
-    fun isValidWebUrl(value: String): Boolean = try {
+    /**
+     * Accepts Unicode domain names while rejecting credentials, malformed authorities and
+     * invalid ports. The original URL is retained; Gecko handles IDN navigation/display.
+     */
+    fun isValidWebUrl(value: String): Boolean {
+        return try {
         val uri = URI(value)
-        (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) &&
-            !uri.host.isNullOrBlank() && uri.rawUserInfo == null
-    } catch (_: Exception) {
-        false
+        val scheme = uri.scheme?.lowercase()
+        if (scheme != "http" && scheme != "https") return false
+        if (uri.rawUserInfo != null) return false
+        val authority = uri.rawAuthority ?: return false
+        if (authority.isBlank() || authority.any { it.isWhitespace() || it == '%' || it == '\\' }) return false
+
+        val host = if (authority.startsWith("[")) {
+            val closing = authority.indexOf(']')
+            if (closing <= 1) return false
+            val suffix = authority.substring(closing + 1)
+            if (suffix.isNotEmpty()) {
+                if (!suffix.startsWith(":")) return false
+                val port = suffix.substring(1).toIntOrNull() ?: return false
+                if (port !in 1..65535) return false
+            }
+            authority.substring(0, closing + 1)
+        } else {
+            val colon = authority.lastIndexOf(':')
+            if (colon >= 0) {
+                if (authority.indexOf(':') != colon) return false
+                val port = authority.substring(colon + 1).toIntOrNull() ?: return false
+                if (port !in 1..65535) return false
+                authority.substring(0, colon)
+            } else authority
+        }
+        if (host.isBlank()) return false
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host.length > 2 && host.substring(1, host.length - 1).contains(':')
+        } else {
+            val ascii = java.net.IDN.toASCII(host, java.net.IDN.USE_STD3_ASCII_RULES)
+            val labels = ascii.trimEnd('.').split('.')
+            ascii.length <= 254 && labels.isNotEmpty() &&
+                labels.all { it.isNotBlank() && it.length <= 63 }
+        }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun looksLikeHost(value: String): Boolean =
