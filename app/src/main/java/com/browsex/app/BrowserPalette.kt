@@ -29,15 +29,15 @@ internal data class BrowseXColors(
 
         fun isArabic(settings: BrowserSettings): Boolean = when {
             settings.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
-            else -> store.languageMode.substringBefore('-').equals("ar", ignoreCase = true)
+            else -> settings.languageMode.substringBefore('-').equals("ar", ignoreCase = true)
         }
 
         /** Layout direction follows the actual locale, independently of translation availability. */
         fun isRtl(settings: BrowserSettings): Boolean {
-            val locale = if (store.languageMode == "system") {
+            val locale = if (settings.languageMode == "system") {
                 Locale.getDefault()
             } else {
-                Locale.forLanguageTag(store.languageMode)
+                Locale.forLanguageTag(settings.languageMode)
             }
             return TextUtils.getLayoutDirectionFromLocale(locale) == View.LAYOUT_DIRECTION_RTL
         }
