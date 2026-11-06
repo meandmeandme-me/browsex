@@ -123,3 +123,14 @@ These changes narrow remaining compatibility usage but do not complete the full 
 - Commit `11defa326272b61aef81bb6580a69c42b8bf89ec`: recently-closed entries expire after 30 days and are pruned when listed, recorded, or restored.
 - Commit `7de2d38855f474f58fd000d704e439c6241233d4`: download coordinator shutdown no longer cancels its persistence scope before the writer's cancellation callbacks can save terminal states to Room; new stream requests are rejected and their bodies closed after shutdown.
 - No tests were run for these changes. Issues #5–#10 remain open until their full acceptance criteria are implemented and verified.
+
+
+## Latest continuation checkpoint — 2026-11-06
+
+- Current implementation branch: `rewrite-v2`; latest documentation checkpoint is being updated alongside source changes. Do not merge to `main`.
+- Commits `f2e98ef93c745f4f3e1ec7219c2c7e10c8dfbc52` and follow-ups: clearing browsing history now also clears recently-closed entries in Room and the emergency SharedPreferences fallback.
+- Commits `2b7dab2138f751fba7766dbf9477bb2b722d645d` and `e7e1b79a872946c20c71b1750398d54393381d72`: added Arabic and English resource-backed messages for MainActivity, Downloads, Privacy, Library and Settings feedback. Both locale files currently contain 325 matching string keys; this was inspected from repository contents, not by running tests locally.
+- Commits `182f5353e72d317ff406c0da2e59306946318e53` and `027f14ccbf66193de64d4d7c19e2a8eae202c549`: extended `scripts/check_locales.py` to validate that Kotlin UI translation helper calls resolve to declared English resource keys, in addition to locale parity and formatting placeholders.
+- The last confirmed successful GitHub Actions build was for `f2e98ef`. The latest localization/validator commits have new Actions runs queued or in progress; do not claim they passed until the run for the latest head completes.
+- No physical-device tests have been performed or claimed. GeckoView response downloads still use the exact original response body; DownloadManager enqueue/reconciliation is not added because a URL-only re-fetch could lose request/response fidelity.
+- Remaining work is still open: full SharedPreferences compatibility audit, tab/session race and low-memory verification, safe DownloadManager integration where the original request can be represented faithfully, Android permission/notification device checks, real-site uBlock behavior, further accessibility and internationalization, and device/install/release verification.

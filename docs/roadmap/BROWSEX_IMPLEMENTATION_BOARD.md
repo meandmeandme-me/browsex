@@ -151,3 +151,14 @@ Issues #5, #7, #8 and #10 remain in progress; these commits do not represent com
 - Commit `11defa326272b61aef81bb6580a69c42b8bf89ec`: recently-closed entries expire after 30 days and are pruned when listed, recorded, or restored.
 - Commit `7de2d38855f474f58fd000d704e439c6241233d4`: download coordinator shutdown no longer cancels its persistence scope before the writer's cancellation callbacks can save terminal states to Room; new stream requests are rejected and their bodies closed after shutdown.
 - No tests were run for these changes. Issues #5–#10 remain open until their full acceptance criteria are implemented and verified.
+
+
+## Latest continuation checkpoint — 2026-11-06
+
+- Branch: `rewrite-v2` only; PR #4 remains open and must not be merged into `main` yet.
+- `f2e98ef`: clearing browsing history also clears recently-closed Room records and the emergency SharedPreferences fallback.
+- `2b7dab2` and `e7e1b79`: localized missing browser feedback strings in Arabic and English. The two resource files were inspected and contain 325 matching keys each.
+- `182f535` and `027f14c`: locale validation now also checks that Kotlin UI translation-helper calls map to declared resource keys.
+- The last confirmed successful Actions build is `f2e98ef`. Actions for the newest localization and validator changes are queued/in progress, not yet confirmed.
+- No manual tests or device verification were performed. The exact Gecko response-body download path remains in place; no unsafe URL re-fetch was introduced for DownloadManager.
+- Still open: SharedPreferences fallback audit, session/tab race and memory verification, DownloadManager reconciliation for safely representable requests, Android permission/notification device verification, uBlock real-site/update checks, broader locale packs and accessibility audit, release signing and installation/device verification.
