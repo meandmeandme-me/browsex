@@ -12,6 +12,7 @@ RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
 LOCALE_CONFIG = RES / "xml" / "locales_config.xml"
 PLACEHOLDER = re.compile(r"(?<!%)%(?!%)(?:[0-9]+\$)?[-#+0,(]*[0-9]*(?:\.[0-9]+)?[sdif]")
+TRANSLATION_CALL = re.compile(r'\b(?:t|BrowseXStrings\.text)\s*\(\s*"([^"]+)"\s*,\s*"([^"]*)"')
 
 
 def resources(path: Path):
