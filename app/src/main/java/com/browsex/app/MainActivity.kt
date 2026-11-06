@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity() {
             enforceSessionBudget = ::enforceLiveSessionBudget,
             updateChrome = ::updateChrome,
             showMessage = ::toast,
-            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title) { store.recordRecentlyClosedTab(tab.url, tab.title) } },
+            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title) },
             dispatchToMain = { action -> runOnUiThread(action) },
             setExtensionTabActive = { session, active ->
                 uBlockOriginManager?.setTabActive(session, active)
@@ -160,9 +160,6 @@ class MainActivity : AppCompatActivity() {
             storage.history.clear()
             storage.sessions.clearRecentlyClosed()
         }
-        // Also clear the emergency SharedPreferences fallback so a Room failure
-        // cannot leave recently-closed URLs visible after the user clears history.
-        if (::store.isInitialized) store.clearRecentlyClosedTabs()
         result.getOrThrow()
     }
 
