@@ -56,7 +56,7 @@ internal class TabsPage(
             setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
-            text = if (BrowseXColors.isArabic(store)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
+            text = if (BrowseXColors.isArabic(activity, store)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
             textSize = 13f
             setTextColor(colors.muted)
             setPadding(0, dp(3), 0, 0)
