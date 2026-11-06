@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                 onUpdated(updated)
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not update browser settings", error)
-                toast(BrowseXStrings.text(this, "Could not save settings", "تعذر حفظ الإعدادات"))
+                toast(BrowseXStrings.text(this@MainActivity, "Could not save settings", "تعذر حفظ الإعدادات"))
             }
         }
     }
@@ -739,7 +739,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun tr(value: String): String = BrowseXStrings.text(this, value)
+    private fun tr(value: String): String = BrowseXStrings.text(this@MainActivity, value)
 
     private fun homePageUrl(): String =
         "$HOME_URL?bxlang=${store.languageMode}&bxtheme=${store.themeMode}" +
@@ -989,7 +989,7 @@ class MainActivity : AppCompatActivity() {
                         .setPositiveButton(tr("Clear")) { _, _ ->
                             lifecycleScope.launch {
                                 runCatching { clearStoredHistory() }.onSuccess { toast("History cleared") }
-                                    .onFailure { toast(BrowseXStrings.text(this, "Could not clear history", "تعذر مسح السجل")) }
+                                    .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
                             }
                         }.show()
                     11 -> showSettings()
@@ -1024,7 +1024,7 @@ class MainActivity : AppCompatActivity() {
                 toast(if (added) "Bookmark saved" else "Bookmark removed")
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not update bookmark", error)
-                toast(BrowseXStrings.text(this, "Could not update bookmark", "تعذر تحديث المفضلة"))
+                toast(BrowseXStrings.text(this@MainActivity, "Could not update bookmark", "تعذر تحديث المفضلة"))
             }
         }
     }
@@ -1050,7 +1050,7 @@ class MainActivity : AppCompatActivity() {
                     if (isFinishing || isDestroyed || activeTab !== tab || tab.url != sourceUrl) return@runOnUiThread
                     val content = extracted?.trim().orEmpty()
                     if (content.isBlank()) {
-                        toast(BrowseXStrings.text(this, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
+                        toast(BrowseXStrings.text(this@MainActivity, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
                     } else {
                         ReaderPage(this, tab.title, sourceUrl, content, store).show()
                     }
@@ -1060,7 +1060,7 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (loading.isShowing) loading.dismiss()
                     android.util.Log.w("BrowseX", "Reader extraction failed", error)
-                    if (!isFinishing && !isDestroyed) toast(BrowseXStrings.text(this, "Could not prepare reader view", "تعذر تجهيز وضع القراءة"))
+                    if (!isFinishing && !isDestroyed) toast(BrowseXStrings.text(this@MainActivity, "Could not prepare reader view", "تعذر تجهيز وضع القراءة"))
                 }
             }
         )
@@ -1159,7 +1159,7 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     runCatching { clearStoredHistory() }
                         .onSuccess { toast("History cleared") }
-                        .onFailure { toast(BrowseXStrings.text(this, "Could not clear history", "تعذر مسح السجل")) }
+                        .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
                 }
             },
             setWebsiteNotifications = { enabled ->
@@ -1218,7 +1218,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val settings = runCatching { storageRuntime.settings.snapshot() }.getOrElse {
                 android.util.Log.e("BrowseX", "Could not load homepage preferences", it)
-                toast(BrowseXStrings.text(this, "Could not load homepage settings", "تعذر تحميل إعدادات الصفحة الرئيسية"))
+                toast(BrowseXStrings.text(this@MainActivity, "Could not load homepage settings", "تعذر تحميل إعدادات الصفحة الرئيسية"))
                 return@launch
             }
             val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
@@ -1299,7 +1299,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val graph = runCatching { storageRuntime.awaitReady() }.getOrElse {
                 android.util.Log.e("BrowseX", "Could not load recall library", it)
-                toast(BrowseXStrings.text(this, "Could not open search library", "تعذر فتح مكتبة البحث"))
+                toast(BrowseXStrings.text(this@MainActivity, "Could not open search library", "تعذر فتح مكتبة البحث"))
                 return@launch
             }
             val bookmarkRows = graph.bookmarks.all().take(30).map { it.title to it.url }
@@ -1342,7 +1342,7 @@ class MainActivity : AppCompatActivity() {
     /** Starts a response stream after validation and any required Android permission prompt. */
     private fun startStreamDownload(response: WebResponse) {
         val body = response.body ?: run {
-            toast(BrowseXStrings.text(this, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
+            toast(BrowseXStrings.text(this@MainActivity, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
             return
         }
         val started = streamDownloadCoordinator.start(
@@ -1364,7 +1364,7 @@ class MainActivity : AppCompatActivity() {
         )
         if (!started) {
             closeDownloadBodySafely { body.close() }
-            toast(BrowseXStrings.text(this, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
+            toast(BrowseXStrings.text(this@MainActivity, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
         }
     }
 
