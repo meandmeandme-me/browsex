@@ -4,7 +4,6 @@ import com.browsex.app.storage.BrowserStorageRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicBoolean
@@ -19,6 +18,7 @@ internal class StreamDownloadCoordinator(
     private val writer: DownloadResponseWriter
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val shuttingDown = AtomicBoolean(false)
 
     fun start(
         response: WebResponse,
@@ -26,6 +26,10 @@ internal class StreamDownloadCoordinator(
         onFailed: (Throwable?, Boolean) -> Unit
     ): Boolean {
         val body = response.body ?: return false
+        if (shuttingDown.get()) {
+            runCatching { body.close() }
+            return false
+        }
         val url = response.uri
         val disposition = response.headers.entries.firstOrNull {
             it.key.equals("content-disposition", ignoreCase = true)
@@ -136,8 +140,11 @@ internal class StreamDownloadCoordinator(
     fun cancel(downloadId: String): Boolean = writer.cancel(downloadId)
 
     fun shutdown() {
+        if (!shuttingDown.compareAndSet(false, true)) return
+        // Keep the persistence scope alive while the writer drains cancelled jobs:
+        // their terminal callbacks must still commit cancelled/failed states to Room.
+        // The scope is owned by this coordinator and becomes collectible with it.
         writer.shutdown()
-        scope.cancel()
     }
 
     private companion object {
