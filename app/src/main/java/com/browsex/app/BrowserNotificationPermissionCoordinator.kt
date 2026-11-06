@@ -40,11 +40,12 @@ internal class BrowserNotificationPermissionCoordinator(
             isInFlight = true
             try {
                 launchRequest()
-            } catch (error: Exception) {
+            } catch (_: Exception) {
+                // Android's Log facade is unavailable in plain JVM tests. More importantly,
+                // a launcher failure must resolve every waiting Gecko callback exactly once.
                 isInFlight = false
                 resolveCallbacks(false)
                 afterResolved()
-                android.util.Log.e("BrowseX", "Could not launch notification permission request", error)
             }
         }
     }

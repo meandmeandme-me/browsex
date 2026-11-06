@@ -71,8 +71,13 @@ class RoomSessionRepositoryTest {
             val repository = RoomSessionRepository(database.storageDao())
             assertFalse(repository.recordRecentlyClosed("file:///private", "Private"))
             assertFalse(repository.recordRecentlyClosed("resource://android/assets/home.html", "Home"))
+            val baseTime = System.currentTimeMillis()
             repeat(11) { index ->
-                assertTrue(repository.recordRecentlyClosed("https://$index.example", "Page $index", index.toLong()))
+                assertTrue(repository.recordRecentlyClosed(
+                    "https://$index.example",
+                    "Page $index",
+                    baseTime + index
+                ))
             }
             assertEquals(10, repository.recentlyClosed().size)
             val selected = repository.recentlyClosed().first()
