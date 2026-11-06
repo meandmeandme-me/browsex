@@ -178,7 +178,7 @@ internal class RoomSavedPagesPage(
                         .any { BrowserTextNormalizer.normalize(it).contains(query) }
                 }
                 val count = TextView(activity).apply {
-                    text = if (BrowseXColors.isArabic(store)) "${filtered.size} من ${rows.size} صفحة"
+                    text = if (BrowseXColors.isArabic(activity, store)) "${filtered.size} من ${rows.size} صفحة"
                         else "${filtered.size} of ${rows.size} pages"
                     textSize = 11f; setTextColor(colors.muted); setPadding(dp(2), dp(4), dp(2), dp(8))
                 }
