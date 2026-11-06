@@ -142,14 +142,13 @@ jobs:
           retention-days: 30
 
       - name: Verify generated Room schema snapshot is committed
-        if: ${{ always() && !cancelled() }}
         shell: bash
         run: |
           set -euo pipefail
           SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json"
           test -s "$SCHEMA"
           if ! git diff --quiet -- "$SCHEMA"; then
-            echo "::error::Room schema changed. Commit the generated schema JSON and its migration in this pull request."
+            echo "::error::Room schema changed. Commit the generated schema JSON and its migration with this change."
             git diff -- "$SCHEMA"
             exit 1
           fi
