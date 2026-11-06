@@ -126,8 +126,16 @@ internal class BrowserTabController(
         if (index < 0) return
         val wasActive = activeTab === tab
         if (!tab.privateMode) recordRecentlyClosed(tab)
-        if (tab.sessionOpened) setExtensionTabActive(tab.session, false)
-        if (wasActive) releaseViewSession()
+        // Extension and view callbacks are best-effort: neither may prevent the
+        // lifecycle owner from closing the native GeckoSession and removing the tab.
+        if (tab.sessionOpened) {
+            runCatching { setExtensionTabActive(tab.session, false) }
+                .onFailure { android.util.Log.w("BrowseX", "Could not deactivate extension tab", it) }
+        }
+        if (wasActive) {
+            runCatching { releaseViewSession() }
+                .onFailure { android.util.Log.w("BrowseX", "Could not release active GeckoView session", it) }
+        }
         sessionLifecycle.closeAndDiscard(tab)
         registry.removeAt(index)
         if (tabs.isEmpty()) createTab(homeUrl())
