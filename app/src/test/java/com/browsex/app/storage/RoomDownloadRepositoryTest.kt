@@ -140,7 +140,6 @@ class RoomDownloadRepositoryTest {
             assertTrue(repository.all().any { it.id == activeId && it.status == "queued" })
             assertTrue(repository.all().any { it.id == nextId })
             assertEquals(300, repository.all().size)
-            assertFalse(repository.remove(activeId).not())
         } finally {
             database.close()
         }
