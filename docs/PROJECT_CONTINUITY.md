@@ -111,3 +111,5 @@
 - Commit `c3c82ac3628d46800c5f096c8f0969ac9f22acb7`: removed the redundant legacy SharedPreferences download-recovery call; application-scoped Room startup recovery remains authoritative for stream-download records.
 
 These changes narrow remaining compatibility usage but do not complete the full legacy-store audit. Do not remove tab/session fallback until its failure behavior is intentionally replaced.
+
+- Commit `97304032b315a6ff68129fa9b2c4a674439bbca5`: address-field text direction now uses first-strong behavior, keeping URL/domain input LTR while allowing Arabic and other RTL search queries to flow naturally.
