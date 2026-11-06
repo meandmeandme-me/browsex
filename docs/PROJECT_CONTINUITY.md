@@ -113,3 +113,13 @@
 These changes narrow remaining compatibility usage but do not complete the full legacy-store audit. Do not remove tab/session fallback until its failure behavior is intentionally replaced.
 
 - Commit `97304032b315a6ff68129fa9b2c4a674439bbca5`: address-field text direction now uses first-strong behavior, keeping URL/domain input LTR while allowing Arabic and other RTL search queries to flow naturally.
+
+
+## Follow-up implementation — 2026-11-06
+
+- Commit `9c9e232729dd4c3cf7ff86ee0749614cf5c6607c`: browsing-data clearing now closes private GeckoSessions before removing private tab records; regular tabs are reset and retained.
+- Commit `e7821ee698648e936f0a22903612202af5d8c783`: site-notification permission checks now use the DataStore-backed global setting rather than the legacy SharedPreferences value.
+- Commit `262b1fc0a6c38432dc916415da01d3b6e45d9445`: tab closing and browsing-data clearing continue cleanup if recently-closed persistence or GeckoView detachment callbacks fail.
+- Commit `11defa326272b61aef81bb6580a69c42b8bf89ec`: recently-closed entries expire after 30 days and are pruned when listed, recorded, or restored.
+- Commit `7de2d38855f474f58fd000d704e439c6241233d4`: download coordinator shutdown no longer cancels its persistence scope before the writer's cancellation callbacks can save terminal states to Room; new stream requests are rejected and their bodies closed after shutdown.
+- No tests were run for these changes. Issues #5–#10 remain open until their full acceptance criteria are implemented and verified.

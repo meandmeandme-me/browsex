@@ -141,3 +141,13 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - Commit `c3c82ac3628d46800c5f096c8f0969ac9f22acb7`: removed the redundant legacy SharedPreferences download-recovery call; application-scoped Room startup recovery remains authoritative for stream-download records.
 
 Issues #5, #7, #8 and #10 remain in progress; these commits do not represent completion of their full acceptance criteria.
+
+
+## Follow-up implementation — 2026-11-06
+
+- Commit `9c9e232729dd4c3cf7ff86ee0749614cf5c6607c`: browsing-data clearing now closes private GeckoSessions before removing private tab records; regular tabs are reset and retained.
+- Commit `e7821ee698648e936f0a22903612202af5d8c783`: site-notification permission checks now use the DataStore-backed global setting rather than the legacy SharedPreferences value.
+- Commit `262b1fc0a6c38432dc916415da01d3b6e45d9445`: tab closing and browsing-data clearing continue cleanup if recently-closed persistence or GeckoView detachment callbacks fail.
+- Commit `11defa326272b61aef81bb6580a69c42b8bf89ec`: recently-closed entries expire after 30 days and are pruned when listed, recorded, or restored.
+- Commit `7de2d38855f474f58fd000d704e439c6241233d4`: download coordinator shutdown no longer cancels its persistence scope before the writer's cancellation callbacks can save terminal states to Room; new stream requests are rejected and their bodies closed after shutdown.
+- No tests were run for these changes. Issues #5–#10 remain open until their full acceptance criteria are implemented and verified.
