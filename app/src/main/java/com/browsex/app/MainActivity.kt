@@ -179,6 +179,10 @@ class MainActivity : AppCompatActivity() {
         store.searchEngine = settings.searchEngine
     }
 
+    internal fun websiteNotificationsEnabled(): Boolean =
+        if (browserSettingsLoaded) browserSettingsSnapshot.siteNotificationsEnabled
+        else store.siteNotificationsEnabled
+
     internal fun wasPlatformPermissionDenied(permission: String): Boolean =
         if (browserSettingsLoaded) permission in browserSettingsSnapshot.deniedPlatformPermissions
         else store.wasPlatformPermissionDenied(permission)
