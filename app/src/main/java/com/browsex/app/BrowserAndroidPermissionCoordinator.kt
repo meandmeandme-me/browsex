@@ -82,11 +82,10 @@ internal class BrowserAndroidPermissionCoordinator(
         val next = queue.takeNext(activeSession(), containsSession) ?: return
         try {
             launchRequest(next.permissions.toTypedArray())
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             // A failed ActivityResult launch must not strand the active Gecko callback
             // or permanently block the permission queue.
             queue.rejectActive()
-            android.util.Log.e("BrowseX", "Could not launch Android permission request", error)
             launchNext()
         }
     }

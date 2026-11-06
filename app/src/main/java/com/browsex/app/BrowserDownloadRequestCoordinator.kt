@@ -81,11 +81,10 @@ internal class BrowserDownloadRequestCoordinator(
         permissionInFlight = true
         try {
             requestLegacyStoragePermission()
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             permissionInFlight = false
             cancelPending()
             showIfAvailable("Storage permission could not be requested")
-            android.util.Log.w("BrowseX", "Could not launch legacy download permission", error)
         }
     }
 
@@ -96,16 +95,14 @@ internal class BrowserDownloadRequestCoordinator(
     private fun startSafely(response: WebResponse) {
         try {
             startDownload(response)
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             closeResponseBody(response)
-            android.util.Log.e("BrowseX", "Could not start response download", error)
             showIfAvailable("Could not start this download")
         }
     }
 
     private fun closeResponseBody(response: WebResponse) {
-        val closed = closeDownloadBodySafely { response.body?.close() }
-        if (!closed) android.util.Log.w("BrowseX", "Could not close a rejected Gecko download response body")
+        closeDownloadBodySafely { response.body?.close() }
     }
 
     private fun isSupported(response: WebResponse): Boolean =

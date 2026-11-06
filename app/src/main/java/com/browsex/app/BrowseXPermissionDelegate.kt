@@ -101,7 +101,7 @@ internal class BrowseXPermissionDelegate(
                 if (isSiteNotification) {
                     activity.requestSiteNotificationPermission { granted ->
                         activity.lifecycleScope.launch {
-                            val allowed = granted && store.siteNotificationsEnabled && isActiveSession(session)
+                            val allowed = granted && activity.websiteNotificationsEnabled() && isActiveSession(session)
                             if (allowed) persistDecision(origin, "notifications", "allow")
                             result.complete(
                                 if (allowed) GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
