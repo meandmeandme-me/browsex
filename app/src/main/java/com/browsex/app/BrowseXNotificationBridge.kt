@@ -19,7 +19,6 @@ import java.security.MessageDigest
 /** Adapts Gecko web notifications to Android's notification tray without leaking private tabs. */
 internal class BrowseXNotificationBridge(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val requestRuntimePermission: ((Boolean) -> Unit) -> Unit
 ) : WebNotificationDelegate {
     private val main = Handler(Looper.getMainLooper())
