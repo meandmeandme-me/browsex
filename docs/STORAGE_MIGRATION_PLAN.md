@@ -1,6 +1,6 @@
 # BrowseX storage migration plan
 
-Status: Room 2.8.5 schema and a non-destructive legacy snapshot importer are implemented and compile under KSP. The importer is not invoked by production startup; current feature reads/writes still use SharedPreferences and no DataStore migration or authoritative storage cutover is active.
+Status (source re-check 2026-11-06): Room entities/DAO/repositories and a Preferences DataStore wrapper exist, but the legacy snapshot parser/importer described in an earlier draft is **not present in the checked `wren-design-prep` source tree**. `BrowserStorageRuntime` does not invoke an importer. `BrowserStore` and focused SharedPreferences stores remain active. No production Room/DataStore cutover is complete. Treat the importer/test descriptions below as requirements, not implemented facts, until matching source and tests are committed and verified.
 
 ## Existing storage inventory
 
@@ -59,15 +59,17 @@ The following details were checked against the four focused store implementation
 - The current download-name reservation and stream-download JSON lists are bounded and ordered. Preserve ordering/retention semantics or document an explicit product-level change.
 - The migration must never include private-tab URLs, GeckoSession state, cookies, credentials, notification payloads, or raw form data.
 
-## Implemented staging state (2026-11-05)
+## Current source inventory (2026-11-06)
 
-- Room 2.8.5 entities/DAO: bookmark folders/items, history, named sessions/tabs, recently closed tabs, site media decisions, stream download records, open-tab snapshot, filename reservations and BrowseX-owned DownloadManager IDs.
-- Room uses KSP (not KAPT) with Kotlin 2.3.20; CI uses AGP 8.13.2 and Gradle 8.13. The Room schema export path is `app/schemas`.
-- `LegacyStorageSnapshotParser` parses an immutable copy of the legacy SharedPreferences snapshot. It validates navigable URLs/origins, normalizes bounds, repairs missing folders to Unfiled, separates DownloadManager IDs from stream records, and uses deterministic IDs for legacy URL-only records.
-- `LegacyStorageMigrator` copies the parsed snapshot in one Room transaction, verifies primary collection counts, writes a versioned completion marker only after commit, and never clears or modifies the original `browsex.browser` preferences.
-- Parser JVM tests cover legacy fallback, deterministic IDs, invalid schemes, missing folders, empty/invalid sessions, permission filtering, download interruption and malformed JSON.
-- Robolectric integration tests open an actual in-memory Room/SQLite database, import the legacy snapshot, verify rows/relations and source preservation, repeat after marker removal to prove idempotency, and inject an SQLite trigger failure to prove transaction rollback and marker safety.
-- **Not yet a production migration:** no app startup call, no Room-backed feature reads/writes and no Preferences DataStore dependency. SharedPreferences is still authoritative. Physical-device upgrade, process-death, downgrade and rollback checks remain pending.
+- Room entities/DAO cover bookmark folders/items, history, named sessions/tabs, recently closed tabs, site permission decisions, download records, open-tab snapshots, filename reservations and DownloadManager IDs.
+- Room repositories exist for bookmarks, downloads, history, sessions, site permissions and tab state.
+- Preferences DataStore exists for browser settings, but the current feature-facing `BrowserStore` still reads and writes the `browsex.browser` SharedPreferences file.
+- `BrowserStorageRuntime` currently initializes the Room graph and recovers interrupted downloads; it does not snapshot, parse, import, verify or mark legacy data migration.
+- A source-tree re-check did not find `LegacyStorageSnapshotParser`, `LegacyStorageMigrator`, or the migration parser/Robolectric tests described in the previous draft. Those claims are withdrawn until the implementation is actually present.
+- `storage_migration_state` exists in the Room schema, but a marker table alone is not a migration.
+- The schema export path is `app/schemas`; Room uses KSP. Verify exact Gradle/Kotlin versions from the checked build before changing dependencies.
+
+**Current data-loss risk:** a user upgrading from a build that stored bookmarks/history/settings in `browsex.browser` can have their data left behind in SharedPreferences while the new Room/DataStore-backed screens read empty/default values. Do not delete or overwrite those legacy keys, and do not announce migration completion, until an importer and upgrade tests exist.
 
 ## Proposed Room schema
 
