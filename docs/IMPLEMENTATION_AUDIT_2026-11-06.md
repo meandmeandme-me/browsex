@@ -29,11 +29,11 @@ This is a source inspection report, not a claim that the app passed a build or d
 ### 3. Room and DataStore migration — release blocker
 
 Source inspection found:
-- Room repositories and a Room database graph exist.
-- DataStore preferences exist.
-- `BrowserStorageRuntime` currently documents a clean-start path and does not invoke a legacy SharedPreferences import.
-- `BrowserStore` and its focused SharedPreferences stores still exist.
-- MainActivity uses the new storage runtime for settings and several repositories while still constructing the legacy BrowserStore facade.
+- Room entities/DAO/repositories and a Room database graph exist.
+- Preferences DataStore exists, but `BrowserStore` and focused stores still read/write the legacy `browsex.browser` SharedPreferences file.
+- `BrowserStorageRuntime` does not invoke a legacy SharedPreferences import.
+- A fresh source-tree scan did **not** find the `LegacyStorageSnapshotParser`, `LegacyStorageMigrator`, or migration tests claimed in an earlier version of `STORAGE_MIGRATION_PLAN.md`; those claims are corrected/withdrawn.
+- MainActivity still constructs the legacy `BrowserStore` facade alongside the newer storage runtime.
 
 This means the production cutover and preservation of existing installations must not be assumed complete.
 
