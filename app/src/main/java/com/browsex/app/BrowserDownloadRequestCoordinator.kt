@@ -81,7 +81,7 @@ internal class BrowserDownloadRequestCoordinator(
         permissionInFlight = true
         try {
             requestLegacyStoragePermission()
-        } catch (error: RuntimeException) {
+        } catch (error: Exception) {
             permissionInFlight = false
             cancelPending()
             showIfAvailable("Storage permission could not be requested")
@@ -96,7 +96,7 @@ internal class BrowserDownloadRequestCoordinator(
     private fun startSafely(response: WebResponse) {
         try {
             startDownload(response)
-        } catch (error: RuntimeException) {
+        } catch (error: Exception) {
             closeResponseBody(response)
             android.util.Log.e("BrowseX", "Could not start response download", error)
             showIfAvailable("Could not start this download")
