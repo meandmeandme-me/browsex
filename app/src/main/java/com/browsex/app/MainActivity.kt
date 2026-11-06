@@ -188,26 +188,12 @@ class MainActivity : AppCompatActivity() {
             arrayOf(settings.languageMode)
         }
         browserRuntime?.settings?.setLocales(engineLocales)
-        if (!::store.isInitialized) return
-        store.adBlockEnabled = settings.adBlockEnabled
-        store.adBlockInstalled = settings.adBlockInstalled
-        store.adBlockPrivateEnabled = settings.adBlockPrivateEnabled
-        store.themeMode = settings.themeMode
-        store.languageMode = settings.languageMode
-        store.siteNotificationsEnabled = settings.siteNotificationsEnabled
-        store.homeShowQuickLinks = settings.homeShowQuickLinks
-        store.homeShowDiscovery = settings.homeShowDiscovery
-        store.homeLayout = settings.homeLayout
-        store.searchEngine = settings.searchEngine
     }
 
-    internal fun websiteNotificationsEnabled(): Boolean =
-        if (browserSettingsLoaded) browserSettingsSnapshot.siteNotificationsEnabled
-        else store.siteNotificationsEnabled
+    internal fun websiteNotificationsEnabled(): Boolean = browserSettingsSnapshot.siteNotificationsEnabled
 
     internal fun wasPlatformPermissionDenied(permission: String): Boolean =
-        if (browserSettingsLoaded) permission in browserSettingsSnapshot.deniedPlatformPermissions
-        else store.wasPlatformPermissionDenied(permission)
+        permission in browserSettingsSnapshot.deniedPlatformPermissions
 
     internal fun markPlatformPermissionDenied(permission: String) {
         if (browserSettingsLoaded) {
@@ -215,7 +201,6 @@ class MainActivity : AppCompatActivity() {
                 deniedPlatformPermissions = browserSettingsSnapshot.deniedPlatformPermissions + permission
             )
         }
-        if (::store.isInitialized) store.markPlatformPermissionDenied(permission)
         updateBrowserSettings(transform = {
             it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions + permission)
         })
@@ -227,7 +212,6 @@ class MainActivity : AppCompatActivity() {
                 deniedPlatformPermissions = browserSettingsSnapshot.deniedPlatformPermissions - permission
             )
         }
-        if (::store.isInitialized) store.clearPlatformPermissionDenial(permission)
         updateBrowserSettings(transform = {
             it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions - permission)
         })
@@ -475,18 +459,18 @@ class MainActivity : AppCompatActivity() {
         browserRuntime = BrowserRuntimeOwner.runtime(applicationContext)
         browserRuntime?.setAutocompleteStorageDelegate(credentialVault)
         browserRuntime?.settings?.setLoginAutofillEnabled(true)
-        browserRuntime?.settings?.setPreferredColorScheme(when (store.themeMode) {
+        browserRuntime?.settings?.setPreferredColorScheme(when (browserSettingsSnapshot.themeMode) {
             "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
             "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
             else -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
         })
-        val requestedLocales = if (store.languageMode == "system") {
+        val requestedLocales = if (browserSettingsSnapshot.languageMode == "system") {
             resources.configuration.locales.toLanguageTags().split(',').filter { it.isNotBlank() }.toTypedArray()
         } else {
-            arrayOf(store.languageMode)
+            arrayOf(browserSettingsSnapshot.languageMode)
         }
         browserRuntime?.settings?.setLocales(requestedLocales)
-        notificationBridge = BrowseXNotificationBridge(this, store, ::requestSiteNotificationPermission)
+        notificationBridge = BrowseXNotificationBridge(this, ::requestSiteNotificationPermission)
         browserRuntime?.setWebNotificationDelegate(notificationBridge)
         // Temporary engine-only host: the legacy chrome is intentionally detached while the
         // browser engine and feature services are reorganized for the new UI architecture.
@@ -507,7 +491,7 @@ class MainActivity : AppCompatActivity() {
 
         val extensionRuntime = browserRuntime
         if (extensionRuntime == null) {
-            BrowserContentProtectionPolicy.configure(store.adBlockEnabled, store.adBlockPrivateEnabled)
+            BrowserContentProtectionPolicy.configure(browserSettingsSnapshot.adBlockEnabled, browserSettingsSnapshot.adBlockPrivateEnabled)
             restoreInitialBrowserTabs(intent)
         } else {
             uBlockOriginManager = UBlockOriginManager(
@@ -553,9 +537,6 @@ class MainActivity : AppCompatActivity() {
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             val enabled = installed?.metaData?.enabled == true
                             val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
-                            store.adBlockInstalled = installed != null
-                            store.adBlockEnabled = enabled
-                            store.adBlockPrivateEnabled = privateAllowed
                             BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
                             // Reconcile persisted preferences with Gecko's actual extension state.
                             updateBrowserSettings({
@@ -621,7 +602,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun persistTabs() {
-        if (!::store.isInitialized || !initialBrowserTabsRestored) return
+        if (!initialBrowserTabsRestored) return
         val currentTabs = tabs
         val selectedIndex = currentTabs.indexOfFirst { it === activeTab }
         val snapshot = BrowserTabPersistencePolicy.snapshot(
@@ -707,7 +688,6 @@ class MainActivity : AppCompatActivity() {
         BrowserUBlockSettingsCoordinator(
             activity = this,
             manager = { uBlockOriginManager },
-            store = store,
             activeSession = { activeTab?.session },
             isHostUnavailable = { isFinishing || isDestroyed },
             showMessage = ::toast,
@@ -723,7 +703,7 @@ class MainActivity : AppCompatActivity() {
             activity = this,
             activeSession = { activeTab?.session },
             activeUrl = { activeTab?.url },
-            currentSearchEngine = { store.searchEngine },
+            currentSearchEngine = { browserSettingsSnapshot.searchEngine },
             updateSearchEngine = { engine ->
                 updateBrowserSettings({ it.copy(searchEngine = engine) }) { updated ->
                     toast(getString(R.string.ui_search_engine_changed, updated.searchEngine))
@@ -739,8 +719,8 @@ class MainActivity : AppCompatActivity() {
     private fun tr(value: String): String = BrowseXStrings.text(this@MainActivity, value)
 
     private fun homePageUrl(): String =
-        "$HOME_URL?bxlang=${store.languageMode}&bxtheme=${store.themeMode}" +
-            "&bxquick=${store.homeShowQuickLinks}&bxdiscovery=${store.homeShowDiscovery}&bxlayout=${store.homeLayout}"
+        "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
+            "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}"
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
@@ -885,7 +865,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateAddress() = Unit
 
     private fun normalizeInput(raw: String): String =
-        if (raw.isBlank()) homePageUrl() else NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
+        if (raw.isBlank()) homePageUrl() else NavigationInput.normalize(raw, browserSettingsSnapshot.searchEngine, HOME_URL)
 
     private fun safeExternalUrl(uri: Uri): String? = NavigationInput.externalWebUrl(uri.toString())
 
