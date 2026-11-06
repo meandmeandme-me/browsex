@@ -140,7 +140,7 @@ internal class SavedPagesPage(
                             search.text?.clear()
                             if (search.text.isNullOrEmpty()) {
                                 list.removeAllViews()
-                                count.text = if (BrowseXColors.isArabic(store)) "0 من 0 صفحة" else "0 of 0 ${if (isHistory) "pages" else "saved sites"}"
+                                count.text = if (BrowseXColors.isArabic(activity, store)) "0 من 0 صفحة" else "0 of 0 ${if (isHistory) "pages" else "saved sites"}"
                                 empty.text = if (isHistory) t("Your browsing history is empty.", "سجل التصفح فارغ.") else t("No bookmarks yet. Save a page to find it here.", "لا توجد صفحات مفضلة بعد. احفظ صفحة لتظهر هنا.")
                                 list.addView(empty, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
                             }
@@ -275,7 +275,7 @@ internal class SavedPagesPage(
                 (normalized.isBlank() || listOf(page, Uri.parse(page).host.orEmpty(), pageTitle(page))
                     .any { BrowserTextNormalizer.normalize(it).contains(normalized) })
         }
-        count.text = if (BrowseXColors.isArabic(store)) "${filtered.size} من ${pages.size} صفحة" else "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
+        count.text = if (BrowseXColors.isArabic(activity, store)) "${filtered.size} من ${pages.size} صفحة" else "${filtered.size} of ${pages.size} ${if (isHistory) "pages" else "saved sites"}"
         if (filtered.isEmpty()) {
             empty.text = when {
                 pages.isEmpty() && isHistory -> "Your browsing history is empty."
