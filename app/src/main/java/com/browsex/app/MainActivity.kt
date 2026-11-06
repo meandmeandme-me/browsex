@@ -1,85 +1,481 @@
 package com.browsex.app
 
+import android.Manifest
 import android.app.DownloadManager
+import android.content.pm.PackageManager
+import android.os.Build
 import android.webkit.CookieManager
-import android.webkit.URLUtil
 import android.os.Environment
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.browsex.app.storage.BrowserStorageRuntime
+import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
+import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.WebResponse
+import org.mozilla.geckoview.WebNotification
 
-private const val HOME_URL = "resource://android/assets/home.html"
-private val COLOR_BG = Color.rgb(13, 17, 23)
-private val COLOR_PANEL = Color.rgb(22, 27, 34)
-private val COLOR_FIELD = Color.rgb(33, 40, 50)
-private val COLOR_ACCENT = Color.rgb(65, 132, 245)
+internal const val HOME_URL = "resource://android/assets/home.html"
 
-/** GeckoRuntime is process-wide. Sessions are owned by MainActivity and always closed there. */
-private object BrowserEngine {
-    @Volatile private var instance: GeckoRuntime? = null
-    fun runtime(context: Context): GeckoRuntime = instance ?: synchronized(this) {
-        instance ?: GeckoRuntime.create(context.applicationContext).also { instance = it }
-    }
-}
-
-private data class BrowserTab(
-    val session: GeckoSession = GeckoSession(),
-    var title: String = "New tab",
-    var url: String = HOME_URL,
-    var progress: Int = 0,
-    var canGoBack: Boolean = false,
-    var canGoForward: Boolean = false,
-    var sitePermissions: List<GeckoSession.PermissionDelegate.ContentPermission> = emptyList()
-)
 
 @androidx.annotation.OptIn(markerClass = [ExperimentalGeckoViewApi::class])
 class MainActivity : AppCompatActivity() {
-    private val tabs = mutableListOf<BrowserTab>()
-    private var activeTab: BrowserTab? = null
+    private val tabRegistry = BrowserTabRegistry<BrowserTab>()
+    private val deviceCapabilityProfile by lazy { DeviceCapabilityProbe(this).snapshot() }
+    private val adaptiveRuntimeConfig by lazy {
+        AdaptiveRuntimePolicy.resolve(deviceCapabilityProfile, DeviceCapabilityProbe(this).runtimePressure())
+    }
+    private val tabEventCoordinator by lazy {
+        BrowserTabEventCoordinator(
+            isActiveTab = { tab -> tab === activeTab },
+            updateChrome = ::updateChrome,
+            recordHistory = { url, title ->
+                lifecycleScope.launch {
+                    runCatching { storageRuntime.awaitReady().history.recordVisit(url, title) }
+                        .onFailure { error ->
+                            android.util.Log.e("BrowseX", "Could not persist browsing history", error)
+                        }
+                }
+            },
+            openPopupTab = { parent -> tabController.onNewSession(parent) },
+            setFullscreen = ::setFullscreen,
+            closeTab = ::closeTab,
+            enqueueDownload = ::enqueueDownload,
+            recoverContentProcess = { tab, session ->
+                contentProcessRecoveryCoordinator.onContentProcessCrash(tab, session)
+            }
+        )
+    }
+    private val sessionDelegateFactory by lazy {
+        BrowserSessionDelegateFactory(tabEventCoordinator)
+    }
+    private val sessionLifecycleCoordinator by lazy {
+        BrowserSessionLifecycleCoordinator(
+            registry = tabRegistry,
+            beforeSessionClose = { tab ->
+                tab.permissionDelegate?.cancelPending()
+                cancelPlatformPermissionRequests(tab.session)
+            },
+            createSession = ::newBrowserSession,
+            maxLiveSessions = adaptiveRuntimeConfig.maxLiveGeckoSessions
+        )
+    }
+    private val tabController by lazy {
+        BrowserTabController(
+            registry = tabRegistry,
+            sessionLifecycle = sessionLifecycleCoordinator,
+            homeUrl = ::homePageUrl,
+            isHostUnavailable = { shuttingDown || isFinishing || isDestroyed },
+            attachDelegates = ::attachDelegates,
+            runtime = { BrowserRuntimeOwner.runtime(this) },
+            attachSessionToView = { session -> browserView.setSession(session) },
+            releaseViewSession = { browserView.releaseSession() },
+            enforceSessionBudget = ::enforceLiveSessionBudget,
+            updateChrome = ::updateChrome,
+            showMessage = ::toast,
+            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title) },
+            dispatchToMain = { action -> runOnUiThread(action) },
+            setExtensionTabActive = { session, active ->
+                uBlockOriginManager?.setTabActive(session, active)
+            }
+        )
+    }
+    private val tabs: List<BrowserTab> get() = tabController.tabs
+    private val activeTab: BrowserTab? get() = tabController.activeTab
+    private val contentProcessRecoveryCoordinator by lazy {
+        BrowserContentProcessRecoveryCoordinator(
+            dispatchToMain = { action -> runOnUiThread(action) },
+            isHostUnavailable = { shuttingDown || isFinishing || isDestroyed },
+            containsTab = { tab -> tabs.any { it === tab } },
+            isActiveTab = { tab -> tab === activeTab },
+            homeUrl = ::homePageUrl,
+            runtime = { BrowserRuntimeOwner.runtime(this) },
+            cancelPlatformPermissions = ::cancelPlatformPermissionRequests,
+            attachDelegates = ::attachDelegates,
+            activateTab = ::activateTab,
+            updateUi = ::updateChrome,
+            showMessage = ::toast
+        )
+    }
     private lateinit var store: BrowserStore
+    private var browserSettingsSnapshot = BrowserSettings()
+    internal val currentBrowserSettings: BrowserSettings get() = browserSettingsSnapshot
+    private var browserSettingsLoaded = false
+    internal val storageRuntime: BrowserStorageRuntime
+        get() = (application as BrowseXApplication).storageRuntime
+    internal fun updateBrowserSettings(
+        transform: (BrowserSettings) -> BrowserSettings,
+        onUpdated: (BrowserSettings) -> Unit = {}
+    ) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.settings.update(transform)
+                storageRuntime.settings.snapshot()
+            }.onSuccess { updated ->
+                mirrorBrowserSettings(updated)
+                onUpdated(updated)
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not update browser settings", error)
+                toast(BrowseXStrings.text(this@MainActivity, "Could not save settings", "تعذر حفظ الإعدادات"))
+            }
+        }
+    }
+
+    private suspend fun clearStoredHistory() {
+        val result = runCatching {
+            val storage = storageRuntime.awaitReady()
+            storage.history.clear()
+            storage.sessions.clearRecentlyClosed()
+        }
+        result.getOrThrow()
+    }
+
+    private fun mirrorBrowserSettings(settings: BrowserSettings) {
+        browserSettingsSnapshot = settings
+        browserSettingsLoaded = true
+        AppCompatDelegate.setDefaultNightMode(when (settings.themeMode) {
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        })
+        AppCompatDelegate.setApplicationLocales(
+            LocaleListCompat.forLanguageTags(if (settings.languageMode == "system") "" else settings.languageMode)
+        )
+        BrowserContentProtectionPolicy.configure(settings.adBlockEnabled, settings.adBlockPrivateEnabled)
+        // Keep Gecko's engine-level theme and language in sync when DataStore loads
+        // after the runtime has already been created, not only during Activity startup.
+        browserRuntime?.settings?.setPreferredColorScheme(when (settings.themeMode) {
+            "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
+            "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            else -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
+        })
+        val engineLocales = if (settings.languageMode == "system") {
+            resources.configuration.locales.toLanguageTags().split(',').filter { it.isNotBlank() }.toTypedArray()
+        } else {
+            arrayOf(settings.languageMode)
+        }
+        browserRuntime?.settings?.setLocales(engineLocales)
+    }
+
+    internal fun websiteNotificationsEnabled(): Boolean = browserSettingsSnapshot.siteNotificationsEnabled
+
+    internal fun wasPlatformPermissionDenied(permission: String): Boolean =
+        permission in browserSettingsSnapshot.deniedPlatformPermissions
+
+    internal fun markPlatformPermissionDenied(permission: String) {
+        if (browserSettingsLoaded) {
+            browserSettingsSnapshot = browserSettingsSnapshot.copy(
+                deniedPlatformPermissions = browserSettingsSnapshot.deniedPlatformPermissions + permission
+            )
+        }
+        updateBrowserSettings(transform = {
+            it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions + permission)
+        })
+    }
+
+    internal fun clearPlatformPermissionDenial(permission: String) {
+        if (browserSettingsLoaded) {
+            browserSettingsSnapshot = browserSettingsSnapshot.copy(
+                deniedPlatformPermissions = browserSettingsSnapshot.deniedPlatformPermissions - permission
+            )
+        }
+        updateBrowserSettings(transform = {
+            it.copy(deniedPlatformPermissions = it.deniedPlatformPermissions - permission)
+        })
+    }
+
+    private lateinit var credentialVault: BrowserCredentialVault
+    private val hostLifecycleCoordinator by lazy {
+        BrowserHostLifecycleCoordinator(
+            tabs = { tabs },
+            activeTab = { activeTab },
+            isSessionOpened = { it.sessionOpened },
+            persistTabs = ::persistTabs,
+            setSessionActive = { tab, active ->
+                runCatching {
+                    if (active) {
+                        tab.session.setActive(true)
+                        tab.session.setFocused(true)
+                    } else {
+                        tab.session.setFocused(false)
+                        tab.session.setActive(false)
+                    }
+                    uBlockOriginManager?.setTabActive(tab.session, active)
+                }
+            },
+            releaseForMemoryPressure = sessionLifecycleCoordinator::releaseForMemoryPressure
+        )
+    }
+    private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
+    private lateinit var downloadRequestCoordinator: BrowserDownloadRequestCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
     private lateinit var tabsButton: TextView
+    private lateinit var uBlockButton: TextView
     private var fullscreen = false
     private var shuttingDown = false
+    private var initialBrowserTabsRestoreStarted = false
+    private var initialBrowserTabsRestored = false
+    private var browserRuntime: GeckoRuntime? = null
+    private var uBlockOriginManager: UBlockOriginManager? = null
+    private var notificationBridge: BrowseXNotificationBridge? = null
+    private var dataClearDialog: AlertDialog? = null
+    private val browsingDataCoordinator by lazy {
+        BrowserBrowsingDataCoordinator(
+            tabs = { tabs },
+            activeTab = { activeTab },
+            sessionLifecycle = sessionLifecycleCoordinator,
+            releaseViewSession = { if (::browserView.isInitialized) browserView.releaseSession() },
+            replaceTabs = tabController::replaceTabs,
+            activateRestoredSelection = tabController::activateRestoredSelection,
+            persistTabs = ::persistTabs,
+            storageController = { browserRuntime?.storageController },
+            clearHistory = {
+                lifecycleScope.launch {
+                    runCatching { clearStoredHistory() }
+                        .onFailure { error ->
+                            android.util.Log.e("BrowseX", "Could not clear browsing history", error)
+                        }
+                }
+            },
+            clearSiteMediaDecisions = { origin ->
+                lifecycleScope.launch {
+                    runCatching {
+                        val permissions = storageRuntime.awaitReady().sitePermissions
+                        if (origin == null) permissions.clearAll() else permissions.clearOrigin(origin)
+                    }.onFailure { error ->
+                        android.util.Log.e("BrowseX", "Could not clear site permission decisions", error)
+                    }
+                }
+            },
+            dispatchToMain = { action -> runOnUiThread(action) },
+            isHostUnavailable = { isFinishing || isDestroyed },
+            onBusyChanged = ::setBrowsingDataBusy,
+            onFinished = { success ->
+                toast(if (success) "Selected browsing data cleared" else "Could not clear browsing data")
+            }
+        )
+    }
+    private lateinit var platformPermissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var platformPermissionCoordinator: BrowserAndroidPermissionCoordinator
+    private lateinit var notificationPermissionCoordinator: BrowserNotificationPermissionCoordinator
+    private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
+    private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = BrowserStore(this)
-        window.statusBarColor = Color.rgb(239, 245, 250)
-        window.navigationBarColor = Color.rgb(239, 245, 250)
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = true
+        lifecycleScope.launch {
+            runCatching { storageRuntime.settings.snapshot() }
+                .onSuccess(::mirrorBrowserSettings)
+                .onFailure { error -> android.util.Log.e("BrowseX", "Could not load browser settings", error) }
+        }
+        credentialVault = BrowserCredentialVault(applicationContext) { onAuthenticated, onRejected ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    onRejected()
+                } else {
+                    BrowserDeviceAuthenticator.authenticate(
+                        activity = this,
+                        title = "Unlock saved passwords",
+                        subtitle = "Verify your identity to use saved passwords",
+                        onAuthenticated = onAuthenticated,
+                        onRejected = onRejected
+                    )
+                }
+            }
+        }
+        streamDownloadCoordinator = StreamDownloadCoordinator(storageRuntime, DownloadResponseWriter(applicationContext))
+        bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) lifecycleScope.launch {
+                runCatching {
+                    val payload = storageRuntime.awaitReady().bookmarks.exportBookmarks()
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(payload.toByteArray(Charsets.UTF_8))
+                    } ?: error("Could not open destination")
+                }.onSuccess { toast("Bookmarks exported") }
+                    .onFailure { android.util.Log.e("BrowseX", "Bookmark export failed", it); toast("Could not export bookmarks") }
+            }
+        }
+        bookmarkImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) runCatching {
+                val bytes = contentResolver.openInputStream(uri)?.use { input ->
+                    val out = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    var total = 0
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= 1_000_000) { "Backup file is too large" }
+                        out.write(buffer, 0, count)
+                    }
+                    out.toByteArray()
+                } ?: error("Could not read backup")
+                String(bytes, Charsets.UTF_8)
+            }.onSuccess { payload ->
+                lifecycleScope.launch {
+                    val preview = runCatching { storageRuntime.awaitReady().bookmarks.previewImport(payload) }.getOrElse { error ->
+                        android.util.Log.w("BrowseX", "Bookmark import preview rejected", error)
+                        toast(error.message ?: "Could not read backup")
+                        return@launch
+                    }
+                    val summary = getString(
+                        R.string.ui_import_preview_message,
+                        preview.totalItems,
+                        preview.validItems,
+                        preview.skippedItems,
+                        preview.duplicateIncomingItems,
+                        preview.existingUrlConflicts,
+                        preview.incomingFolders
+                    )
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(tr("Import preview"))
+                        .setMessage(summary)
+                        .setPositiveButton(tr("Merge with current bookmarks")) { _, _ ->
+                            lifecycleScope.launch {
+                                runCatching { storageRuntime.awaitReady().bookmarks.importBookmarks(payload, merge = true) }
+                                    .onSuccess { result -> toast(getString(R.string.ui_imported_bookmarks, result.importedBookmarks)) }
+                                    .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
+                            }
+                        }
+                        .setNegativeButton(tr("Replace current bookmarks")) { _, _ ->
+                            AlertDialog.Builder(this@MainActivity)
+                                .setMessage(tr("Replace all current bookmarks and folders?"))
+                                .setNegativeButton(tr("Cancel"), null)
+                                .setPositiveButton(tr("Replace")) { _, _ ->
+                                    lifecycleScope.launch {
+                                        runCatching { storageRuntime.awaitReady().bookmarks.importBookmarks(payload, merge = false) }
+                                            .onSuccess { result -> toast(getString(R.string.ui_imported_bookmarks, result.importedBookmarks)) }
+                                            .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
+                                    }
+                                }
+                                .show()
+                        }
+                        .setNeutralButton(tr("Cancel"), null)
+                        .show()
+                }
+            }.onFailure { error -> android.util.Log.w("BrowseX", "Bookmark backup read failed", error); toast(error.message ?: "Could not read backup") }
+        }
+        platformPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { grants ->
+            platformPermissionCoordinator.onResult(grants)
+        }
+        platformPermissionCoordinator = BrowserAndroidPermissionCoordinator(
+            activeSession = { activeTab?.session },
+            containsSession = { session -> tabs.any { it.session === session } },
+            isHostAvailable = { !shuttingDown && !isFinishing && !isDestroyed },
+            anotherPromptInFlight = { ::notificationPermissionCoordinator.isInitialized && notificationPermissionCoordinator.isInFlight },
+            isGranted = { permission ->
+                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+            },
+            wasDenied = ::wasPlatformPermissionDenied,
+            clearDenial = ::clearPlatformPermissionDenial,
+            markDenied = ::markPlatformPermissionDenied,
+            launchRequest = { permissions -> platformPermissionLauncher.launch(permissions) }
+        )
+        legacyDownloadPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (::downloadRequestCoordinator.isInitialized) {
+                downloadRequestCoordinator.onLegacyPermissionResult(granted)
+            }
+        }
+        notificationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            notificationPermissionCoordinator.onResult(granted)
+        }
+        notificationPermissionCoordinator = BrowserNotificationPermissionCoordinator(
+            apiLevel = Build.VERSION.SDK_INT,
+            featureEnabled = ::websiteNotificationsEnabled,
+            permissionGranted = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+            },
+            notificationsEnabled = { NotificationManagerCompat.from(this).areNotificationsEnabled() },
+            previouslyDenied = { wasPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
+            clearDenial = { clearPlatformPermissionDenial(Manifest.permission.POST_NOTIFICATIONS) },
+            markDenied = { markPlatformPermissionDenied(Manifest.permission.POST_NOTIFICATIONS) },
+            hostAvailable = { !isFinishing && !isDestroyed },
+            launchRequest = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+            afterResolved = { platformPermissionCoordinator.launchNext() }
+        )
+        downloadRequestCoordinator = BrowserDownloadRequestCoordinator(
+            apiLevel = Build.VERSION.SDK_INT,
+            hasLegacyStoragePermission = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                    PackageManager.PERMISSION_GRANTED
+            },
+            canRequestLegacyStoragePermission = {
+                ::legacyDownloadPermissionLauncher.isInitialized && !isFinishing && !isDestroyed
+            },
+            requestLegacyStoragePermission = {
+                legacyDownloadPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            },
+            startDownload = ::startStreamDownload,
+            isHostAvailable = { !isFinishing && !isDestroyed },
+            showMessage = ::toast
+        )
+        browserRuntime = BrowserRuntimeOwner.runtime(applicationContext)
+        browserRuntime?.setAutocompleteStorageDelegate(credentialVault)
+        browserRuntime?.settings?.setLoginAutofillEnabled(true)
+        browserRuntime?.settings?.setPreferredColorScheme(when (browserSettingsSnapshot.themeMode) {
+            "dark" -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
+            "light" -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            else -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
+        })
+        val requestedLocales = if (browserSettingsSnapshot.languageMode == "system") {
+            resources.configuration.locales.toLanguageTags().split(',').filter { it.isNotBlank() }.toTypedArray()
+        } else {
+            arrayOf(browserSettingsSnapshot.languageMode)
+        }
+        browserRuntime?.settings?.setLocales(requestedLocales)
+        notificationBridge = BrowseXNotificationBridge(this, ::requestSiteNotificationPermission)
+        browserRuntime?.setWebNotificationDelegate(notificationBridge)
+        // Attach the browser engine inside the native glass chrome. The GeckoView remains
+        // the flexible content surface; browser controls stay outside the web rendering layer.
+        browserView = GeckoView(this)
         setContentView(createBrowserUi())
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -94,48 +490,246 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        val externalUrl = intent?.data?.let(::safeExternalUrl)
-        if (externalUrl != null) {
-            createTab(externalUrl)
+        val extensionRuntime = browserRuntime
+        if (extensionRuntime == null) {
+            BrowserContentProtectionPolicy.configure(browserSettingsSnapshot.adBlockEnabled, browserSettingsSnapshot.adBlockPrivateEnabled)
+            restoreInitialBrowserTabs(intent)
         } else {
-            val snapshot = store.restoreOpenTabs()
-            snapshot.urls.forEach(::createTab)
-            tabs.getOrNull(snapshot.activeIndex)?.let(::activateTab)
+            uBlockOriginManager = UBlockOriginManager(
+                activity = this,
+                runtime = extensionRuntime,
+                activeSession = { activeTab?.session },
+                existingSessions = { tabs.filter { it.sessionOpened }.map { it.session } },
+                createTab = { parentSession ->
+                    val parent = tabs.firstOrNull { it.session === parentSession } ?: activeTab
+                    parent?.let { tabController.onNewSession(it) }
+                },
+                closeTab = { session ->
+                    val tab = tabs.firstOrNull { it.session === session }
+                    if (tab == null) false else {
+                        closeTab(tab)
+                        true
+                    }
+                },
+                onActionChanged = {
+                    if (!isFinishing && !isDestroyed) {
+                        runOnUiThread { syncUBlockButton() }
+                    }
+                },
+                onExtensionStateChanged = { updated ->
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        val enabled = updated?.metaData?.enabled == true
+                        val privateAllowed = enabled && updated?.metaData?.allowedInPrivateBrowsing == true
+                        BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                        updateBrowserSettings({
+                            it.copy(
+                                adBlockInstalled = updated != null,
+                                adBlockEnabled = enabled,
+                                adBlockPrivateEnabled = privateAllowed
+                            )
+                        })
+                    }
+                }
+            ).also { manager ->
+                manager.refresh(
+                    onComplete = { installed ->
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            val enabled = installed?.metaData?.enabled == true
+                            val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
+                            BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                            // Reconcile persisted preferences with Gecko's actual extension state.
+                            updateBrowserSettings({
+                                it.copy(
+                                    adBlockInstalled = installed != null,
+                                    adBlockEnabled = enabled,
+                                    adBlockPrivateEnabled = privateAllowed
+                                )
+                            })
+                            restoreInitialBrowserTabs(intent)
+                        }
+                    },
+                    onFailure = { error ->
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            android.util.Log.w("BrowseX", "Could not discover uBlock Origin", error)
+                            // Unknown extension state must never leave Gecko tracking protection disabled.
+                            BrowserContentProtectionPolicy.configure(enabled = false, privateAllowed = false)
+                            restoreInitialBrowserTabs(intent)
+                        }
+                    }
+                )
+            }
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        intent.data?.let(::safeExternalUrl)?.let(::createTab)
+        if (intent.action == BrowseXNotificationBridge.ACTION_SITE_NOTIFICATION_CLICK) {
+            handleSiteNotificationIntent(intent)
+        } else {
+            intent.data?.let(::safeExternalUrl)?.let { url -> createTab(url) }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        hostLifecycleCoordinator.onStart()
     }
 
     override fun onStop() {
-        persistTabs()
+        // Extension action popups own a separate GeckoSession; release it as soon as the host stops.
+        uBlockOriginManager?.closePopup()
+        if (::credentialVault.isInitialized) credentialVault.lock()
+        hostLifecycleCoordinator.onStop()
         super.onStop()
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        hostLifecycleCoordinator.onTrimMemory(level)
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        hostLifecycleCoordinator.onLowMemory()
+    }
+
+    /** GeckoSession resource limits and background release are owned by the lifecycle coordinator. */
+    private fun enforceLiveSessionBudget() {
+        sessionLifecycleCoordinator.enforceLiveSessionBudget()
+    }
+
     private fun persistTabs() {
-        if (!::store.isInitialized || tabs.isEmpty()) return
-        store.saveOpenTabs(tabs.map { it.url }, activeTab?.let(tabs::indexOf)?.coerceAtLeast(0) ?: 0)
+        if (!initialBrowserTabsRestored) return
+        val currentTabs = tabs
+        val selectedIndex = currentTabs.indexOfFirst { it === activeTab }
+        val snapshot = BrowserTabPersistencePolicy.snapshot(
+            urls = currentTabs.map { it.url },
+            privateFlags = currentTabs.map { it.privateMode },
+            activeIndex = selectedIndex,
+            homeUrl = homePageUrl()
+        )
+        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex)
     }
 
     override fun onDestroy() {
         persistTabs()
         shuttingDown = true
+        if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
+        if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
+        if (::credentialVault.isInitialized) {
+            credentialVault.lock()
+            credentialVault.setPrivateTabsOpen(false)
+        }
+        if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
+        if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
+        uBlockOriginManager?.destroy()
+        uBlockOriginManager = null
+        dataClearDialog?.dismiss()
+        dataClearDialog = null
+        browserRuntime?.setWebNotificationDelegate(null)
         if (::browserView.isInitialized) browserView.releaseSession()
-        tabs.toList().forEach { it.session.close() }
-        tabs.clear()
-        activeTab = null
+        sessionLifecycleCoordinator.closeAllSessions()
+        tabController.clear()
         super.onDestroy()
     }
+
+    fun requestAndroidPermissions(
+        session: GeckoSession,
+        requested: Array<String>,
+        callback: GeckoSession.PermissionDelegate.Callback
+    ) = platformPermissionCoordinator.request(session, requested, callback)
+
+    private fun cancelPlatformPermissionRequests(session: GeckoSession) {
+        platformPermissionCoordinator.cancelSession(session)
+    }
+
+    fun requestSiteNotificationPermission(callback: (Boolean) -> Unit) =
+        notificationPermissionCoordinator.request(callback)
+
+    @Suppress("DEPRECATION")
+    private fun handleSiteNotificationIntent(intent: Intent?) {
+        if (intent?.action != BrowseXNotificationBridge.ACTION_SITE_NOTIFICATION_CLICK) return
+        val notification = intent.getParcelableExtra<WebNotification>(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
+        if (notification != null) {
+            runCatching { notification.click(); notification.dismiss() }
+            val source = notification.source?.let { safeExternalUrl(Uri.parse(it)) }
+            if (source != null && !isFinishing && !isDestroyed) {
+                val sourceUri = Uri.parse(source)
+                val existing = tabs.firstOrNull { tab ->
+                    if (tab.privateMode) return@firstOrNull false
+                    val tabUri = Uri.parse(tab.url)
+                    tabUri.scheme.equals(sourceUri.scheme, true) &&
+                        tabUri.host.equals(sourceUri.host, true) &&
+                        tabUri.port == sourceUri.port
+                }
+                if (existing != null) activateTab(existing) else createTab(source)
+            }
+        }
+        intent.action = null
+        intent.removeExtra(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
+    }
+
+    private val colors get() = BrowseXColors.resolve(this, browserSettingsSnapshot)
+
+    private val passwordManager by lazy {
+        BrowserPasswordManagerCoordinator(
+            activity = this,
+            vault = credentialVault,
+            isHostUnavailable = { isFinishing || isDestroyed },
+            showMessage = ::toast,
+            translate = ::tr
+        )
+    }
+
+    private val uBlockSettings by lazy {
+        BrowserUBlockSettingsCoordinator(
+            activity = this,
+            manager = { uBlockOriginManager },
+            activeSession = { activeTab?.session },
+            isHostUnavailable = { isFinishing || isDestroyed },
+            showMessage = ::toast,
+            translate = ::tr,
+            dp = ::dp,
+            textColor = colors.ink,
+            onSettingsChanged = ::recreate
+        )
+    }
+
+    private val pageActions by lazy {
+        BrowserPageActionsCoordinator(
+            activity = this,
+            activeSession = { activeTab?.session },
+            activeUrl = { activeTab?.url },
+            currentSearchEngine = { browserSettingsSnapshot.searchEngine },
+            updateSearchEngine = { engine ->
+                updateBrowserSettings({ it.copy(searchEngine = engine) }) { updated ->
+                    toast(getString(R.string.ui_search_engine_changed, updated.searchEngine))
+                }
+            },
+            showMessage = ::toast,
+            mutedColor = { colors.muted },
+            dp = ::dp
+        )
+    }
+
+
+    private fun tr(value: String): String = BrowseXStrings.text(this@MainActivity, value)
+
+    private fun homePageUrl(): String =
+        "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
+            "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}"
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun createBrowserUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setBackgroundColor(colors.canvas)
+            BrowseXColors.applyDirection(this, browserSettingsSnapshot)
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -146,11 +740,12 @@ class MainActivity : AppCompatActivity() {
         topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            setBackgroundColor(Color.rgb(239, 245, 250))
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            background = rounded(colors.panel, 22)
+            elevation = dp(4).toFloat()
         }
-        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(HOME_URL) }.apply {
-            background = rounded(Color.WHITE, 10)
+        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(homePageUrl()) }.apply {
+            background = rounded(colors.card, 10)
             textSize = 22f
         }
         topBar.addView(home, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
@@ -158,17 +753,19 @@ class MainActivity : AppCompatActivity() {
         })
 
         address = EditText(this).apply {
-            hint = "Search or enter URL"
-            setHintTextColor(Color.rgb(83, 105, 123))
-            setTextColor(Color.rgb(19, 43, 64))
+            // Keep URLs/domains LTR while allowing Arabic and other RTL search queries.
+            textDirection = View.TEXT_DIRECTION_FIRST_STRONG
+            hint = tr("Search or enter URL")
+            setHintTextColor(colors.muted)
+            setTextColor(colors.ink)
             textSize = 14f
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
             setPadding(dp(14), 0, dp(12), 0)
-            background = rounded(Color.WHITE, 24)
-            elevation = dp(3).toFloat()
+            background = rounded(colors.field, 22)
+            elevation = dp(2).toFloat()
             setOnEditorActionListener { _, action, _ ->
                 if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
                     navigate(address.text.toString())
@@ -182,47 +779,59 @@ class MainActivity : AppCompatActivity() {
         })
 
         tabsButton = actionButton("▢", "Open tabs") { showTabs() }.apply {
-            background = rounded(Color.WHITE, 10)
+            background = rounded(colors.card, 10)
             textSize = 20f
         }
         topBar.addView(tabsButton, LinearLayout.LayoutParams(dp(44), dp(48)).apply {
             marginEnd = dp(4)
         })
+        uBlockButton = actionButton("uB", "uBlock Origin controls") {
+            uBlockOriginManager?.clickBrowserAction(activeTab?.session)
+        }.apply {
+            textSize = 14f
+            visibility = View.GONE
+            background = rounded(colors.card, 10)
+        }
+        topBar.addView(uBlockButton, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            marginEnd = dp(4)
+        })
         val menu = actionButton("⋮", "Browser menu") { showBrowserMenu() }.apply {
-            background = rounded(Color.WHITE, 10)
+            background = rounded(colors.card, 10)
             textSize = 22f
         }
         topBar.addView(menu, LinearLayout.LayoutParams(dp(44), dp(48)))
 
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.rgb(8, 102, 217))
+            progressTintList = android.content.res.ColorStateList.valueOf(colors.accent)
             visibility = View.GONE
         }
-        browserView = GeckoView(this).apply { setBackgroundColor(Color.WHITE) }
+        browserView = GeckoView(this).apply { setBackgroundColor(colors.card) }
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setPadding(dp(14), dp(5), dp(14), dp(8))
-            background = rounded(Color.WHITE, 22)
+            background = rounded(colors.card, 22)
             elevation = dp(5).toFloat()
         }
         bottomButton("‹", "Go back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
         bottomButton("›", "Go forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
-        bottomButton("＋", "New tab") { createTab(HOME_URL) }
+        bottomButton("＋", "New tab") { createTab(homePageUrl()) }
         bottomButton("☆", "Bookmark page") {
-            activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                val added = store.toggleBookmark(it)
-                toast(if (added) "Saved to favorites" else "Removed from favorites")
+            activeTab?.url?.takeIf { it.startsWith("http") }?.let { url ->
+                toggleBookmarkInRoom(url, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
             }
         }
 
-        root.addView(topBar)
+        root.addView(topBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
+            setMargins(dp(10), dp(8), dp(10), dp(5))
+        })
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
-            setMargins(dp(12), dp(5), dp(12), dp(8))
+            setMargins(dp(14), dp(7), dp(14), dp(10))
         })
+        BrowseXColors.applyDirection(root, browserSettingsSnapshot)
         return root
     }
 
@@ -233,37 +842,72 @@ class MainActivity : AppCompatActivity() {
 
     private fun actionButton(label: String, description: String, action: () -> Unit) =
         TextView(this).apply {
-            text = label
-            contentDescription = description
+            text = tr(label)
+            contentDescription = tr(description)
             textSize = 22f
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(48, 61, 88))
+            setTextColor(colors.ink)
+            minimumWidth = dp(48)
+            minimumHeight = dp(48)
             setOnClickListener { action() }
         }
 
     private fun bottomButton(label: String, description: String, action: () -> Unit) =
         actionButton(label, description, action).also {
             it.textSize = 23f
-            it.setTextColor(Color.rgb(54, 62, 86))
+            it.setTextColor(colors.ink)
             bottomBar.addView(it, LinearLayout.LayoutParams(0, -1, 1f))
         }
 
     private fun updateChrome() {
-        val tab = activeTab ?: return
-        if (!address.hasFocus()) updateAddress()
-        progress.progress = tab.progress
-        progress.visibility = if (tab.progress in 1..99) View.VISIBLE else View.GONE
-        tabsButton.text = "▢ ${tabs.size}"
+        if (::credentialVault.isInitialized) {
+            credentialVault.setPrivateTabsOpen(tabs.any { it.privateMode })
+        }
+        if (!::browserView.isInitialized) return
+
+        val tab = activeTab
+        updateAddress()
+        if (::tabsButton.isInitialized) {
+            tabsButton.text = tabs.size.toString()
+            tabsButton.textSize = 14f
+            tabsButton.contentDescription = tr("Open tabs") + ", " + tabs.size
+        }
+        if (::progress.isInitialized) {
+            val value = tab?.progress?.coerceIn(0, 100) ?: 0
+            progress.progress = value
+            progress.visibility = if (value in 1..99) View.VISIBLE else View.GONE
+        }
+        bottomBar.getChildAt(0)?.let { button ->
+            button.isEnabled = tab?.canGoBack == true
+            button.alpha = if (button.isEnabled) 1f else 0.38f
+        }
+        bottomBar.getChildAt(1)?.let { button ->
+            button.isEnabled = tab?.canGoForward == true
+            button.alpha = if (button.isEnabled) 1f else 0.38f
+        }
+        syncUBlockButton()
+    }
+
+    private fun syncUBlockButton() {
+        if (!::uBlockButton.isInitialized) return
+        val available = uBlockOriginManager?.hasBrowserAction(activeTab?.session) == true
+        uBlockButton.visibility = if (available) View.VISIBLE else View.GONE
+        uBlockButton.isEnabled = available
+        uBlockButton.alpha = if (available) 1f else 0f
     }
 
     private fun updateAddress() {
         if (!::address.isInitialized || address.hasFocus()) return
-        val url = activeTab?.url.orEmpty()
-        address.setText(if (url.startsWith("resource://")) "" else url)
+        val currentUrl = activeTab?.url.orEmpty()
+        val displayUrl = if (currentUrl.startsWith(HOME_URL)) "" else currentUrl
+        if (address.text.toString() != displayUrl) {
+            address.setText(displayUrl)
+            address.setSelection(address.text.length)
+        }
     }
 
     private fun normalizeInput(raw: String): String =
-        NavigationInput.normalize(raw, store.searchEngine, HOME_URL)
+        if (raw.isBlank()) homePageUrl() else NavigationInput.normalize(raw, browserSettingsSnapshot.searchEngine, HOME_URL)
 
     private fun safeExternalUrl(uri: Uri): String? = NavigationInput.externalWebUrl(uri.toString())
 
@@ -277,104 +921,34 @@ class MainActivity : AppCompatActivity() {
         browserView.requestFocus()
     }
 
-    private fun createTab(url: String) {
-        if (shuttingDown) return
-        if (tabs.size >= TabSessionState.MAX_TABS) {
-            toast("You can keep up to ${TabSessionState.MAX_TABS} tabs open")
-            return
-        }
-        val tab = BrowserTab()
-        attachDelegates(tab)
-        tab.session.open(BrowserEngine.runtime(this))
-        tabs.add(tab)
-        activateTab(tab)
-        tab.session.loadUri(url)
-    }
+    private fun createTab(url: String, privateMode: Boolean = false) =
+        tabController.createTab(url, privateMode)
 
-    private fun activateTab(tab: BrowserTab) {
-        if (!tabs.contains(tab)) return
-        activeTab = tab
-        browserView.setSession(tab.session)
-        updateChrome()
-    }
+    private fun activateTab(tab: BrowserTab) = tabController.activateTab(tab)
 
-    private fun closeTab(tab: BrowserTab) {
-        val index = tabs.indexOf(tab)
-        if (index < 0) return
-        val wasActive = activeTab === tab
-        if (wasActive) browserView.releaseSession()
-        tabs.removeAt(index)
-        tab.session.close()
-        if (tabs.isEmpty()) createTab(HOME_URL)
-        else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
-        else updateChrome()
-    }
+    private fun closeTab(tab: BrowserTab) = tabController.closeTab(tab)
 
     private fun attachDelegates(tab: BrowserTab) {
-        val session = tab.session
-        session.progressDelegate = object : GeckoSession.ProgressDelegate {
-            override fun onPageStart(session: GeckoSession, url: String) {
-                tab.progress = 1
-                if (tab === activeTab) updateChrome()
+        tab.permissionDelegate = BrowseXPermissionDelegate(
+            this,
+            { requested ->
+                requested === activeTab?.session && tabs.any { it.session === requested } && !shuttingDown
+            },
+            tab.privateMode
+        )
+        tab.session.permissionDelegate = tab.permissionDelegate
+        sessionDelegateFactory.attach(tab)
+        uBlockOriginManager?.attachSession(tab.session)
+        tab.session.promptDelegate = BrowserCredentialPromptDelegate(
+            activity = this,
+            privateMode = tab.privateMode,
+            hasPrivateTabsOpen = { credentialVault.privateBrowsingActive },
+            onDeviceAuthenticated = credentialVault::unlockForSession,
+            isStillValid = { session, origin ->
+                !shuttingDown && tabs.any { it === tab } && tab.session === session &&
+                    CredentialOriginPolicy.canonicalHttpsOrigin(tab.url) == origin
             }
-            override fun onProgressChange(session: GeckoSession, progressValue: Int) {
-                tab.progress = progressValue
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onPageStop(session: GeckoSession, success: Boolean) {
-                tab.progress = 100
-                if (success) store.addHistory(tab.url)
-                if (tab === activeTab) updateChrome()
-            }
-        }
-        session.navigationDelegate = object : GeckoSession.NavigationDelegate {
-            override fun onLocationChange(
-                session: GeckoSession,
-                url: String?,
-                perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
-                hasUserGesture: Boolean
-            ) {
-                tab.url = url.orEmpty()
-                tab.sitePermissions = perms.toList()
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
-                tab.canGoBack = canGoBack
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
-                tab.canGoForward = canGoForward
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-                if (isFinishing || shuttingDown || tabs.size >= TabSessionState.MAX_TABS) {
-                    runOnUiThread { if (!isFinishing && !shuttingDown) toast("Tab limit reached") }
-                    return null
-                }
-                val child = BrowserTab()
-                attachDelegates(child)
-                child.session.open(BrowserEngine.runtime(this@MainActivity))
-                tabs.add(child)
-                runOnUiThread {
-                    if (!isFinishing && !shuttingDown && tabs.contains(child)) activateTab(child)
-                    else if (tabs.contains(child)) closeTab(child)
-                }
-                return GeckoResult.fromValue(child.session)
-            }
-        }
-        session.contentDelegate = object : GeckoSession.ContentDelegate {
-            override fun onTitleChange(session: GeckoSession, title: String?) {
-                tab.title = title?.takeIf { it.isNotBlank() } ?: "New tab"
-                if (tab === activeTab) updateChrome()
-            }
-            override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
-                if (tab === activeTab) setFullscreen(fullScreen)
-            }
-            override fun onCloseRequest(session: GeckoSession) { closeTab(tab) }
-            override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
-                enqueueDownload(response)
-            }
-        }
+        )
     }
 
     private fun setFullscreen(enabled: Boolean) {
@@ -388,189 +962,90 @@ class MainActivity : AppCompatActivity() {
         } else controller.show(WindowInsetsCompat.Type.systemBars())
     }
 
-    /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
     private fun showTabs() {
-        lateinit var dialog: AlertDialog
-        val page = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(18), dp(18), dp(12))
-            setBackgroundColor(Color.rgb(239, 245, 250))
-        }
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        heading.addView(TextView(this).apply {
-            text = "Your space"
-            textSize = 25f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(19, 43, 64))
-        })
-        heading.addView(TextView(this).apply {
-            text = "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
-            textSize = 13f
-            setTextColor(Color.rgb(83, 105, 123))
-            setPadding(0, dp(3), 0, 0)
-        })
-        header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
-        val add = TextView(this).apply {
-            text = "+  New tab"
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(dp(16), dp(11), dp(16), dp(11))
-            background = rounded(Color.rgb(8, 102, 217), 22)
-            setOnClickListener { createTab(HOME_URL); dialog.dismiss(); showTabs() }
-        }
-        header.addView(add)
-        page.addView(header)
-
-        val hint = TextView(this).apply {
-            text = "Tap a card to return to it"
-            textSize = 12f
-            setTextColor(Color.rgb(83, 105, 123))
-            setPadding(0, dp(15), 0, dp(12))
-        }
-        page.addView(hint)
-
-        val scroll = ScrollView(this)
-        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        scroll.addView(grid)
-        val columns = if (resources.configuration.screenWidthDp >= 600) 3 else 2
-        val rows = tabs.chunked(columns)
-        rows.forEach { rowTabs ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
-            rowTabs.forEach { tab ->
-                val selected = tab === activeTab
-                val card = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(13), dp(13), dp(13), dp(12))
-                    background = rounded(Color.WHITE, 18)
-                    elevation = dp(if (selected) 4 else 1).toFloat()
-                }
-                val preview = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    setPadding(dp(8), dp(8), dp(8), dp(8))
-                    background = rounded(if (selected) Color.rgb(225, 239, 255) else Color.rgb(243, 247, 251), 12)
-                }
-                preview.addView(TextView(this).apply {
-                    text = "Browse X"
-                    textSize = 11f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.rgb(8, 102, 217))
-                })
-                preview.addView(TextView(this).apply {
-                    text = tab.title.ifBlank { "New tab" }
-                    textSize = 13f
-                    setTextColor(Color.rgb(31, 48, 65))
-                    maxLines = 2
-                    gravity = Gravity.CENTER
-                    setPadding(0, dp(7), 0, dp(3))
-                })
-                card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
-                card.addView(TextView(this).apply {
-                    text = tab.title.ifBlank { "New tab" }
-                    textSize = 14f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.rgb(19, 43, 64))
-                    maxLines = 1
-                    setPadding(0, dp(10), 0, dp(3))
-                })
-                card.addView(TextView(this).apply {
-                    text = tab.url.removePrefix("https://").removePrefix("http://").ifBlank { "Start page" }
-                    textSize = 11f
-                    setTextColor(Color.rgb(83, 105, 123))
-                    maxLines = 2
-                })
-                val actions = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(0, dp(9), 0, 0)
-                }
-                actions.addView(TextView(this).apply {
-                    text = if (selected) "● Active" else "Open"
-                    textSize = 12f
-                    setTextColor(if (selected) Color.rgb(8, 102, 217) else Color.rgb(83, 105, 123))
-                }, LinearLayout.LayoutParams(0, dp(32), 1f))
-                actions.addView(TextView(this).apply {
-                    text = "×"
-                    textSize = 22f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.rgb(190, 65, 75))
-                    contentDescription = "Close tab"
-                    setPadding(dp(12), 0, dp(5), 0)
-                    setOnClickListener {
-                        closeTab(tab)
-                        dialog.dismiss()
-                        showTabs()
-                    }
-                })
-                card.addView(actions)
-                card.setOnClickListener {
-                    activateTab(tab)
-                    dialog.dismiss()
-                }
-                row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    setMargins(dp(4), dp(4), dp(4), dp(9))
-                })
-            }
-            repeat(columns - rowTabs.size) {
-                row.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
-            }
-            grid.addView(row)
-        }
-        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        val done = TextView(this).apply {
-            text = "Done"
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(19, 43, 64), 24)
-            setPadding(dp(20), dp(13), dp(20), dp(13))
-        }
-        page.addView(done, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })
-
-        dialog = AlertDialog.Builder(this).setView(page).create()
-        done.setOnClickListener { dialog.dismiss() }
-        dialog.setOnShowListener {
-            dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        }
-        dialog.show()
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        TabsPage(
+            activity = this,
+            store = store,
+            tabsProvider = { tabs },
+            activeTabProvider = { activeTab },
+            onCreateTab = { url -> createTab(url) },
+            onActivateTab = ::activateTab,
+            onCloseTab = ::closeTab,
+            homePageUrlProvider = ::homePageUrl,
+            onToast = ::toast
+        ).show()
     }
 
     private fun showBrowserMenu() {
-        val actions = arrayOf(
-            if (store.isBookmarked(activeTab?.url.orEmpty())) "Remove bookmark" else "Add bookmark",
-            "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
-            "Site information", "Search engine", "Clear browsing history", "Settings"
-        )
-        AlertDialog.Builder(this).setTitle("BrowseX").setItems(actions) { _, index ->
-            when (index) {
-                0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let {
-                    val added = store.toggleBookmark(it)
-                    toast(if (added) "Bookmark saved" else "Bookmark removed")
+        lifecycleScope.launch {
+            val url = activeTab?.url.orEmpty()
+            val bookmarked = url.startsWith("http") && runCatching {
+                storageRuntime.awaitReady().bookmarks.find(url) != null
+            }.getOrDefault(false)
+            val actions = arrayOf(
+                if (bookmarked) "Remove bookmark" else "Add bookmark",
+                "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
+                "Site information", "Search engine", "Clear browsing history", "Settings",
+                "New private tab", "Close private tabs", "Find anything", "Passwords"
+            ).map(::tr).toTypedArray()
+            AlertDialog.Builder(this@MainActivity).setTitle("BrowseX").setItems(actions) { _, index ->
+                when (index) {
+                    0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let { pageUrl ->
+                        toggleBookmarkInRoom(pageUrl, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
+                    }
+                    1 -> showSavedPages("Bookmarks", emptyList())
+                    2 -> showSavedPages("History", emptyList())
+                    3 -> openDownloads()
+                    4 -> pageActions.shareCurrentPage()
+                    5 -> pageActions.copyCurrentAddress()
+                    6 -> pageActions.findInPage()
+                    7 -> openReaderMode()
+                    8 -> showSiteInformation()
+                    9 -> pageActions.chooseSearchEngine()
+                    10 -> AlertDialog.Builder(this@MainActivity).setMessage(tr("Delete all browsing history?"))
+                        .setNegativeButton(tr("Cancel"), null)
+                        .setPositiveButton(tr("Clear")) { _, _ ->
+                            lifecycleScope.launch {
+                                runCatching { clearStoredHistory() }.onSuccess { toast("History cleared") }
+                                    .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
+                            }
+                        }.show()
+                    11 -> showSettings()
+                    12 -> createTab(homePageUrl(), privateMode = true)
+                    13 -> {
+                        val privateTabs = tabs.filter { it.privateMode }
+                        if (privateTabs.isEmpty()) toast("No private tabs are open")
+                        else AlertDialog.Builder(this@MainActivity)
+                            .setMessage(tr("Close all private tabs? Their browsing data will be discarded."))
+                            .setNegativeButton(tr("Cancel"), null)
+                            .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
+                            .show()
+                    }
+                    14 -> showRecall()
+                    15 -> passwordManager.show()
                 }
-                1 -> showSavedPages("Bookmarks", store.bookmarks())
-                2 -> showSavedPages("History", store.history())
-                3 -> openDownloads()
-                4 -> shareCurrentPage()
-                5 -> copyCurrentAddress()
-                6 -> findInPage()
-                7 -> openReaderMode()
-                8 -> showSiteInformation()
-                9 -> chooseSearchEngine()
-                10 -> AlertDialog.Builder(this).setMessage("Delete all browsing history?")
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Clear") { _, _ -> store.clearHistory(); toast("History cleared") }.show()
-                11 -> showSettings()
-            }
-        }.show()
+            }.show()
+        }
     }
 
+    private fun toggleBookmarkInRoom(url: String, title: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val bookmarks = storageRuntime.awaitReady().bookmarks
+                if (bookmarks.find(url) != null) {
+                    bookmarks.remove(url)
+                    false
+                } else {
+                    bookmarks.add(url, title)
+                }
+            }.onSuccess { added ->
+                toast(if (added) "Bookmark saved" else "Bookmark removed")
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not update bookmark", error)
+                toast(BrowseXStrings.text(this@MainActivity, "Could not update bookmark", "تعذر تحديث المفضلة"))
+            }
+        }
+    }
 
     /** Extracts the current page through GeckoView's page extractor; no page scripts are injected. */
     private fun openReaderMode() {
@@ -581,8 +1056,8 @@ class MainActivity : AppCompatActivity() {
         }
         val sourceUrl = tab.url
         val loading = AlertDialog.Builder(this)
-            .setTitle("Reader mode")
-            .setMessage("Preparing a clean reading view…")
+            .setTitle(tr("Reader mode"))
+            .setMessage(tr("Preparing a clean reading view…"))
             .setNegativeButton("Cancel", null)
             .create()
         loading.show()
@@ -593,9 +1068,9 @@ class MainActivity : AppCompatActivity() {
                     if (isFinishing || isDestroyed || activeTab !== tab || tab.url != sourceUrl) return@runOnUiThread
                     val content = extracted?.trim().orEmpty()
                     if (content.isBlank()) {
-                        toast("This page does not contain readable text")
+                        toast(BrowseXStrings.text(this@MainActivity, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
                     } else {
-                        ReaderPage(this, tab.title, sourceUrl, content).show()
+                        ReaderPage(this, tab.title, sourceUrl, content, store).show()
                     }
                 }
             },
@@ -603,12 +1078,15 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (loading.isShowing) loading.dismiss()
                     android.util.Log.w("BrowseX", "Reader extraction failed", error)
-                    if (!isFinishing && !isDestroyed) toast("Could not prepare reader view")
+                    if (!isFinishing && !isDestroyed) toast(BrowseXStrings.text(this@MainActivity, "Could not prepare reader view", "تعذر تجهيز وضع القراءة"))
                 }
             }
         )
     }
 
+
+    private fun originForUrl(url: String): String =
+        BrowserSiteOriginPolicy.canonicalOrigin(url).orEmpty()
 
     private fun showSiteInformation() {
         val tab = activeTab ?: return
@@ -617,226 +1095,302 @@ class MainActivity : AppCompatActivity() {
             toast("Open a website first")
             return
         }
-        SiteInfoPage(
-            activity = this,
-            url = url,
-            title = tab.title,
-            permissions = tab.sitePermissions
-        ).show()
+        fun showPage() {
+            if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return
+            SiteInfoPage(
+                activity = this,
+                url = url,
+                title = tab.title,
+                permissions = if (tab.privateMode) emptyList() else tab.sitePermissions,
+                store = store,
+                onPermissionChange = { permission, value ->
+                    if (!tab.privateMode) {
+                        val storage = browserRuntime?.storageController
+                        storage?.setPermission(permission, value)
+                        storage?.getPermissions(url, false)?.accept(
+                            { updated -> runOnUiThread {
+                                if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
+                            } },
+                            { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
+                        )
+                    }
+                },
+                onClearSiteData = {
+                    clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
+                },
+                onResetPermissions = {
+                    val storage = browserRuntime?.storageController
+                    tab.sitePermissions.filter {
+                        it.permission != GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE
+                    }.forEach { permission ->
+                        storage?.setPermission(
+                            permission,
+                            GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+                        )
+                    }
+                    val uri = Uri.parse(url)
+                    val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
+                    lifecycleScope.launch {
+                        runCatching { storageRuntime.awaitReady().sitePermissions.clearOrigin(origin) }
+                            .onFailure { error -> android.util.Log.e("BrowseX", "Could not reset saved site permissions", error) }
+                    }
+                    tab.sitePermissions = emptyList()
+                    storage?.getPermissions(url, false)?.accept(
+                        { updated -> runOnUiThread {
+                            if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
+                        } },
+                        { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
+                    )
+                    toast("Site permissions reset")
+                },
+                privateMode = tab.privateMode
+            ).show()
+        }
+        val storage = browserRuntime?.storageController
+        // Gecko's non-private permission store is shared across sessions. Never query it
+        // while showing site information for a private tab.
+        if (tab.privateMode || storage == null) {
+            showPage()
+            return
+        }
+        storage.getPermissions(url, false).accept(
+            { permissions -> runOnUiThread {
+                if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
+                tab.sitePermissions = permissions.orEmpty().toList()
+                showPage()
+            } },
+            { error -> runOnUiThread {
+                android.util.Log.w("BrowseX", "Could not load site permissions", error)
+                showPage()
+            } }
+        )
     }
 
     private fun showSettings() {
         SettingsPage(
             activity = this,
             store = store,
-            openBookmarks = { showSavedPages("Bookmarks", store.bookmarks()) },
-            openHistory = { showSavedPages("History", store.history()) },
+            openBookmarks = { showSavedPages("Bookmarks", emptyList()) },
+            openHistory = { showSavedPages("History", emptyList()) },
             openDownloads = { openDownloads() },
             clearHistory = {
-                store.clearHistory()
-                toast("History cleared")
-            }
+                lifecycleScope.launch {
+                    runCatching { clearStoredHistory() }
+                        .onSuccess { toast("History cleared") }
+                        .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
+                }
+            },
+            setWebsiteNotifications = { enabled ->
+                updateBrowserSettings(transform = { it.copy(siteNotificationsEnabled = enabled) })
+                if (!enabled) NotificationManagerCompat.from(this).cancelAll()
+            },
+            importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
+            exportBookmarks = { bookmarkExportLauncher.launch("browsex-bookmarks.json") },
+            showHomePreferences = { showHomePreferences() },
+            openPrivacyCenter = { showPrivacyCenter() },
+            manageUBlockOrigin = { showUBlockOriginSettings() },
+            openAutofillSettings = { openAutofillServiceSettings() }
         ).show()
     }
 
+
+    private fun restoreInitialBrowserTabs(startupIntent: Intent?) {
+        if (initialBrowserTabsRestoreStarted || isFinishing || isDestroyed) return
+        initialBrowserTabsRestoreStarted = true
+        lifecycleScope.launch {
+            val snapshot = runCatching { storageRuntime.restoreOpenTabs() }
+                .onFailure { error ->
+                    android.util.Log.e("BrowseX", "Room tab restore failed; starting with a clean tab snapshot", error)
+                }
+                .getOrElse {
+                    // BrowseX has no pre-existing user tab data to migrate. Room is the
+                    // sole source of truth; never resurrect stale SharedPreferences tabs.
+                    com.browsex.app.storage.TabSessionSnapshot(emptyList(), 0, 0L)
+                }
+            if (isFinishing || isDestroyed) return@launch
+            val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
+            tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
+            initialBrowserTabsRestored = true
+            handleSiteNotificationIntent(startupIntent)
+            syncUBlockButton()
+        }
+    }
+
+    private fun openAutofillServiceSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            toast(tr("Password autofill requires Android 8 or newer"))
+            return
+        }
+        val request = Intent(
+            Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE,
+            Uri.parse("package:$packageName")
+        )
+        runCatching { startActivity(request) }
+            .onFailure {
+                android.util.Log.w("BrowseX", "Could not open Android Autofill settings", it)
+                toast(tr("Could not open Android Autofill settings"))
+            }
+    }
+
+    private fun showUBlockOriginSettings() = uBlockSettings.show()
+
+    private fun showHomePreferences() {
+        lifecycleScope.launch {
+            val settings = runCatching { storageRuntime.settings.snapshot() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load homepage preferences", it)
+                toast(BrowseXStrings.text(this@MainActivity, "Could not load homepage settings", "تعذر تحميل إعدادات الصفحة الرئيسية"))
+                return@launch
+            }
+            val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
+            val checked = booleanArrayOf(settings.homeShowQuickLinks, settings.homeShowDiscovery)
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(tr("Home page"))
+                .setMultiChoiceItems(labels, checked) { _, which, enabled ->
+                    updateBrowserSettings({
+                        if (which == 0) it.copy(homeShowQuickLinks = enabled)
+                        else it.copy(homeShowDiscovery = enabled)
+                    })
+                }
+                .setPositiveButton(tr("Next")) { _, _ ->
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(tr("Shortcut layout"))
+                        .setSingleChoiceItems(
+                            arrayOf(tr("Grid layout"), tr("List layout")),
+                            arrayOf("grid", "list").indexOf(settings.homeLayout).coerceAtLeast(0)
+                        ) { choice, index ->
+                            updateBrowserSettings({ it.copy(homeLayout = arrayOf("grid", "list")[index]) }) {
+                                choice.dismiss()
+                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
+                            }
+                        }
+                        .setNeutralButton(tr("Reset")) { _, _ ->
+                            updateBrowserSettings({
+                                it.copy(homeShowQuickLinks = true, homeShowDiscovery = true, homeLayout = "grid")
+                            }) {
+                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }?.session?.loadUri(homePageUrl())
+                            }
+                        }
+                        .setNegativeButton(tr("Close"), null)
+                        .show()
+                }
+                .setNegativeButton(tr("Cancel"), null)
+                .show()
+        }
+    }
+
+    private fun showPrivacyCenter() {
+        PrivacyPage(
+            activity = this,
+            store = store,
+            clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) }
+        ).show()
+    }
+
+    private fun clearBrowsingData(flags: Long, clearHistory: Boolean) =
+        browsingDataCoordinator.clear(flags, clearHistory, host = null, mediaOrigin = null)
+
+    private fun clearBrowsingDataForHost(host: String, mediaOrigin: String) {
+        val canonicalHost = if (host.contains(':')) host else
+            runCatching { java.net.IDN.toASCII(host, java.net.IDN.USE_STD3_ASCII_RULES) }.getOrDefault(host)
+        browsingDataCoordinator.clear(
+            org.mozilla.geckoview.StorageController.ClearFlags.SITE_DATA,
+            clearHistory = false,
+            host = canonicalHost,
+            mediaOrigin = mediaOrigin
+        )
+    }
+
+    private fun setBrowsingDataBusy(busy: Boolean) {
+        if (busy) {
+            dataClearDialog = AlertDialog.Builder(this)
+                .setTitle(tr("Privacy center"))
+                .setMessage(tr("Clearing selected browsing data…"))
+                .setView(ProgressBar(this))
+                .setCancelable(false)
+                .create()
+            dataClearDialog?.show()
+        } else {
+            dataClearDialog?.dismiss()
+            dataClearDialog = null
+        }
+    }
+
+    private fun showRecall() {
+        lifecycleScope.launch {
+            val graph = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load recall library", it)
+                toast(BrowseXStrings.text(this@MainActivity, "Could not open search library", "تعذر فتح مكتبة البحث"))
+                return@launch
+            }
+            val bookmarkRows = graph.bookmarks.all().take(30).map { it.title to it.url }
+            val historyRows = graph.history.recent(30).map { it.title to it.url }
+            RecallPage(
+                activity = this@MainActivity,
+                store = store,
+                openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
+                bookmarkRows = bookmarkRows,
+                historyRows = historyRows,
+                onOpen = { url ->
+                    val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
+                    if (existing != null) activateTab(existing) else createTab(url)
+                }
+            ).show()
+        }
+    }
+
     private fun showSavedPages(title: String, pages: List<String>) {
-        val isHistory = title.contains("History", ignoreCase = true)
-        val currentPages = pages.toMutableList()
-        if (currentPages.isEmpty()) { toast("Nothing here yet"); return }
-        val scroll = ScrollView(this)
-        val list = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-        }
-        scroll.addView(list)
-        lateinit var dialog: AlertDialog
-        fun render() {
-            list.removeAllViews()
-            if (currentPages.isEmpty()) {
-                list.addView(TextView(this).apply {
-                    text = "Nothing here yet"
-                    setTextColor(Color.rgb(83, 105, 123))
-                    gravity = Gravity.CENTER
-                    setPadding(0, dp(24), 0, dp(24))
-                })
-                return
-            }
-            currentPages.forEach { page ->
-                val item = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(10), dp(9), dp(6), dp(9))
-                    background = rounded(Color.WHITE, 13)
-                }
-                val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                details.addView(TextView(this).apply {
-                    text = Uri.parse(page).host ?: page
-                    textSize = 14f
-                    setTextColor(Color.rgb(19, 43, 64))
-                    maxLines = 1
-                })
-                details.addView(TextView(this).apply {
-                    text = page
-                    textSize = 10f
-                    setTextColor(Color.rgb(83, 105, 123))
-                    maxLines = 2
-                })
-                item.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
-                val remove = TextView(this).apply {
-                    text = "×"
-                    textSize = 23f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.rgb(190, 65, 75))
-                    contentDescription = "Remove saved page"
-                    setPadding(dp(12), dp(4), dp(12), dp(4))
-                    setOnClickListener {
-                        if (isHistory) store.removeHistory(page) else store.removeBookmark(page)
-                        currentPages.remove(page)
-                        render()
-                    }
-                }
-                item.addView(remove)
-                item.setOnClickListener { createTab(page); dialog.dismiss() }
-                list.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
-                    bottomMargin = dp(7)
-                })
-            }
-        }
-        render()
-        dialog = AlertDialog.Builder(this).setTitle(title).setView(scroll)
-            .setNegativeButton("Close", null).create()
-        dialog.show()
+        RoomSavedPagesPage(
+            activity = this,
+            store = store,
+            title = title,
+            onOpen = { url -> createTab(url) }
+        ).show()
     }
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
-        DownloadsPage(this, store).show()
+        DownloadsPage(this, store) { downloadId ->
+            streamDownloadCoordinator.cancel(downloadId)
+        }.show()
     }
 
-    /** Routes GeckoView's external responses through Android's supported download service. */
+    /** Routes GeckoView responses into the dedicated download request coordinator. */
     private fun enqueueDownload(response: WebResponse) {
-        val url = response.uri
-        val uri = Uri.parse(url)
-        if ((uri.scheme != "https" && uri.scheme != "http") || uri.host.isNullOrBlank()) {
-            response.body?.close()
-            toast("This download link is not supported")
+        downloadRequestCoordinator.enqueue(response)
+    }
+
+    /** Starts a response stream after validation and any required Android permission prompt. */
+    private fun startStreamDownload(response: WebResponse) {
+        val body = response.body ?: run {
+            toast(BrowseXStrings.text(this@MainActivity, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
             return
         }
-        val disposition = response.headers.entries.firstOrNull {
-            it.key.equals("content-disposition", ignoreCase = true)
-        }?.value
-        val mime = response.headers.entries.firstOrNull {
-            it.key.equals("content-type", ignoreCase = true)
-        }?.value?.substringBefore(';')
-        val filename = URLUtil.guessFileName(url, disposition, mime)
-            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            .take(180)
-            .ifBlank { "download" }
-        try {
-            val request = DownloadManager.Request(uri)
-                .setTitle(filename)
-                .setDescription("Downloading with Browse X")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
-            if (!mime.isNullOrBlank()) request.setMimeType(mime)
-            CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }?.let {
-                request.addRequestHeader("Cookie", it)
-            }
-            request.addRequestHeader("User-Agent", org.mozilla.geckoview.GeckoSession.getDefaultUserAgent())
-            val id = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-            store.addBrowseXDownload(id)
-            response.body?.close()
-            toast("Download added: $filename")
-            android.util.Log.i("BrowseX", "Download queued with id=$id")
-        } catch (error: Exception) {
-            response.body?.close()
-            android.util.Log.e("BrowseX", "Unable to queue download", error)
-            toast("Could not start download")
-        }
-    }
-
-    private fun chooseSearchEngine() {
-        val choices = arrayOf("Google", "DuckDuckGo", "Bing")
-        AlertDialog.Builder(this).setTitle("Default search engine")
-            .setSingleChoiceItems(choices, choices.indexOf(store.searchEngine).coerceAtLeast(0)) { dialog, which ->
-                store.searchEngine = choices[which]
-                dialog.dismiss()
-                toast("Search engine: ${store.searchEngine}")
-            }.setNegativeButton("Cancel", null).show()
-    }
-
-    private fun shareCurrentPage() {
-        val tab = activeTab ?: return
-        val url = tab.url
-        if (!url.startsWith("http")) return
-        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, url)
-        }, "Share page"))
-    }
-
-    /** Uses GeckoView's native finder so matches are highlighted in page content. */
-    private fun findInPage() {
-        val session = activeTab?.session ?: return
-        val field = EditText(this).apply {
-            hint = "Find text on this page"
-            setSingleLine(true)
-            inputType = InputType.TYPE_CLASS_TEXT
-        }
-        val count = TextView(this).apply {
-            text = "Type to search"
-            setTextColor(Color.rgb(83, 105, 123))
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-        }
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), 0)
-            addView(field)
-            addView(count)
-        }
-        lateinit var dialog: AlertDialog
-        field.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, countBefore: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, countAfter: Int) {
-                val query = s?.toString().orEmpty()
-                if (query.isBlank()) {
-                    session.getFinder().clear()
-                    count.text = "Type to search"
-                } else {
-                    session.getFinder().find(query, GeckoSession.FINDER_FIND_FORWARD)
-                    count.text = "Searching page…"
+        val started = streamDownloadCoordinator.start(
+            response = response,
+            onCompleted = { result ->
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast(getString(R.string.ui_downloaded_file, result.displayName))
+                }
+                android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
+            },
+            onFailed = { error, cancelled ->
+                if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
+                runOnUiThread {
+                    if (!cancelled && !isFinishing && !isDestroyed) {
+                        toast(getString(R.string.ui_could_not_save_download, error?.message ?: getString(R.string.ui_unknown_status)))
+                    }
                 }
             }
-            override fun afterTextChanged(s: android.text.Editable?) = Unit
-        })
-        dialog = AlertDialog.Builder(this).setTitle("Find in page").setView(panel)
-            .setNegativeButton("Close") { _, _ -> session.getFinder().clear() }
-            .setNeutralButton("Next", null)
-            .setPositiveButton("Previous", null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                session.getFinder().find(null, GeckoSession.FINDER_FIND_FORWARD)
-            }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                session.getFinder().find(null, GeckoSession.FINDER_FIND_BACKWARDS)
-            }
+        )
+        if (!started) {
+            closeDownloadBodySafely { body.close() }
+            toast(BrowseXStrings.text(this@MainActivity, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
         }
-        dialog.show()
-        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
-        field.requestFocus()
     }
 
-    private fun copyCurrentAddress() {
-        val url = activeTab?.url.orEmpty()
-        if (!url.startsWith("http")) return
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Page address", url))
-        toast("Address copied")
-    }
 
     private fun toast(message: String) {
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(this, tr(message), android.widget.Toast.LENGTH_SHORT).show()
     }
 
 }

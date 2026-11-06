@@ -1,49 +1,69 @@
-# BrowseX
+# Wren Browser
 
-متصفح Android مبني على Kotlin وMozilla GeckoView. التطوير النشط يتم تدريجياً على الفرع `rewrite-v2` مع إبقاء `main` دون تغييرات تجريبية مباشرة.
+A privacy-focused Android web browser built with Kotlin and Mozilla GeckoView. The repository is currently named `browsex`; the product name is **Wren Browser**.
 
-## الموجود حالياً
+## Project status
 
-- واجهة تصفح أساسية، شريط عنوان، تبويبات، تنقل خلف/أمام، وملء الشاشة.
-- صفحة بداية محلية، اختيار محرك البحث، مفضلة وسجل محفوظان محلياً.
-- شاشة إعدادات، إدارة سجل/مفضلة، ومشاركة الرابط.
-- Reader mode أولي باستخدام GeckoView page extraction.
-- معلومات الموقع وحالة HTTPS والصلاحيات التي يبلغ عنها GeckoView (عرض فقط).
-- استجابة تنزيلات GeckoView تُمرر إلى Android DownloadManager، وواجهة BrowseX تعرض قائمة التنزيلات التي يديرها النظام.
-- سياسة تنقل مستقلة مع اختبارات JVM تمنع تحميل المخططات غير المسموحة كنصوص عناوين.
+Active development: `rewrite-v2`. Design preparation: `wren-design-prep`. Keep experimental work off `main`.
 
-## حدود معروفة — لا تعتبرها ميزات مكتملة
+### Implemented foundations
 
-- قائمة التنزيلات تستخدم DownloadManager على مستوى النظام، لذلك قد تعرض تنزيلات تطبيقات أخرى. DownloadManager يعيد جلب الرابط؛ لا نضمن الحفاظ على POST body أو جميع رؤوس الطلب الأصلية.
-- Site Information للعرض فقط؛ منح/سحب صلاحيات المواقع غير منفذ.
-- إشعارات المواقع وطلب صلاحية Android 13+ غير منفذين.
-- استعادة التبويبات بعد إغلاق التطبيق، التصفح الخاص، والمزامنة غير منفذة.
-- مانع الإعلانات مؤجل ومعطل افتراضياً؛ لا توجد حماية حجب فعالة مثبتة.
-- لا يوجد مفتاح Release ثابت مُعتمد بعد. لا تستخدم APK debug كترقية مضمونة فوق تثبيت سابق.
-- لم يتم إثبات اختبار على جهاز فعلي بعد؛ CI لا يعوض اختبار Android 10/الأجهزة منخفضة الذاكرة.
+- GeckoView browsing, navigation, a bounded tab workspace, private tabs, tab/session restore, recently closed tabs, and named sessions.
+- Home page customization, search, bookmarks, history, in-page search, Reader Mode, sharing, and unified Recall search.
+- Website permission prompts and controls, Android runtime permission handling, website notifications, and Android notification channels.
+- Light/dark/system appearance, Arabic and English resources, and RTL support on core screens.
+- Download management with progress, cancellation, error states, and direct response-stream handling.
+- Local encrypted password storage using Android Keystore, explicit user confirmation, biometric/device authentication, and optional Android Autofill (fill-only).
+- GeckoView Safe Browsing and optional official uBlock Origin WebExtension integration.
+- Provider-neutral account/sync models and tested OIDC Authorization Code + PKCE request/callback foundations.
 
-## البناء محلياً
+## Not yet complete
 
-المتطلبات: JDK 17 وAndroid SDK 36 وGradle 8.11.1.
+- Google and Microsoft sign-in, token exchange/validation, and cloud synchronization.
+- Production Room/DataStore storage cutover; SharedPreferences remains the operational source pending migration verification.
+- Full locale coverage beyond English and Arabic.
+- Physical-device verification across Android versions, screen sizes, low-memory devices, and all critical flows.
+- Stable production release signing and upgrade verification.
+
+Do not present planned work as shipped functionality.
+
+## Build and test
+
+Requirements: JDK 17, Android SDK 36, Gradle 8.13.
 
 ```bash
 gradle testDebugUnitTest lintDebug assembleDebug
 ```
 
-ملفات APK تظهر تحت `app/build/outputs/apk/debug/`.
+Debug APK output: `app/build/outputs/apk/debug/`.
 
-## الفروع وCI
+CI runs JVM tests, Android Lint, APK checks, and artifact generation. A successful CI run is not a substitute for physical-device testing.
 
-- `main`: لا تغييرات تجريبية مباشرة.
-- `rewrite-v2`: التطوير والفحص.
-- CI يشغل اختبارات JVM وAndroid Lint ويبني APKs ويتحقق من توقيع debug ومعرّف الحزمة وminSdk ووجود مكتبات GeckoView للـABI ثم يرفعها كـ artifact مع SHA-256.
-- النشر العام ينتظر إعداد توقيع Release ثابت وآمن ومراجعة التوافق والتحديث.
+## Important release notes
 
-## التوثيق
+- Minimum supported Android version: Android 8.0 (API 26).
+- Debug APKs may not update an existing installation if their signing certificates differ.
+- Never commit keystores, passwords, API secrets, OAuth client secrets, or private signing material.
+- DownloadManager has platform limitations for replaying some original requests; direct Gecko response-stream downloads preserve the response body.
+- uBlock Origin is installed from the official Mozilla Add-ons distribution after user consent; verify extension behavior on real devices before release.
+
+## Project documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Project tree and dependency contracts](docs/PROJECT_TREE.md)
+- [Project structure and boundaries](docs/PROJECT_TREE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [QA checklist](docs/QA_CHECKLIST.md)
+- [Implementation audit and release gates](docs/IMPLEMENTATION_AUDIT_2026-11-06.md)
+- [Installation and APK troubleshooting](docs/INSTALLING.md)
+- [World-browser product requirements](docs/WORLD_BROWSER_PRODUCT_REQUIREMENTS.md)
+- [Account provider implementation plan](docs/ACCOUNT_PROVIDER_IMPLEMENTATION_PLAN.md)
+- [Figma design brief and screen inventory](docs/FIGMA_DESIGN_BRIEF.md)
 
-التوثيق يميز بين الموجود فعلياً والمخطط له؛ لا تعتبر عناصر الخطة ميزات منفذة.
+## Working rules
+
+1. Preserve user data and backward compatibility.
+2. Keep `main` stable; develop and validate changes on feature branches.
+3. Prefer small, testable modules and explicit interfaces over empty placeholder packages.
+4. Keep UI state, domain rules, persistence, and browser-engine integration separated.
+5. Update tests and documentation whenever behavior changes.
+6. Mark each feature as implemented, tested, or planned accurately.

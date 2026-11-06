@@ -1,0 +1,164 @@
+# BrowseX Implementation Board
+
+> Working branch: `rewrite-v2`  
+> Tracking epic: [Issue #3 — Complete BrowseX](https://github.com/meandmeandme-me/browsex/issues/3)
+
+This is the repository-side phase board for the A–F implementation. Each phase has a dedicated GitHub issue with its detailed checklist, known gaps and acceptance criteria.
+
+| Phase | Workstream | Issue | Current state |
+|---|---|---:|---|
+| A | Storage migration and Room production wiring | [#5](https://github.com/meandmeandme-me/browsex/issues/5) | In progress |
+| B | Tabs, sessions, restore and memory safety | [#6](https://github.com/meandmeandme-me/browsex/issues/6) | In progress |
+| C | Downloads and Android integration | [#7](https://github.com/meandmeandme-me/browsex/issues/7) | In progress |
+| D | Website permissions, notifications and privacy | [#8](https://github.com/meandmeandme-me/browsex/issues/8) | In progress |
+| E | Bookmarks, history, settings, localization and accessibility | [#9](https://github.com/meandmeandme-me/browsex/issues/9) | In progress |
+| F | Ad blocking and advanced browser protections | [#10](https://github.com/meandmeandme-me/browsex/issues/10) | In progress |
+
+## Current implementation baseline
+
+### A — Storage
+- Room repositories exist for bookmarks, history, tabs, sessions, downloads and site permissions.
+- Application-scoped storage runtime performs lazy, one-time legacy migration before Room operations.
+- History writes/clear, bookmark backup import/export, and multiple feature reads/writes now use Room.
+- DataStore now owns core browser settings; a compatibility mirror keeps older readers aligned.
+- Exact Room v2 schema snapshot is now committed at `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json` (commit `5498121d64cb9f7b09c5fc04a65a14e48a73f697`); CI generated it and the push workflow committed it automatically.
+- Remaining: finish every legacy read/write cutover and verify migration parity.
+
+### B — Tabs and sessions
+- Regular-tab restore/save uses Room and excludes private tabs.
+- Recently closed tabs and named sessions use Room.
+- Recently-closed consumption is transactional.
+- Remaining: race/crash/memory-pressure hardening and full lifecycle verification.
+
+### C — Downloads
+- Streamed download metadata and progress are persisted through Room.
+- SQL state transitions are atomic; queued records move to running before transfer.
+- Downloads UI reads Room stream records. It can query only explicitly tracked Android DownloadManager IDs, but no production enqueue/registration path currently feeds those IDs; Gecko response downloads use the bounded stream writer.
+- Remaining: complete Android DownloadManager enqueue/reconciliation, resume/retry semantics, cleanup edge cases and device coverage.
+
+### D — Permissions and privacy
+- Per-origin camera, microphone, geolocation and notification decisions use Room.
+- Android permission-denial history uses DataStore.
+- Site information, notification bridge and browsing-data clear paths use Room permission decisions.
+- Remaining: full Android/API permission matrix, lifecycle cancellation tests and privacy audit.
+
+### E — Library and settings
+- Room-backed bookmarks/history page supports search, folder create/rename/delete, move, remove and clear.
+- Bookmark backup preview/import/export supports merge and replace.
+- Settings screen and homepage preferences use DataStore for core settings.
+- Remaining: remove all legacy compatibility reads/writes, complete reorder UX, full translations/RTL/accessibility audit.
+
+### F — Ad blocking
+- Official Mozilla Add-ons uBlock Origin install/enable/disable/uninstall, private-mode consent, session attachment and site-action popup are already implemented.
+- Global/private state now persists through DataStore.
+- Remaining: update/version lifecycle verification, BrowseX-owned per-site exception UX, recovery tests and low-memory performance measurements.
+
+## Release gates
+
+- [x] Exact Room schema v2 snapshot committed; CI migration/unit test job passed on the generating commit.
+- [ ] No private browsing state is persisted.
+- [ ] No production database work blocks the UI thread.
+- [ ] All user-facing controls are connected to real behavior.
+- [ ] Unit/Robolectric/instrumented tests pass on the final commit.
+- [x] CI passes on the latest verified commit `42ddf62e5706a4c767a015015819754c8f1b4140` (run `42090800528`). This is an intermediate verification, not the final release gate.
+- [ ] Android 10/API 29 and newer Android permission/storage behavior verified.
+- [ ] ARM32, ARM64 and tablet layouts verified where devices are available.
+- [ ] Release APK is reproducible and signed; installation is tested on the target device.
+- [ ] Remaining limitations are documented; no unverified device test is claimed.
+
+**Important:** This file is a repository-side implementation board. GitHub Project V2 board creation is not exposed by the connected GitHub actions in this workspace; the live task cards are the linked Issues above.
+
+
+## Current branch checkpoint — 2026-11-05
+
+- Current audited HEAD before the next corrective commit: `871c84192431a1a55fc656cc050e1e92715ddb45`.
+- Push CI run `42121854379` and PR CI run `42121859399` both passed on that exact HEAD.
+- PR #4 remains open and unmerged. Continue on `rewrite-v2`.
+- Current Room/DataStore production paths cover bookmarks/history, regular tab snapshots, named/recent sessions, stream-download metadata and site permissions. The earlier continuity notes that describe Room as staging-only are obsolete.
+- DownloadManager enqueue/registration/reconciliation is still absent. Existing tracked-ID query UI is not proof of an enqueue path. Gecko one-shot response downloads must continue using the original response-body writer.
+- A tracked Android download cancellation bug was identified: only remove the Room tracking row after `DownloadManager.remove(id)` returns a positive count. Follow-up fix is included in the next commit.
+- Device installation, Android API matrix, release signing, tablet/accessibility and live uBlock verification remain outstanding.
+
+## Latest implementation and verification — 2026-11-05
+
+- CI run [#42088452485](https://github.com/meandmeandme-me/browsex/actions/runs/42088452485) passed for code commit `99c381744694148846068b36e9bff6b0f5f64da1`: unit tests, lint, locale validation, debug APK assembly, ABI/package/signature verification and artifact upload.
+- Debug artifacts produced: ARM32, ARM64 and universal. Signed release APK generation was skipped because release signing is not configured.
+- The exact Room v2 schema was generated, uploaded, and then committed by the successful push workflow run `42089582128`; source file: `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json` (commit `5498121d64cb9f7b09c5fc04a65a14e48a73f697`, identity hash `a8bb5bdfbd75a05ec09fb4f5ee8c5062`).
+- Downloads UI now refreshes while Android DownloadManager jobs are active, and stream completion no longer reports success if the Room completion transition fails.
+- Site information exposes stored geolocation and notification decisions even when there is no current Gecko permission row, and persists changes made there.
+- Bookmark ordering is now stable per folder: new bookmarks append, moving folders appends to the destination, and the organization menu supports moving bookmarks up/down within a folder.
+
+## Remaining work (not yet claimed complete)
+
+- [x] Commit the exact generated Room schema JSON. CI push run `42089582128` completed the schema-commit step successfully; committed schema identity hash is `a8bb5bdfbd75a05ec09fb4f5ee8c5062`.
+- [ ] Add a dedicated schema/migration parity assertion and keep it in the release gate.
+- [ ] Finish legacy storage cutover and migration parity review.
+- [ ] Complete DownloadManager enqueue/reconciliation and pause/resume/retry semantics; current Gecko response-body downloads use BrowseX's bounded stream writer.
+- [ ] Complete API-level and device permission/privacy testing.
+- [ ] Finish translation coverage beyond Arabic/English fallback, RTL, TalkBack and large-font audits.
+- [ ] Add BrowseX-owned per-site uBlock exception UX and extension update/recovery coverage.
+- [ ] Verify install/update behavior on Android 10 and the target TECNO device; CI artifact validation is not a substitute for device installation.
+
+
+## Verification update — schema snapshot
+
+- Pull-request CI run `42089596752` passed tests, lint, locale validation, debug APK assembly, APK verification and artifact upload; its schema-commit step was correctly skipped because it was a pull-request event.
+- Push CI run `42089582128` passed the same build checks and successfully executed `Commit generated Room schema snapshot`.
+- GitHub branch `rewrite-v2` now contains the generated schema commit `5498121d64cb9f7b09c5fc04a65a14e48a73f697`. This verifies source-control persistence of the generated schema, not Android device installation or runtime behavior.
+- Release APK signing remains skipped because release signing secrets are not configured; the produced artifacts are debug APKs.
+
+
+## Latest branch verification — 2026-11-05
+
+- Push workflow run [#42090800528](https://github.com/meandmeandme-me/browsex/actions/runs/42090800528) passed on commit `42ddf62e5706a4c767a015015819754c8f1b4140`: locale validation, unit tests, lint, debug APK assembly, APK verification/checksums, Room schema upload and schema commit step.
+- ARM32, ARM64 and universal debug APK artifacts were uploaded. Release APK steps were skipped because signing secrets are not configured.
+- The schema commit step succeeded and found the committed schema current; the branch head remained `42ddf62e5706a4c767a015015819754c8f1b4140`.
+- Important download audit correction: the current code has no production `DownloadManager.enqueue()` call. The Room platform-ID repository and DownloadsPage query support exist, but the enqueue/registration/reconciliation path remains unimplemented. Gecko response-body downloads currently use the exact-response bounded stream writer.
+
+
+## Latest CI verification — 2026-11-05 (commit `27a07b081cc473ebba84601ff57f5c6dd7413bce`)
+
+- Push workflow run [#42093465872](https://github.com/meandmeandme-me/browsex/actions/runs/42093465872) completed successfully.
+- Locale validation, unit tests, lint, debug APK assembly, APK output/checksum verification, Room schema upload and schema commit step all passed.
+- CI uploaded ARM32 (`browsex-armeabi-v7a-debug`), ARM64 (`browsex-arm64-v8a-debug`) and universal (`browsex-universal-debug`) debug APK artifacts.
+- Release APK signing/verification/upload were skipped because release signing is not configured. These are debug artifacts, not signed release builds.
+- The new PR-only Room schema drift gate is present in the workflow. This push run correctly skipped that PR-only step; it still needs to be exercised by the open pull request before that gate is called verified.
+- This CI result verifies the exact branch commit above. It does not replace Android 10/device installation, runtime, tablet or accessibility testing.
+
+
+## Follow-up implementation checkpoint — 2026-11-06
+
+- Current branch head: `1bc0771e3d4973805bdb8a8c966e591df3eb3880`.
+- Issue #7 download lifecycle: terminal failure/cancel now preserves last persisted progress; Gecko response body cleanup now covers coordinator cancellation before writer handoff. Android DownloadManager enqueue/reconciliation remains intentionally unimplemented for Gecko one-shot response bodies; a URL-only re-fetch would not preserve cookies, POST bodies or response fidelity.
+- Issue #8 notifications: Android notification identity is now a stable SHA-256-derived tag scoped to origin and website notification tag, avoiding collisions in the prior 32-bit integer ID.
+- Work remains in progress across Issues #5–#10. No physical-device verification or overall completion claim is made.
+
+
+## Additional implementation checkpoint — 2026-11-06
+
+- Commit `d782d3e2d3c525bb116d7a593bbad5e400b7841c`: the website-notification bridge now reads the global enablement flag from the DataStore-backed settings snapshot (legacy cache is only a pre-load fallback).
+- Commit `29993fd5e95dc034225a7ad5258146c69d9eb889`: startup reconciles persisted uBlock flags with GeckoView's discovered extension state.
+- Commit `c3c82ac3628d46800c5f096c8f0969ac9f22acb7`: removed the redundant legacy SharedPreferences download-recovery call; application-scoped Room startup recovery remains authoritative for stream-download records.
+
+Issues #5, #7, #8 and #10 remain in progress; these commits do not represent completion of their full acceptance criteria.
+
+
+## Follow-up implementation — 2026-11-06
+
+- Commit `9c9e232729dd4c3cf7ff86ee0749614cf5c6607c`: browsing-data clearing now closes private GeckoSessions before removing private tab records; regular tabs are reset and retained.
+- Commit `e7821ee698648e936f0a22903612202af5d8c783`: site-notification permission checks now use the DataStore-backed global setting rather than the legacy SharedPreferences value.
+- Commit `262b1fc0a6c38432dc916415da01d3b6e45d9445`: tab closing and browsing-data clearing continue cleanup if recently-closed persistence or GeckoView detachment callbacks fail.
+- Commit `11defa326272b61aef81bb6580a69c42b8bf89ec`: recently-closed entries expire after 30 days and are pruned when listed, recorded, or restored.
+- Commit `7de2d38855f474f58fd000d704e439c6241233d4`: download coordinator shutdown no longer cancels its persistence scope before the writer's cancellation callbacks can save terminal states to Room; new stream requests are rejected and their bodies closed after shutdown.
+- No tests were run for these changes. Issues #5–#10 remain open until their full acceptance criteria are implemented and verified.
+
+
+## Latest continuation checkpoint — 2026-11-06
+
+- Branch: `rewrite-v2` only; PR #4 remains open and must not be merged into `main` yet.
+- `f2e98ef`: clearing browsing history also clears recently-closed Room records and the emergency SharedPreferences fallback.
+- `2b7dab2` and `e7e1b79`: localized missing browser feedback strings in Arabic and English. The two resource files were inspected and contain 325 matching keys each.
+- `182f535` and `027f14c`: locale validation now also checks that Kotlin UI translation-helper calls map to declared resource keys.
+- The last confirmed successful Actions build is `f2e98ef`. Actions for the newest localization and validator changes are queued/in progress, not yet confirmed.
+- No manual tests or device verification were performed. The exact Gecko response-body download path remains in place; no unsafe URL re-fetch was introduced for DownloadManager.
+- Still open: SharedPreferences fallback audit, session/tab race and memory verification, DownloadManager reconciliation for safely representable requests, Android permission/notification device verification, uBlock real-site/update checks, broader locale packs and accessibility audit, release signing and installation/device verification.
