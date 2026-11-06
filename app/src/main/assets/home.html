@@ -6,64 +6,33 @@
 <meta name="theme-color" content="#eff5fa">
 <title>Browse X</title>
 <style>
-:root{color-scheme:light;--canvas:#eff5fa;--ink:#132b40;--muted:#53697b;--blue:#0866d9;--line:#d7e3ec;--card:#fff;--shadow:0 6px 24px rgba(38,77,108,.07)}
-:root[dir="rtl"]{direction:rtl} :root[dir="rtl"] header{flex-direction:row-reverse} :root[dir="rtl"] .section-head{flex-direction:row-reverse} :root[dir="rtl"] .dialog-actions{flex-direction:row-reverse} :root[dir="rtl"] .shortcut-edit{right:auto;left:0}
-html,body{scrollbar-gutter:stable;}
+:root{color-scheme:light;--canvas:#eef4fb;--ink:#14283d;--muted:#65788c;--blue:#236fe3;--line:#dbe5ef;--card:rgba(255,255,255,.72);--glass:rgba(255,255,255,.58);--shadow:0 18px 48px rgba(35,67,102,.09);--soft-shadow:0 8px 26px rgba(35,67,102,.07)}
+:root[dir="rtl"]{direction:rtl}:root[dir="rtl"] header,:root[dir="rtl"] .section-head,:root[dir="rtl"] .dialog-actions{flex-direction:row-reverse}:root[dir="rtl"] .shortcut-edit{right:auto;left:0}
 *{box-sizing:border-box}[hidden]{display:none!important}
-html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
-body{background:linear-gradient(112deg,#e0f6fc 0%,#f4f7fc 48%,#e6ecfc 100%);background-attachment:fixed}
-main{width:min(100%,620px);margin:auto;padding:24px 20px 36px}
-header,.section-head{display:flex;align-items:center;justify-content:space-between}
-header{margin-bottom:30px}
-.brand{display:flex;align-items:center;gap:10px}
-.mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#5fc8e9,#3b69c9 58%,#766bd1);display:grid;place-items:center;color:#fff;font-size:26px;box-shadow:0 5px 14px #477cc333}
-.brand-name{font-size:23px;font-weight:750;letter-spacing:-.7px}
- .icon-btn{width:48px;height:48px;border:0;border-radius:13px;background:var(--card);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}
-.greeting{margin:0 0 28px}
-h1{white-space:pre-line;font-size:clamp(29px,7vw,36px);line-height:1.12;letter-spacing:-1.1px;margin:0 0 10px;font-weight:760}
-.greeting p{font-size:14px;color:var(--muted);margin:0}
-.section-head{margin:0 0 14px}
-.section-head h2{font-size:17px;font-weight:550;margin:0}
-.text-action{border:0;background:transparent;color:var(--blue);font-size:13px;font-weight:650;padding:8px 0;cursor:pointer}
-.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:30px}.shortcuts.list{grid-template-columns:1fr}.shortcuts.list .shortcut{flex-direction:row;justify-content:flex-start}.shortcuts.list .shortcut-icon{width:46px;height:46px;border-radius:14px}.shortcuts.list .shortcut-name{font-size:13px}
-.shortcut-wrap{position:relative;min-width:0}
-.shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink)}
-.shortcut-icon{width:58px;height:58px;border-radius:19px;background:var(--card);display:grid;place-items:center;font-size:25px;font-weight:650;box-shadow:var(--shadow);color:var(--blue);overflow:hidden}
-.shortcut-name{font-size:11px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
- .shortcut-edit{position:absolute;right:0;top:-5px;width:44px;height:44px;border:0;border-radius:50%;background:#dcecff;color:#0759bd;font-size:13px;cursor:pointer}
-.add-shortcut{width:58px;height:58px;border:1px dashed #91abc2;border-radius:19px;background:#ffffff75;color:var(--blue);font-size:26px;cursor:pointer}
-.add-label{display:block;margin-top:8px;font-size:11px;color:var(--muted)}
-.reading-card{padding:12px;border-radius:22px;background:var(--card);border:1px solid #ffffffb3;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block}
-.editorial-art{height:142px;border-radius:16px;overflow:hidden;position:relative;background:linear-gradient(130deg,#b7cbd2 0%,#d7d6c7 45%,#8da8a9 100%)}
-.editorial-art:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7e8cf,#b5a58f 65%,#7c8e8c);left:8%;top:-62px;box-shadow:100px 48px 0 -28px #ffffff59}
-.article-info{padding:11px 2px 1px}
-.kicker{font-size:11px;color:var(--blue);letter-spacing:.2px;margin-bottom:5px}
-.article-title{font-size:20px;line-height:1.2;margin:0 0 6px;font-weight:600}
-.article-meta{font-size:12px;color:var(--muted)}
-.search-hint{margin:22px 0 0;text-align:center;font-size:11px;color:var(--muted)}
-dialog{width:min(420px,calc(100% - 32px));border:0;border-radius:22px;padding:0;background:var(--card);color:var(--ink);box-shadow:0 20px 70px #0b203855}
-dialog::backdrop{background:#0c203b80;backdrop-filter:blur(3px)}
-.dialog-body{padding:21px}
-.dialog-body h2{font-size:20px;margin:0 0 6px}
-.dialog-body p{font-size:12px;color:var(--muted);margin:0 0 17px}
-label{display:block;font-size:12px;font-weight:650;margin:12px 0 6px}
-input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--canvas);color:var(--ink);font-size:14px;outline-color:var(--blue)}
-.dialog-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-.dialog-actions button{flex:1 1 calc(50% - 8px);min-height:44px;border:0;border-radius:12px;font-weight:650;cursor:pointer}
-.primary{background:var(--blue);color:#fff}.secondary{background:var(--canvas);color:var(--ink)}.danger{background:#fff0f0;color:#b42332}
-body.dark{color-scheme:dark;--canvas:#111d2e;--ink:#edf5ff;--muted:#aab9c9;--line:#31445a;--card:#20334a;--blue:#78b5ff;background:linear-gradient(120deg,#1c3547,#1c263e 52%,#302c4a);color:var(--ink)}
-body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}body.dark .shortcut-edit{background:#294d76;color:#cfe5ff}body.dark .danger{background:#492d38;color:#ffc5cc}
-@media(max-width:360px){main{padding:18px 14px}.shortcuts{gap:6px}.shortcut-icon,.add-shortcut{width:51px;height:51px}.shortcut-name,.add-label{font-size:10px}}
-@media(min-width:700px){main{padding-top:38px}.shortcuts{gap:18px}.shortcut-icon,.add-shortcut{width:64px;height:64px}}
+html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);scrollbar-gutter:stable}
+body{background:radial-gradient(ellipse at 8% 4%,#d4f0fa 0,transparent 34%),radial-gradient(ellipse at 94% 12%,#dce4ff 0,transparent 34%),linear-gradient(135deg,#edf5fa 0%,#f7f8fc 52%,#e9effb 100%);background-attachment:fixed}
+main{width:min(100%,760px);margin:auto;padding:clamp(20px,5vw,42px) clamp(16px,4vw,30px) 46px}
+header,.section-head{display:flex;align-items:center;justify-content:space-between}header{margin-bottom:clamp(32px,7vw,58px)}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:46px;border-radius:17px;background:linear-gradient(145deg,#7bd9ed,#4e8fe5 52%,#796be0);display:grid;place-items:center;color:#fff;font-size:27px;box-shadow:0 9px 22px #477cc33d}.brand-name{font-size:23px;font-weight:780;letter-spacing:-.8px}
+.header-actions{display:flex;align-items:center;gap:10px}.date-chip{padding:10px 14px;border:1px solid #ffffffb8;border-radius:999px;background:#ffffff77;color:var(--muted);font-size:11px;font-weight:650;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.icon-btn{width:44px;height:44px;border:1px solid #ffffffc9;border-radius:15px;background:var(--glass);color:var(--ink);font-size:19px;box-shadow:var(--soft-shadow);cursor:pointer;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.greeting{margin:0 0 36px}.eyebrow{font-size:10px;font-weight:750;letter-spacing:1.7px;text-transform:uppercase;color:var(--blue);margin:0 0 13px}h1{white-space:pre-line;font-size:clamp(34px,8vw,54px);line-height:1.03;letter-spacing:-1.9px;margin:0 0 13px;font-weight:780}.greeting p{font-size:14px;color:var(--muted);margin:0}
+.section-head{margin:0 0 17px}.section-head h2{font-size:17px;font-weight:720;letter-spacing:-.25px;margin:0}.text-action{border:0;background:transparent;color:var(--blue);font-size:12px;font-weight:700;padding:8px 0;cursor:pointer}
+.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(9px,2vw,17px);margin-bottom:36px}.shortcuts.list{grid-template-columns:1fr}.shortcuts.list .shortcut{flex-direction:row;justify-content:flex-start;padding:9px 12px;border-radius:18px;background:var(--glass);border:1px solid #ffffffb8}.shortcuts.list .shortcut-icon{width:44px;height:44px;border-radius:14px}.shortcuts.list .shortcut-name{font-size:13px}
+.shortcut-wrap{position:relative;min-width:0}.shortcut{display:flex;min-width:0;align-items:center;flex-direction:column;gap:9px;text-decoration:none;color:var(--ink);padding:12px 5px 10px;border-radius:22px;transition:transform .18s ease,background .18s ease}.shortcut:active{transform:scale(.96)}.shortcut-icon{width:62px;height:62px;border-radius:21px;background:linear-gradient(145deg,#fff,#f4f8fc);border:1px solid #ffffffd9;display:grid;place-items:center;font-size:25px;font-weight:750;box-shadow:0 9px 24px rgba(37,76,115,.09);color:var(--blue);overflow:hidden}.shortcut-name{font-size:11px;font-weight:680;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}.shortcut-edit{position:absolute;right:0;top:0;width:42px;height:42px;border:1px solid #fff;border-radius:50%;background:#e5f0ff;color:#0759bd;font-size:13px;cursor:pointer;box-shadow:0 4px 12px #173f691c}.add-shortcut{width:62px;height:62px;border:1px dashed #91abc2;border-radius:21px;background:#ffffff70;color:var(--blue);font-size:27px;cursor:pointer}.add-label{display:block;margin-top:9px;font-size:11px;color:var(--muted);text-align:center}
+.reading-card{padding:12px;border-radius:28px;background:var(--card);border:1px solid #ffffffd4;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);transition:transform .2s ease,box-shadow .2s ease}.reading-card:active{transform:scale(.99)}.editorial-art{height:clamp(150px,34vw,220px);border-radius:20px;overflow:hidden;position:relative;background:radial-gradient(ellipse at 78% 20%,#c9c4ff 0,transparent 34%),radial-gradient(ellipse at 18% 78%,#82d8e6 0,transparent 38%),linear-gradient(120deg,#a8c7df,#d8e2f2 48%,#b8b5e8)}.editorial-art:before{content:"";position:absolute;width:clamp(190px,42vw,290px);height:clamp(190px,42vw,290px);border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff,#e4edff 30%,#a9b9e5 70%,#7f91c5);right:10%;top:-38%;box-shadow:-145px 150px 0 -60px #ffffff8a,115px 175px 0 -72px #ffffff85}.editorial-art:after{content:"✳";position:absolute;right:12%;bottom:8%;font-size:clamp(42px,10vw,76px);color:#ffffffb5;text-shadow:0 8px 24px #546c9c55}
+.article-info{padding:15px 7px 5px}.kicker{font-size:10px;color:var(--blue);font-weight:750;letter-spacing:1.35px;margin-bottom:8px}.article-title{font-size:clamp(21px,5vw,27px);line-height:1.15;letter-spacing:-.6px;margin:0 0 7px;font-weight:730}.article-meta{font-size:12px;color:var(--muted)}.search-hint{margin:23px 0 0;text-align:center;font-size:11px;color:var(--muted)}
+dialog{width:min(420px,calc(100% - 32px));border:1px solid #ffffffb8;border-radius:24px;padding:0;background:var(--card);color:var(--ink);box-shadow:0 24px 80px #0b203855;backdrop-filter:blur(24px)}dialog::backdrop{background:#0c203b80;backdrop-filter:blur(5px)}.dialog-body{padding:23px}.dialog-body h2{font-size:20px;margin:0 0 6px}.dialog-body p{font-size:12px;color:var(--muted);margin:0 0 17px}label{display:block;font-size:12px;font-weight:700;margin:12px 0 6px}input{width:100%;height:46px;border:1px solid var(--line);border-radius:14px;padding:0 12px;background:var(--canvas);color:var(--ink);font-size:14px;outline-color:var(--blue)}.dialog-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.dialog-actions button{flex:1 1 calc(50% - 8px);min-height:44px;border:0;border-radius:14px;font-weight:700;cursor:pointer}.primary{background:linear-gradient(135deg,#277be9,#5b70df);color:#fff}.secondary{background:var(--canvas);color:var(--ink)}.danger{background:#fff0f0;color:#b42332}
+body.dark{color-scheme:dark;--canvas:#101d2d;--ink:#edf5ff;--muted:#aab9c9;--line:#354a61;--card:rgba(28,46,66,.78);--glass:rgba(25,44,64,.66);--blue:#8bc1ff;--shadow:0 18px 48px rgba(0,0,0,.2);--soft-shadow:0 8px 26px rgba(0,0,0,.17);background:radial-gradient(ellipse at 8% 4%,#1c4654 0,transparent 34%),radial-gradient(ellipse at 94% 12%,#30335b 0,transparent 34%),linear-gradient(135deg,#111e2c,#1a263d 55%,#252640)}body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8) saturate(.8)}body.dark .shortcut-edit{background:#294d76;color:#cfe5ff}body.dark .shortcut-icon{background:linear-gradient(145deg,#2b4058,#1e3046);border-color:#526a82}body.dark .date-chip{border-color:#ffffff20;background:#172b42}body.dark .danger{background:#492d38;color:#ffc5cc}
+@media(hover:hover){.shortcut:hover{background:#ffffff66;transform:translateY(-2px)}.reading-card:hover{transform:translateY(-2px);box-shadow:0 22px 55px rgba(35,67,102,.13)}}@media(max-width:380px){.date-chip{display:none}main{padding:19px 14px 34px}.shortcuts{gap:4px}.shortcut{padding-inline:2px}.shortcut-icon,.add-shortcut{width:53px;height:53px;border-radius:18px}.shortcut-name,.add-label{font-size:10px}h1{letter-spacing:-1.2px}}@media(min-width:700px){.shortcuts{gap:22px}.shortcut-icon,.add-shortcut{width:70px;height:70px}.shortcut{padding:14px}.reading-card{padding:15px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <main>
 <header>
  <div class="brand"><div class="mark" aria-hidden="true">✳</div><div class="brand-name">Browse X</div></div>
- <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle appearance">☾</button>
+ <div class="header-actions"><span class="date-chip" id="date-chip"></span><button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle appearance">☾</button></div>
 </header>
-<section class="greeting"><h1 id="greeting-title">A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
+<section class="greeting"><div class="eyebrow" id="eyebrow">A BROWSER FOR THE OPEN WEB</div><h1 id="greeting-title">A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
 <section aria-labelledby="everyday-title">
  <div class="section-head"><h2 id="everyday-title">Your everyday</h2><button class="text-action" id="reset" type="button">Reset</button></div>
  <nav class="shortcuts" id="shortcuts" aria-label="Favorite websites"></nav>
@@ -103,7 +72,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  document.documentElement.lang=language;
  document.documentElement.dir=rtlLanguages.has(languageCode)?'rtl':'ltr';
  const copy=arabic?{
-  greeting:['صباح الخير. إلى أين نذهب؟','مساء الخير. إلى أين نذهب؟'],
+  greeting:['صباح الخير. إلى أين نذهب؟','مساء الخير. إلى أين نذهب؟'],eyebrow:'متصفح للويب المفتوح',
   main:['فضول صغير.','عالم أوسع.'],everyday:'مساحتك اليومية',reset:'إعادة ضبط',
   begin:'ابدأ من هنا',explore:'استكشف',kicker:'الويب المفتوح / اكتشاف',
   title:'اتبع فضولك',meta:'فكرة جديدة تبدأ ببحث واحد',
@@ -116,7 +85,7 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
   cancel:'إلغاء',save:'حفظ',moveUp:'تحريك للأعلى',moveDown:'تحريك للأسفل',invalid:'أدخل عنوان موقع صحيحًا يبدأ بـ http أو https.',
   morning:'صباح الخير. إلى أين نذهب؟',afternoon:'نهارك سعيد. إلى أين نذهب؟',evening:'مساء الخير. إلى أين نذهب؟'
  }:{
-  greeting:['Good morning. Where to next?','Good evening. Where to next?'],
+  greeting:['Good morning. Where to next?','Good evening. Where to next?'],eyebrow:'A BROWSER FOR THE OPEN WEB',
   main:['A little curiosity.','A wider world.'],everyday:'Your everyday',reset:'Reset',
   begin:'A place to begin',explore:'Explore',kicker:'OPEN WEB / DISCOVERY',
   title:'Follow your curiosity',meta:'A new idea is one search away',
@@ -204,6 +173,8 @@ body.dark .mark{box-shadow:none}body.dark .editorial-art{filter:brightness(.8)}b
  $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
  if(requestedTheme==='system'&&window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',event=>applyTheme(event.matches));}
  $('greeting-title').textContent=copy.main.join('\n');
+ $('eyebrow').textContent=copy.eyebrow;
+ try{$('date-chip').textContent=new Intl.DateTimeFormat(language,{weekday:'short',month:'short',day:'numeric'}).format(new Date())}catch(_){$('date-chip').textContent=new Date().toLocaleDateString()}
  $('everyday-title').textContent=copy.everyday;$('reset').textContent=copy.reset;
  $('reading-title').textContent=copy.begin;document.querySelector('.section-head a').textContent=copy.explore;
  document.querySelector('.kicker').textContent=copy.kicker;
