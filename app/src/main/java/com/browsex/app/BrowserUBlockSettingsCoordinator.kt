@@ -14,7 +14,6 @@ import org.mozilla.geckoview.GeckoSession
 internal class BrowserUBlockSettingsCoordinator(
     private val activity: Activity,
     private val manager: () -> UBlockOriginManager?,
-    private val store: BrowserStore,
     private val activeSession: () -> GeckoSession?,
     private val isHostUnavailable: () -> Boolean,
     private val showMessage: (String) -> Unit,
@@ -137,12 +136,7 @@ internal class BrowserUBlockSettingsCoordinator(
 
     private fun persistState(installed: Boolean, enabled: Boolean, privateAllowed: Boolean) {
         val host = activity as? MainActivity
-        if (host == null) {
-            store.adBlockInstalled = installed
-            store.adBlockEnabled = enabled
-            store.adBlockPrivateEnabled = privateAllowed
-            return
-        }
+        if (host == null) return
         host.updateBrowserSettings(transform = {
             it.copy(
                 adBlockInstalled = installed,
