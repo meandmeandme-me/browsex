@@ -521,6 +521,14 @@ class MainActivity : AppCompatActivity() {
                             store.adBlockEnabled = enabled
                             store.adBlockPrivateEnabled = privateAllowed
                             BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                            // Reconcile persisted preferences with Gecko's actual extension state.
+                            updateBrowserSettings({
+                                it.copy(
+                                    adBlockInstalled = installed != null,
+                                    adBlockEnabled = enabled,
+                                    adBlockPrivateEnabled = privateAllowed
+                                )
+                            })
                             restoreInitialBrowserTabs(intent)
                         }
                     },
