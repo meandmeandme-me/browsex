@@ -1072,7 +1072,7 @@ class MainActivity : AppCompatActivity() {
                 activity = this,
                 url = url,
                 title = tab.title,
-                permissions = tab.sitePermissions,
+                permissions = if (tab.privateMode) emptyList() else tab.sitePermissions,
                 store = store,
                 onPermissionChange = { permission, value ->
                     if (!tab.privateMode) {
