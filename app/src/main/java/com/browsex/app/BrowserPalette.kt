@@ -2,6 +2,7 @@ package com.browsex.app
 
 import android.content.Context
 import android.content.res.Configuration
+import android.text.TextUtils
 import android.view.View
 import java.util.Locale
 
@@ -32,9 +33,12 @@ internal data class BrowseXColors(
 
         /** Layout direction follows the actual locale, independently of translation availability. */
         fun isRtl(store: BrowserStore): Boolean {
-            val language = if (store.languageMode == "system") Locale.getDefault().language
-                else store.languageMode.substringBefore('-')
-            return language.lowercase(Locale.ROOT) in setOf("ar", "fa", "ur", "ps", "he", "yi", "sd", "ug", "ku")
+            val locale = if (store.languageMode == "system") {
+                Locale.getDefault()
+            } else {
+                Locale.forLanguageTag(store.languageMode)
+            }
+            return TextUtils.getLayoutDirectionFromLocale(locale) == View.LAYOUT_DIRECTION_RTL
         }
 
         fun applyDirection(view: View, store: BrowserStore) {
