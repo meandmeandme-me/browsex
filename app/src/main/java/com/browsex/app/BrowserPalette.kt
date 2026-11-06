@@ -21,6 +21,9 @@ internal data class BrowseXColors(
             return resolve(context, settings)
         }
 
+        fun isArabic(context: Context, store: BrowserStore): Boolean =
+            (context as? MainActivity)?.currentBrowserSettings?.let(::isArabic) ?: isArabic(store)
+
         fun isArabic(store: BrowserStore): Boolean = when {
             store.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
             else -> store.languageMode.substringBefore('-').equals("ar", ignoreCase = true)
