@@ -406,13 +406,20 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM download_records WHERE id = :id")
     suspend fun deleteDownloadRecord(id: String): Int
 
-    @Query("DELETE FROM download_records WHERE id IN (SELECT id FROM download_records ORDER BY created_at DESC LIMIT -1 OFFSET :keep)")
+    @Query("SELECT COUNT(*) FROM download_records WHERE status IN ('queued', 'running')")
+    suspend fun activeDownloadCount(): Int
+
+    @Query("DELETE FROM download_records WHERE id IN (SELECT id FROM download_records WHERE status NOT IN ('queued', 'running') ORDER BY created_at DESC LIMIT -1 OFFSET :keep)")
     suspend fun pruneDownloadRecords(keep: Int)
 
     @Transaction
     suspend fun createDownloadRecord(record: DownloadRecordEntity, keep: Int = 300): Boolean {
+        if (keep <= 0) return false
+        val active = activeDownloadCount()
+        // Never evict an active transfer to make room for a new history row.
+        if (active >= keep) return false
+        pruneDownloadRecords((keep - active - 1).coerceAtLeast(0))
         putDownloads(listOf(record))
-        pruneDownloadRecords(keep)
         return true
     }
 
