@@ -56,6 +56,26 @@ class BrowserNotificationPermissionCoordinatorTest {
         assertFalse(coordinator.isInFlight)
     }
 
+    @Test fun launcherFailureRejectsPendingCallbacksAndAllowsFutureRequests() {
+        var attempts = 0
+        var fail = true
+        val results = mutableListOf<Boolean>()
+        val coordinator = coordinator(launch = {
+            attempts++
+            if (fail) throw IllegalStateException("launcher unavailable")
+        })
+        coordinator.request { value -> results.add(value) }
+        assertEquals(listOf(false), results)
+        assertFalse(coordinator.isInFlight)
+
+        fail = false
+        coordinator.request { value -> results.add(value) }
+        assertTrue(coordinator.isInFlight)
+        coordinator.onResult(true)
+        assertEquals(listOf(false, true), results)
+        assertEquals(2, attempts)
+    }
+
     private fun coordinator(
         api: Int = 35,
         enabled: () -> Boolean = { true },
