@@ -125,7 +125,10 @@ internal class BrowserTabController(
         val index = tabs.indexOfFirst { it === tab }
         if (index < 0) return
         val wasActive = activeTab === tab
-        if (!tab.privateMode) recordRecentlyClosed(tab)
+        if (!tab.privateMode) {
+            runCatching { recordRecentlyClosed(tab) }
+                .onFailure { android.util.Log.w("BrowseX", "Could not record recently closed tab", it) }
+        }
         // Extension and view callbacks are best-effort: neither may prevent the
         // lifecycle owner from closing the native GeckoSession and removing the tab.
         if (tab.sessionOpened) {

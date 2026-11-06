@@ -48,7 +48,8 @@ internal class BrowserBrowsingDataCoordinator(
             regularTabs.getOrNull(index)?.also { it.url = url } ?: BrowserTab(url = url)
         }
 
-        releaseViewSession()
+        runCatching { releaseViewSession() }
+            .onFailure { android.util.Log.w("BrowseX", "Could not detach GeckoView before clearing data", it) }
         // Regular tabs survive the data-clear transaction and receive fresh sessions.
         // Private tabs are intentionally discarded; close them rather than resetting
         // their GeckoSessions and then dropping their records from the registry.
