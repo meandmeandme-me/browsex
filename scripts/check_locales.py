@@ -12,7 +12,8 @@ RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
 LOCALE_CONFIG = RES / "xml" / "locales_config.xml"
 PLACEHOLDER = re.compile(r"(?<!%)%(?!%)(?:[0-9]+\$)?[-#+0,(]*[0-9]*(?:\.[0-9]+)?[sdif]")
-TRANSLATION_CALL = re.compile(r'\b(?:t|BrowseXStrings\.text)\s*\(\s*"([^"]+)"\s*,\s*"([^"]*)"')
+TRANSLATION_CALL = re.compile(r'\bt\s*\(\s*"([^"]+)"')
+DIRECT_TRANSLATION_CALL = re.compile(r'BrowseXStrings\.text\s*\(\s*[^,]+,\s*"([^"]+)"')
 
 
 def resources(path: Path):
@@ -61,15 +62,16 @@ def main() -> int:
     kotlin_root = ROOT / "app" / "src" / "main" / "java"
     for source_path in kotlin_root.rglob("*.kt"):
         source = source_path.read_text(encoding="utf-8")
-        for match in TRANSLATION_CALL.finditer(source):
-            english = match.group(1)
-            key = "ui_tabs_title" if english == "Tabs" else (
+        for pattern in (TRANSLATION_CALL, DIRECT_TRANSLATION_CALL):
+            for match in pattern.finditer(source):
+                english = match.group(1)
+                key = "ui_tabs_title" if english == "Tabs" else (
                 "ui_" + re.sub(r"[^a-z0-9]+", "_", english.lower()).strip("_")
             )
-            if ("string", key) not in base:
-                errors.append(
-                    f"{source_path}: translation key {key!r} is missing for {english!r}"
-                )
+                if ("string", key) not in base:
+                    errors.append(
+                        f"{source_path}: translation key {key!r} is missing for {english!r}"
+                    )
 
     config_root = ET.parse(LOCALE_CONFIG).getroot()
     android_name = "{http://schemas.android.com/apk/res/android}name"
