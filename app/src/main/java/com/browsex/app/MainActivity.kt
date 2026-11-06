@@ -133,6 +133,7 @@ class MainActivity : AppCompatActivity() {
     }
     private lateinit var store: BrowserStore
     private var browserSettingsSnapshot = BrowserSettings()
+    internal val currentBrowserSettings: BrowserSettings get() = browserSettingsSnapshot
     private var browserSettingsLoaded = false
     internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
