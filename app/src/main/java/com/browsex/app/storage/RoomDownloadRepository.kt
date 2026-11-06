@@ -91,7 +91,8 @@ internal class RoomDownloadRepository(
             id = id,
             status = status,
             error = error.trim().take(MAX_ERROR_LENGTH),
-            bytesWritten = bytesWritten ?: 0L
+            // A missing byte count means preserve the latest progress already stored in Room.
+            bytesWritten = bytesWritten ?: -1L
         ) > 0
     }
 

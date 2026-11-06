@@ -76,6 +76,33 @@ class RoomDownloadRepositoryTest {
     }
 
     @Test
+    fun failingOrCancellingDownloadPreservesLastPersistedProgressWhenByteCountIsUnknown() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomDownloadRepository(database.storageDao())
+            val failedId = repository.beginStream("partial-failure.bin", "application/octet-stream", createdAt = 1L)!!
+            assertTrue(repository.markRunning(failedId))
+            assertTrue(repository.updateProgress(failedId, 4096L))
+            assertTrue(repository.fail(failedId, "network disconnected"))
+
+            val cancelledId = repository.beginStream("partial-cancel.bin", "application/octet-stream", createdAt = 2L)!!
+            assertTrue(repository.markRunning(cancelledId))
+            assertTrue(repository.updateProgress(cancelledId, 8192L))
+            assertTrue(repository.cancel(cancelledId))
+
+            val records = repository.all().associateBy { it.id }
+            assertEquals(4096L, records[failedId]?.bytesWritten)
+            assertEquals(8192L, records[cancelledId]?.bytesWritten)
+            assertEquals("failed", records[failedId]?.status)
+            assertEquals("cancelled", records[cancelledId]?.status)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun downloadHistoryHasThreeHundredRecordLimit() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java

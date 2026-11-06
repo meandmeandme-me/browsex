@@ -483,7 +483,7 @@ interface BrowseXStorageDao {
     @Query("UPDATE download_records SET uri = :uri, bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END, status = 'completed', error = '' WHERE id = :id AND status IN ('queued', 'running')")
     suspend fun completeActiveDownload(id: String, uri: String, bytesWritten: Long): Int
 
-    @Query("UPDATE download_records SET uri = '', bytes_written = CASE WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END, status = :status, error = :error WHERE id = :id AND status IN ('queued', 'running')")
+    @Query("UPDATE download_records SET uri = '', bytes_written = CASE WHEN :bytesWritten < 0 THEN bytes_written WHEN bytes_written < :bytesWritten THEN :bytesWritten ELSE bytes_written END, status = :status, error = :error WHERE id = :id AND status IN ('queued', 'running')")
     suspend fun finishActiveDownload(id: String, status: String, error: String, bytesWritten: Long): Int
 
     @Query("UPDATE download_records SET uri = '', status = 'failed', error = 'Download interrupted before BrowseX could finish it' WHERE status IN ('queued', 'running')")
