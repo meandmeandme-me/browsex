@@ -281,4 +281,16 @@
     <string name="ui_choose_a_saved_sign_in">اختر بيانات تسجيل دخول محفوظة</string>
     <string name="ui_password_autofill_requires_android_8_or_newer">تتطلب التعبئة التلقائية لكلمات المرور أندرويد 8 أو أحدث</string>
     <string name="ui_could_not_open_android_autofill_settings">تعذر فتح إعدادات التعبئة التلقائية في أندرويد</string>
+    <string name="ui_could_not_save_settings">تعذر حفظ الإعدادات</string>
+    <string name="ui_imported_bookmarks">تم استيراد %1$d من المفضلة</string>
+    <string name="ui_search_engine_changed">محرك البحث: %1$s</string>
+    <string name="ui_could_not_clear_history">تعذر مسح السجل</string>
+    <string name="ui_could_not_update_bookmark">تعذر تحديث المفضلة</string>
+    <string name="ui_this_page_does_not_contain_readable_text">هذه الصفحة لا تحتوي على نص قابل للقراءة</string>
+    <string name="ui_could_not_prepare_reader_view">تعذر تجهيز وضع القراءة</string>
+    <string name="ui_could_not_load_homepage_settings">تعذر تحميل إعدادات الصفحة الرئيسية</string>
+    <string name="ui_could_not_open_search_library">تعذر فتح مكتبة البحث</string>
+    <string name="ui_this_download_response_is_not_supported">استجابة التنزيل هذه غير مدعومة</string>
+    <string name="ui_downloaded_file">تم التنزيل: %1$s</string>
+    <string name="ui_could_not_save_download">تعذر حفظ التنزيل: %1$s</string>
 </resources>

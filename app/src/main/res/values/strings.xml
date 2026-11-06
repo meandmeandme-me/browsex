@@ -281,4 +281,16 @@
     <string name="ui_choose_a_saved_sign_in">Choose a saved sign-in</string>
     <string name="ui_password_autofill_requires_android_8_or_newer">Password autofill requires Android 8 or newer</string>
     <string name="ui_could_not_open_android_autofill_settings">Could not open Android Autofill settings</string>
+    <string name="ui_could_not_save_settings">Could not save settings</string>
+    <string name="ui_imported_bookmarks">Imported %1$d bookmarks</string>
+    <string name="ui_search_engine_changed">Search engine: %1$s</string>
+    <string name="ui_could_not_clear_history">Could not clear history</string>
+    <string name="ui_could_not_update_bookmark">Could not update bookmark</string>
+    <string name="ui_this_page_does_not_contain_readable_text">This page does not contain readable text</string>
+    <string name="ui_could_not_prepare_reader_view">Could not prepare reader view</string>
+    <string name="ui_could_not_load_homepage_settings">Could not load homepage settings</string>
+    <string name="ui_could_not_open_search_library">Could not open search library</string>
+    <string name="ui_this_download_response_is_not_supported">This download response is not supported</string>
+    <string name="ui_downloaded_file">Downloaded: %1$s</string>
+    <string name="ui_could_not_save_download">Could not save download: %1$s</string>
 </resources>

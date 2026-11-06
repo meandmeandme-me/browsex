@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                 onUpdated(updated)
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not update browser settings", error)
-                toast("Could not save settings")
+                toast(BrowseXStrings.text(this, "Could not save settings", "تعذر حفظ الإعدادات"))
             }
         }
     }
@@ -392,7 +392,7 @@ class MainActivity : AppCompatActivity() {
                         .setPositiveButton(tr("Merge with current bookmarks")) { _, _ ->
                             lifecycleScope.launch {
                                 runCatching { storageRuntime.awaitReady().bookmarks.importBookmarks(payload, merge = true) }
-                                    .onSuccess { result -> toast("Imported ${result.importedBookmarks} bookmarks") }
+                                    .onSuccess { result -> toast(getString(R.string.ui_imported_bookmarks, result.importedBookmarks)) }
                                     .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
                             }
                         }
@@ -403,7 +403,7 @@ class MainActivity : AppCompatActivity() {
                                 .setPositiveButton(tr("Replace")) { _, _ ->
                                     lifecycleScope.launch {
                                         runCatching { storageRuntime.awaitReady().bookmarks.importBookmarks(payload, merge = false) }
-                                            .onSuccess { result -> toast("Imported ${result.importedBookmarks} bookmarks") }
+                                            .onSuccess { result -> toast(getString(R.string.ui_imported_bookmarks, result.importedBookmarks)) }
                                             .onFailure { error -> android.util.Log.w("BrowseX", "Bookmark import rejected", error); toast(error.message ?: "Could not import bookmarks") }
                                     }
                                 }
@@ -729,7 +729,7 @@ class MainActivity : AppCompatActivity() {
             currentSearchEngine = { store.searchEngine },
             updateSearchEngine = { engine ->
                 updateBrowserSettings({ it.copy(searchEngine = engine) }) { updated ->
-                    toast("Search engine: ${updated.searchEngine}")
+                    toast(getString(R.string.ui_search_engine_changed, updated.searchEngine))
                 }
             },
             showMessage = ::toast,
@@ -989,7 +989,7 @@ class MainActivity : AppCompatActivity() {
                         .setPositiveButton(tr("Clear")) { _, _ ->
                             lifecycleScope.launch {
                                 runCatching { clearStoredHistory() }.onSuccess { toast("History cleared") }
-                                    .onFailure { toast("Could not clear history") }
+                                    .onFailure { toast(BrowseXStrings.text(this, "Could not clear history", "تعذر مسح السجل")) }
                             }
                         }.show()
                     11 -> showSettings()
@@ -1024,7 +1024,7 @@ class MainActivity : AppCompatActivity() {
                 toast(if (added) "Bookmark saved" else "Bookmark removed")
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not update bookmark", error)
-                toast("Could not update bookmark")
+                toast(BrowseXStrings.text(this, "Could not update bookmark", "تعذر تحديث المفضلة"))
             }
         }
     }
@@ -1050,7 +1050,7 @@ class MainActivity : AppCompatActivity() {
                     if (isFinishing || isDestroyed || activeTab !== tab || tab.url != sourceUrl) return@runOnUiThread
                     val content = extracted?.trim().orEmpty()
                     if (content.isBlank()) {
-                        toast("This page does not contain readable text")
+                        toast(BrowseXStrings.text(this, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
                     } else {
                         ReaderPage(this, tab.title, sourceUrl, content, store).show()
                     }
@@ -1060,7 +1060,7 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (loading.isShowing) loading.dismiss()
                     android.util.Log.w("BrowseX", "Reader extraction failed", error)
-                    if (!isFinishing && !isDestroyed) toast("Could not prepare reader view")
+                    if (!isFinishing && !isDestroyed) toast(BrowseXStrings.text(this, "Could not prepare reader view", "تعذر تجهيز وضع القراءة"))
                 }
             }
         )
@@ -1159,7 +1159,7 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     runCatching { clearStoredHistory() }
                         .onSuccess { toast("History cleared") }
-                        .onFailure { toast("Could not clear history") }
+                        .onFailure { toast(BrowseXStrings.text(this, "Could not clear history", "تعذر مسح السجل")) }
                 }
             },
             setWebsiteNotifications = { enabled ->
@@ -1218,7 +1218,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val settings = runCatching { storageRuntime.settings.snapshot() }.getOrElse {
                 android.util.Log.e("BrowseX", "Could not load homepage preferences", it)
-                toast("Could not load homepage settings")
+                toast(BrowseXStrings.text(this, "Could not load homepage settings", "تعذر تحميل إعدادات الصفحة الرئيسية"))
                 return@launch
             }
             val labels = arrayOf(tr("Show favorite shortcuts"), tr("Show discovery card"))
@@ -1299,7 +1299,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val graph = runCatching { storageRuntime.awaitReady() }.getOrElse {
                 android.util.Log.e("BrowseX", "Could not load recall library", it)
-                toast("Could not open search library")
+                toast(BrowseXStrings.text(this, "Could not open search library", "تعذر فتح مكتبة البحث"))
                 return@launch
             }
             val bookmarkRows = graph.bookmarks.all().take(30).map { it.title to it.url }
@@ -1342,14 +1342,14 @@ class MainActivity : AppCompatActivity() {
     /** Starts a response stream after validation and any required Android permission prompt. */
     private fun startStreamDownload(response: WebResponse) {
         val body = response.body ?: run {
-            toast("This download response is not supported")
+            toast(BrowseXStrings.text(this, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
             return
         }
         val started = streamDownloadCoordinator.start(
             response = response,
             onCompleted = { result ->
                 runOnUiThread {
-                    if (!isFinishing && !isDestroyed) toast("Downloaded: ${result.displayName}")
+                    if (!isFinishing && !isDestroyed) toast(getString(R.string.ui_downloaded_file, result.displayName))
                 }
                 android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
             },
@@ -1357,14 +1357,14 @@ class MainActivity : AppCompatActivity() {
                 if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
                 runOnUiThread {
                     if (!cancelled && !isFinishing && !isDestroyed) {
-                        toast("Could not save download: ${error?.message ?: "unknown error"}")
+                        toast(getString(R.string.ui_could_not_save_download, error?.message ?: getString(R.string.ui_unknown_status)))
                     }
                 }
             }
         )
         if (!started) {
             closeDownloadBodySafely { body.close() }
-            toast("This download response is not supported")
+            toast(BrowseXStrings.text(this, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
         }
     }
 
