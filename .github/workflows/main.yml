@@ -3,12 +3,10 @@ name: BrowseX CI
 on:
   push:
     branches: [ main, rewrite-v2 ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: browsex-ci-${{ github.ref }}
@@ -17,8 +15,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@v4
         with:
@@ -140,8 +141,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Verify generated Room schema snapshot is committed on pull requests
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Verify generated Room schema snapshot is committed
+        if: ${{ always() && !cancelled() }}
         shell: bash
         run: |
           set -euo pipefail
@@ -152,21 +153,6 @@ jobs:
             git diff -- "$SCHEMA"
             exit 1
           fi
-
-      - name: Commit generated Room schema snapshot
-        if: ${{ github.event_name == 'push' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -f app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json
-          if git diff --cached --quiet; then
-            echo "Room schema snapshot is already up to date."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(storage): commit generated Room schema snapshot"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Verify APK outputs and checksums
         shell: bash
