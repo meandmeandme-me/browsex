@@ -1075,14 +1075,16 @@ class MainActivity : AppCompatActivity() {
                 permissions = tab.sitePermissions,
                 store = store,
                 onPermissionChange = { permission, value ->
-                    val storage = browserRuntime?.storageController
-                    storage?.setPermission(permission, value)
-                    storage?.getPermissions(url, false)?.accept(
-                        { updated -> runOnUiThread {
-                            if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
-                        } },
-                        { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
-                    )
+                    if (!tab.privateMode) {
+                        val storage = browserRuntime?.storageController
+                        storage?.setPermission(permission, value)
+                        storage?.getPermissions(url, false)?.accept(
+                            { updated -> runOnUiThread {
+                                if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
+                            } },
+                            { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
+                        )
+                    }
                 },
                 onClearSiteData = {
                     clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
@@ -1111,11 +1113,14 @@ class MainActivity : AppCompatActivity() {
                         { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
                     )
                     toast("Site permissions reset")
-                }
+                },
+                privateMode = tab.privateMode
             ).show()
         }
         val storage = browserRuntime?.storageController
-        if (storage == null) {
+        // Gecko's non-private permission store is shared across sessions. Never query it
+        // while showing site information for a private tab.
+        if (tab.privateMode || storage == null) {
             showPage()
             return
         }

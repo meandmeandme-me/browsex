@@ -23,7 +23,8 @@ class SiteInfoPage(
     private val store: BrowserStore,
     private val onPermissionChange: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
     private val onResetPermissions: () -> Unit,
-    private val onClearSiteData: () -> Unit
+    private val onClearSiteData: () -> Unit,
+    private val privateMode: Boolean = false
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
     private val localPermissionValues = mutableMapOf<Pair<Int, String>, Int>()
@@ -35,6 +36,11 @@ class SiteInfoPage(
     private fun dp(value: Int) = (value * density).toInt()
 
     fun show() {
+        if (privateMode) {
+            // A private tab must not read persistent per-origin decisions.
+            showWithSiteDecisions(emptyMap())
+            return
+        }
         activity.lifecycleScope.launch {
             val decisions = runCatching {
                 activity.storageRuntime.awaitReady().sitePermissions.all()
@@ -160,16 +166,18 @@ class SiteInfoPage(
                     })
                 })
                 row.contentDescription = t("Change ", "تغيير إذن ") + name + ", " + status
-                row.setOnClickListener { showPermissionChoices(permission, name, siteDecisions) }
+                row.isClickable = !privateMode
+                row.isFocusable = !privateMode
+                if (!privateMode) row.setOnClickListener { showPermissionChoices(permission, name, siteDecisions) }
                 root.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
             }
         }
-        listOf(
+        if (!privateMode) listOf(
             "geolocation" to t("Location", "الموقع"),
             "notifications" to t("Notifications", "الإشعارات")
         ).filterNot { (feature, _) -> feature in liveStoredFeatures }
             .forEach { (feature, name) -> addStoredPermissionRow(root, feature, name, siteDecisions) }
-        listOf("camera", "microphone").forEach { feature ->
+        if (!privateMode) listOf("camera", "microphone").forEach { feature ->
             val decision = siteDecisions[feature]
             val row = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -200,7 +208,12 @@ class SiteInfoPage(
             root.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
         }
         root.addView(TextView(activity).apply {
-            text = t(
+            text = if (privateMode) {
+                t(
+                    "Private browsing does not read or save site permission choices.",
+                    "التصفح الخاص لا يقرأ اختيارات أذونات المواقع ولا يحفظها."
+                )
+            } else t(
                 "Tap a permission to allow, block or ask again. Persistent storage cannot be revoked after it is granted.",
                 "اضغط على الإذن للسماح أو الحظر أو السؤال مجددًا. لا يمكن إلغاء إذن التخزين الدائم بعد منحه."
             )
@@ -208,6 +221,7 @@ class SiteInfoPage(
             setTextColor(colors.muted)
             setPadding(0, dp(12), 0, dp(8))
         })
+        if (!privateMode) {
         val reset = TextView(activity).apply {
             text = t("Reset site permissions", "إعادة ضبط أذونات الموقع")
             textSize = 13f
@@ -261,6 +275,7 @@ class SiteInfoPage(
         }
         root.addView(clearSiteData, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
 
+        }
         val scroll = ScrollView(activity).apply { addView(root) }
         val dialog = AlertDialog.Builder(activity).setView(scroll)
             .setNegativeButton(t("Close", "إغلاق"), null).create()
@@ -275,6 +290,7 @@ class SiteInfoPage(
         name: String,
         siteDecisions: Map<String, String>
     ) {
+        if (privateMode) return
         val labels = arrayOf(t("Ask every time", "اسأل في كل مرة"), t("Allow", "سماح"), t("Block", "حظر"))
         val values = intArrayOf(
             GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT,
@@ -373,6 +389,7 @@ class SiteInfoPage(
     }
 
     private fun showMediaPermissionChoices(feature: String, name: String, siteDecisions: Map<String, String>) {
+        if (privateMode) return
         val labels = arrayOf(t("Ask every time", "اسأل في كل مرة"), t("Allow", "سماح"), t("Block", "حظر"))
         val selected = when (siteDecisions[feature]) {
             "allow" -> 1
