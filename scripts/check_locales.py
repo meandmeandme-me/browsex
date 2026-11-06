@@ -55,6 +55,21 @@ def main() -> int:
     base, duplicates = resources(BASE)
     errors.extend(f"{BASE}: duplicate resource {name}" for name in duplicates)
 
+    # Catch untranslated labels passed through the shared t()/BrowseXStrings helpers.
+    # These helpers derive Android resource names from their English source phrase.
+    kotlin_root = ROOT / "app" / "src" / "main" / "java"
+    for source_path in kotlin_root.rglob("*.kt"):
+        source = source_path.read_text(encoding="utf-8")
+        for match in TRANSLATION_CALL.finditer(source):
+            english = match.group(1)
+            key = "ui_tabs_title" if english == "Tabs" else (
+                "ui_" + re.sub(r"[^a-z0-9]+", "_", english.lower()).strip("_")
+            )
+            if ("string", key) not in base:
+                errors.append(
+                    f"{source_path}: translation key {key!r} is missing for {english!r}"
+                )
+
     config_root = ET.parse(LOCALE_CONFIG).getroot()
     android_name = "{http://schemas.android.com/apk/res/android}name"
     configured = {
