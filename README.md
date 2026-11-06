@@ -53,6 +53,7 @@ CI runs JVM tests, Android Lint, APK checks, and artifact generation. A successf
 - [Project structure and boundaries](docs/PROJECT_TREE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [QA checklist](docs/QA_CHECKLIST.md)
+- [Implementation audit and release gates](docs/IMPLEMENTATION_AUDIT_2026-11-06.md)
 - [Installation and APK troubleshooting](docs/INSTALLING.md)
 - [World-browser product requirements](docs/WORLD_BROWSER_PRODUCT_REQUIREMENTS.md)
 - [Account provider implementation plan](docs/ACCOUNT_PROVIDER_IMPLEMENTATION_PLAN.md)
