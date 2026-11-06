@@ -27,7 +27,7 @@ object TabSessionState {
                 }.toMap()
                 params.keys.containsAll(setOf("bxlang", "bxtheme")) &&
                     params.keys.all { it in setOf("bxlang", "bxtheme", "bxquick", "bxdiscovery", "bxlayout") } &&
-                    params["bxlang"]?.let { it in setOf("system", "ar", "en") } == true &&
+                    params["bxlang"]?.let { it == "system" || BrowserPreferencePolicy.normalizeLanguageTag(it) != "system" } == true &&
                     params["bxtheme"]?.let { it in setOf("system", "light", "dark") } == true &&
                     params["bxquick"]?.let { it in setOf("true", "false") } != false &&
                     params["bxdiscovery"]?.let { it in setOf("true", "false") } != false &&

@@ -35,6 +35,16 @@ class TabSessionStateTest {
         )
     }
 
+    @Test fun acceptsAnyValidBcp47HomeLanguageTag() {
+        val french = "$home?bxlang=fr-FR&bxtheme=dark"
+        val traditionalChinese = "$home?bxlang=zh-Hant-TW&bxtheme=light"
+        val invalid = "$home?bxlang=not_a_locale&bxtheme=dark"
+        assertEquals(
+            listOf(french, traditionalChinese),
+            TabSessionState.normalize(listOf(french, traditionalChinese, invalid), 0, home).urls
+        )
+    }
+
     @Test fun acceptsOnlyKnownHomeCustomizationParameters() {
         val customized = "$home?bxlang=ar&bxtheme=dark&bxquick=false&bxdiscovery=true&bxlayout=list"
         val invalid = "$home?bxlang=ar&bxtheme=dark&bxdebug=true"
