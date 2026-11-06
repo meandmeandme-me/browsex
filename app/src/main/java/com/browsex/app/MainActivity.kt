@@ -154,6 +154,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun clearStoredHistory() {
+        val result = runCatching {
+            val storage = storageRuntime.awaitReady()
+            storage.history.clear()
+            storage.sessions.clearRecentlyClosed()
+        }
+        // Also clear the emergency SharedPreferences fallback so a Room failure
+        // cannot leave recently-closed URLs visible after the user clears history.
+        if (::store.isInitialized) store.clearRecentlyClosedTabs()
+        result.getOrThrow()
+    }
+
     private fun mirrorBrowserSettings(settings: BrowserSettings) {
         browserSettingsSnapshot = settings
         browserSettingsLoaded = true
@@ -275,11 +287,7 @@ class MainActivity : AppCompatActivity() {
             storageController = { browserRuntime?.storageController },
             clearHistory = {
                 lifecycleScope.launch {
-                    runCatching {
-                        val storage = storageRuntime.awaitReady()
-                        storage.history.clear()
-                        storage.sessions.clearRecentlyClosed()
-                    }
+                    runCatching { clearStoredHistory() }
                         .onFailure { error ->
                             android.util.Log.e("BrowseX", "Could not clear browsing history", error)
                         }
@@ -980,11 +988,7 @@ class MainActivity : AppCompatActivity() {
                         .setNegativeButton(tr("Cancel"), null)
                         .setPositiveButton(tr("Clear")) { _, _ ->
                             lifecycleScope.launch {
-                                runCatching {
-                                    val storage = storageRuntime.awaitReady()
-                                    storage.history.clear()
-                                    storage.sessions.clearRecentlyClosed()
-                                }.onSuccess { toast("History cleared") }
+                                runCatching { clearStoredHistory() }.onSuccess { toast("History cleared") }
                                     .onFailure { toast("Could not clear history") }
                             }
                         }.show()
@@ -1153,11 +1157,7 @@ class MainActivity : AppCompatActivity() {
             openDownloads = { openDownloads() },
             clearHistory = {
                 lifecycleScope.launch {
-                    runCatching {
-                        val storage = storageRuntime.awaitReady()
-                        storage.history.clear()
-                        storage.sessions.clearRecentlyClosed()
-                    }
+                    runCatching { clearStoredHistory() }
                         .onSuccess { toast("History cleared") }
                         .onFailure { toast("Could not clear history") }
                 }

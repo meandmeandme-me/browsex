@@ -102,6 +102,10 @@ internal class BrowserSessionStore(private val prefs: SharedPreferences) {
         }
     } catch (_: Exception) { emptyList() }
 
+    fun clearRecentlyClosedTabs() {
+        prefs.edit().remove("recently_closed_tabs_v1").apply()
+    }
+
     fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? {
         val tabs = recentlyClosedTabs()
         val selected = tabs.firstOrNull { it.id == id } ?: return null

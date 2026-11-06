@@ -121,6 +121,8 @@ class BrowserStore(context: Context) {
     internal fun consumeRecentlyClosedTab(id: String): RecentlyClosedTab? =
         sessions.consumeRecentlyClosedTab(id)
 
+    fun clearRecentlyClosedTabs() = sessions.clearRecentlyClosedTabs()
+
     fun bookmarks(): List<String> = library.bookmarks()
     fun history(): List<String> = library.history()
     internal fun historyEntries(): List<BrowserHistoryEntry> = library.historyEntries()
