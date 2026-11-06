@@ -40,7 +40,7 @@ internal class BrowserNotificationPermissionCoordinator(
             isInFlight = true
             try {
                 launchRequest()
-            } catch (error: RuntimeException) {
+            } catch (error: Exception) {
                 isInFlight = false
                 resolveCallbacks(false)
                 afterResolved()
