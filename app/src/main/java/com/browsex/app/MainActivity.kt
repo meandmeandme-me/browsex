@@ -521,6 +521,21 @@ class MainActivity : AppCompatActivity() {
                     if (!isFinishing && !isDestroyed) {
                         runOnUiThread { syncUBlockButton() }
                     }
+                },
+                onExtensionStateChanged = { updated ->
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        val enabled = updated?.metaData?.enabled == true
+                        val privateAllowed = enabled && updated?.metaData?.allowedInPrivateBrowsing == true
+                        BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                        updateBrowserSettings({
+                            it.copy(
+                                adBlockInstalled = updated != null,
+                                adBlockEnabled = enabled,
+                                adBlockPrivateEnabled = privateAllowed
+                            )
+                        })
+                    }
                 }
             ).also { manager ->
                 manager.refresh(

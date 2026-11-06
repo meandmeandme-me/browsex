@@ -28,7 +28,8 @@ internal class UBlockOriginManager(
     private val existingSessions: () -> List<GeckoSession>,
     private val createTab: (GeckoSession) -> GeckoResult<GeckoSession>?,
     private val closeTab: (GeckoSession) -> Boolean,
-    private val onActionChanged: () -> Unit
+    private val onActionChanged: () -> Unit,
+    private val onExtensionStateChanged: (WebExtension?) -> Unit = {}
 ) : WebExtension.ActionDelegate {
     private val controller: WebExtensionController = runtime.webExtensionController
     private val sessionActions = WeakHashMap<GeckoSession, WebExtension.Action>()
@@ -75,6 +76,15 @@ internal class UBlockOriginManager(
             origins: Array<String>,
             dataCollectionPermissions: Array<String>
         ): GeckoResult<AllowOrDeny> = GeckoResult.deny()
+
+        // Do not silently grant new permissions during background updates. Updates that
+        // need additional access remain unapplied until a future explicit consent flow exists.
+        override fun onUpdatePrompt(
+            extension: WebExtension,
+            newPermissions: Array<String>,
+            newOrigins: Array<String>,
+            newDataCollectionPermissions: Array<String>
+        ): GeckoResult<AllowOrDeny> = GeckoResult.deny()
     }
 
     private val tabDelegate = object : WebExtension.TabDelegate {
@@ -118,12 +128,35 @@ internal class UBlockOriginManager(
             { extensions ->
                 if (destroyed) return@accept
                 extension = extensions.orEmpty().firstOrNull { it.id == EXTENSION_ID }
-                extension?.let(::registerExtension)
-                onComplete(extension)
+                val installed = extension
+                installed?.let(::registerExtension)
+                onComplete(installed)
                 onActionChanged()
+                // GeckoView validates the Mozilla-signed update package and checks the
+                // extension's declared update source. Existing extension stays active if
+                // the check fails or an update asks for additional permissions.
+                installed?.let(::checkForUpdates)
             },
             { error ->
                 if (!destroyed) onFailure(error ?: IllegalStateException("Could not list installed extensions"))
+            }
+        )
+    }
+
+    private fun checkForUpdates(current: WebExtension) {
+        if (destroyed || current.id != EXTENSION_ID) return
+        controller.update(current).accept(
+            { updated ->
+                if (destroyed || updated == null || updated.id != EXTENSION_ID) return@accept
+                extension = updated
+                registerExtension(updated)
+                onExtensionStateChanged(updated)
+                onActionChanged()
+            },
+            { error ->
+                if (!destroyed) {
+                    android.util.Log.w("BrowseX", "Could not check for uBlock Origin updates", error)
+                }
             }
         )
     }
