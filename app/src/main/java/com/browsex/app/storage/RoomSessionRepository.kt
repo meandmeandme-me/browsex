@@ -66,6 +66,10 @@ internal class RoomSessionRepository(
         return true
     }
 
+    suspend fun clearRecentlyClosed() {
+        dao.clearRecentlyClosed()
+    }
+
     suspend fun consumeRecentlyClosed(id: String): RecentlyClosedTabEntity? {
         pruneExpiredRecentlyClosed()
         return dao.consumeRecentlyClosedTab(id)

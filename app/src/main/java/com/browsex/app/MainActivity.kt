@@ -275,7 +275,11 @@ class MainActivity : AppCompatActivity() {
             storageController = { browserRuntime?.storageController },
             clearHistory = {
                 lifecycleScope.launch {
-                    runCatching { storageRuntime.awaitReady().history.clear() }
+                    runCatching {
+                        val storage = storageRuntime.awaitReady()
+                        storage.history.clear()
+                        storage.sessions.clearRecentlyClosed()
+                    }
                         .onFailure { error ->
                             android.util.Log.e("BrowseX", "Could not clear browsing history", error)
                         }
@@ -976,7 +980,11 @@ class MainActivity : AppCompatActivity() {
                         .setNegativeButton(tr("Cancel"), null)
                         .setPositiveButton(tr("Clear")) { _, _ ->
                             lifecycleScope.launch {
-                                runCatching { storageRuntime.awaitReady().history.clear() }
+                                runCatching {
+                        val storage = storageRuntime.awaitReady()
+                        storage.history.clear()
+                        storage.sessions.clearRecentlyClosed()
+                    }
                                     .onSuccess { toast("History cleared") }
                                     .onFailure { toast("Could not clear history") }
                             }
@@ -1146,7 +1154,11 @@ class MainActivity : AppCompatActivity() {
             openDownloads = { openDownloads() },
             clearHistory = {
                 lifecycleScope.launch {
-                    runCatching { storageRuntime.awaitReady().history.clear() }
+                    runCatching {
+                        val storage = storageRuntime.awaitReady()
+                        storage.history.clear()
+                        storage.sessions.clearRecentlyClosed()
+                    }
                         .onSuccess { toast("History cleared") }
                         .onFailure { toast("Could not clear history") }
                 }

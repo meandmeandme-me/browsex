@@ -63,6 +63,24 @@ class RoomSessionRepositoryTest {
     }
 
     @Test
+    fun clearingRecentlyClosedRemovesEveryPersistedEntry() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSessionRepository(database.storageDao())
+            val now = System.currentTimeMillis()
+            assertTrue(repository.recordRecentlyClosed("https://one.example", "One", now))
+            assertTrue(repository.recordRecentlyClosed("https://two.example", "Two", now + 1))
+            assertEquals(2, repository.recentlyClosed().size)
+            repository.clearRecentlyClosed()
+            assertTrue(repository.recentlyClosed().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun recentlyClosedTabsAreBoundedDeduplicatedAndConsumedOnce() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
