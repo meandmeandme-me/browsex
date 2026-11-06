@@ -397,8 +397,7 @@ class MainActivity : AppCompatActivity() {
             isHostAvailable = { !shuttingDown && !isFinishing && !isDestroyed },
             anotherPromptInFlight = { ::notificationPermissionCoordinator.isInitialized && notificationPermissionCoordinator.isInFlight },
             isGranted = { permission ->
-                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-            },
+                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED            },
             wasDenied = ::wasPlatformPermissionDenied,
             clearDenial = ::clearPlatformPermissionDenial,
             markDenied = ::markPlatformPermissionDenied,
@@ -550,6 +549,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        // Extension action popups own a separate GeckoSession; release it as soon as the host stops.
+        uBlockOriginManager?.closePopup()
         if (::credentialVault.isInitialized) credentialVault.lock()
         hostLifecycleCoordinator.onStop()
         super.onStop()
@@ -798,7 +799,6 @@ class MainActivity : AppCompatActivity() {
         BrowseXColors.applyDirection(root, store)
         return root
     }
-
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
@@ -1198,7 +1198,6 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
     }
-
     private fun showPrivacyCenter() {
         PrivacyPage(
             activity = this,
