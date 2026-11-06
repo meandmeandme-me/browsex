@@ -161,7 +161,7 @@ internal class SettingsPage(
                 gravity = Gravity.CENTER
                 setTextColor(accent)
             })
-            item.contentDescription = t(title) + (if (BrowseXColors.isArabic(store)) "، " else ", ") + t(description)
+            item.contentDescription = t(title) + (if (BrowseXColors.isArabic(activity.currentBrowserSettings)) "، " else ", ") + t(description)
             content.addView(item, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(8)
             })
