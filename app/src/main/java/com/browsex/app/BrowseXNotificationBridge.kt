@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.mozilla.geckoview.WebNotification
 import org.mozilla.geckoview.WebNotificationDelegate
+import java.security.MessageDigest
 
 /** Adapts Gecko web notifications to Android's notification tray without leaking private tabs. */
 internal class BrowseXNotificationBridge(
@@ -72,7 +73,7 @@ internal class BrowseXNotificationBridge(
 
     override fun onCloseNotification(notification: WebNotification) {
         main.post {
-            manager.cancel(notificationId(notification))
+            manager.cancel(notificationTag(notification), NOTIFICATION_ID)
             notification.dismiss()
         }
     }
@@ -80,11 +81,12 @@ internal class BrowseXNotificationBridge(
     private fun showInAndroid(notification: WebNotification) {
         try {
             ensureChannel()
-            val id = notificationId(notification)
+            val tag = notificationTag(notification)
+            val id = NOTIFICATION_ID
             val tapIntent = Intent(activity, MainActivity::class.java).apply {
                 action = ACTION_SITE_NOTIFICATION_CLICK
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                data = Uri.parse("browsex-notification://$id")
+                data = Uri.parse("browsex-notification://$tag")
                 putExtra(EXTRA_WEB_NOTIFICATION, notification)
             }
             val tap = PendingIntent.getActivity(
@@ -93,8 +95,9 @@ internal class BrowseXNotificationBridge(
             )
             val dismissIntent = Intent(activity, SiteNotificationActionReceiver::class.java).apply {
                 action = ACTION_SITE_NOTIFICATION_DISMISS
-                data = Uri.parse("browsex-dismiss://$id")
+                data = Uri.parse("browsex-dismiss://$tag")
                 putExtra(EXTRA_NOTIFICATION_ID, id)
+                putExtra(EXTRA_NOTIFICATION_TAG, tag)
                 putExtra(EXTRA_WEB_NOTIFICATION, notification)
             }
             val delete = PendingIntent.getBroadcast(
@@ -113,7 +116,7 @@ internal class BrowseXNotificationBridge(
                 .setOnlyAlertOnce(true)
                 .setShowWhen(true)
             if (notification.silent) builder.setSilent(true)
-            manager.notify(id, builder.build())
+            manager.notify(tag, id, builder.build())
             notification.show()
         } catch (_: SecurityException) {
             notification.dismiss()
@@ -130,8 +133,12 @@ internal class BrowseXNotificationBridge(
         activity.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    private fun notificationId(notification: WebNotification): Int =
-        ("${notification.origin}|${notification.tag}").hashCode().let { if (it == 0) 1 else it }
+    /** Stable collision-resistant Android notification tag, scoped to origin and web tag. */
+    private fun notificationTag(notification: WebNotification): String {
+        val source = "${notification.origin}|${notification.tag}".toByteArray(Charsets.UTF_8)
+        val digest = MessageDigest.getInstance("SHA-256").digest(source)
+        return "browsex-web-" + digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+    }
 
     private fun isSafeWebOrigin(raw: String): Boolean = try {
         val uri = Uri.parse(raw)
@@ -144,5 +151,7 @@ internal class BrowseXNotificationBridge(
         const val ACTION_SITE_NOTIFICATION_DISMISS = "com.browsex.app.SITE_NOTIFICATION_DISMISS"
         const val EXTRA_WEB_NOTIFICATION = "browsex.extra.WEB_NOTIFICATION"
         const val EXTRA_NOTIFICATION_ID = "browsex.extra.NOTIFICATION_ID"
+        const val EXTRA_NOTIFICATION_TAG = "browsex.extra.NOTIFICATION_TAG"
+        private const val NOTIFICATION_ID = 0
     }
 }

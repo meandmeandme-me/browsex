@@ -12,7 +12,8 @@ class SiteNotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != BrowseXNotificationBridge.ACTION_SITE_NOTIFICATION_DISMISS) return
         val id = intent.getIntExtra(BrowseXNotificationBridge.EXTRA_NOTIFICATION_ID, 0)
-        if (id != 0) NotificationManagerCompat.from(context).cancel(id)
+        val tag = intent.getStringExtra(BrowseXNotificationBridge.EXTRA_NOTIFICATION_TAG)
+        if (!tag.isNullOrBlank()) NotificationManagerCompat.from(context).cancel(tag, id)
         val notification = intent.getParcelableExtra<WebNotification>(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
         notification?.dismiss()
     }
