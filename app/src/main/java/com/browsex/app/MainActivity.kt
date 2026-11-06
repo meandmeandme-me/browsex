@@ -981,11 +981,10 @@ class MainActivity : AppCompatActivity() {
                         .setPositiveButton(tr("Clear")) { _, _ ->
                             lifecycleScope.launch {
                                 runCatching {
-                        val storage = storageRuntime.awaitReady()
-                        storage.history.clear()
-                        storage.sessions.clearRecentlyClosed()
-                    }
-                                    .onSuccess { toast("History cleared") }
+                                    val storage = storageRuntime.awaitReady()
+                                    storage.history.clear()
+                                    storage.sessions.clearRecentlyClosed()
+                                }.onSuccess { toast("History cleared") }
                                     .onFailure { toast("Could not clear history") }
                             }
                         }.show()
