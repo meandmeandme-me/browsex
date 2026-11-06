@@ -132,3 +132,12 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - Issue #7 download lifecycle: terminal failure/cancel now preserves last persisted progress; Gecko response body cleanup now covers coordinator cancellation before writer handoff. Android DownloadManager enqueue/reconciliation remains intentionally unimplemented for Gecko one-shot response bodies; a URL-only re-fetch would not preserve cookies, POST bodies or response fidelity.
 - Issue #8 notifications: Android notification identity is now a stable SHA-256-derived tag scoped to origin and website notification tag, avoiding collisions in the prior 32-bit integer ID.
 - Work remains in progress across Issues #5–#10. No physical-device verification or overall completion claim is made.
+
+
+## Additional implementation checkpoint — 2026-11-06
+
+- Commit `d782d3e2d3c525bb116d7a593bbad5e400b7841c`: the website-notification bridge now reads the global enablement flag from the DataStore-backed settings snapshot (legacy cache is only a pre-load fallback).
+- Commit `29993fd5e95dc034225a7ad5258146c69d9eb889`: startup reconciles persisted uBlock flags with GeckoView's discovered extension state.
+- Commit `c3c82ac3628d46800c5f096c8f0969ac9f22acb7`: removed the redundant legacy SharedPreferences download-recovery call; application-scoped Room startup recovery remains authoritative for stream-download records.
+
+Issues #5, #7, #8 and #10 remain in progress; these commits do not represent completion of their full acceptance criteria.

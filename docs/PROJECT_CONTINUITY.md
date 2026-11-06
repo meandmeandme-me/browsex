@@ -102,3 +102,12 @@
 - Commit `fb74dce66c80ead8acad4083108858bb5c8c65dc`: Gecko one-shot response bodies are now closed if the stream coordinator is cancelled before ownership transfers to the background writer. Once accepted by the writer, writer cleanup remains authoritative.
 - Commit `1bc0771e3d4973805bdb8a8c966e591df3eb3880`: Website notifications now use a stable SHA-256-derived Android notification tag based on origin + web tag. This prevents 32-bit notification ID collisions from causing one site's notification to replace or cancel another site's notification; dismissal uses the same tag.
 - These changes are implementation updates, not a claim that Issues #5–#10 are complete. No device/runtime verification is claimed. GitHub Actions workflows may run automatically after branch pushes.
+
+
+## Additional source-of-truth and protection updates — 2026-11-06
+
+- Commit `d782d3e2d3c525bb116d7a593bbad5e400b7841c`: the website-notification bridge now reads the global enablement flag from the DataStore-backed settings snapshot (legacy cache is only a pre-load fallback).
+- Commit `29993fd5e95dc034225a7ad5258146c69d9eb889`: startup reconciles persisted uBlock flags with GeckoView's discovered extension state.
+- Commit `c3c82ac3628d46800c5f096c8f0969ac9f22acb7`: removed the redundant legacy SharedPreferences download-recovery call; application-scoped Room startup recovery remains authoritative for stream-download records.
+
+These changes narrow remaining compatibility usage but do not complete the full legacy-store audit. Do not remove tab/session fallback until its failure behavior is intentionally replaced.
