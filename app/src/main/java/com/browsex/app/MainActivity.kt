@@ -633,7 +633,7 @@ class MainActivity : AppCompatActivity() {
             activeIndex = selectedIndex,
             homeUrl = homePageUrl()
         )
-        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex) { store.saveOpenTabs(snapshot.urls, snapshot.activeIndex) }
+        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex)
     }
 
     override fun onDestroy() {
@@ -1182,11 +1182,13 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val snapshot = runCatching { storageRuntime.restoreOpenTabs() }
                 .onFailure { error ->
-                    android.util.Log.e("BrowseX", "Room tab restore failed; using legacy snapshot", error)
+                    android.util.Log.e("BrowseX", "Room tab restore failed; starting with a clean tab snapshot", error)
                 }
-                .getOrElse { store.restoreOpenTabs().let { legacy ->
-                    com.browsex.app.storage.TabSessionSnapshot(legacy.urls, legacy.activeIndex, 0L)
-                } }
+                .getOrElse {
+                    // BrowseX has no pre-existing user tab data to migrate. Room is the
+                    // sole source of truth; never resurrect stale SharedPreferences tabs.
+                    com.browsex.app.storage.TabSessionSnapshot(emptyList(), 0, 0L)
+                }
             if (isFinishing || isDestroyed) return@launch
             val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
             tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
