@@ -49,7 +49,13 @@ internal class BrowserBrowsingDataCoordinator(
         }
 
         releaseViewSession()
-        tabs().forEach(sessionLifecycle::resetSession)
+        // Regular tabs survive the data-clear transaction and receive fresh sessions.
+        // Private tabs are intentionally discarded; close them rather than resetting
+        // their GeckoSessions and then dropping their records from the registry.
+        tabs().forEach { tab ->
+            if (tab.privateMode) sessionLifecycle.closeAndDiscard(tab)
+            else sessionLifecycle.resetSession(tab)
+        }
         replaceTabs(tabsToRestore, snapshot.activeIndex)
         isClearing = true
         onBusyChanged(true)
