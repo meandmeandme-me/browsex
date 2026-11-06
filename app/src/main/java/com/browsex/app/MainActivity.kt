@@ -734,6 +734,8 @@ class MainActivity : AppCompatActivity() {
         })
 
         address = EditText(this).apply {
+            // Keep URLs/domains LTR while allowing Arabic and other RTL search queries.
+            textDirection = View.TEXT_DIRECTION_FIRST_STRONG
             hint = tr("Search or enter URL")
             setHintTextColor(colors.muted)
             setTextColor(colors.ink)
