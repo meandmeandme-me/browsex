@@ -473,10 +473,10 @@ class MainActivity : AppCompatActivity() {
         browserRuntime?.settings?.setLocales(requestedLocales)
         notificationBridge = BrowseXNotificationBridge(this, ::requestSiteNotificationPermission)
         browserRuntime?.setWebNotificationDelegate(notificationBridge)
-        // Temporary engine-only host: the legacy chrome is intentionally detached while the
-        // browser engine and feature services are reorganized for the new UI architecture.
+        // Attach the browser engine inside the native glass chrome. The GeckoView remains
+        // the flexible content surface; browser controls stay outside the web rendering layer.
         browserView = GeckoView(this)
-        setContentView(browserView)
+        setContentView(createBrowserUi())
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -740,8 +740,9 @@ class MainActivity : AppCompatActivity() {
         topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            setBackgroundColor(colors.canvas)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            background = rounded(colors.panel, 22)
+            elevation = dp(4).toFloat()
         }
         val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(homePageUrl()) }.apply {
             background = rounded(colors.card, 10)
@@ -763,8 +764,8 @@ class MainActivity : AppCompatActivity() {
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
             setPadding(dp(14), 0, dp(12), 0)
-            background = rounded(colors.card, 24)
-            elevation = dp(3).toFloat()
+            background = rounded(colors.field, 22)
+            elevation = dp(2).toFloat()
             setOnEditorActionListener { _, action, _ ->
                 if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
                     navigate(address.text.toString())
@@ -822,11 +823,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        root.addView(topBar)
+        root.addView(topBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
+            setMargins(dp(10), dp(8), dp(10), dp(5))
+        })
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
-            setMargins(dp(12), dp(5), dp(12), dp(8))
+            setMargins(dp(14), dp(7), dp(14), dp(10))
         })
         BrowseXColors.applyDirection(root, browserSettingsSnapshot)
         return root
@@ -857,13 +860,51 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun updateChrome() {
-        // Presentation is intentionally absent during the engine/platform refoundation.
-        if (::credentialVault.isInitialized) credentialVault.setPrivateTabsOpen(tabs.any { it.privateMode })
+        if (::credentialVault.isInitialized) {
+            credentialVault.setPrivateTabsOpen(tabs.any { it.privateMode })
+        }
+        if (!::browserView.isInitialized) return
+
+        val tab = activeTab
+        updateAddress()
+        if (::tabsButton.isInitialized) {
+            tabsButton.text = tabs.size.toString()
+            tabsButton.textSize = 14f
+            tabsButton.contentDescription = tr("Open tabs") + ", " + tabs.size
+        }
+        if (::progress.isInitialized) {
+            val value = tab?.progress?.coerceIn(0, 100) ?: 0
+            progress.progress = value
+            progress.visibility = if (value in 1..99) View.VISIBLE else View.GONE
+        }
+        bottomBar.getChildAt(0)?.let { button ->
+            button.isEnabled = tab?.canGoBack == true
+            button.alpha = if (button.isEnabled) 1f else 0.38f
+        }
+        bottomBar.getChildAt(1)?.let { button ->
+            button.isEnabled = tab?.canGoForward == true
+            button.alpha = if (button.isEnabled) 1f else 0.38f
+        }
+        syncUBlockButton()
     }
 
-    private fun syncUBlockButton() = Unit
+    private fun syncUBlockButton() {
+        if (!::uBlockButton.isInitialized) return
+        val available = uBlockOriginManager?.hasBrowserAction(activeTab?.session) == true
+        uBlockButton.visibility = if (available) View.VISIBLE else View.GONE
+        uBlockButton.isEnabled = available
+        uBlockButton.alpha = if (available) 1f else 0f
+    }
 
-    private fun updateAddress() = Unit
+    private fun updateAddress() {
+        if (!::address.isInitialized || address.hasFocus()) return
+        val currentUrl = activeTab?.url.orEmpty()
+        val displayUrl = if (currentUrl.startsWith(HOME_URL)) "" else currentUrl
+        if (address.text.toString() != displayUrl) {
+            address.setText(displayUrl)
+            address.setSelection(address.text.length)
+        }
+    }
 
     private fun normalizeInput(raw: String): String =
         if (raw.isBlank()) homePageUrl() else NavigationInput.normalize(raw, browserSettingsSnapshot.searchEngine, HOME_URL)
