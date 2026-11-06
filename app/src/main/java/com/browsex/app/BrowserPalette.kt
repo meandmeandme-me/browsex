@@ -13,11 +13,13 @@ internal data class BrowseXColors(
     val danger: Int, val success: Int, val selected: Int, val isDark: Boolean
 ) {
     companion object {
-        fun resolve(context: Context, store: BrowserStore): BrowseXColors =
-            resolve(context, BrowserSettings(
+        fun resolve(context: Context, store: BrowserStore): BrowseXColors {
+            val settings = (context as? MainActivity)?.currentBrowserSettings ?: BrowserSettings(
                 themeMode = store.themeMode,
                 languageMode = store.languageMode
-            ))
+            )
+            return resolve(context, settings)
+        }
 
         fun isArabic(store: BrowserStore): Boolean = when {
             store.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
@@ -30,8 +32,10 @@ internal data class BrowseXColors(
         }
 
         fun applyDirection(view: View, store: BrowserStore) {
-            view.layoutDirection = if (isRtl(store)) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
-            view.textDirection = View.TEXT_DIRECTION_LOCALE
+            val settings = (view.context as? MainActivity)?.currentBrowserSettings ?: BrowserSettings(
+                languageMode = store.languageMode
+            )
+            applyDirection(view, settings)
         }
 
         fun resolve(context: Context, settings: BrowserSettings): BrowseXColors {
