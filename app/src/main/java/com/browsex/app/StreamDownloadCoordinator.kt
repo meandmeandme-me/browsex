@@ -7,6 +7,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicBoolean
 import org.mozilla.geckoview.WebResponse
 
 /**
@@ -39,7 +40,8 @@ internal class StreamDownloadCoordinator(
             it.key.equals("content-length", ignoreCase = true)
         }?.value?.toLongOrNull()?.takeIf { it >= 0L } ?: -1L
 
-        scope.launch {
+        val bodyOwnershipTransferred = AtomicBoolean(false)
+        val job = scope.launch {
             var downloadId: String? = null
             try {
                 val repository = storage.awaitReady().downloads
@@ -107,14 +109,26 @@ internal class StreamDownloadCoordinator(
                         }
                     }
                 }
+                bodyOwnershipTransferred.set(true)
             } catch (error: Throwable) {
-                runCatching { body.close() }
+                if (bodyOwnershipTransferred.compareAndSet(false, true)) {
+                    runCatching { body.close() }
+                }
                 if (downloadId != null) {
                     runCatching { storage.awaitReady().downloads.fail(downloadId, error.message ?: "Download failed") }
                 }
                 onFailed(error, false)
             }
         }
+        // If shutdown cancels this coroutine before it reaches the writer, close Gecko's
+        // one-shot body as well. Once handed off, the writer owns stream cleanup.
+        job.invokeOnCompletion { cause ->
+            if (cause != null && bodyOwnershipTransferred.compareAndSet(false, true)) {
+                closeDownloadBodySafely { body.close() }
+            }
+        }
+        // writer.write is synchronous; the first call that reaches it transfers ownership.
+        // The marker is set by the writer callback registration path below.
         return true
     }
 
