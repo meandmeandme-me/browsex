@@ -11,7 +11,7 @@ internal class PrivacyPage(
     private val clearData: (flags: Long, clearHistory: Boolean) -> Unit
 ) {
     private fun t(en: String, ar: String): String =
-        if (BrowseXColors.isArabic(store)) ar else en
+        if (BrowseXColors.isArabic(activity, store)) ar else en
 
     fun show() {
         val labels = arrayOf(
