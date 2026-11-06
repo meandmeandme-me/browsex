@@ -99,13 +99,32 @@ internal class StreamDownloadCoordinator(
                                 )
                                 return@launch
                             }
-                            if (persisted) onCompleted(result)
-                            else onFailed(
-                                IllegalStateException(
-                                    "File was saved, but BrowseX could not update its download history"
-                                ),
-                                false
-                            )
+                            if (persisted) {
+                                onCompleted(result)
+                            } else {
+                                // The writer has finalized the file, but a missing/invalid Room
+                                // transition must not leave a permanently active history row.
+                                // Mark it terminal when it is still active; never delete the file
+                                // here because the completed URI may already be visible to Android.
+                                runCatching {
+                                    repository.fail(
+                                        createdId,
+                                        "File was saved, but BrowseX could not update its download history"
+                                    )
+                                }.onFailure { persistenceError ->
+                                    android.util.Log.e(
+                                        "BrowseX",
+                                        "Could not finalize failed download metadata",
+                                        persistenceError
+                                    )
+                                }
+                                onFailed(
+                                    IllegalStateException(
+                                        "File was saved, but BrowseX could not update its download history"
+                                    ),
+                                    false
+                                )
+                            }
                         } else {
                             if (cancelled) repository.cancel(createdId)
                             else repository.fail(createdId, error?.message ?: "Download failed")
