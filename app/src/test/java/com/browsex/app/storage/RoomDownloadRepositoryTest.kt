@@ -110,7 +110,10 @@ class RoomDownloadRepositoryTest {
         try {
             val repository = RoomDownloadRepository(database.storageDao())
             repeat(301) { index ->
-                assertNotNull(repository.beginStream("file-$index.bin", "application/octet-stream", createdAt = index.toLong()))
+                val id = repository.beginStream("file-$index.bin", "application/octet-stream", createdAt = index.toLong())
+                assertNotNull(id)
+                assertTrue(repository.markRunning(id!!))
+                assertTrue(repository.complete(id, "content://downloads/$index", index.toLong()))
             }
             assertEquals(300, repository.all().size)
             assertTrue(repository.all().none { it.displayName == "file-0.bin" })
@@ -119,4 +122,28 @@ class RoomDownloadRepositoryTest {
             database.close()
         }
     }
+    @Test
+    fun activeDownloadsAreNeverEvictedWhenHistoryReachesCapacity() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomDownloadRepository(database.storageDao())
+            repeat(299) { index ->
+                val id = repository.beginStream("done-$index.bin", "application/octet-stream", createdAt = index.toLong())!!
+                assertTrue(repository.markRunning(id))
+                assertTrue(repository.complete(id, "content://downloads/done-$index", index.toLong()))
+            }
+            val activeId = repository.beginStream("active.bin", "application/octet-stream", createdAt = 400L)!!
+            val nextId = repository.beginStream("next.bin", "application/octet-stream", createdAt = 401L)
+            assertNotNull(nextId)
+            assertTrue(repository.all().any { it.id == activeId && it.status == "queued" })
+            assertTrue(repository.all().any { it.id == nextId })
+            assertEquals(300, repository.all().size)
+            assertFalse(repository.remove(activeId).not())
+        } finally {
+            database.close()
+        }
+    }
+
 }
