@@ -12,7 +12,6 @@ import org.mozilla.geckoview.GeckoSession
 /** Separates Android runtime permissions from Gecko's per-origin content permissions. */
 internal class BrowseXPermissionDelegate(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val isActiveSession: (GeckoSession) -> Boolean,
     private val privateMode: Boolean = false
 ) : GeckoSession.PermissionDelegate {
