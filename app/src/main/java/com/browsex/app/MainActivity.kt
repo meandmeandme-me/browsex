@@ -672,7 +672,7 @@ class MainActivity : AppCompatActivity() {
         intent.removeExtra(BrowseXNotificationBridge.EXTRA_WEB_NOTIFICATION)
     }
 
-    private val colors get() = BrowseXColors.resolve(this, store)
+    private val colors get() = BrowseXColors.resolve(this, browserSettingsSnapshot)
 
     private val passwordManager by lazy {
         BrowserPasswordManagerCoordinator(
@@ -728,7 +728,7 @@ class MainActivity : AppCompatActivity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(colors.canvas)
-            BrowseXColors.applyDirection(this, store)
+            BrowseXColors.applyDirection(this, browserSettingsSnapshot)
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -827,7 +827,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
             setMargins(dp(12), dp(5), dp(12), dp(8))
         })
-        BrowseXColors.applyDirection(root, store)
+        BrowseXColors.applyDirection(root, browserSettingsSnapshot)
         return root
     }
 
@@ -889,7 +889,6 @@ class MainActivity : AppCompatActivity() {
     private fun attachDelegates(tab: BrowserTab) {
         tab.permissionDelegate = BrowseXPermissionDelegate(
             this,
-            store,
             { requested ->
                 requested === activeTab?.session && tabs.any { it.session === requested } && !shuttingDown
             },
