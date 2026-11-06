@@ -42,7 +42,7 @@ internal class BrowseXPermissionDelegate(
         }
         val isSiteNotification =
             perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION
-        if (isSiteNotification && !store.siteNotificationsEnabled) {
+        if (isSiteNotification && !activity.websiteNotificationsEnabled()) {
             result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
             return result
         }
