@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.text.TextUtils
 import android.view.View
 import java.util.Locale
+import com.browsex.app.storage.BrowserSettings
 
 internal data class BrowseXColors(
     val canvas: Int, val panel: Int, val card: Int, val field: Int,
@@ -12,9 +13,9 @@ internal data class BrowseXColors(
     val danger: Int, val success: Int, val selected: Int, val isDark: Boolean
 ) {
     companion object {
-        fun resolve(context: Context, store: BrowserStore): BrowseXColors {
+        fun resolve(context: Context, settings: BrowserSettings): BrowseXColors {
             val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val dark = when (store.themeMode) { "dark" -> true; "light" -> false; else -> night }
+            val dark = when (settings.themeMode) { "dark" -> true; "light" -> false; else -> night }
             return if (dark) BrowseXColors(
                 0xFF101820.toInt(), 0xFF182635.toInt(), 0xFF203246.toInt(), 0xFF293D52.toInt(),
                 0xFFEAF3FC.toInt(), 0xFFB2C2D2.toInt(), 0xFF83BFFF.toInt(), 0xFF3B5269.toInt(),
@@ -26,13 +27,13 @@ internal data class BrowseXColors(
             )
         }
 
-        fun isArabic(store: BrowserStore): Boolean = when {
-            store.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
+        fun isArabic(settings: BrowserSettings): Boolean = when {
+            settings.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
             else -> store.languageMode.substringBefore('-').equals("ar", ignoreCase = true)
         }
 
         /** Layout direction follows the actual locale, independently of translation availability. */
-        fun isRtl(store: BrowserStore): Boolean {
+        fun isRtl(settings: BrowserSettings): Boolean {
             val locale = if (store.languageMode == "system") {
                 Locale.getDefault()
             } else {
@@ -41,8 +42,8 @@ internal data class BrowseXColors(
             return TextUtils.getLayoutDirectionFromLocale(locale) == View.LAYOUT_DIRECTION_RTL
         }
 
-        fun applyDirection(view: View, store: BrowserStore) {
-            view.layoutDirection = if (isRtl(store)) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+        fun applyDirection(view: View, settings: BrowserSettings) {
+            view.layoutDirection = if (isRtl(settings)) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
             view.textDirection = View.TEXT_DIRECTION_LOCALE
         }
     }
