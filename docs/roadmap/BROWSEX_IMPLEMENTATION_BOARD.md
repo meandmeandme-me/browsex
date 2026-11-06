@@ -124,3 +124,11 @@ This is the repository-side phase board for the A–F implementation. Each phase
 - Release APK signing/verification/upload were skipped because release signing is not configured. These are debug artifacts, not signed release builds.
 - The new PR-only Room schema drift gate is present in the workflow. This push run correctly skipped that PR-only step; it still needs to be exercised by the open pull request before that gate is called verified.
 - This CI result verifies the exact branch commit above. It does not replace Android 10/device installation, runtime, tablet or accessibility testing.
+
+
+## Follow-up implementation checkpoint — 2026-11-06
+
+- Current branch head: `1bc0771e3d4973805bdb8a8c966e591df3eb3880`.
+- Issue #7 download lifecycle: terminal failure/cancel now preserves last persisted progress; Gecko response body cleanup now covers coordinator cancellation before writer handoff. Android DownloadManager enqueue/reconciliation remains intentionally unimplemented for Gecko one-shot response bodies; a URL-only re-fetch would not preserve cookies, POST bodies or response fidelity.
+- Issue #8 notifications: Android notification identity is now a stable SHA-256-derived tag scoped to origin and website notification tag, avoiding collisions in the prior 32-bit integer ID.
+- Work remains in progress across Issues #5–#10. No physical-device verification or overall completion claim is made.

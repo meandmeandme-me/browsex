@@ -93,3 +93,12 @@
 - Confirmed PR #4 remains open and unmerged.
 - Audited implementation board, open issues #5–#10, tab/session lifecycle, Room/DataStore paths, downloads, permissions and uBlock integration.
 - Found and fixed a DownloadsPage cancellation bookkeeping bug in the follow-up commit: only forget a tracked platform download after Android confirms removal.
+
+
+## 2026-11-06 — follow-up implementation after Issues #5–#10 review
+
+- Branch: `rewrite-v2`; work remains unmerged from PR #4.
+- Commit `3f69007bd2292fa35e0620ab7855b87b9f2f2214`: Room download failure/cancellation transitions now preserve the last persisted byte count when no final count is supplied. The DAO treats the sentinel as “keep current progress”; a focused repository regression test was added.
+- Commit `fb74dce66c80ead8acad4083108858bb5c8c65dc`: Gecko one-shot response bodies are now closed if the stream coordinator is cancelled before ownership transfers to the background writer. Once accepted by the writer, writer cleanup remains authoritative.
+- Commit `1bc0771e3d4973805bdb8a8c966e591df3eb3880`: Website notifications now use a stable SHA-256-derived Android notification tag based on origin + web tag. This prevents 32-bit notification ID collisions from causing one site's notification to replace or cancel another site's notification; dismissal uses the same tag.
+- These changes are implementation updates, not a claim that Issues #5–#10 are complete. No device/runtime verification is claimed. GitHub Actions workflows may run automatically after branch pushes.
