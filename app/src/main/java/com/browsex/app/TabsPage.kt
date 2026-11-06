@@ -205,10 +205,44 @@ internal class TabsPage(
                                 onToast("Tab limit reached")
                             } else {
                                 activity.lifecycleScope.launch {
+                                    val storage = runCatching {
+                                        activity.storageRuntime.awaitReady()
+                                    }.getOrElse {
+                                        android.util.Log.e("BrowseX", "Could not prepare recently closed tab restore", it)
+                                        onToast("Could not restore tab")
+                                        return@launch
+                                    }
+
+                                    // The tab count may change while Room is initializing or the
+                                    // coroutine is suspended. Do not consume the one-shot history
+                                    // entry until capacity is checked again, or the entry could be
+                                    // lost when createTab rejects the restore.
+                                    if (tabs.size >= TabSessionState.MAX_TABS) {
+                                        onToast("Tab limit reached")
+                                        return@launch
+                                    }
+
                                     val restored = runCatching {
-                                        activity.storageRuntime.awaitReady().sessions.consumeRecentlyClosed(recentlyClosed[index].id)
+                                        storage.sessions.consumeRecentlyClosed(recentlyClosed[index].id)
+                                    }.onFailure {
+                                        android.util.Log.e("BrowseX", "Could not consume recently closed tab", it)
                                     }.getOrNull()
-                                    restored?.let { onCreateTab(it.url) }
+                                    if (restored != null) {
+                                        if (tabs.size < TabSessionState.MAX_TABS) {
+                                            onCreateTab(restored.url)
+                                        } else {
+                                            // Put the item back if capacity changed during the
+                                            // consume/create boundary; never silently lose it.
+                                            runCatching {
+                                                storage.sessions.recordRecentlyClosed(
+                                                    restored.url, restored.title, restored.closedAt
+                                                )
+                                            }.onFailure {
+                                                android.util.Log.e("BrowseX", "Could not restore recently closed entry", it)
+                                            }
+                                            onToast("Tab limit reached")
+                                        }
+                                    }
                                 }
                             }
                         }
