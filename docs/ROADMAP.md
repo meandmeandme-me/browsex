@@ -46,6 +46,9 @@ This file records implementation state separately from device verification. A ch
 - [x] Deactivate inactive GeckoSessions on tab switch and Activity stop; persist state before teardown.
 - [x] Add one automatic recovery attempt for crashed content sessions and a manual retry path after repeated crashes.
 - [ ] Verify process recreation, recently-closed restore, tab switching, named-session persistence and GeckoSession lifecycle on Android 10 and newer.
+- [x] Recheck tab capacity before consuming a recently-closed entry; preserve the entry if a restore races the 20-tab limit.
+- [ ] Complete crash-recovery checkpoint UX, Room-unavailable recovery behavior and automated process-recreation coverage as specified in SESSION_RECOVERY_PLAN.md.
+- [ ] Verify named-session restore into a partially full workspace, active-tab selection, and recovery after force-stop/process death on physical devices.
 - [ ] Verify back/forward, fullscreen, popup/new-session and share flows on device.
 
 ## Phase 2 — permissions, notifications and downloads
@@ -136,6 +139,8 @@ This file records implementation state separately from device verification. A ch
 - [ ] Define backend API, account lifecycle, retention policy, threat model, encryption/key ownership and recovery.
 - [x] Add tested provider-neutral PKCE verifier/challenge/state/nonce generation, an HTTPS-only Authorization Code request builder, and exact callback/state validation; this does not enable provider login, token exchange or ID-token verification.
 - [ ] Implement a secure platform credential vault and verified OIDC Authorization Code + PKCE provider adapter, including ID-token validation and revocation.
+- [ ] Implement Google sign-in first and Microsoft sign-in second only after OAuth app registrations, verified redirect configuration, secure token vault and full OIDC issuer/audience/signature/nonce validation are available; see ACCOUNT_PROVIDER_IMPLEMENTATION_PLAN.md.
+- [ ] Implement the Supabase proof of concept, RLS isolation/device-revocation tests, E2EE key recovery and encrypted bookmark sync before enabling any cloud-sync UI.
 - [ ] Build real account UI and device registration/revocation; keep unsupported providers unavailable rather than fake.
 - [ ] Implement opt-in encrypted bookmark sync first, then offline queue, idempotency, conflict resolution and schema migration.
 - [ ] Add cross-device export/deletion, disconnect and local-data-retention flows.
