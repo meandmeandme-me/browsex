@@ -101,6 +101,16 @@ body.high-contrast-mode :is(.icon-btn,.shortcut-icon,.add-shortcut,.reading-card
  border:2px solid var(--line);
 }
 body.high-contrast-mode :is(.brand-name,h1,h2,.shortcut-name,.article-title){font-weight:800}
+/* Runtime pressure disables expensive home-page compositing as well as native blur. */
+body.performance-minimal-mode :is(.date-chip,.icon-btn,.shortcut,.shortcut-icon,.add-shortcut,.reading-card,dialog,input){
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+ box-shadow:none!important;
+}
+body.performance-minimal-mode .editorial-art:before{box-shadow:none;filter:none}
+body.performance-minimal-mode .editorial-art:after{text-shadow:none}
+body.performance-minimal-mode .shortcut,
+body.performance-minimal-mode .reading-card{transition:none!important}
 body.reduce-motion-mode *,
 body.reduce-motion-mode *::before,
 body.reduce-motion-mode *::after{
@@ -154,6 +164,7 @@ body.reduce-motion-mode *::after{
  if(params.get('bxopaque')==='true')document.body.classList.add('matte-mode');
  if(params.get('bxcontrast')==='true')document.body.classList.add('high-contrast-mode');
  if(params.get('bxmotion')==='true')document.body.classList.add('reduce-motion-mode');
+ if(params.get('bxminimal')==='true')document.body.classList.add('performance-minimal-mode');
  const selectedLanguage=params.get('bxlang')||'system';
  const language=selectedLanguage==='system'?(navigator.language||'en'):selectedLanguage;
  const languageCode=language.toLowerCase().split('-')[0];
