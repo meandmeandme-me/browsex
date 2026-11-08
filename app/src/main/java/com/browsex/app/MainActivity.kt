@@ -180,6 +180,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun mirrorBrowserSettings(settings: BrowserSettings) {
+        val previous = browserSettingsSnapshot
+        val wasLoaded = browserSettingsLoaded
+        val homePresentationChanged = wasLoaded && (
+            previous.themeMode != settings.themeMode ||
+                previous.languageMode != settings.languageMode ||
+                previous.homeShowQuickLinks != settings.homeShowQuickLinks ||
+                previous.homeShowDiscovery != settings.homeShowDiscovery ||
+                previous.homeLayout != settings.homeLayout ||
+                previous.reduceTransparency != settings.reduceTransparency ||
+                previous.highContrast != settings.highContrast ||
+                previous.reduceMotion != settings.reduceMotion
+            )
         browserSettingsSnapshot = settings
         browserSettingsLoaded = true
         AppCompatDelegate.setDefaultNightMode(when (settings.themeMode) {
@@ -205,6 +217,13 @@ class MainActivity : AppCompatActivity() {
         }
         browserRuntime?.settings?.setLocales(engineLocales)
         if (::browserRoot.isInitialized) refreshCurrentAdaptivePresentation(force = true)
+        if (homePresentationChanged) {
+            activeTab?.takeIf { it.sessionOpened && it.url.startsWith(HOME_URL) }?.let { tab ->
+                runCatching { tab.session.loadUri(homePageUrl()) }.onFailure {
+                    android.util.Log.w("Wren", "Could not refresh adaptive home-page presentation", it)
+                }
+            }
+        }
     }
 
     internal fun websiteNotificationsEnabled(): Boolean = browserSettingsSnapshot.siteNotificationsEnabled
@@ -860,7 +879,8 @@ class MainActivity : AppCompatActivity() {
     private fun homePageUrl(): String =
         "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
             "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}" +
-            "&bxtv=$isTelevisionDevice"
+            "&bxtv=$isTelevisionDevice&bxopaque=${browserSettingsSnapshot.reduceTransparency}" +
+            "&bxcontrast=${browserSettingsSnapshot.highContrast}&bxmotion=${browserSettingsSnapshot.reduceMotion}"
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
@@ -930,9 +950,10 @@ class MainActivity : AppCompatActivity() {
         val fieldFill = if (opaque) opaqueField else colors.field
         val stroke = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) colors.ink else colors.line
 
-        topBar.background = glassSurface(20, fill, stroke)
-        bottomBar.background = glassSurface(28, fill, stroke)
-        addressRow.background = glassSurface(22, fieldFill, stroke)
+        val borderWidth = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) 2 else 1
+        topBar.background = glassSurface(20, fill, stroke, borderWidth)
+        bottomBar.background = glassSurface(28, fill, stroke, borderWidth)
+        addressRow.background = glassSurface(22, fieldFill, stroke, borderWidth)
         bottomBar.elevation = when (config.materialMode) {
             WrenMaterialMode.GLASS_BLUR, WrenMaterialMode.GLASS_TINTED -> dp(8).toFloat()
             WrenMaterialMode.MATTE -> dp(3).toFloat()
@@ -958,9 +979,9 @@ class MainActivity : AppCompatActivity() {
         val topParams = topBar.layoutParams as? FrameLayout.LayoutParams
         topParams?.let {
             it.height = dp(if (tvRemote) 70 else 46)
-            it.topMargin = dp(if (tvRemote) 16 else 5)
-            it.leftMargin = dp(if (tvRemote) 28 else 13)
-            it.rightMargin = dp(if (tvRemote) 28 else 13)
+            it.topMargin = dp(if (tvRemote) 28 else 5)
+            it.leftMargin = dp(if (tvRemote) 48 else 13)
+            it.rightMargin = dp(if (tvRemote) 48 else 13)
             topBar.layoutParams = it
         }
         val progressParams = progress.layoutParams as? FrameLayout.LayoutParams
@@ -1319,10 +1340,10 @@ class MainActivity : AppCompatActivity() {
         cornerRadius = dp(radius).toFloat()
     }
 
-    private fun glassSurface(radius: Int, fill: Int, stroke: Int) = GradientDrawable().apply {
+    private fun glassSurface(radius: Int, fill: Int, stroke: Int, strokeWidthDp: Int = 1) = GradientDrawable().apply {
         setColor(fill)
         cornerRadius = dp(radius).toFloat()
-        setStroke(dp(1), stroke)
+        setStroke(dp(strokeWidthDp), stroke)
     }
 
     private fun actionButton(label: String, description: String, action: () -> Unit) =
