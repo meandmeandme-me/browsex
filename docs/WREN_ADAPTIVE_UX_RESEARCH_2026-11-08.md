@@ -310,10 +310,12 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 6. Wire platform blur availability listeners and accessibility preference handling.
 7. Introduce JankStats/benchmark scenarios and tune visual quality tiers on representative hardware.
 8. Add responsive tablet/foldable/connected-display navigation.
-9. Create a separate Android TV shell and complete D-pad/focus tests before TV launcher registration.
+9. A preliminary Android TV/Google TV mode, Leanback launcher metadata, banner and remote-readable start page are now present. Complete D-pad/focus/IME/overscan testing before claiming TV support or store certification.
 10. Evaluate Tizen and webOS as separate future clients only when product, engine and distribution budgets are approved.
 
 ## 8A. Current implementation checkpoint
+
+- Latest checked commit: `0c4d34ce6e82bd095b57e4d39082713fc7c68fd3`; CI run [#42525156452](https://github.com/meandmeandme-me/browsex/actions/runs/42525156452) completed successfully for locale validation, tests, lint, debug APK build, schema/checksum verification and ARM32/ARM64/Universal artifact upload. Release signing was skipped because release secrets are not configured.
 
 **Implemented in the working branch (not yet device-certified):**
 - `AdaptivePresentationPolicy.kt` resolves current-window layout, address placement, material mode, motion policy and reason codes. Unit tests cover phone/tablet/TV decisions, accessibility overrides, battery saver, system low memory, constrained RAM, thermal state, measured jank and the requirement that API version alone never enables blur.
@@ -327,7 +329,7 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 - The current probe deliberately sets `hasVerifiedBackdropBlurPath=false`. There is no verified in-window live backdrop-blur implementation yet, so even newer/high-end devices currently use tinted glass rather than live blur. This avoids confusing Android cross-window blur support with in-window toolbar blur and avoids claiming a GPU path that has not been measured.
 - Address-bar placement is saved in DataStore and exposed as Automatic/Top/Bottom in Settings. The Bottom preference applies on compact windows; medium/expanded windows use a top/side layout to preserve usable content space.
 - Android's public high-contrast-text API is only used on API 36+. Reduced-transparency is not automatically detectable through one consistent public Android API and is not wired to a Wren setting yet.
-- TV layout detection uses Leanback/Television features or Android TV UI mode; a connected D-pad alone does not turn a regular phone/tablet into TV mode. The remote-oriented dock is still preliminary; a Leanback launcher/banner, D-pad focus certification and complete TV product testing remain outstanding. Tizen and webOS need separate clients; they cannot install the Android APK.
+- TV layout detection uses Leanback/Television features or Android TV UI mode; a connected D-pad alone does not turn a regular phone/tablet into TV mode. Android TV mode now includes optional Leanback launcher metadata, a banner, larger remote-first chrome, a remote-readable start page, adaptive tab grid and enlarged settings/library/downloads controls. Physical/emulator D-pad certification, IME handoff, overscan and complete TV journeys remain outstanding. Tizen and webOS need separate clients; they cannot install the Android APK.
 - Fold-hinge posture and multi-window edge-case QA remain to be added. The layout does respond to current Activity window bounds, including ordinary resizing.
 
 The latest CI run is used to validate compilation/tests/lint/build. A passing CI run is not physical-device verification; test on Android 10/low-memory hardware, tablets, landscape and Android TV before claiming release readiness.
