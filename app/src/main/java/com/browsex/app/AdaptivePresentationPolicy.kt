@@ -49,6 +49,7 @@ internal data class PresentationCapabilitySnapshot(
     val reduceMotion: Boolean = false,
     val measuredJankPressure: Boolean = false,
     val severeMemoryPressure: Boolean = false,
+    val imeVisible: Boolean = false,
     val addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
 ) {
     init {
@@ -66,6 +67,7 @@ internal data class AdaptivePresentationConfig(
     val reduceMotion: Boolean,
     val allowNonEssentialAnimation: Boolean,
     val allowSpeculativeVisualWork: Boolean,
+    val showNavigationActions: Boolean,
     val reasonCodes: Set<String>
 )
 
@@ -93,6 +95,7 @@ internal object AdaptivePresentationPolicy {
         if (snapshot.ramTier == DeviceRamTier.CONSTRAINED) reasons += "constrained-memory"
         if (snapshot.measuredJankPressure) reasons += "measured-jank"
         if (snapshot.severeMemoryPressure) reasons += "system-low-memory"
+        if (snapshot.imeVisible) reasons += "ime-visible"
 
         val severePressure = snapshot.thermalStatus >= THERMAL_SEVERE ||
             snapshot.measuredJankPressure || snapshot.severeMemoryPressure
@@ -121,6 +124,7 @@ internal object AdaptivePresentationPolicy {
             reduceMotion = reduceMotion,
             allowNonEssentialAnimation = !reduceMotion,
             allowSpeculativeVisualWork = !constrained && !severePressure,
+            showNavigationActions = !snapshot.imeVisible || layout == WrenWindowLayout.TV,
             reasonCodes = reasons
         )
     }
