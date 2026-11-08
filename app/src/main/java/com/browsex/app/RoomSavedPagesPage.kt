@@ -25,6 +25,7 @@ internal class RoomSavedPagesPage(
 ) {
     private val isHistory = title.contains("History", ignoreCase = true)
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
@@ -48,39 +49,45 @@ internal class RoomSavedPagesPage(
 
             val root = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(18), dp(16), dp(18), dp(14))
+                setPadding(WrenAdaptiveUi.horizontalSafePadding(activity), WrenAdaptiveUi.verticalSafePadding(activity), WrenAdaptiveUi.horizontalSafePadding(activity), dp(if (isTvRemote) 28 else 14))
                 setBackgroundColor(colors.canvas)
                 BrowseXColors.applyDirection(this, store)
             }
             val header = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL }
             header.addView(TextView(activity).apply {
                 text = if (isHistory) t("History", "السجل") else t("Bookmarks", "المفضلة")
-                textSize = 25f
+                textSize = if (isTvRemote) 34f else 25f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colors.ink)
             }, LinearLayout.LayoutParams(0, -2, 1f))
             val close = TextView(activity).apply {
-                text = "×"; textSize = 27f; gravity = Gravity.CENTER
+                text = "×"; textSize = if (isTvRemote) 34f else 27f; gravity = Gravity.CENTER
                 setTextColor(colors.ink); background = rounded(colors.card, 14)
-                minimumWidth = dp(48); minimumHeight = dp(48)
                 contentDescription = t("Close", "إغلاق")
+                WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.accent, if (isTvRemote) 64 else 48)
             }
             header.addView(close)
             root.addView(header)
 
             val search = EditText(activity).apply {
                 hint = if (isHistory) t("Search browsing history", "ابحث في سجل التصفح") else t("Search bookmarks", "ابحث في المفضلة")
-                textSize = 14f; isSingleLine = true
+                textSize = if (isTvRemote) 19f else 14f; isSingleLine = true
                 setTextColor(colors.ink); setHintTextColor(colors.muted)
                 setPadding(dp(14), 0, dp(14), 0); background = rounded(colors.card, 14)
             }
-            root.addView(search, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(12) })
+            root.addView(search, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 64 else 48)).apply { topMargin = dp(12) })
             val folderBar = LinearLayout(activity).apply {
                 gravity = Gravity.CENTER_VERTICAL
-                visibility = if (isHistory) android.view.View.GONE else android.view.View.VISIBLE
                 setPadding(0, dp(8), 0, dp(4))
+                clipChildren = false
             }
-            root.addView(folderBar)
+            val folderScroll = android.widget.HorizontalScrollView(activity).apply {
+                isHorizontalScrollBarEnabled = false
+                clipToPadding = false
+                visibility = if (isHistory) android.view.View.GONE else android.view.View.VISIBLE
+                addView(folderBar, android.widget.HorizontalScrollView.LayoutParams(-2, -2))
+            }
+            root.addView(folderScroll)
             val scroll = ScrollView(activity).apply { clipToPadding = false }
             val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(4), 0, dp(8)) }
             scroll.addView(list)
@@ -114,11 +121,12 @@ internal class RoomSavedPagesPage(
                 fun chip(label: String, id: String?) {
                     val chosen = selectedFolder == id
                     val chip = TextView(activity).apply {
-                        text = label; textSize = 11f; typeface = Typeface.DEFAULT_BOLD
+                        text = label; textSize = if (isTvRemote) 16f else 11f; typeface = Typeface.DEFAULT_BOLD
                         setTextColor(if (chosen) colors.accent else colors.muted)
-                        setPadding(dp(11), dp(8), dp(11), dp(8))
+                        setPadding(dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 14 else 8), dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 14 else 8))
                         background = rounded(if (chosen) colors.selected else colors.card, 18)
-                        isClickable = true; isFocusable = true
+                        isClickable = true
+                        WrenAdaptiveUi.prepareFocusable(this, activity, 18, colors.accent, if (isTvRemote) 60 else 48)
                         setOnClickListener { selectedFolder = id; drawFolders(); render(search.text?.toString().orEmpty()) }
                     }
                     if (id != null && id != "unfiled") chip.setOnLongClickListener {
@@ -157,8 +165,9 @@ internal class RoomSavedPagesPage(
                 val add = TextView(activity).apply {
                     text = "+"; textSize = 20f; gravity = Gravity.CENTER
                     setTextColor(colors.accent); background = rounded(colors.card, 16)
-                    minimumWidth = dp(40); minimumHeight = dp(36)
                     contentDescription = t("Create folder", "إنشاء مجلد")
+                    WrenAdaptiveUi.prepareFocusable(this, activity, 16, colors.accent, if (isTvRemote) 60 else 48)
+                    minimumWidth = dp(if (isTvRemote) 60 else 48)
                     setOnClickListener { createFolderDialog() }
                 }
                 folderBar.addView(add)
@@ -180,37 +189,39 @@ internal class RoomSavedPagesPage(
                 val count = TextView(activity).apply {
                     text = if (BrowseXColors.isArabic(activity, store)) "${filtered.size} من ${rows.size} صفحة"
                         else "${filtered.size} of ${rows.size} pages"
-                    textSize = 11f; setTextColor(colors.muted); setPadding(dp(2), dp(4), dp(2), dp(8))
+                    textSize = if (isTvRemote) 15f else 11f; setTextColor(colors.muted); setPadding(dp(2), dp(4), dp(2), dp(8))
                 }
                 list.addView(count)
                 if (filtered.isEmpty()) {
                     list.addView(TextView(activity).apply {
                         text = if (isHistory) t("Your browsing history is empty.", "سجل التصفح فارغ.")
                             else t("No bookmarks in this folder yet.", "لا توجد مفضلة في هذا المجلد بعد.")
-                        textSize = 13f; gravity = Gravity.CENTER; setTextColor(colors.muted)
+                        textSize = if (isTvRemote) 18f else 13f; gravity = Gravity.CENTER; setTextColor(colors.muted)
                         setPadding(dp(20), dp(34), dp(20), dp(34)); background = rounded(colors.card, 16)
                     })
                 }
                 filtered.forEach { (label, url, folderId) ->
                     val row = LinearLayout(activity).apply {
                         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(12), dp(11), dp(7), dp(11)); background = rounded(colors.card, 14)
-                        isClickable = true; isFocusable = true
+                        setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 14 else 7), dp(if (isTvRemote) 18 else 11)); background = rounded(colors.card, 14)
+                        isClickable = true
+                        WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.accent, if (isTvRemote) 76 else 48)
+                        contentDescription = label.ifBlank { Uri.parse(url).host.orEmpty().ifBlank { url } } + ", " + url
                     }
                     val details = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
                     details.addView(TextView(activity).apply {
                         text = label.ifBlank { Uri.parse(url).host.orEmpty().ifBlank { url } }
-                        textSize = 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(colors.ink); maxLines = 1
+                        textSize = if (isTvRemote) 18f else 14f; typeface = Typeface.DEFAULT_BOLD; setTextColor(colors.ink); maxLines = 1
                     })
                     details.addView(TextView(activity).apply {
-                        text = url; textSize = 10f; setTextColor(colors.muted); maxLines = 2
+                        text = url; textSize = if (isTvRemote) 14f else 10f; setTextColor(colors.muted); maxLines = 2
                         setPadding(0, dp(3), 0, 0)
                     })
                     row.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
                     val remove = TextView(activity).apply {
                         text = "×"; textSize = 22f; gravity = Gravity.CENTER; setTextColor(colors.danger)
-                        minimumWidth = dp(44); minimumHeight = dp(44)
                         contentDescription = if (isHistory) t("Remove from history", "حذف من السجل") else t("Remove bookmark", "إزالة من المفضلة")
+                        WrenAdaptiveUi.prepareFocusable(this, activity, 12, colors.danger, if (isTvRemote) 60 else 48)
                         setOnClickListener {
                             activity.lifecycleScope.launch {
                                 if (isHistory) historyRepo.remove(url) else bookmarkRepo.remove(url)
@@ -262,8 +273,9 @@ internal class RoomSavedPagesPage(
 
             if (isHistory) {
                 val clear = TextView(activity).apply {
-                    text = t("Clear history", "مسح السجل"); textSize = 12f; typeface = Typeface.DEFAULT_BOLD
+                    text = t("Clear history", "مسح السجل"); textSize = if (isTvRemote) 16f else 12f; typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colors.danger); setPadding(dp(8), dp(8), dp(4), dp(8))
+                    WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.danger, if (isTvRemote) 60 else 48)
                     setOnClickListener {
                         AlertDialog.Builder(activity).setTitle(t("Clear browsing history?", "مسح سجل التصفح؟"))
                             .setNegativeButton(t("Cancel", "إلغاء"), null)
@@ -289,6 +301,7 @@ internal class RoomSavedPagesPage(
             }
             dialog.show()
             dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            if (isTvRemote) search.post { if (dialog.isShowing) search.requestFocus() }
         }
     }
 }
