@@ -84,7 +84,7 @@ internal object AdaptivePresentationPolicy {
         val placement = resolveAddressPlacement(snapshot, layout)
         val reasons = linkedSetOf<String>()
 
-        if (snapshot.systemHighContrast) reasons += "system-high-contrast"
+        if (snapshot.systemHighContrast) reasons += "high-contrast"
         if (snapshot.reduceTransparency) reasons += "reduced-transparency"
         if (snapshot.isLeanbackDevice) reasons += "leanback-device"
         if (!snapshot.hasTouchscreen && snapshot.hasDpad) reasons += "remote-input-present"
@@ -113,7 +113,7 @@ internal object AdaptivePresentationPolicy {
         }
 
         val reduceMotion = snapshot.reduceMotion || constrained || severePressure
-        if (snapshot.reduceMotion) reasons += "system-reduced-motion"
+        if (snapshot.reduceMotion) reasons += "reduce-motion-preference"
         if (reduceMotion) reasons += "reduced-motion-policy"
         if (!canUseVerifiedBlur(snapshot)) reasons += "blur-fallback"
 
