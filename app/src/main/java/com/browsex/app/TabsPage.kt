@@ -58,6 +58,14 @@ internal class TabsPage(
                     setStroke(dp(2), this@TabsPage.colors.accent)
                 }
             )
+            addState(
+                intArrayOf(android.R.attr.state_hovered),
+                GradientDrawable().apply {
+                    setColor(this@TabsPage.colors.selected)
+                    cornerRadius = dp(radius).toFloat()
+                    setStroke(dp(1), this@TabsPage.colors.accent)
+                }
+            )
             addState(intArrayOf(), rounded(fill, radius))
         }
 
@@ -389,6 +397,22 @@ internal class TabsPage(
                 card.setOnClickListener {
                     onActivateTab(tab)
                     dialog.dismiss()
+                }
+                card.setOnContextClickListener {
+                    AlertDialog.Builder(activity)
+                        .setTitle(tab.title.ifBlank { tr("New tab") })
+                        .setItems(arrayOf(tr("Open"), tr("Close tab"))) { _, index ->
+                            if (index == 0) {
+                                onActivateTab(tab)
+                                dialog.dismiss()
+                            } else {
+                                onCloseTab(tab)
+                                dialog.dismiss()
+                                show()
+                            }
+                        }
+                        .show()
+                    true
                 }
                 row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
                     setMargins(dp(4), dp(4), dp(4), dp(9))

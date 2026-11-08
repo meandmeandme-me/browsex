@@ -656,6 +656,101 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (
+                BrowserKeyboardShortcutPolicy.resolve(
+                    keyCode = event.keyCode,
+                    controlPressed = event.isCtrlPressed,
+                    metaPressed = event.isMetaPressed,
+                    shiftPressed = event.isShiftPressed,
+                    altPressed = event.isAltPressed,
+                    repeatCount = event.repeatCount,
+                    imeVisible = imeVisible
+                )
+            ) {
+                BrowserKeyboardAction.FOCUS_ADDRESS -> {
+                    address.requestFocus()
+                    address.selectAll()
+                    return true
+                }
+                BrowserKeyboardAction.NEW_TAB -> {
+                    createTab(homePageUrl())
+                    return true
+                }
+                BrowserKeyboardAction.NEW_PRIVATE_TAB -> {
+                    createTab(homePageUrl(), privateMode = true)
+                    return true
+                }
+                BrowserKeyboardAction.CLOSE_TAB -> {
+                    val current = activeTab ?: return super.dispatchKeyEvent(event)
+                    closeTab(current)
+                    return true
+                }
+                BrowserKeyboardAction.RELOAD -> {
+                    val current = activeTab ?: return super.dispatchKeyEvent(event)
+                    current.session.reload()
+                    return true
+                }
+                BrowserKeyboardAction.FIND_IN_PAGE -> {
+                    pageActions.findInPage()
+                    return true
+                }
+                BrowserKeyboardAction.NEXT_TAB -> {
+                    cycleTabs(1)
+                    return true
+                }
+                BrowserKeyboardAction.PREVIOUS_TAB -> {
+                    cycleTabs(-1)
+                    return true
+                }
+                BrowserKeyboardAction.TOGGLE_BOOKMARK -> {
+                    val current = activeTab ?: return super.dispatchKeyEvent(event)
+                    if (current.url.startsWith("http://") || current.url.startsWith("https://")) {
+                        toggleBookmarkInRoom(current.url, current.title)
+                    }
+                    return true
+                }
+                BrowserKeyboardAction.OPEN_DOWNLOADS -> {
+                    openDownloads()
+                    return true
+                }
+                BrowserKeyboardAction.OPEN_HISTORY -> {
+                    showSavedPages("History", emptyList())
+                    return true
+                }
+                BrowserKeyboardAction.OPEN_BOOKMARKS -> {
+                    showSavedPages("Bookmarks", emptyList())
+                    return true
+                }
+                BrowserKeyboardAction.GO_BACK -> {
+                    val current = activeTab
+                    if (current?.canGoBack == true) {
+                        current.session.goBack()
+                        return true
+                    }
+                }
+                BrowserKeyboardAction.GO_FORWARD -> {
+                    val current = activeTab
+                    if (current?.canGoForward == true) {
+                        current.session.goForward()
+                        return true
+                    }
+                }
+                null -> Unit
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun cycleTabs(direction: Int) {
+        val currentTabs = tabs
+        if (currentTabs.size < 2) return
+        val currentIndex = currentTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+        val nextIndex = (currentIndex + direction + currentTabs.size) % currentTabs.size
+        activateTab(currentTabs[nextIndex])
+    }
+
     override fun onResume() {
         super.onResume()
         ensureJankStats()

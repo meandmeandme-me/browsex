@@ -427,3 +427,12 @@ Implemented in the adaptive runtime:
 - The launcher icon uses adaptive foreground/background artwork plus a monochrome themed-icon layer. TV banners include localized English and Arabic xhdpi resources and TV-optional hardware declarations.
 
 Remaining foldable limitations: the first pass classifies posture but does not yet partition independent panes using exact hinge bounds on every device. Drag/drop, stylus parity, posture transitions, and hinge occlusion still need emulator and physical-device tests before foldable certification.
+
+
+## 8C. Desktop input and certification work (2026-11-08)
+
+Wren now includes a testable keyboard shortcut policy for Ctrl/Meta+L, Ctrl/Meta+T, Ctrl/Meta+Shift+N, Ctrl/Meta+W/R/F/D/J/H/B, Ctrl/Meta+Tab / Ctrl/Meta+Shift+Tab, and Alt+Left/Right. The Activity maps these to address focus, regular/private tabs, close/reload, tab cycling, find-in-page, bookmarks, downloads and history. The IME retains control while visible and repeated key-down events are ignored.
+
+The shared Wren focus overlay now exposes a subtle pointer-hover outline, and tab cards expose Open / Close through the secondary mouse button (right-click / trackpad secondary click).
+
+**Still not certified:** physical keyboard/Chromebook testing; context menus on bookmark and download rows; stylus/drag-and-drop workflows; exact fold hinge-safe pane placement; 200% text scaling; TalkBack/Switch Access; and external-display multi-window behavior. Use `docs/ADAPTIVE_DEVICE_QA_MATRIX.md` as the release checklist.

@@ -24,6 +24,7 @@ internal object WrenFocusStyle {
         return StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), outline(2))
             addState(intArrayOf(android.R.attr.state_pressed), outline(2))
+            addState(intArrayOf(android.R.attr.state_hovered), outline(1))
             addState(intArrayOf(), ColorDrawable(Color.TRANSPARENT))
         }
     }
