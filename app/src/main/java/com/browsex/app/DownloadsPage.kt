@@ -36,6 +36,7 @@ internal class DownloadsPage(
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
+        setStroke(dp(1), colors.line)
     }
 
     fun show() {
@@ -593,7 +594,7 @@ internal class DownloadsPage(
                 count++
             }
             if (count == 0) list.addView(TextView(activity).apply {
-                text = t("No BrowseX downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
+                text = t("No Wren downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
                 textSize = 13f
                 gravity = Gravity.CENTER
                 setTextColor(colors.muted)
