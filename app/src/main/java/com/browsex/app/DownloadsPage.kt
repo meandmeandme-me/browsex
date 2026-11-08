@@ -108,7 +108,7 @@ internal class DownloadsPage(
         lateinit var dialog: AlertDialog
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(if (isTvRemote) 30 else 18), dp(if (isTvRemote) 26 else 16), dp(if (isTvRemote) 30 else 18), dp(14))
+            setPadding(WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), WrenAdaptiveUi.verticalSafePadding(activity, if (isTvRemote) 26 else 16), WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), dp(if (isTvRemote) 28 else 14))
             setBackgroundColor(colors.canvas)
             BrowseXColors.applyDirection(this, store)
         }
