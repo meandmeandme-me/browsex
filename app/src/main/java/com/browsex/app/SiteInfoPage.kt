@@ -363,15 +363,14 @@ class SiteInfoPage(
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), dp(11), dp(12), dp(11))
+            setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11))
             background = cardBackground()
-            minimumHeight = dp(54)
             isClickable = true
-            isFocusable = true
+            WrenAdaptiveUi.prepareFocusable(this, activity, 15, colors.accent, if (isTvRemote) 76 else 48)
         }
         row.addView(TextView(activity).apply {
             text = name
-            textSize = 14f
+            textSize = if (isTvRemote) 18f else 14f
             setTextColor(colors.ink)
         }, LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(TextView(activity).apply {
@@ -380,7 +379,7 @@ class SiteInfoPage(
                 "deny" -> t("Blocked", "محظور")
                 else -> t("Ask", "اسأل")
             } + "  ›"
-            textSize = 12f
+            textSize = if (isTvRemote) 15f else 12f
             setTextColor(colors.muted)
         })
         row.contentDescription = t("Change ", "تغيير إذن ") + name
