@@ -901,7 +901,8 @@ class MainActivity : AppCompatActivity() {
                     "top" -> AddressBarPreference.TOP
                     "bottom" -> AddressBarPreference.BOTTOM
                     else -> AddressBarPreference.AUTO
-                }
+                },
+                reduceTransparency = browserSettingsSnapshot.reduceTransparency
             )
         )
         adaptivePresentationConfig = next
