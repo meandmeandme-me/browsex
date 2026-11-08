@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BrowseX</string>
+    <string name="app_name">Wren</string>
     <string name="website_notification_channel">Website notifications</string>
-    <string name="website_notification_channel_description">Notifications sent by websites you allow in BrowseX</string>
+    <string name="website_notification_channel_description">Notifications sent by websites you allow in Wren</string>
     <string name="ui_home">Home</string>
     <string name="ui_open_tabs">Open tabs</string>
     <string name="ui_search_or_enter_url">Search or enter URL</string>
@@ -40,7 +40,7 @@
     <string name="ui_site_information">Site information</string>
     <string name="ui_search_engine">Search engine</string>
     <string name="ui_clear_browsing_history">Clear browsing history?</string>
-    <string name="ui_browsex">BrowseX</string>
+    <string name="ui_browsex">Wren</string>
     <string name="ui_open_webpage_first">Open webpage first</string>
     <string name="ui_open_a_webpage_first">Open a webpage first</string>
     <string name="ui_preparing_a_clean_reading_view">Preparing a clean reading view…</string>
@@ -90,7 +90,7 @@
     <string name="ui_shortcut_layout">Shortcut layout</string>
     <string name="ui_reset">Reset</string>
     <string name="ui_site_permissions_reset">Site permissions reset</string>
-    <string name="ui_make_browse_x_work_the_way_you_like">Make Browse X work the way you like</string>
+    <string name="ui_make_browse_x_work_the_way_you_like">Make Wren work the way you like</string>
     <string name="ui_close_settings">Close settings</string>
     <string name="ui_general">General</string>
     <string name="ui_choose_how_you_browse">Choose how you browse</string>
