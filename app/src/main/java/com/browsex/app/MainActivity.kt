@@ -245,6 +245,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
     private lateinit var downloadRequestCoordinator: BrowserDownloadRequestCoordinator
     private lateinit var browserView: GeckoView
+    private lateinit var browserRoot: FrameLayout
+    private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
+    private var lastPresentationWidthPx = 0
+    private var lastPresentationHeightPx = 0
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
@@ -732,6 +736,157 @@ class MainActivity : AppCompatActivity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
+    private fun refreshAdaptivePresentation(widthPx: Int, heightPx: Int, hardwareAccelerated: Boolean) {
+        if (widthPx <= 0 || heightPx <= 0 || isFinishing || isDestroyed) return
+        if (widthPx == lastPresentationWidthPx && heightPx == lastPresentationHeightPx) return
+        lastPresentationWidthPx = widthPx
+        lastPresentationHeightPx = heightPx
+
+        val probe = AdaptivePresentationProbe(this)
+        val pressure = DeviceCapabilityProbe(this).runtimePressure()
+        val next = AdaptivePresentationPolicy.resolve(
+            probe.snapshot(
+                windowWidthPx = widthPx,
+                windowHeightPx = heightPx,
+                density = resources.displayMetrics.density,
+                isHardwareAccelerated = hardwareAccelerated,
+                deviceProfile = deviceCapabilityProfile,
+                pressure = pressure
+            )
+        )
+        adaptivePresentationConfig = next
+        applyAdaptivePresentation(next, widthPx)
+    }
+
+    /** Apply the resolved presentation without changing browser-engine or security behavior. */
+    private fun applyAdaptivePresentation(config: AdaptivePresentationConfig, windowWidthPx: Int) {
+        if (!::bottomBar.isInitialized || !::topBar.isInitialized ||
+            !::addressRow.isInitialized || !::navigationBar.isInitialized
+        ) return
+
+        val opaque = config.materialMode == WrenMaterialMode.MATTE ||
+            config.materialMode == WrenMaterialMode.HIGH_CONTRAST ||
+            config.materialMode == WrenMaterialMode.PERFORMANCE_MINIMAL
+        val fill = if (opaque) colors.card else colors.panel
+        val fieldFill = if (opaque) colors.canvas else colors.field
+        val stroke = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) colors.ink else colors.line
+
+        topBar.background = glassSurface(20, fill, stroke)
+        bottomBar.background = glassSurface(28, fill, stroke)
+        addressRow.background = glassSurface(22, fieldFill, stroke)
+        bottomBar.elevation = when (config.materialMode) {
+            WrenMaterialMode.GLASS_BLUR, WrenMaterialMode.GLASS_TINTED -> dp(8).toFloat()
+            WrenMaterialMode.MATTE -> dp(3).toFloat()
+            WrenMaterialMode.HIGH_CONTRAST, WrenMaterialMode.PERFORMANCE_MINIMAL -> 0f
+        }
+
+        val rtl = BrowseXColors.isRtl(browserSettingsSnapshot)
+        val sideRail = config.addressPlacement == WrenAddressPlacement.SIDE
+        val tvRemote = config.addressPlacement == WrenAddressPlacement.TV_REMOTE
+        val topDock = config.addressPlacement == WrenAddressPlacement.TOP || tvRemote
+
+        // Re-parenting the existing rows preserves all click listeners and browser actions.
+        bottomBar.removeAllViews()
+        navigationBar.removeAllViews()
+        if (sideRail) {
+            bottomBar.orientation = LinearLayout.HORIZONTAL
+            bottomBar.gravity = Gravity.CENTER_VERTICAL
+            bottomBar.setPadding(dp(7), dp(8), dp(7), dp(8))
+            navigationBar.orientation = LinearLayout.VERTICAL
+            navigationBar.gravity = Gravity.CENTER
+            navigationBar.setPadding(0, 0, 0, 0)
+            val railButtonSize = dp(48)
+            val railButtonWidth = dp(52)
+            for (index in 0 until navigationBar.childCount) {
+                val child = navigationBar.getChildAt(index)
+                child.layoutParams = LinearLayout.LayoutParams(railButtonWidth, railButtonSize).apply {
+                    bottomMargin = dp(2)
+                }
+            }
+            bottomBar.addView(addressRow, LinearLayout.LayoutParams(dp(250), dp(48)))
+            bottomBar.addView(navigationBar, LinearLayout.LayoutParams(railButtonWidth, -2).apply {
+                marginStart = dp(4)
+                marginEnd = dp(2)
+            })
+        } else {
+            bottomBar.orientation = LinearLayout.VERTICAL
+            bottomBar.gravity = Gravity.CENTER
+            bottomBar.setPadding(
+                dp(if (tvRemote) 14 else 8),
+                dp(if (tvRemote) 12 else 8),
+                dp(if (tvRemote) 14 else 8),
+                dp(if (tvRemote) 10 else 7)
+            )
+            navigationBar.orientation = LinearLayout.HORIZONTAL
+            navigationBar.gravity = Gravity.CENTER
+            navigationBar.setPadding(dp(1), dp(if (tvRemote) 8 else 5), dp(1), 0)
+            val buttonHeight = dp(if (tvRemote) 60 else 44)
+            for (index in 0 until navigationBar.childCount) {
+                val child = navigationBar.getChildAt(index)
+                child.minimumHeight = buttonHeight
+                child.layoutParams = LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
+                    marginStart = dp(1)
+                    marginEnd = dp(1)
+                }
+            }
+            bottomBar.addView(addressRow, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 54 else 48)))
+            bottomBar.addView(navigationBar, LinearLayout.LayoutParams(-1, buttonHeight + dp(3)).apply {
+                topMargin = dp(3)
+            })
+        }
+
+        val params = bottomBar.layoutParams as? FrameLayout.LayoutParams ?: return
+        when {
+            sideRail -> {
+                params.width = dp(310)
+                params.height = -2
+                params.gravity = (if (rtl) Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
+                params.topMargin = dp(12)
+                params.bottomMargin = dp(12)
+                params.leftMargin = dp(12)
+                params.rightMargin = dp(12)
+            }
+            tvRemote -> {
+                params.width = minOf(dp(1200), (windowWidthPx - dp(96)).coerceAtLeast(dp(640)))
+                params.height = -2
+                params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                params.topMargin = dp(74)
+                params.bottomMargin = 0
+                params.leftMargin = dp(24)
+                params.rightMargin = dp(24)
+            }
+            topDock -> {
+                params.width = if (windowWidthPx / resources.displayMetrics.density < 600f) {
+                    -1
+                } else {
+                    minOf(dp(720), (windowWidthPx - dp(32)).coerceAtLeast(dp(280)))
+                }
+                params.height = dp(118)
+                params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                params.topMargin = dp(58)
+                params.bottomMargin = 0
+                params.leftMargin = dp(10)
+                params.rightMargin = dp(10)
+            }
+            else -> {
+                params.width = if (windowWidthPx / resources.displayMetrics.density < 600f) {
+                    -1
+                } else {
+                    minOf(dp(720), (windowWidthPx - dp(32)).coerceAtLeast(dp(280)))
+                }
+                params.height = dp(118)
+                params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                params.topMargin = 0
+                params.bottomMargin = dp(7)
+                params.leftMargin = dp(10)
+                params.rightMargin = dp(10)
+            }
+        }
+        bottomBar.layoutParams = params
+        BrowseXColors.applyDirection(bottomBar, browserSettingsSnapshot)
+        BrowseXColors.applyDirection(navigationBar, browserSettingsSnapshot)
+    }
+
     private fun createBrowserUi(): View {
         val root = FrameLayout(this).apply {
             setBackgroundColor(colors.canvas)
@@ -739,6 +894,7 @@ class MainActivity : AppCompatActivity() {
             clipToPadding = false
             BrowseXColors.applyDirection(this, browserSettingsSnapshot)
         }
+        browserRoot = root
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
@@ -918,6 +1074,13 @@ class MainActivity : AppCompatActivity() {
             rightMargin = dp(10)
         })
         BrowseXColors.applyDirection(root, browserSettingsSnapshot)
+        root.addOnLayoutChangeListener { view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            val width = right - left
+            val height = bottom - top
+            if (width != oldRight - oldLeft || height != oldBottom - oldTop) {
+                refreshAdaptivePresentation(width, height, view.isHardwareAccelerated)
+            }
+        }
         return root
     }
 
