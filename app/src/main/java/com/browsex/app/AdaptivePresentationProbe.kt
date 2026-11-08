@@ -26,7 +26,8 @@ internal class AdaptivePresentationProbe(context: Context) {
         isHardwareAccelerated: Boolean,
         deviceProfile: DeviceCapabilityProfile,
         pressure: RuntimePressure,
-        measuredJankPressure: Boolean = false
+        measuredJankPressure: Boolean = false,
+        imeVisible: Boolean = false
     ): PresentationCapabilitySnapshot {
         val packageManager = appContext.packageManager
         val accessibility = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE)
@@ -62,7 +63,8 @@ internal class AdaptivePresentationProbe(context: Context) {
             reduceTransparency = false,
             reduceMotion = !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
             measuredJankPressure = measuredJankPressure,
-            severeMemoryPressure = memoryInfo.lowMemory
+            severeMemoryPressure = memoryInfo.lowMemory,
+            imeVisible = imeVisible
         )
     }
 
