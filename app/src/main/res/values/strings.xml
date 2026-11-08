@@ -334,4 +334,7 @@
     <string name="ui_top">Top</string>
     <string name="ui_bottom">Bottom</string>
     <string name="ui_active">Active</string>
+    <string name="ui_accessibility_appearance">Accessibility & appearance</string>
+    <string name="ui_reduce_transparency">Reduce transparency</string>
+    <string name="ui_use_opaque_browser_surfaces_for_clearer_contrast_and_less_visual_layering">Use opaque browser surfaces for clearer contrast and less visual layering</string>
 </resources>
