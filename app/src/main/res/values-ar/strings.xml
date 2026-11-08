@@ -326,4 +326,6 @@
     <string name="ui_settings_are_temporarily_unavailable">الإعدادات غير متاحة مؤقتًا</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">التصفح الخاص لا يقرأ اختيارات أذونات المواقع ولا يحفظها.</string>
     <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">لا توجد تنزيلات في Wren بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.</string>
+    <string name="ui_wren_browser">متصفح Wren</string>
+    <string name="ui_reload_page">إعادة تحميل الصفحة</string>
 </resources>
