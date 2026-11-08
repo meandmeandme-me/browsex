@@ -2,6 +2,7 @@ package com.browsex.app
 
 import android.animation.ValueAnimator
 import android.app.ActivityManager
+import android.os.Build
 import android.content.Context
 import android.content.pm.PackageManager
 import android.view.InputDevice
@@ -54,7 +55,8 @@ internal class AdaptivePresentationProbe(context: Context) {
             ramTier = deviceProfile.ramTier,
             batterySaverEnabled = pressure.batterySaverEnabled,
             thermalStatus = pressure.thermalStatus,
-            systemHighContrast = accessibility?.isHighTextContrastEnabled == true,
+            systemHighContrast = Build.VERSION.SDK_INT >= 36 &&
+                accessibility?.isHighContrastTextEnabled == true,
             // Android does not expose a single reliable reduced-transparency setting
             // across all OEM versions. The app preference can populate this separately.
             reduceTransparency = false,
