@@ -67,6 +67,7 @@ CI runs JVM tests, Android Lint, APK checks, and artifact generation. A successf
 - [World-browser product requirements](docs/WORLD_BROWSER_PRODUCT_REQUIREMENTS.md)
 - [Account provider implementation plan](docs/ACCOUNT_PROVIDER_IMPLEMENTATION_PLAN.md)
 - [Figma design brief and screen inventory](docs/FIGMA_DESIGN_BRIEF.md)
+- [Wren browser, Glass UI, adaptive performance and TV research](docs/WREN_ADAPTIVE_UX_RESEARCH_2026-11-08.md)
 
 ## Working rules
 
