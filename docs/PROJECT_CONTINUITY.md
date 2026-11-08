@@ -1,28 +1,29 @@
-# BrowseX — Project Continuity
+# Wren Browser — Project Continuity
 
-> **Source of truth:** this checkpoint reflects branch `rewrite-v2` at the time recorded below. Update it with every meaningful implementation commit. Older phase notes from earlier sessions are intentionally not carried forward as current status.
+> **Source of truth:** active implementation checkpoint for branch `wren-design-prep`. Update this file after meaningful source, design, storage, or release changes. Historical notes below must not override the current product decisions.
 
 ## Current checkpoint
 
 - Repository: `meandmeandme-me/browsex`
-- Working branch: `rewrite-v2`
-- Current HEAD before the follow-up fix: `871c84192431a1a55fc656cc050e1e92715ddb45`
-- Last commit: `perf(downloads): throttle Room progress writes for large files`
-- Pull request: [#4 — Rewrite v2](https://github.com/meandmeandme-me/browsex/pull/4), open and not merged. Do not merge to `main` without owner approval and final release/device gates.
-- CI for HEAD: push run [42121854379](https://github.com/meandmeandme-me/browsex/actions/runs/42121854379) and PR run [42121859399](https://github.com/meandmeandme-me/browsex/actions/runs/42121859399) both completed with **success**. These are automated CI results, not physical-device verification.
-- Compare with `main`: branch is substantially ahead and has diverged; preserve the rewrite branch and do not reset/rebase/merge without review.
+- Active working branch: `wren-design-prep`
+- Current HEAD at this checkpoint: `7fbb376334fbbe96d281001758387b3722459ea9`
+- Pull request: [#11 — Wren design preparation](https://github.com/meandmeandme-me/browsex/pull/11), open and not merged.
+- Keep all new implementation on `wren-design-prep`; do not merge into `main` without the owner's explicit instruction.
+- CI has been enabled for this working branch. The first UI build/test run was started while the source was still being updated; always check the latest run against the latest branch HEAD before claiming a green build.
+- The Android app uses GeckoView. The existing engine, downloads, privacy, settings, permissions, storage and session logic must be preserved while the UI is redesigned.
 
-## Product and collaboration constraints
+## Product and collaboration decisions
 
-- Android browser using GeckoView (Firefox engine); this is not a Firefox app fork or an extension-only project.
-- Future product name direction: **Falak (فلك)**, tagline “Your orbit on the web”. Keep repository/package/application identity and current branding unchanged until the owner explicitly approves a rename.
-- Owner is not a programmer and prefers the assistant to work directly in the connected GitHub repository, explain results in simple Arabic, and avoid asking for repeated approvals between safe implementation steps.
-- Claude owns UI/UX and the new visual design. Do not change screen layouts, colors, visual hierarchy, labels, or branding until the owner supplies the new approved design.
-- Keep all work on `rewrite-v2`; never merge to `main` without explicit approval.
-- Preserve the existing implementation and Room user data. The owner confirmed there is no pre-existing user data to migrate: do not reintroduce legacy import or unnecessary dual-write. Keep forward Room schema migrations for future app upgrades.
-- No blocked-request counter. Shield UI is on/off only.
-- No live account login or cloud sync now. Google/Microsoft/OIDC foundations are planning only; real provider configuration/backend is deferred.
-- Target Android API 26+, including Android 10/API 29 and low-memory devices. CI ABI builds cover ARM32, ARM64 and universal outputs; device behavior remains unverified.
+- Product and visible brand name: **Wren Browser**. The user supplied the Wren bird logo in light and dark presentations and approved this identity.
+- Approved UI direction (2026-11-08): familiar, highly usable mobile-browser interaction patterns inspired by Google Chrome and Safari, implemented as Wren's own design—not copied source code, proprietary assets, or exact trademark artwork.
+- Primary phone layout: the address/search field is anchored near the bottom for thumb reach, inside a refined glass-style dock. Back/forward, home, bookmark, tabs and menu actions sit in the same bottom control area. A small Wren/site identity remains at the top.
+- Use translucent surfaces, subtle outlines, restrained elevation, rounded geometry, clear contrast and consistent iconography. Avoid excessive blur or low-contrast glass.
+- Android minSdk is API 26. Use real backdrop blur only when supported and retain a readable translucent fallback on Android 8–11; never make core navigation depend on a blur effect.
+- Light, dark and system themes must use the same semantic tokens. Arabic RTL and English LTR remain first-class; directional controls mirror while brand marks and universal symbols do not.
+- Work directly in the connected GitHub repository, explain results in simple Arabic, and avoid asking the owner to repeat already-confirmed decisions.
+- Preserve current features and user data. Do not remove old storage consumers, browser engine paths, download response handling, private-mode guarantees, permission flows, or account security foundations as a shortcut for UI work.
+- No false UI: sign-in, cloud sync, translation, extensions or ad-block status must not appear active unless the underlying feature is implemented and verified.
+- Target Android API 26+, including Android 10 and lower-memory devices. Test compact phones, large phones, landscape, foldables and tablets; device QA is separate from CI.
 
 ## What is implemented at current HEAD
 
