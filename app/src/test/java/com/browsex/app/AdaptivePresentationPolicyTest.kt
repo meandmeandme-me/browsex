@@ -155,6 +155,21 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun remoteOnlyInputCanSelectTvModeWithoutLeanbackFlag() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(
+                isLeanbackDevice = false,
+                hasTouchscreen = false,
+                hasDpad = true
+            )
+        )
+
+        assertEquals(WrenWindowLayout.TV, result.windowLayout)
+        assertEquals(WrenAddressPlacement.TV_REMOTE, result.addressPlacement)
+        assertTrue(result.reasonCodes.contains("remote-only-input"))
+    }
+
+    @Test
     fun userCanChooseTopBarOnPhone() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(addressBarPreference = AddressBarPreference.TOP)
