@@ -34,7 +34,7 @@ internal class TabsPage(
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
-        setStroke(dp(1), colors.line)
+        setStroke(dp(1), this@TabsPage.colors.line)
     }
 
     /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
