@@ -36,7 +36,7 @@ internal class DownloadsPage(
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
-        setStroke(dp(1), colors.line)
+        setStroke(dp(1), this@DownloadsPage.colors.line)
     }
 
     fun show() {
