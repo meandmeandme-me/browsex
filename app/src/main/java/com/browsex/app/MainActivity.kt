@@ -711,11 +711,17 @@ class MainActivity : AppCompatActivity() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         hostLifecycleCoordinator.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW &&
+            level <= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
+        ) {
+            refreshCurrentAdaptivePresentation(force = true)
+        }
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         hostLifecycleCoordinator.onLowMemory()
+        refreshCurrentAdaptivePresentation(force = true)
     }
 
     /** GeckoSession resource limits and background release are owned by the lifecycle coordinator. */
