@@ -163,7 +163,7 @@ class AdaptivePresentationPolicyTest {
                 blurCurrentlyEnabled = true,
                 hasVerifiedBackdropBlurPath = true,
                 ramTier = DeviceRamTier.HIGH,
-                systemHighContrast = true
+                highContrastEnabled = true
             )
         )
         val reducedTransparency = AdaptivePresentationPolicy.resolve(
