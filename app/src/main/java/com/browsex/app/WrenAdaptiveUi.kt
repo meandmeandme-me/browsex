@@ -15,6 +15,7 @@ internal object WrenAdaptiveUi {
         val resolved = (context as? MainActivity)?.currentAdaptivePresentation
         if (resolved != null) return resolved.windowLayout == WrenWindowLayout.TV
         return context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK) ||
+            context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_TELEVISION) ||
             (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
                 Configuration.UI_MODE_TYPE_TELEVISION
     }
