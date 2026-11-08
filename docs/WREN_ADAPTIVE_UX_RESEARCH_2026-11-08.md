@@ -298,11 +298,22 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 
 ## 8A. Current implementation checkpoint
 
-The first pure policy layer has been added:
-- `AdaptivePresentationPolicy.kt` resolves a current-window layout class, address placement, material mode, motion policy and reason codes.
-- `AdaptivePresentationPolicyTest.kt` covers phone/tablet/TV layouts, reduced transparency/high contrast, battery saver, constrained memory, measured jank and the rule that API availability alone must not enable backdrop blur.
+**Implemented in the working branch (not yet device-certified):**
+- `AdaptivePresentationPolicy.kt` resolves current-window layout, address placement, material mode, motion policy and reason codes. Unit tests cover phone/tablet/TV decisions, accessibility overrides, battery saver, system low memory, constrained RAM, thermal state, measured jank and the requirement that API version alone never enables blur.
+- `AdaptivePresentationProbe.kt` reads current Activity root dimensions and actual touch/D-pad/Leanback features, RAM tier, battery/thermal pressure, system low-memory state, system animation preference and API 36+ high-contrast text where the public API exists.
+- `MainActivity` applies the resolved presentation to the live Wren toolbar: compact phone uses bottom chrome; compact landscape and medium/expanded windows use top chrome; large/extra-large windows use a side rail; detected TV/remote environments use a larger remote-oriented top dock.
+- Power-saver and thermal changes, Activity resume, root-window resize and memory-pressure callbacks cause policy re-evaluation.
+- AndroidX JankStats observes window-frame jank while the Activity is resumed. Wren keeps a rolling 60-frame boolean sample locally; sustained jank (at least 20%) selects performance-minimal surfaces; recovery to 10% or less allows the normal presentation to return. No URL, page content or browsing history is collected for this.
+- The fallback surfaces are applied automatically without a user-facing warning. Matte/performance surfaces are fully opaque; tinted-glass surfaces keep the same dimensions and actions.
 
-This policy is currently **not wired into the live Activity or material renderer**. The next code phase is to probe current Activity/window bounds and actual platform/input capabilities, then wire policy output into the shared design system. Do not claim automatic runtime fallback is shipped until that integration is implemented and device-tested.
+**Limitations that remain:**
+- The current probe deliberately sets `hasVerifiedBackdropBlurPath=false`. There is no verified in-window live backdrop-blur implementation yet, so even newer/high-end devices currently use tinted glass rather than live blur. This avoids confusing Android cross-window blur support with in-window toolbar blur and avoids claiming a GPU path that has not been measured.
+- The top/bottom address-bar enum exists, but the Activity currently uses AUTO; no Settings control for changing it has shipped yet.
+- Android's public high-contrast-text API is only used on API 36+. Reduced-transparency is not automatically detectable through one consistent public Android API and is not wired to a Wren setting yet.
+- TV/remote layout detection and an initial remote-oriented dock exist, but a Leanback launcher/banner, D-pad focus certification and complete TV product testing remain outstanding. Tizen and webOS need separate clients; they cannot install the Android APK.
+- Fold-hinge posture and multi-window edge-case QA remain to be added. The layout does respond to current Activity window bounds, including ordinary resizing.
+
+The latest CI run is used to validate compilation/tests/lint/build. A passing CI run is not physical-device verification; test on Android 10/low-memory hardware, tablets, landscape and Android TV before claiming release readiness.
 
 ## 9. Acceptance checklist
 
