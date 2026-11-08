@@ -20,6 +20,43 @@ This review compares product patterns from Chrome, Safari, Firefox, Vivaldi, Ope
 
 This is desk research, not a statistically representative worldwide user study. Community discussions and product patterns identify hypotheses to test; they do not prove that every user wants the same toolbar position or feature set. Validate key choices with task-based usability sessions on real devices.
 
+## 1A. User behavior: evidence and product hypotheses
+
+### One-handed use and thumb reach
+
+A controlled study of 20 right-handed participants found that thumb performance changed with phone size, movement direction and orientation; performance was generally better on smaller devices and for some outward/adduction-abduction movements. A separate 104-participant study found that icon size and position affected one-handed tapping time, with vertical distance and smaller targets influencing performance.
+
+**What this means for Wren:** bottom placement is useful as a default hypothesis for common phone tasks, not a universal rule. Put the highest-frequency actions within a comfortable lower reach area, use generous touch targets, and offer a top placement option. Do not assume every user holds the phone in the right hand or uses one hand. Evaluate left/right-handed use, large phones, accessibility input and landscape separately.
+
+### Tab overload and the fear of losing pages
+
+A 2026 CHI paper reviewing tab-management research reports that 50.7% of participants in one cited survey complained about tab overload; another cited study found browser clutter/tab overload serious for 24.8% of its participants. These are separate research samples, not worldwide prevalence rates. The paper also describes people keeping tabs as task reminders or because they are uncertain whether a page will matter later. Forcing people to name and organize every new page immediately can interrupt browsing; a field study of a lightweight task-centric approach found that users often made use of saving/grouping but rarely used added scheduling, prioritization and note-taking features.
+
+**What this means for Wren:**
+- Make tab search, recently closed, quick restore and close/reopen predictable.
+- Offer groups/collections and saved sessions, but do not force a group decision on every new tab.
+- Let people keep a page temporarily, then organize when its relevance becomes clear.
+- Make private tabs unmistakably separate and exclude them from normal history/restore surfaces.
+- Keep automatic tab cleanup opt-in or carefully explained; never silently discard user intent.
+
+### Trust, predictability and cognitive load
+
+Browser users switch repeatedly between the page and browser controls. Every state change should be visible: loading, secure/insecure connection, permission granted/blocked, download progress and ad-block status. Do not move controls unexpectedly as pages load. Prefer progressive disclosure: show common actions directly, less common actions in a menu, and advanced settings only when needed. Avoid turning the main toolbar into a dashboard of badges, counters and promotional controls.
+
+### Wren usability-test plan
+
+Test representative tasks rather than asking whether the interface simply "looks nice":
+1. Open a new tab, search for a topic and return to the previous page.
+2. Find a page among 10–20 tabs without closing useful tabs.
+3. Save a page and retrieve it later without remembering its exact title.
+4. Allow or block a website permission and understand how to change it later.
+5. Download a file, identify its state and recover from a failure.
+6. Switch between normal/private browsing without confusing the two.
+7. Use the same core journeys with one hand, both hands, TalkBack, keyboard/mouse and TV remote.
+8. Repeat after switching from full glass to tinted/matte mode; users should not notice any loss of functionality.
+
+Measure task completion, time, mis-taps, backtracking, abandonment, recall errors and perceived clarity. Recruit varied ages, hand sizes, left/right-handed users, accessibility users, low-end devices and tablet/TV users. Do not infer satisfaction solely from raw tap counts.
+
 ## 2. Browser comparison: what Wren should learn
 
 | Browser | Observed pattern / strength | Wren decision |
@@ -276,6 +313,11 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 - [ ] Product claims distinguish Android TV support from Tizen/webOS support.
 
 ## 10. Sources
+
+### Human factors and user behavior
+- One-handed thumb performance study (2012, 20 participants): https://pubmed.ncbi.nlm.nih.gov/22409102/
+- Icon size/position and one-handed tapping study (2022, 104 participants): https://pubmed.ncbi.nlm.nih.gov/36161546/
+- CHI 2026 research on tab overload and page management: https://doi.org/10.1145/3772318.3791979
 
 ### Browser UX
 - Chrome Android address bar placement: https://support.google.com/chrome/answer/14181646
