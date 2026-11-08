@@ -8,7 +8,7 @@ Design a complete, production-quality Android browser experience for **Wren Brow
 
 - Premium Wren browser UI inspired by familiar Chrome and Safari usage patterns, with refined glass surfaces used selectively—not excessive blur or low-contrast text.
 - Distinctive visual identity, polished spacing, typography, iconography, subtle motion, and clear hierarchy.
-- Mobile-first and adaptive across compact phones, large phones, foldables, and tablets; support portrait and landscape.
+- Adaptive across compact phones, large phones, foldables, tablets, split-screen/connected displays and a dedicated Android TV/Google TV remote-first experience; support portrait and landscape.
 - Light, dark, and system themes.
 - Complete Arabic RTL and English LTR layouts. Mirror directional navigation where appropriate, but do not mirror brand marks, media controls, or universal icons.
 - Accessible contrast, scalable text, screen-reader labels, large touch targets, keyboard/focus support, and reduced-motion alternatives.
@@ -30,7 +30,7 @@ Create a structured multi-page Figma file with:
 2. Component library: buttons, icon buttons, address/search field, tab cards, bottom navigation, top bars, sheets, dialogs, menus, switches, checkboxes, radio rows, permission prompts, snackbars, progress, empty/error/loading states.
 3. Complete screen designs and interactive prototype flows for every screen listed below.
 4. Light and dark variants, plus Arabic RTL counterparts for every major screen.
-5. Phone, tablet, and landscape adaptations.
+5. Phone, tablet, foldable, connected-display and landscape adaptations; a separate Android TV/Google TV remote-first flow with D-pad focus. Tizen/webOS are separate future clients, not Android APK layouts.
 6. A clickable prototype connecting every primary action and meaningful secondary action.
 7. A component/state inventory documenting default, pressed, focused, disabled, loading, success, empty, and error states where relevant.
 
@@ -121,6 +121,15 @@ Create a separate clearly labeled concept flow, not a fake enabled feature:
 - Account center, provider selection (Google/Microsoft), consent by data category, sync status, connected devices, revoke device, conflict resolution, export/delete account data.
 - Show disabled/planned states until backend, provider verification, secure token storage, encryption, and sync are actually shipped.
 - No password-vault cloud sync by default; require separate security design and explicit opt-in.
+
+
+
+### Adaptive material and device capability contract
+- Create variants for Glass Blur, Tinted Glass (no live blur), Matte, High Contrast and Performance Minimal. Keep geometry, spacing and content hierarchy consistent between variants.
+- Show a capability matrix and fallback behavior; never design a warning pop-up when blur is unavailable.
+- Device/window classification must be based on current window width/height, posture and input modalities—not device model names.
+- TV layouts must expose visible focus for every action and complete primary tasks using only a D-pad/remote and optional keyboard.
+- Provide system/user overrides for reduced motion, contrast and transparency.
 
 ## Interaction contract
 
