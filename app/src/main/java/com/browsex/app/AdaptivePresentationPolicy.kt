@@ -104,7 +104,7 @@ internal object AdaptivePresentationPolicy {
             snapshot.thermalStatus >= THERMAL_MODERATE || snapshot.severeMemoryPressure
 
         val material = when {
-            snapshot.systemHighContrast -> WrenMaterialMode.HIGH_CONTRAST
+            snapshot.highContrastEnabled -> WrenMaterialMode.HIGH_CONTRAST
             snapshot.reduceTransparency -> WrenMaterialMode.MATTE
             severePressure -> WrenMaterialMode.PERFORMANCE_MINIMAL
             constrained -> WrenMaterialMode.GLASS_TINTED
@@ -173,7 +173,7 @@ internal object AdaptivePresentationPolicy {
             snapshot.ramTier == DeviceRamTier.HIGH &&
             !snapshot.batterySaverEnabled &&
             snapshot.thermalStatus < THERMAL_MODERATE &&
-            !snapshot.systemHighContrast &&
+            !snapshot.highContrastEnabled &&
             !snapshot.reduceTransparency &&
             !snapshot.reduceMotion &&
             !snapshot.measuredJankPressure
