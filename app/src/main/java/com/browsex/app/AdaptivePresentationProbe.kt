@@ -33,7 +33,9 @@ internal class AdaptivePresentationProbe(context: Context) {
         addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO,
         reduceTransparency: Boolean = false,
         reduceMotionPreference: Boolean = false,
-        highContrastPreference: Boolean = false
+        highContrastPreference: Boolean = false,
+        appMemoryTrimPressure: Boolean = false,
+        foldPosture: WrenFoldPosture = WrenFoldPosture.NONE
     ): PresentationCapabilitySnapshot {
         val packageManager = appContext.packageManager
         val accessibility = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE)
@@ -71,7 +73,8 @@ internal class AdaptivePresentationProbe(context: Context) {
             reduceMotion = reduceMotionPreference ||
                 !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
             measuredJankPressure = measuredJankPressure,
-            severeMemoryPressure = memoryInfo.lowMemory,
+            severeMemoryPressure = memoryInfo.lowMemory || appMemoryTrimPressure,
+            foldPosture = foldPosture,
             imeVisible = imeVisible,
             addressBarPreference = addressBarPreference
         )

@@ -50,7 +50,8 @@ internal data class PresentationCapabilitySnapshot(
     val measuredJankPressure: Boolean = false,
     val severeMemoryPressure: Boolean = false,
     val imeVisible: Boolean = false,
-    val addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
+    val addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO,
+    val foldPosture: WrenFoldPosture = WrenFoldPosture.NONE
 ) {
     init {
         require(sdkInt >= 1)
@@ -96,6 +97,7 @@ internal object AdaptivePresentationPolicy {
         if (snapshot.measuredJankPressure) reasons += "measured-jank"
         if (snapshot.severeMemoryPressure) reasons += "system-low-memory"
         if (snapshot.imeVisible) reasons += "ime-visible"
+        if (snapshot.foldPosture != WrenFoldPosture.NONE) reasons += "fold-${snapshot.foldPosture.name.lowercase()}"
 
         val severePressure = snapshot.thermalStatus >= THERMAL_SEVERE ||
             snapshot.measuredJankPressure || snapshot.severeMemoryPressure
@@ -148,6 +150,15 @@ internal object AdaptivePresentationPolicy {
         layout: WrenWindowLayout
     ): WrenAddressPlacement {
         if (layout == WrenWindowLayout.TV) return WrenAddressPlacement.TV_REMOTE
+        if (snapshot.addressBarPreference == AddressBarPreference.AUTO) {
+            when (snapshot.foldPosture) {
+                WrenFoldPosture.TABLETOP, WrenFoldPosture.SEPARATING_HORIZONTAL ->
+                    return WrenAddressPlacement.BOTTOM
+                WrenFoldPosture.BOOK, WrenFoldPosture.SEPARATING_VERTICAL ->
+                    if (snapshot.windowWidthDp >= 600) return WrenAddressPlacement.SIDE
+                WrenFoldPosture.NONE -> Unit
+            }
+        }
         return when (snapshot.addressBarPreference) {
             AddressBarPreference.TOP -> WrenAddressPlacement.TOP
             AddressBarPreference.BOTTOM -> if (

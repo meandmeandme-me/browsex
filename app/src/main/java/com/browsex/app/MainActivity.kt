@@ -3,6 +3,7 @@ package com.browsex.app
 import android.Manifest
 import android.os.PowerManager
 import android.app.DownloadManager
+import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.webkit.CookieManager
@@ -41,8 +42,13 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
 import androidx.metrics.performance.JankStats
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.CancellationException
 import java.util.ArrayDeque
 import java.util.WeakHashMap
 import com.browsex.app.storage.BrowserStorageRuntime
@@ -294,6 +300,9 @@ class MainActivity : AppCompatActivity() {
     private var lastPresentationHeightPx = 0
     private var initialTvFocusRequested = false
     private var imeVisible = false
+    private var foldPosture = WrenFoldPosture.NONE
+    private var windowLayoutJob: Job? = null
+    @Volatile private var appMemoryTrimPressure = false
     private var activePageScrollY = 0
     private var lastFocusedNavigationControl: View? = null
     private val pageScrollOffsets = WeakHashMap<GeckoSession, Int>()
@@ -651,6 +660,11 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         ensureJankStats()
         jankStats?.isTrackingEnabled = true
+        // Re-check the global memory state after returning to foreground; a prior
+        // app-specific trim hint should not force minimal chrome forever.
+        val memoryInfo = ActivityManager.MemoryInfo()
+        (getSystemService(ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memoryInfo)
+        if (!memoryInfo.lowMemory) appMemoryTrimPressure = false
         refreshCurrentAdaptivePresentation(force = true)
     }
 
@@ -705,8 +719,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun observeWindowFolding() {
+        if (windowLayoutJob?.isActive == true) return
+        windowLayoutJob = lifecycleScope.launch {
+            try {
+                WindowInfoTracker.getOrCreate(this@MainActivity)
+                    .windowLayoutInfo(this@MainActivity)
+                    .collect { layoutInfo ->
+                        val feature = layoutInfo.displayFeatures
+                            .filterIsInstance<FoldingFeature>()
+                            .firstOrNull { it.isSeparating || it.state == FoldingFeature.State.HALF_OPENED }
+                        val nextPosture = feature?.let {
+                            WrenFoldPosturePolicy.resolve(
+                                isHalfOpened = it.state == FoldingFeature.State.HALF_OPENED,
+                                orientation = if (it.orientation == FoldingFeature.Orientation.VERTICAL) {
+                                    WrenFoldOrientation.VERTICAL
+                                } else {
+                                    WrenFoldOrientation.HORIZONTAL
+                                },
+                                isSeparating = it.isSeparating
+                            )
+                        } ?: WrenFoldPosture.NONE
+                        if (nextPosture != foldPosture) {
+                            foldPosture = nextPosture
+                            refreshCurrentAdaptivePresentation(force = true)
+                        }
+                    }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                android.util.Log.w("Wren", "Fold posture observation is unavailable", error)
+            }
+        }
+    }
+
     override fun onStart() {
         super.onStart()
+        observeWindowFolding()
         if (!powerSaveReceiverRegistered) {
             runCatching {
                 ContextCompat.registerReceiver(
@@ -733,6 +782,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        windowLayoutJob?.cancel()
+        windowLayoutJob = null
         // Extension action popups own a separate GeckoSession; release it as soon as the host stops.
         uBlockOriginManager?.closePopup()
         if (::credentialVault.isInitialized) credentialVault.lock()
@@ -757,6 +808,9 @@ class MainActivity : AppCompatActivity() {
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW &&
             level <= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
         ) {
+            // Android 10–13 can signal pressure before MemoryInfo.lowMemory flips.
+            // Android 14+ no longer sends these deprecated running-level callbacks.
+            appMemoryTrimPressure = true
             refreshCurrentAdaptivePresentation(force = true)
         }
     }
@@ -764,6 +818,7 @@ class MainActivity : AppCompatActivity() {
     override fun onLowMemory() {
         super.onLowMemory()
         hostLifecycleCoordinator.onLowMemory()
+        appMemoryTrimPressure = true
         refreshCurrentAdaptivePresentation(force = true)
     }
 
@@ -905,7 +960,7 @@ class MainActivity : AppCompatActivity() {
 
         return "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
             "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}" +
-            "&bxtv=$isTelevisionDevice&bxopaque=$opaque&bxcontrast=$highContrast" +
+            "&bxtv=$isTelevisionDevice&bxfold=${foldPosture.name.lowercase()}&bxopaque=$opaque&bxcontrast=$highContrast" +
             "&bxmotion=$reduceMotion&bxminimal=$performanceMinimal"
     }
 
@@ -964,7 +1019,9 @@ class MainActivity : AppCompatActivity() {
                 },
                 reduceTransparency = browserSettingsSnapshot.reduceTransparency,
                 reduceMotionPreference = browserSettingsSnapshot.reduceMotion,
-                highContrastPreference = browserSettingsSnapshot.highContrast
+                highContrastPreference = browserSettingsSnapshot.highContrast,
+                appMemoryTrimPressure = appMemoryTrimPressure,
+                foldPosture = foldPosture
             )
         )
         adaptivePresentationConfig = next
@@ -1085,7 +1142,16 @@ class MainActivity : AppCompatActivity() {
         val params = bottomBar.layoutParams as? FrameLayout.LayoutParams ?: return
         when {
             sideRail -> {
-                params.width = dp(if (config.showNavigationActions) 324 else 280)
+                val foldSideRail = foldPosture == WrenFoldPosture.BOOK ||
+                    foldPosture == WrenFoldPosture.SEPARATING_VERTICAL
+                params.width = dp(
+                    when {
+                        foldSideRail && config.showNavigationActions -> 280
+                        foldSideRail -> 236
+                        config.showNavigationActions -> 324
+                        else -> 280
+                    }
+                )
                 params.height = -2
                 params.gravity = (if (rtl) Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
                 params.topMargin = dp(12)

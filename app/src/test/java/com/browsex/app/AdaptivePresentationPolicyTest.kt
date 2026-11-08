@@ -252,6 +252,29 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun tabletopFoldPlacesBrowserControlsInLowerDisplayArea() {
+        val result = AdaptivePresentationPolicy.resolve(snapshot(foldPosture = WrenFoldPosture.TABLETOP))
+        assertEquals(WrenAddressPlacement.BOTTOM, result.addressPlacement)
+        assertTrue(result.reasonCodes.contains("fold-tabletop"))
+    }
+
+    @Test
+    fun bookPostureUsesSideRailWhenWindowIsWideEnough() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(windowWidthDp = 900, foldPosture = WrenFoldPosture.BOOK)
+        )
+        assertEquals(WrenAddressPlacement.SIDE, result.addressPlacement)
+    }
+
+    @Test
+    fun explicitAddressPreferenceWinsOverFoldAutoPlacement() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(foldPosture = WrenFoldPosture.TABLETOP, addressBarPreference = AddressBarPreference.TOP)
+        )
+        assertEquals(WrenAddressPlacement.TOP, result.addressPlacement)
+    }
+
+    @Test
     fun userCanChooseTopBarOnPhone() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(addressBarPreference = AddressBarPreference.TOP)
@@ -279,7 +302,8 @@ class AdaptivePresentationPolicyTest {
         measuredJankPressure: Boolean = false,
         severeMemoryPressure: Boolean = false,
         imeVisible: Boolean = false,
-        addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
+        addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO,
+        foldPosture: WrenFoldPosture = WrenFoldPosture.NONE
     ) = PresentationCapabilitySnapshot(
         sdkInt = sdkInt,
         windowWidthDp = windowWidthDp,
@@ -299,6 +323,7 @@ class AdaptivePresentationPolicyTest {
         measuredJankPressure = measuredJankPressure,
         severeMemoryPressure = severeMemoryPressure,
         imeVisible = imeVisible,
-        addressBarPreference = addressBarPreference
+        addressBarPreference = addressBarPreference,
+        foldPosture = foldPosture
     )
 }

@@ -416,3 +416,14 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 ### Other TV platforms
 - Samsung Tizen web applications: https://developer.samsung.com/smarttv/develop
 - LG webOS TV developer portal: https://webostv.developer.lge.com/
+
+
+## 8B. Foldable, launcher, and memory-pressure audit (2026-11-08)
+
+Implemented in the adaptive runtime:
+- Stable Jetpack WindowManager 1.5.1 is observed through an Activity-scoped Flow while the Activity is STARTED. The posture classifier distinguishes tabletop, book, and flat separating vertical/horizontal features.
+- In AUTO mode the browser dock moves to the lower area for tabletop posture and to a side rail for book/vertical-separating posture when the window is wide enough. Explicit user TOP/BOTTOM preference remains respected.
+- App-specific running-low/critical trim callbacks now feed the presentation policy even if ActivityManager.MemoryInfo.lowMemory has not flipped yet. The temporary signal is rechecked and cleared on foreground return after global memory recovery.
+- The launcher icon uses adaptive foreground/background artwork plus a monochrome themed-icon layer. TV banners include localized English and Arabic xhdpi resources and TV-optional hardware declarations.
+
+Remaining foldable limitations: the first pass classifies posture but does not yet partition independent panes using exact hinge bounds on every device. Drag/drop, stylus parity, posture transitions, and hinge occlusion still need emulator and physical-device tests before foldable certification.

@@ -125,6 +125,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.metrics:metrics-performance:1.0.0")
+    implementation("androidx.window:window:1.5.1")
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.8.5")
     implementation("androidx.datastore:datastore-preferences:1.1.7")

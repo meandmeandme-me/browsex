@@ -118,3 +118,11 @@ chrome. Existing domain stores, engine delegates, permission bridges, downloads,
 vault, and tab/session lifecycle remain in place. Old presentation helpers are temporarily
 retained as unreachable migration material and must be deleted after their remaining
 feature responsibilities have been moved behind presentation-independent interfaces.
+
+
+## Fold posture and pressure observations
+
+- Stable Jetpack WindowManager 1.5.1 supplies FoldingFeature updates for the current Activity. Its Flow is collected while STARTED and cancelled on STOP.
+- A pure posture policy maps tabletop/book/separating states into AUTO browser-chrome placement. Explicit user address-bar preference overrides AUTO posture behavior.
+- App trim callbacks are combined with ActivityManager low-memory state; the temporary app-specific flag is cleared after a foreground re-check reports memory recovery. Android 14+ global memory probing remains the fallback because older running-level trim callbacks are deprecated and no longer delivered.
+- Remaining work: use exact hinge bounds to partition panes, verify posture changes and hinge occlusion on real foldables, and add drag/drop or stylus parity only where browser workflows benefit.
