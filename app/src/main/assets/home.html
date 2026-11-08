@@ -68,6 +68,45 @@ body.tv-mode .dialog-actions button{min-height:60px;font-size:18px}
  body.tv-mode .shortcut-icon,body.tv-mode .add-shortcut{width:78px;height:78px}
 }
 @media(prefers-reduced-motion:reduce){body.tv-mode :is(a,button){transition:none!important;transform:none!important}}
+/* User-controlled accessibility overrides: the page chrome follows the browser's material mode. */
+body.matte-mode .date-chip,
+body.matte-mode .icon-btn,
+body.matte-mode .shortcut,
+body.matte-mode .shortcut-icon,
+body.matte-mode .add-shortcut,
+body.matte-mode .reading-card,
+body.matte-mode .shortcuts.list .shortcut,
+body.matte-mode dialog,
+body.matte-mode input{
+ background:var(--card);
+ border-color:var(--line);
+ box-shadow:none;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+body.dark.matte-mode .date-chip,
+body.dark.matte-mode .icon-btn,
+body.dark.matte-mode .shortcut,
+body.dark.matte-mode .shortcut-icon,
+body.dark.matte-mode .add-shortcut,
+body.dark.matte-mode .reading-card,
+body.dark.matte-mode .shortcuts.list .shortcut,
+body.dark.matte-mode dialog,
+body.dark.matte-mode input{background:#1c2e42;border-color:#71869d}
+body.high-contrast-mode{--muted:#43566c;--line:#657b91;--blue:#075fc5}
+body.dark.high-contrast-mode{--muted:#d3e0ef;--line:#9aafc4;--blue:#a9d2ff}
+body.high-contrast-mode :is(.icon-btn,.shortcut-icon,.add-shortcut,.reading-card,input,dialog){
+ border:2px solid var(--line);
+}
+body.high-contrast-mode :is(.brand-name,h1,h2,.shortcut-name,.article-title){font-weight:800}
+body.reduce-motion-mode *,
+body.reduce-motion-mode *::before,
+body.reduce-motion-mode *::after{
+ scroll-behavior:auto!important;
+ transition:none!important;
+ animation:none!important;
+ transform:none!important;
+}
 </style>
 </head>
 <body>
@@ -110,6 +149,9 @@ body.tv-mode .dialog-actions button{min-height:60px;font-size:18px}
  const params=new URLSearchParams(location.search);
  const tvMode=params.get('bxtv')==='true';
  if(tvMode)document.body.classList.add('tv-mode');
+ if(params.get('bxopaque')==='true')document.body.classList.add('matte-mode');
+ if(params.get('bxcontrast')==='true')document.body.classList.add('high-contrast-mode');
+ if(params.get('bxmotion')==='true')document.body.classList.add('reduce-motion-mode');
  const selectedLanguage=params.get('bxlang')||'system';
  const language=selectedLanguage==='system'?(navigator.language||'en'):selectedLanguage;
  const languageCode=language.toLowerCase().split('-')[0];
