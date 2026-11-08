@@ -837,10 +837,10 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             setPadding(dp(1), dp(5), dp(1), 0)
         }
-        bottomButton("‹", "Go back") {
+        bottomButton(if (BrowseXColors.isRtl(browserSettingsSnapshot)) "›" else "‹", "Go back") {
             activeTab?.takeIf { it.canGoBack }?.session?.goBack()
         }
-        bottomButton("›", "Go forward") {
+        bottomButton(if (BrowseXColors.isRtl(browserSettingsSnapshot)) "‹" else "›", "Go forward") {
             activeTab?.takeIf { it.canGoForward }?.session?.goForward()
         }
         bottomButton("⌂", "Home") {
@@ -863,7 +863,7 @@ class MainActivity : AppCompatActivity() {
             marginEnd = dp(1)
         })
         bottomButton("⋯", "Browser menu") { showBrowserMenu() }
-        uBlockButton = actionButton("盾", "uBlock Origin controls") {
+        uBlockButton = actionButton("⛨", "uBlock Origin controls") {
             uBlockOriginManager?.clickBrowserAction(activeTab?.session)
         }.apply {
             textSize = 18f
