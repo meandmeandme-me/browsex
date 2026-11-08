@@ -106,7 +106,7 @@ class AdaptivePresentationPolicyTest {
         )
 
         assertEquals(WrenMaterialMode.HIGH_CONTRAST, highContrast.materialMode)
-        assertEquals(WrenMaterialMode.HIGH_CONTRAST, reducedTransparency.materialMode)
+        assertEquals(WrenMaterialMode.MATTE, reducedTransparency.materialMode)
     }
 
     @Test
