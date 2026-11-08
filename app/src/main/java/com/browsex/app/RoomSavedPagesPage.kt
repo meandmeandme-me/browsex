@@ -85,7 +85,7 @@ internal class RoomSavedPagesPage(
                 isHorizontalScrollBarEnabled = false
                 clipToPadding = false
                 visibility = if (isHistory) android.view.View.GONE else android.view.View.VISIBLE
-                addView(folderBar, android.widget.HorizontalScrollView.LayoutParams(-2, -2))
+                addView(folderBar, android.widget.FrameLayout.LayoutParams(-2, -2))
             }
             root.addView(folderScroll)
             val scroll = ScrollView(activity).apply { clipToPadding = false }
