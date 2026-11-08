@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BrowseX</string>
+    <string name="app_name">Wren</string>
     <string name="website_notification_channel">إشعارات المواقع</string>
-    <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل BrowseX</string>
+    <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل Wren</string>
     <string name="ui_home">الرئيسية</string>
     <string name="ui_open_tabs">فتح علامات التبويب</string>
     <string name="ui_search_or_enter_url">ابحث أو أدخل عنوان الموقع</string>
@@ -40,7 +40,7 @@
     <string name="ui_site_information">معلومات الموقع</string>
     <string name="ui_search_engine">محرك البحث</string>
     <string name="ui_clear_browsing_history">مسح سجل التصفح؟</string>
-    <string name="ui_browsex">BrowseX</string>
+    <string name="ui_browsex">Wren</string>
     <string name="ui_open_webpage_first">افتح صفحة ويب أولًا</string>
     <string name="ui_open_a_webpage_first">افتح صفحة ويب أولًا</string>
     <string name="ui_preparing_a_clean_reading_view">جارٍ تجهيز وضع القراءة…</string>
@@ -90,7 +90,7 @@
     <string name="ui_shortcut_layout">تخطيط الاختصارات</string>
     <string name="ui_reset">إعادة ضبط</string>
     <string name="ui_site_permissions_reset">تمت إعادة ضبط أذونات الموقع</string>
-    <string name="ui_make_browse_x_work_the_way_you_like">خصّص تجربة التصفح كما تحب</string>
+    <string name="ui_make_browse_x_work_the_way_you_like">خصّص تجربة Wren كما تحب</string>
     <string name="ui_close_settings">إغلاق الإعدادات</string>
     <string name="ui_general">عام</string>
     <string name="ui_choose_how_you_browse">اختر طريقة التصفح</string>
