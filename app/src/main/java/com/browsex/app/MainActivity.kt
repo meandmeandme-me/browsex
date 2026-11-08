@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.Manifest
+import android.os.PowerManager
 import android.app.DownloadManager
 import android.content.pm.PackageManager
 import android.os.Build
@@ -37,7 +38,9 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.metrics.performance.JankStats
 import kotlinx.coroutines.launch
+import java.util.ArrayDeque
 import com.browsex.app.storage.BrowserStorageRuntime
 import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
@@ -249,6 +252,10 @@ class MainActivity : AppCompatActivity() {
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
+    private var jankStats: JankStats? = null
+    private val recentJankFrames = ArrayDeque<Boolean>(60)
+    private var recentJankFrameCount = 0
+    @Volatile private var measuredJankPressure = false
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
@@ -585,6 +592,71 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        ensureJankStats()
+        jankStats?.isTrackingEnabled = true
+        if (::browserRoot.isInitialized) {
+            refreshAdaptivePresentation(
+                browserRoot.width,
+                browserRoot.height,
+                browserRoot.isHardwareAccelerated,
+                force = true
+            )
+        }
+    }
+
+    override fun onPause() {
+        jankStats?.isTrackingEnabled = false
+        super.onPause()
+    }
+
+    private fun ensureJankStats() {
+        if (jankStats != null) return
+        runCatching {
+            jankStats = JankStats.createAndTrack(
+                window,
+                JankStats.OnFrameListener { frameData -> onFramePerformanceSample(frameData.isJank) }
+            )
+        }.onFailure { error ->
+            android.util.Log.w("Wren", "Frame performance monitoring is unavailable", error)
+        }
+    }
+
+    /** Keep only a rolling local window; never persist or transmit frame or page data. */
+    private fun onFramePerformanceSample(isJank: Boolean) {
+        var pressureChanged: Boolean? = null
+        synchronized(recentJankFrames) {
+            if (recentJankFrames.size == 60) {
+                if (recentJankFrames.removeFirst()) recentJankFrameCount--
+            }
+            recentJankFrames.addLast(isJank)
+            if (isJank) recentJankFrameCount++
+
+            if (recentJankFrames.size == 60) {
+                val jankRatio = recentJankFrameCount.toFloat() / recentJankFrames.size
+                pressureChanged = when {
+                    !measuredJankPressure && jankRatio >= 0.20f -> true
+                    measuredJankPressure && jankRatio <= 0.10f -> false
+                    else -> null
+                }
+            }
+        }
+        val nextPressure = pressureChanged ?: return
+        if (nextPressure == measuredJankPressure) return
+        measuredJankPressure = nextPressure
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed && ::browserRoot.isInitialized) {
+                refreshAdaptivePresentation(
+                    browserRoot.width,
+                    browserRoot.height,
+                    browserRoot.isHardwareAccelerated,
+                    force = true
+                )
+            }
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         hostLifecycleCoordinator.onStart()
@@ -736,9 +808,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    private fun refreshAdaptivePresentation(widthPx: Int, heightPx: Int, hardwareAccelerated: Boolean) {
+    private fun refreshAdaptivePresentation(
+        widthPx: Int,
+        heightPx: Int,
+        hardwareAccelerated: Boolean,
+        force: Boolean = false
+    ) {
         if (widthPx <= 0 || heightPx <= 0 || isFinishing || isDestroyed) return
-        if (widthPx == lastPresentationWidthPx && heightPx == lastPresentationHeightPx) return
+        if (!force && widthPx == lastPresentationWidthPx && heightPx == lastPresentationHeightPx) return
         lastPresentationWidthPx = widthPx
         lastPresentationHeightPx = heightPx
 
@@ -751,7 +828,8 @@ class MainActivity : AppCompatActivity() {
                 density = resources.displayMetrics.density,
                 isHardwareAccelerated = hardwareAccelerated,
                 deviceProfile = deviceCapabilityProfile,
-                pressure = pressure
+                pressure = pressure,
+                measuredJankPressure = measuredJankPressure
             )
         )
         adaptivePresentationConfig = next
