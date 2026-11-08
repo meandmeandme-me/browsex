@@ -136,6 +136,23 @@ Prefer normal opaque/solid surfaces for:
 
 Never stack glass surfaces on glass surfaces. Avoid a clear transparent surface over busy imagery unless a readability/dimming strategy is present.
 
+### Why Wren does not force a live blur library onto GeckoView
+
+A candidate such as **Dimezis/BlurView** is worth studying: it uses a `BlurTarget` snapshot and has API-specific rendering paths (RenderEffect on newer Android, OpenGL on Android 10/11, and RenderScript on older versions). Its published project license is Apache-2.0. However, this does **not** mean it can blur every browser surface transparently.
+
+GeckoView's default `BACKEND_SURFACE_VIEW` is designed for better rendering performance. Mozilla documents that SurfaceView is outside normal View compositing; Android can composite normal sibling overlays above it, but a third-party View snapshot/blur should not be assumed to include the browser page. GeckoView offers `BACKEND_TEXTURE_VIEW`, but Mozilla explicitly describes it as slower and more memory-intensive. Android's TextureView documentation also lists capability trade-offs compared with SurfaceView, including HDR/DRM differences.
+
+Android window blur APIs are a different mechanism: they blur a window background or the content behind a separate window. They are not a general-purpose way to blur an arbitrary rectangle of content inside Wren's full-screen Activity, and system availability can change at runtime.
+
+**Decision for Wren:** keep the current GeckoView SurfaceView path and use translucent/tinted glass with contrast-safe surfaces. Do not add BlurView or switch the engine to TextureView just to claim a frosted-glass appearance. Reconsider only after a separate prototype proves all of the following on real devices:
+- The blur target actually contains the Gecko page on the intended rendering backend.
+- Video, protected media/DRM, fullscreen playback, keyboard and popup windows remain correct.
+- Memory use and frame times remain within budget on high-end hardware.
+- Android 10/11 fallback and low-memory mode remain smooth and readable.
+- The feature can be disabled instantly when system/runtime availability or JankStats indicates pressure.
+
+This keeps "Glass UI" a visual design language that works on all supported hardware; live blur remains a high-end optional enhancement rather than a core requirement.
+
 ## 5. Runtime capability detection: Adaptive Presentation Engine
 
 The existing `DeviceCapabilityProbe` and `AdaptiveRuntimePolicy` already capture some stable memory/ABI/screen facts and battery/thermal pressure. Keep them as the resource-policy foundation, but do not mix their RAM tiers with UI layout decisions. Extend the architecture with a separate, testable `AdaptivePresentationPolicy`.
@@ -351,6 +368,14 @@ The latest CI run is used to validate compilation/tests/lint/build. A passing CI
 - Samsung Internet Android overview: https://developer.samsung.com/browser/android/overview.html
 - Samsung toolbar customization: https://www.samsung.com/us/apps/samsung-browser/
 - Samsung bottom address-bar availability notes: https://hptotosamsung.com/africa_en/apps/samsung-browser/
+
+### Browser rendering and blur implementation constraints
+- Dimezis BlurView (API-specific blur backends, BlurTarget setup and Apache-2.0 license): https://github.com/Dimezis/BlurView
+- GeckoView rendering backends (SurfaceView default vs TextureView trade-off): https://mozilla.github.io/geckoview/javadoc/mozilla-central/org/mozilla/geckoview/GeckoView.html
+- GeckoView architecture and SurfaceView compositing notes: https://firefox-source-docs.mozilla.org/mobile/android/geckoview/contributor/geckoview-architecture.html
+- Android SurfaceView sibling compositing and alpha-blend cost: https://developer.android.com/reference/android/view/SurfaceView
+- Android TextureView vs SurfaceView trade-offs: https://developer.android.com/reference/android/view/TextureView
+- Android window blur is a cross-window feature and can be disabled dynamically: https://source.android.com/docs/core/display/window-blurs
 
 ### Glass and components
 - Uiverse glass components: https://uiverse.io/ui/glassmorphism-ui
