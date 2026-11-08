@@ -790,7 +790,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(3), dp(2), dp(3), dp(2))
             background = glassSurface(22, colors.field, colors.line)
         }
-        siteInfoButton = actionButton("⌕", "Site information") {
+        siteInfoButton = actionButton("ⓘ", "Site information") {
             showSiteInformation()
         }.apply {
             textSize = 21f
@@ -1067,7 +1067,7 @@ class MainActivity : AppCompatActivity() {
                 "Site information", "Search engine", "Clear browsing history", "Settings",
                 "New private tab", "Close private tabs", "Find anything", "Passwords"
             ).map(::tr).toTypedArray()
-            AlertDialog.Builder(this@MainActivity).setTitle("BrowseX").setItems(actions) { _, index ->
+            AlertDialog.Builder(this@MainActivity).setTitle("Wren").setItems(actions) { _, index ->
                 when (index) {
                     0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let { pageUrl ->
                         toggleBookmarkInRoom(pageUrl, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
