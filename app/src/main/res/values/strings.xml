@@ -325,4 +325,5 @@
     <string name="ui_this_bookmark_is_already_at_the_edge_of_its_folder">This bookmark is already at the edge of its folder.</string>
     <string name="ui_settings_are_temporarily_unavailable">Settings are temporarily unavailable</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">Private browsing does not read or save site permission choices.</string>
+    <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">No Wren downloads yet. Files you download from websites will appear here.</string>
 </resources>
