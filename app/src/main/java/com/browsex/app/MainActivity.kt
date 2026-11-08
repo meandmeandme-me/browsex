@@ -22,6 +22,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
@@ -247,6 +248,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
+    private lateinit var navigationBar: LinearLayout
+    private lateinit var addressRow: LinearLayout
+    private lateinit var pageIdentity: TextView
+    private lateinit var siteInfoButton: TextView
+    private lateinit var reloadButton: TextView
     private lateinit var tabsButton: TextView
     private lateinit var uBlockButton: TextView
     private var fullscreen = false
@@ -733,103 +739,153 @@ class MainActivity : AppCompatActivity() {
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(bars.left, bars.top, bars.right, 0)
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
 
+        // Quiet page identity at the top; all everyday browser controls stay within thumb reach.
         topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(7), dp(7), dp(7), dp(7))
-            background = rounded(colors.panel, 22)
-            elevation = dp(4).toFloat()
+            setPadding(dp(5), dp(2), dp(5), dp(2))
         }
-        val home = actionButton("⌂", "Home") { activeTab?.session?.loadUri(homePageUrl()) }.apply {
-            background = rounded(colors.card, 10)
-            textSize = 22f
+        val brandMark = ImageView(this).apply {
+            setImageResource(R.drawable.ic_browsex)
+            contentDescription = tr("Wren browser")
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         }
-        topBar.addView(home, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
-            marginEnd = dp(4)
+        topBar.addView(brandMark, LinearLayout.LayoutParams(dp(34), dp(34)).apply {
+            marginEnd = dp(8)
         })
+        pageIdentity = TextView(this).apply {
+            text = "Wren"
+            textSize = 17f
+            setTextColor(colors.ink)
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        topBar.addView(pageIdentity, LinearLayout.LayoutParams(0, -1, 1f))
+
+        progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progressTintList = android.content.res.ColorStateList.valueOf(colors.accent)
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(colors.line)
+            visibility = View.GONE
+        }
+        browserView = GeckoView(this).apply { setBackgroundColor(colors.canvas) }
+
+        // A compact two-row glass dock: address/search first, navigation second.
+        bottomBar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(8), dp(8), dp(7))
+            background = glassSurface(28, colors.panel, colors.line)
+            elevation = dp(8).toFloat()
+        }
+        addressRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(3), dp(2), dp(3), dp(2))
+            background = glassSurface(22, colors.field, colors.line)
+        }
+        siteInfoButton = actionButton("⌕", "Site information") {
+            showSiteInformation()
+        }.apply {
+            textSize = 21f
+            background = rounded(android.graphics.Color.TRANSPARENT, 16)
+        }
+        addressRow.addView(siteInfoButton, LinearLayout.LayoutParams(dp(42), dp(44)))
 
         address = EditText(this).apply {
-            // Keep URLs/domains LTR while allowing Arabic and other RTL search queries.
+            // URLs stay readable LTR; ordinary queries can follow Arabic or another RTL locale.
             textDirection = View.TEXT_DIRECTION_FIRST_STRONG
             hint = tr("Search or enter URL")
             setHintTextColor(colors.muted)
             setTextColor(colors.ink)
-            textSize = 14f
+            textSize = 15f
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             setSelectAllOnFocus(true)
-            setPadding(dp(14), 0, dp(12), 0)
-            background = rounded(colors.field, 22)
-            elevation = dp(2).toFloat()
+            setPadding(dp(8), 0, dp(8), 0)
+            background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            elevation = 0f
+            contentDescription = tr("Search or enter URL")
             setOnEditorActionListener { _, action, _ ->
-                if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
+                if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE ||
+                    action == EditorInfo.IME_ACTION_SEARCH) {
                     navigate(address.text.toString())
                     true
                 } else false
             }
             setOnFocusChangeListener { _, focused -> if (!focused) updateAddress() }
         }
-        topBar.addView(address, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
-            marginEnd = dp(4)
-        })
+        addressRow.addView(address, LinearLayout.LayoutParams(0, dp(44), 1f))
 
-        tabsButton = actionButton("▢", "Open tabs") { showTabs() }.apply {
-            background = rounded(colors.card, 10)
-            textSize = 20f
-        }
-        topBar.addView(tabsButton, LinearLayout.LayoutParams(dp(44), dp(48)).apply {
-            marginEnd = dp(4)
-        })
-        uBlockButton = actionButton("uB", "uBlock Origin controls") {
-            uBlockOriginManager?.clickBrowserAction(activeTab?.session)
+        reloadButton = actionButton("↻", "Reload page") {
+            activeTab?.session?.reload()
         }.apply {
-            textSize = 14f
-            visibility = View.GONE
-            background = rounded(colors.card, 10)
-        }
-        topBar.addView(uBlockButton, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
-            marginEnd = dp(4)
-        })
-        val menu = actionButton("⋮", "Browser menu") { showBrowserMenu() }.apply {
-            background = rounded(colors.card, 10)
             textSize = 22f
+            background = rounded(android.graphics.Color.TRANSPARENT, 16)
         }
-        topBar.addView(menu, LinearLayout.LayoutParams(dp(44), dp(48)))
+        addressRow.addView(reloadButton, LinearLayout.LayoutParams(dp(42), dp(44)))
 
-        progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(colors.accent)
-            visibility = View.GONE
-        }
-        browserView = GeckoView(this).apply { setBackgroundColor(colors.card) }
-        bottomBar = LinearLayout(this).apply {
+        navigationBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(14), dp(5), dp(14), dp(8))
-            background = rounded(colors.card, 22)
-            elevation = dp(5).toFloat()
+            setPadding(dp(1), dp(5), dp(1), 0)
         }
-        bottomButton("‹", "Go back") { activeTab?.takeIf { it.canGoBack }?.session?.goBack() }
-        bottomButton("›", "Go forward") { activeTab?.takeIf { it.canGoForward }?.session?.goForward() }
-        bottomButton("＋", "New tab") { createTab(homePageUrl()) }
+        bottomButton("‹", "Go back") {
+            activeTab?.takeIf { it.canGoBack }?.session?.goBack()
+        }
+        bottomButton("›", "Go forward") {
+            activeTab?.takeIf { it.canGoForward }?.session?.goForward()
+        }
+        bottomButton("⌂", "Home") {
+            activeTab?.session?.loadUri(homePageUrl())
+        }
         bottomButton("☆", "Bookmark page") {
             activeTab?.url?.takeIf { it.startsWith("http") }?.let { url ->
-                toggleBookmarkInRoom(url, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
+                toggleBookmarkInRoom(
+                    url,
+                    activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty()
+                )
             }
         }
+        tabsButton = actionButton("1", "Open tabs") { showTabs() }.apply {
+            textSize = 14f
+            background = rounded(0x18FFFFFF, 14)
+        }
+        navigationBar.addView(tabsButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+            marginStart = dp(1)
+            marginEnd = dp(1)
+        })
+        bottomButton("⋯", "Browser menu") { showBrowserMenu() }
+        uBlockButton = actionButton("盾", "uBlock Origin controls") {
+            uBlockOriginManager?.clickBrowserAction(activeTab?.session)
+        }.apply {
+            textSize = 18f
+            visibility = View.GONE
+        }
+        navigationBar.addView(uBlockButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+            marginStart = dp(1)
+            marginEnd = dp(1)
+        })
 
-        root.addView(topBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
-            setMargins(dp(10), dp(8), dp(10), dp(5))
+        bottomBar.addView(addressRow, LinearLayout.LayoutParams(-1, dp(48)))
+        bottomBar.addView(navigationBar, LinearLayout.LayoutParams(-1, dp(49)).apply {
+            topMargin = dp(3)
+        })
+
+        root.addView(topBar, LinearLayout.LayoutParams(-1, dp(46)).apply {
+            setMargins(dp(13), dp(5), dp(13), dp(3))
         })
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(62)).apply {
-            setMargins(dp(14), dp(7), dp(14), dp(10))
+        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(108)).apply {
+            setMargins(dp(10), dp(6), dp(10), dp(7))
         })
         BrowseXColors.applyDirection(root, browserSettingsSnapshot)
         return root
@@ -840,23 +896,33 @@ class MainActivity : AppCompatActivity() {
         cornerRadius = dp(radius).toFloat()
     }
 
+    private fun glassSurface(radius: Int, fill: Int, stroke: Int) = GradientDrawable().apply {
+        setColor(fill)
+        cornerRadius = dp(radius).toFloat()
+        setStroke(dp(1), stroke)
+    }
+
     private fun actionButton(label: String, description: String, action: () -> Unit) =
         TextView(this).apply {
             text = tr(label)
             contentDescription = tr(description)
-            textSize = 22f
+            textSize = 21f
             gravity = Gravity.CENTER
             setTextColor(colors.ink)
-            minimumWidth = dp(48)
-            minimumHeight = dp(48)
+            minimumWidth = dp(0)
+            minimumHeight = dp(44)
+            isFocusable = true
             setOnClickListener { action() }
         }
 
     private fun bottomButton(label: String, description: String, action: () -> Unit) =
         actionButton(label, description, action).also {
-            it.textSize = 23f
+            it.textSize = 22f
             it.setTextColor(colors.ink)
-            bottomBar.addView(it, LinearLayout.LayoutParams(0, -1, 1f))
+            navigationBar.addView(it, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                marginStart = dp(1)
+                marginEnd = dp(1)
+            })
         }
 
     private fun updateChrome() {
@@ -877,14 +943,27 @@ class MainActivity : AppCompatActivity() {
             progress.progress = value
             progress.visibility = if (value in 1..99) View.VISIBLE else View.GONE
         }
-        bottomBar.getChildAt(0)?.let { button ->
+        navigationBar.getChildAt(0)?.let { button ->
             button.isEnabled = tab?.canGoBack == true
             button.alpha = if (button.isEnabled) 1f else 0.38f
         }
-        bottomBar.getChildAt(1)?.let { button ->
+        navigationBar.getChildAt(1)?.let { button ->
             button.isEnabled = tab?.canGoForward == true
             button.alpha = if (button.isEnabled) 1f else 0.38f
         }
+        if (::pageIdentity.isInitialized) {
+            val currentUrl = tab?.url.orEmpty()
+            val host = runCatching { Uri.parse(currentUrl).host?.removePrefix("www.") }
+                .getOrNull()?.takeIf { it.isNotBlank() }
+            val identity = host ?: "Wren"
+            pageIdentity.text = if (tab?.privateMode == true) "${tr("Private")} · $identity" else identity
+        }
+        if (::siteInfoButton.isInitialized) {
+            val hasSite = tab?.url?.startsWith("http") == true
+            siteInfoButton.isEnabled = hasSite
+            siteInfoButton.alpha = if (hasSite) 1f else 0.55f
+        }
+        if (::reloadButton.isInitialized) reloadButton.isEnabled = tab != null
         syncUBlockButton()
     }
 
