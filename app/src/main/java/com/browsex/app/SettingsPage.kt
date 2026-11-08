@@ -39,7 +39,7 @@ internal class SettingsPage(
     private val openAutofillSettings: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
-    private val isTvRemote get() = activity.currentAdaptivePresentation?.windowLayout == WrenWindowLayout.TV
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private val ink get() = colors.ink
     private val muted get() = colors.muted
     private val accent get() = colors.accent
