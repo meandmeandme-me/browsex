@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.widget.Toast
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import org.mozilla.geckoview.StorageController
 
@@ -10,6 +11,8 @@ internal class PrivacyPage(
     private val store: BrowserStore,
     private val clearData: (flags: Long, clearHistory: Boolean) -> Unit
 ) {
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
+    private fun dp(value: Int) = WrenAdaptiveUi.dp(activity, value)
     private fun t(en: String, ar: String): String =
         if (BrowseXColors.isArabic(activity, store)) ar else en
 
@@ -22,7 +25,7 @@ internal class PrivacyPage(
             t("Authentication sessions", "جلسات تسجيل الدخول")
         )
         val selected = booleanArrayOf(true, true, true, false, false)
-        AlertDialog.Builder(activity)
+        val dialog = AlertDialog.Builder(activity)
             .setTitle(t("Privacy center", "مركز الخصوصية"))
             .setMessage(
                 t(
@@ -47,6 +50,29 @@ internal class PrivacyPage(
                     clearData(flags, clearHistory)
                 }
             }
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            if (isTvRemote) {
+                val width = (activity.resources.displayMetrics.widthPixels - dp(96)).coerceAtLeast(dp(560))
+                dialog.window?.setLayout(minOf(dp(980), width), android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+                dialog.findViewById<TextView>(android.R.id.message)?.textSize = 18f
+                listOf(
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE),
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                ).forEach { button ->
+                    button.minHeight = dp(60)
+                    button.textSize = 17f
+                }
+                val list = dialog.listView
+                for (index in 0 until list.childCount) {
+                    val row = list.getChildAt(index)
+                    row.minimumHeight = dp(68)
+                    row.findViewById<TextView>(android.R.id.text1)?.textSize = 18f
+                    row.isFocusable = true
+                    row.isFocusableInTouchMode = false
+                }
+            }
+        }
+        dialog.show()
     }
 }
