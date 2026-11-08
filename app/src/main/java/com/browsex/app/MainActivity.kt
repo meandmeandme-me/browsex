@@ -121,6 +121,12 @@ class MainActivity : AppCompatActivity() {
             }
         )
     }
+    private val isTelevisionDevice by lazy {
+        packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+            packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
+            (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_TYPE_MASK) ==
+                android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+    }
     private val tabs: List<BrowserTab> get() = tabController.tabs
     private val activeTab: BrowserTab? get() = tabController.activeTab
     private val contentProcessRecoveryCoordinator by lazy {
@@ -851,7 +857,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun homePageUrl(): String =
         "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
-            "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}"
+            "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}" +
+            "&bxtv=$isTelevisionDevice"
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
