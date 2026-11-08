@@ -30,7 +30,8 @@ internal class AdaptivePresentationProbe(context: Context) {
         pressure: RuntimePressure,
         measuredJankPressure: Boolean = false,
         imeVisible: Boolean = false,
-        addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
+        addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO,
+        reduceTransparency: Boolean = false
     ): PresentationCapabilitySnapshot {
         val packageManager = appContext.packageManager
         val accessibility = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE)
@@ -63,9 +64,8 @@ internal class AdaptivePresentationProbe(context: Context) {
             thermalStatus = pressure.thermalStatus,
             systemHighContrast = Build.VERSION.SDK_INT >= 36 &&
                 accessibility?.isHighContrastTextEnabled == true,
-            // Android does not expose a single reliable reduced-transparency setting
-            // across all OEM versions. The app preference can populate this separately.
-            reduceTransparency = false,
+            // No OEM-neutral Android switch exists; use Wren's persisted preference.
+            reduceTransparency = reduceTransparency,
             reduceMotion = !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
             measuredJankPressure = measuredJankPressure,
             severeMemoryPressure = memoryInfo.lowMemory,
