@@ -90,6 +90,18 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun systemLowMemorySelectsPerformanceMinimalMode() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(severeMemoryPressure = true)
+        )
+
+        assertEquals(WrenMaterialMode.PERFORMANCE_MINIMAL, result.materialMode)
+        assertTrue(result.reduceMotion)
+        assertFalse(result.allowSpeculativeVisualWork)
+        assertTrue(result.reasonCodes.contains("system-low-memory"))
+    }
+
+    @Test
     fun accessibilityOverridesBlurAndVisualPerformanceTier() {
         val highContrast = AdaptivePresentationPolicy.resolve(
             snapshot(
@@ -195,6 +207,7 @@ class AdaptivePresentationPolicyTest {
         reduceTransparency: Boolean = false,
         reduceMotion: Boolean = false,
         measuredJankPressure: Boolean = false,
+        severeMemoryPressure: Boolean = false,
         addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
     ) = PresentationCapabilitySnapshot(
         sdkInt = sdkInt,
@@ -213,6 +226,7 @@ class AdaptivePresentationPolicyTest {
         reduceTransparency = reduceTransparency,
         reduceMotion = reduceMotion,
         measuredJankPressure = measuredJankPressure,
+        severeMemoryPressure = severeMemoryPressure,
         addressBarPreference = addressBarPreference
     )
 }
