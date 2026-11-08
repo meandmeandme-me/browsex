@@ -1,10 +1,8 @@
 package com.browsex.app
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.pm.PackageManager
-import android.hardware.input.InputManager
 import android.view.InputDevice
 import android.view.accessibility.AccessibilityManager
 
