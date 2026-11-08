@@ -182,6 +182,23 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun openingKeyboardKeepsAddressFieldAndHidesNavigationActions() {
+        val phone = AdaptivePresentationPolicy.resolve(snapshot(imeVisible = true))
+        val tv = AdaptivePresentationPolicy.resolve(
+            snapshot(
+                isLeanbackDevice = true,
+                hasTouchscreen = false,
+                hasDpad = true,
+                imeVisible = true
+            )
+        )
+
+        assertEquals(WrenAddressPlacement.BOTTOM, phone.addressPlacement)
+        assertFalse(phone.showNavigationActions)
+        assertTrue(tv.showNavigationActions)
+    }
+
+    @Test
     fun userCanChooseTopBarOnPhone() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(addressBarPreference = AddressBarPreference.TOP)
@@ -208,6 +225,7 @@ class AdaptivePresentationPolicyTest {
         reduceMotion: Boolean = false,
         measuredJankPressure: Boolean = false,
         severeMemoryPressure: Boolean = false,
+        imeVisible: Boolean = false,
         addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
     ) = PresentationCapabilitySnapshot(
         sdkInt = sdkInt,
@@ -227,6 +245,7 @@ class AdaptivePresentationPolicyTest {
         reduceMotion = reduceMotion,
         measuredJankPressure = measuredJankPressure,
         severeMemoryPressure = severeMemoryPressure,
+        imeVisible = imeVisible,
         addressBarPreference = addressBarPreference
     )
 }
