@@ -233,6 +233,10 @@ body.tv-mode .dialog-actions button{min-height:60px;font-size:18px}
  $('theme').addEventListener('click',()=>{$('theme').setAttribute('aria-pressed',String(document.body.classList.contains('dark')))});
  const hour=new Date().getHours();$('greeting').textContent=hour<12?copy.morning:hour<18?copy.afternoon:copy.evening;
  render();
+ if(tvMode){
+  const firstAction=$('shortcuts').querySelector('a.shortcut,button.add-shortcut')||$('theme');
+  if(firstAction)firstAction.focus({preventScroll:true});
+ }
 })();
 </script>
 </body>
