@@ -167,7 +167,7 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
-    fun remoteOnlyInputCanSelectTvModeWithoutLeanbackFlag() {
+    fun externalDpadDoesNotMisclassifyARegularWindowAsTv() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(
                 isLeanbackDevice = false,
@@ -176,9 +176,9 @@ class AdaptivePresentationPolicyTest {
             )
         )
 
-        assertEquals(WrenWindowLayout.TV, result.windowLayout)
-        assertEquals(WrenAddressPlacement.TV_REMOTE, result.addressPlacement)
-        assertTrue(result.reasonCodes.contains("remote-only-input"))
+        assertEquals(WrenWindowLayout.PHONE_COMPACT, result.windowLayout)
+        assertEquals(WrenAddressPlacement.BOTTOM, result.addressPlacement)
+        assertTrue(result.reasonCodes.contains("remote-input-present"))
     }
 
     @Test

@@ -328,4 +328,9 @@
     <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">لا توجد تنزيلات في Wren بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.</string>
     <string name="ui_wren_browser">متصفح Wren</string>
     <string name="ui_reload_page">إعادة تحميل الصفحة</string>
+    <string name="ui_address_bar_position">موضع شريط العنوان</string>
+    <string name="ui_choose_top_or_bottom_on_compact_screens">اختر موضع الشريط أعلى أو أسفل الشاشة الصغيرة</string>
+    <string name="ui_automatic">تلقائي</string>
+    <string name="ui_top">أعلى</string>
+    <string name="ui_bottom">أسفل</string>
 </resources>

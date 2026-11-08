@@ -87,7 +87,7 @@ internal object AdaptivePresentationPolicy {
         if (snapshot.systemHighContrast) reasons += "system-high-contrast"
         if (snapshot.reduceTransparency) reasons += "reduced-transparency"
         if (snapshot.isLeanbackDevice) reasons += "leanback-device"
-        if (!snapshot.hasTouchscreen && snapshot.hasDpad) reasons += "remote-only-input"
+        if (!snapshot.hasTouchscreen && snapshot.hasDpad) reasons += "remote-input-present"
         if (snapshot.windowWidthDp < 600) reasons += "compact-window"
         if (snapshot.windowHeightDp in 1 until 480) reasons += "compact-height"
         if (snapshot.batterySaverEnabled) reasons += "battery-saver"
@@ -130,9 +130,7 @@ internal object AdaptivePresentationPolicy {
     }
 
     private fun resolveLayout(snapshot: PresentationCapabilitySnapshot): WrenWindowLayout {
-        if (snapshot.isLeanbackDevice || (!snapshot.hasTouchscreen && snapshot.hasDpad)) {
-            return WrenWindowLayout.TV
-        }
+        if (snapshot.isLeanbackDevice) return WrenWindowLayout.TV
         val width = snapshot.windowWidthDp
         val height = snapshot.windowHeightDp
         if (width < 600 && height in 1 until 480) return WrenWindowLayout.COMPACT_LANDSCAPE

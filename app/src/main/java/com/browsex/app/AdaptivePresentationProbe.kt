@@ -3,7 +3,9 @@ package com.browsex.app
 import android.animation.ValueAnimator
 import android.app.ActivityManager
 import android.os.Build
+import android.app.UiModeManager
 import android.content.Context
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.view.InputDevice
 import android.view.accessibility.AccessibilityManager
@@ -27,14 +29,17 @@ internal class AdaptivePresentationProbe(context: Context) {
         deviceProfile: DeviceCapabilityProfile,
         pressure: RuntimePressure,
         measuredJankPressure: Boolean = false,
-        imeVisible: Boolean = false
+        imeVisible: Boolean = false,
+        addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
     ): PresentationCapabilitySnapshot {
         val packageManager = appContext.packageManager
         val accessibility = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE)
             as? AccessibilityManager
         val hasTouchscreen = packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        val uiModeManager = appContext.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager
         val leanback = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
-            packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
+            packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
+            uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
         val hasDpad = hasDpadInput() || leanback
         val memoryInfo = ActivityManager.MemoryInfo().also { info ->
             (appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(info)
@@ -64,7 +69,8 @@ internal class AdaptivePresentationProbe(context: Context) {
             reduceMotion = !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
             measuredJankPressure = measuredJankPressure,
             severeMemoryPressure = memoryInfo.lowMemory,
-            imeVisible = imeVisible
+            imeVisible = imeVisible,
+            addressBarPreference = addressBarPreference
         )
     }
 

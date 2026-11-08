@@ -6,12 +6,16 @@ import java.util.Locale
 internal object BrowserPreferencePolicy {
     private val themes = setOf("system", "light", "dark")
     private val homeLayouts = setOf("grid", "list")
+    private val addressBarPositions = setOf("auto", "top", "bottom")
 
     fun normalizeTheme(value: String?): String =
         value?.takeIf(themes::contains) ?: "system"
 
     fun normalizeHomeLayout(value: String?): String =
         value?.takeIf(homeLayouts::contains) ?: "grid"
+
+    fun normalizeAddressBarPosition(value: String?): String =
+        value?.trim()?.lowercase(Locale.ROOT)?.takeIf(addressBarPositions::contains) ?: "auto"
 
     fun normalizeLanguageTag(value: String?): String {
         val raw = value?.trim().orEmpty()

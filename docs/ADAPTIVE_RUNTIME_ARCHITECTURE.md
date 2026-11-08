@@ -39,9 +39,9 @@ engine/dependency strategy and potentially a distinct build variant, not a runti
 - AndroidX JankStats tracks frame timing only while the Activity is resumed. A rolling 60-frame sample enters visual-minimal mode at 20% jank and exits it at 10% or less. Only boolean frame outcomes are retained locally; no page, URL or browsing data is collected.
 - The live UI applies tinted-glass, matte, high-contrast and performance-minimal surfaces, and changes between phone-bottom, tablet-top, large-window side rail and a preliminary remote-first TV layout.
 - **Live backdrop blur is intentionally not enabled yet.** The Android probe sets `hasVerifiedBackdropBlurPath=false`; the actual chrome is the safe tinted-glass style, which works on Android 8–10. No user warning is shown. A blur path must be implemented and benchmarked for the exact in-window renderer before it can be marked verified.
-- The address preference resolver supports AUTO/TOP/BOTTOM, but the current Activity uses AUTO; a user-facing placement setting is still future work.
+- The address preference resolver supports AUTO/TOP/BOTTOM; the selected value is persisted in DataStore and exposed in Settings. Compact windows honor TOP or BOTTOM; wider windows select a top/side presentation to preserve content space.
 - Reduced-transparency has no universal OEM-neutral Android setting probe and currently defaults to false. System high-contrast text is detected only through the public API on API 36+; earlier systems retain the baseline contrast-safe design.
-- TV layout detection is present, but this does **not** mean Android TV distribution is complete: no Leanback launcher/banner release path or complete D-pad certification has been declared. Fold-hinge posture handling also remains future work.
+- TV layout detection is based on Leanback/Television features or Android TV UI mode; a D-pad connected to a regular device does not alone trigger TV mode. This does **not** mean Android TV distribution is complete: no Leanback launcher/banner release path or complete D-pad certification has been declared. Fold-hinge posture handling also remains future work.
 
 
 ## Initial policy defaults

@@ -20,6 +20,14 @@ class BrowserPreferencePolicyTest {
     }
 
     @Test
+    fun normalizesAddressBarPositionAndFallsBackToAutomatic() {
+        assertEquals("top", BrowserPreferencePolicy.normalizeAddressBarPosition("TOP"))
+        assertEquals("bottom", BrowserPreferencePolicy.normalizeAddressBarPosition("bottom"))
+        assertEquals("auto", BrowserPreferencePolicy.normalizeAddressBarPosition(null))
+        assertEquals("auto", BrowserPreferencePolicy.normalizeAddressBarPosition("floating"))
+    }
+
+    @Test
     fun normalizesThemeAndHomeLayoutToSupportedValues() {
         assertEquals("dark", BrowserPreferencePolicy.normalizeTheme("dark"))
         assertEquals("system", BrowserPreferencePolicy.normalizeTheme("contrast"))

@@ -184,6 +184,33 @@ internal class SettingsPage(
                 .show()
         }
 
+        row(
+            "Address bar position",
+            "Choose top or bottom on compact screens",
+            t(when (BrowserPreferencePolicy.normalizeAddressBarPosition(settings.addressBarPosition)) {
+                "top" -> "Top"
+                "bottom" -> "Bottom"
+                else -> "Automatic"
+            })
+        ) {
+            val values = arrayOf("auto", "top", "bottom")
+            val labels = arrayOf(t("Automatic"), t("Top"), t("Bottom"))
+            val selected = values.indexOf(
+                BrowserPreferencePolicy.normalizeAddressBarPosition(settings.addressBarPosition)
+            ).coerceAtLeast(0)
+            AlertDialog.Builder(activity)
+                .setTitle(t("Address bar position"))
+                .setSingleChoiceItems(labels, selected) { choice, index ->
+                    activity.updateBrowserSettings({ it.copy(addressBarPosition = values[index]) }) {
+                        choice.dismiss()
+                        dialog.dismiss()
+                        show()
+                    }
+                }
+                .setNegativeButton(t("Cancel"), null)
+                .show()
+        }
+
         row("Theme", "Choose the browser appearance", t(when (settings.themeMode) {
             "dark" -> "Dark"; "light" -> "Light"; else -> "System default"
         })) {

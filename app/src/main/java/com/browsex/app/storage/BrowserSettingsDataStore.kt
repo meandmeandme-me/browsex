@@ -57,6 +57,7 @@ internal class BrowserSettingsDataStore(
         homeShowQuickLinks = p[Keys.homeShowQuickLinks] ?: true,
         homeShowDiscovery = p[Keys.homeShowDiscovery] ?: true,
         homeLayout = BrowserPreferencePolicy.normalizeHomeLayout(p[Keys.homeLayout]),
+        addressBarPosition = BrowserPreferencePolicy.normalizeAddressBarPosition(p[Keys.addressBarPosition]),
         searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
         deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
     )
@@ -74,6 +75,7 @@ internal class BrowserSettingsDataStore(
         p[Keys.homeShowQuickLinks] = settings.homeShowQuickLinks
         p[Keys.homeShowDiscovery] = settings.homeShowDiscovery
         p[Keys.homeLayout] = BrowserPreferencePolicy.normalizeHomeLayout(settings.homeLayout)
+        p[Keys.addressBarPosition] = BrowserPreferencePolicy.normalizeAddressBarPosition(settings.addressBarPosition)
         p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
         p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
     }
@@ -88,6 +90,7 @@ internal class BrowserSettingsDataStore(
         val homeShowQuickLinks = booleanPreferencesKey("home_show_quick_links")
         val homeShowDiscovery = booleanPreferencesKey("home_show_discovery")
         val homeLayout = stringPreferencesKey("home_layout")
+        val addressBarPosition = stringPreferencesKey("address_bar_position")
         val searchEngine = stringPreferencesKey("search_engine")
         val deniedPlatformPermissions = stringSetPreferencesKey("denied_platform_permissions")
     }
@@ -103,6 +106,7 @@ internal data class BrowserSettings(
     val homeShowQuickLinks: Boolean = true,
     val homeShowDiscovery: Boolean = true,
     val homeLayout: String = "grid",
+    val addressBarPosition: String = "auto",
     val searchEngine: String = "Google",
     val deniedPlatformPermissions: Set<String> = emptySet()
 )

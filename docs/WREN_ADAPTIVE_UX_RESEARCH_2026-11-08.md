@@ -308,9 +308,9 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 
 **Limitations that remain:**
 - The current probe deliberately sets `hasVerifiedBackdropBlurPath=false`. There is no verified in-window live backdrop-blur implementation yet, so even newer/high-end devices currently use tinted glass rather than live blur. This avoids confusing Android cross-window blur support with in-window toolbar blur and avoids claiming a GPU path that has not been measured.
-- The top/bottom address-bar enum exists, but the Activity currently uses AUTO; no Settings control for changing it has shipped yet.
+- Address-bar placement is saved in DataStore and exposed as Automatic/Top/Bottom in Settings. The Bottom preference applies on compact windows; medium/expanded windows use a top/side layout to preserve usable content space.
 - Android's public high-contrast-text API is only used on API 36+. Reduced-transparency is not automatically detectable through one consistent public Android API and is not wired to a Wren setting yet.
-- TV/remote layout detection and an initial remote-oriented dock exist, but a Leanback launcher/banner, D-pad focus certification and complete TV product testing remain outstanding. Tizen and webOS need separate clients; they cannot install the Android APK.
+- TV layout detection uses Leanback/Television features or Android TV UI mode; a connected D-pad alone does not turn a regular phone/tablet into TV mode. The remote-oriented dock is still preliminary; a Leanback launcher/banner, D-pad focus certification and complete TV product testing remain outstanding. Tizen and webOS need separate clients; they cannot install the Android APK.
 - Fold-hinge posture and multi-window edge-case QA remain to be added. The layout does respond to current Activity window bounds, including ordinary resizing.
 
 The latest CI run is used to validate compilation/tests/lint/build. A passing CI run is not physical-device verification; test on Android 10/low-memory hardware, tablets, landscape and Android TV before claiming release readiness.

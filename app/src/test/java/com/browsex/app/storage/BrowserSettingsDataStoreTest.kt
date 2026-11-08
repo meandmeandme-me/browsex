@@ -45,6 +45,7 @@ class BrowserSettingsDataStoreTest {
         assertEquals("system", settings.themeMode)
         assertEquals("system", settings.languageMode)
         assertEquals("Google", settings.searchEngine)
+        assertEquals("auto", settings.addressBarPosition)
         assertTrue(legacy.contains("bookmark_items_v1"))
         assertTrue(legacy.getBoolean("ad_block_enabled", false))
         legacy.edit().clear().commit()
@@ -61,15 +62,17 @@ class BrowserSettingsDataStoreTest {
         )
         val repository = BrowserSettingsDataStore(context, isolatedStore)
 
-        repository.update { it.copy(themeMode = "dark", searchEngine = "Bing") }
+        repository.update { it.copy(themeMode = "dark", searchEngine = "Bing", addressBarPosition = "bottom") }
         repository.update { it.copy(languageMode = "fr-FR") }
         val updated = repository.snapshot()
         assertEquals("dark", updated.themeMode)
         assertEquals("fr-FR", updated.languageMode)
         assertEquals("Bing", updated.searchEngine)
+        assertEquals("bottom", updated.addressBarPosition)
 
         repository.update(updated.copy(
             themeMode = "neon",
+            addressBarPosition = "floating",
             languageMode = "not a locale!",
             homeLayout = "carousel",
             searchEngine = "Unknown"
@@ -79,5 +82,6 @@ class BrowserSettingsDataStoreTest {
         assertEquals("system", normalized.languageMode)
         assertEquals("grid", normalized.homeLayout)
         assertEquals("Google", normalized.searchEngine)
+        assertEquals("auto", normalized.addressBarPosition)
     }
 }

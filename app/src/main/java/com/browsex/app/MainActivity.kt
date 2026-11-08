@@ -196,6 +196,7 @@ class MainActivity : AppCompatActivity() {
             arrayOf(settings.languageMode)
         }
         browserRuntime?.settings?.setLocales(engineLocales)
+        if (::browserRoot.isInitialized) refreshCurrentAdaptivePresentation(force = true)
     }
 
     internal fun websiteNotificationsEnabled(): Boolean = browserSettingsSnapshot.siteNotificationsEnabled
@@ -885,7 +886,14 @@ class MainActivity : AppCompatActivity() {
                 deviceProfile = deviceCapabilityProfile,
                 pressure = pressure,
                 measuredJankPressure = measuredJankPressure,
-                imeVisible = imeVisible
+                imeVisible = imeVisible,
+                addressBarPreference = when (
+                    BrowserPreferencePolicy.normalizeAddressBarPosition(browserSettingsSnapshot.addressBarPosition)
+                ) {
+                    "top" -> AddressBarPreference.TOP
+                    "bottom" -> AddressBarPreference.BOTTOM
+                    else -> AddressBarPreference.AUTO
+                }
             )
         )
         adaptivePresentationConfig = next
