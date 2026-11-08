@@ -44,7 +44,7 @@ internal data class PresentationCapabilitySnapshot(
     val batterySaverEnabled: Boolean = false,
     /** Android PowerManager thermal status: 0 is none, larger values mean hotter. */
     val thermalStatus: Int = 0,
-    val systemHighContrast: Boolean = false,
+    val highContrastEnabled: Boolean = false,
     val reduceTransparency: Boolean = false,
     val reduceMotion: Boolean = false,
     val measuredJankPressure: Boolean = false,
@@ -84,7 +84,7 @@ internal object AdaptivePresentationPolicy {
         val placement = resolveAddressPlacement(snapshot, layout)
         val reasons = linkedSetOf<String>()
 
-        if (snapshot.systemHighContrast) reasons += "high-contrast"
+        if (snapshot.highContrastEnabled) reasons += "high-contrast"
         if (snapshot.reduceTransparency) reasons += "reduced-transparency"
         if (snapshot.isLeanbackDevice) reasons += "leanback-device"
         if (!snapshot.hasTouchscreen && snapshot.hasDpad) reasons += "remote-input-present"
@@ -123,7 +123,7 @@ internal object AdaptivePresentationPolicy {
             materialMode = material,
             reduceMotion = reduceMotion,
             allowNonEssentialAnimation = !reduceMotion,
-            allowSpeculativeVisualWork = !constrained && !severePressure,
+            allowSpeculativeVisualWork = !constrained && !severePressure && !snapshot.reduceMotion,
             showNavigationActions = !snapshot.imeVisible || layout == WrenWindowLayout.TV,
             reasonCodes = reasons
         )
