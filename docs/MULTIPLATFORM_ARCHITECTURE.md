@@ -32,6 +32,12 @@ Use ACCOUNT_SYNC_FOUNDATION.md, AccountDomainModels.kt and ACCOUNT_SYNC_UX_MAP.m
 
 Recommended sign-in is OIDC Authorization Code + PKCE with state, nonce, issuer, audience, signature and exact redirect validation. Never embed a client secret in a distributed client. Sync records require stable IDs, schema versions, revisions, tombstones, idempotency keys, bounded offline queues, deterministic conflict resolution, key recovery/rotation and device revocation. Private tabs/history, cookies, site grants, form contents and auth tokens are never sync records.
 
+## TV platform boundary
+
+Android TV / Google TV is a planned Android target using the Android client only after a dedicated remote-first layout, Leanback launcher declaration, touchscreen-not-required declaration, large-screen banner and full D-pad/focus QA are complete.
+
+Samsung Tizen and LG webOS are separate operating-system platforms. An Android APK cannot be installed on those TVs merely because its layout is responsive. Tizen offers its own TV web-app package and APIs; webOS has its own web-app platform, packaging and distribution workflow. Reuse product/domain rules, design tokens and compatible web components where practical, but plan separate platform shells, engine/media adapters, signing and store submissions.
+
 ## Platform UX
 
 Desktop: resizable windows, keyboard shortcuts, context menus, drag/drop, file chooser integration, native credential vaults and desktop notifications.
