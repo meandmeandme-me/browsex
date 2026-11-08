@@ -52,8 +52,8 @@ class TabSessionStateTest {
     }
 
     @Test fun restoresTvAndAccessibilityHomePreferencesButRejectsMalformedFlags() {
-        val adaptive = "$home?bxlang=ar&bxtheme=dark&bxtv=true&bxopaque=true&bxcontrast=true&bxmotion=true"
-        val malformed = "$home?bxlang=ar&bxtheme=dark&bxtv=true&bxmotion=yes"
+        val adaptive = "$home?bxlang=ar&bxtheme=dark&bxtv=true&bxopaque=true&bxcontrast=true&bxmotion=true&bxminimal=true"
+        val malformed = "$home?bxlang=ar&bxtheme=dark&bxtv=true&bxminimal=yes"
 
         assertEquals(
             listOf(adaptive),
