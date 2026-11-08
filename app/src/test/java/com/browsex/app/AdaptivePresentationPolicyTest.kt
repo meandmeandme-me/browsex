@@ -90,6 +90,23 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun userReducedTransparencySelectsOpaqueMatteSurfaceEvenOnHighTierDevice() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(
+                sdkInt = 35,
+                isHardwareAccelerated = true,
+                blurCurrentlyEnabled = true,
+                hasVerifiedBackdropBlurPath = true,
+                ramTier = DeviceRamTier.HIGH,
+                reduceTransparency = true
+            )
+        )
+
+        assertEquals(WrenMaterialMode.MATTE, result.materialMode)
+        assertTrue(result.reasonCodes.contains("reduced-transparency"))
+    }
+
+    @Test
     fun systemLowMemorySelectsPerformanceMinimalMode() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(severeMemoryPressure = true)
