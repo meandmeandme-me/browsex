@@ -311,6 +311,19 @@ internal class SettingsPage(
             exportBookmarks()
         })
 
+        section("Accessibility & appearance")
+        row(
+            "Reduce transparency",
+            "Use opaque browser surfaces for clearer contrast and less visual layering",
+            t(if (settings.reduceTransparency) "On" else "Off")
+        ) {
+            val nextValue = !settings.reduceTransparency
+            activity.updateBrowserSettings({ it.copy(reduceTransparency = nextValue) }) {
+                dialog.dismiss()
+                show()
+            }
+        }
+
         section("Home page")
         row("Home page", "Customize shortcuts and sections", action = {
             dialog.dismiss()
