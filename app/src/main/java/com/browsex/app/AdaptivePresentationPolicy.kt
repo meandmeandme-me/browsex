@@ -48,6 +48,7 @@ internal data class PresentationCapabilitySnapshot(
     val reduceTransparency: Boolean = false,
     val reduceMotion: Boolean = false,
     val measuredJankPressure: Boolean = false,
+    val severeMemoryPressure: Boolean = false,
     val addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO
 ) {
     init {
@@ -91,12 +92,13 @@ internal object AdaptivePresentationPolicy {
         if (snapshot.thermalStatus >= THERMAL_MODERATE) reasons += "thermal-pressure"
         if (snapshot.ramTier == DeviceRamTier.CONSTRAINED) reasons += "constrained-memory"
         if (snapshot.measuredJankPressure) reasons += "measured-jank"
+        if (snapshot.severeMemoryPressure) reasons += "system-low-memory"
 
         val severePressure = snapshot.thermalStatus >= THERMAL_SEVERE ||
-            snapshot.measuredJankPressure
+            snapshot.measuredJankPressure || snapshot.severeMemoryPressure
         val constrained = snapshot.ramTier == DeviceRamTier.CONSTRAINED ||
             snapshot.batterySaverEnabled ||
-            snapshot.thermalStatus >= THERMAL_MODERATE
+            snapshot.thermalStatus >= THERMAL_MODERATE || snapshot.severeMemoryPressure
 
         val material = when {
             snapshot.systemHighContrast -> WrenMaterialMode.HIGH_CONTRAST
