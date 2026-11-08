@@ -796,7 +796,12 @@ class MainActivity : AppCompatActivity() {
             background = glassSurface(22, colors.field, colors.line)
         }
         siteInfoButton = actionButton("ⓘ", "Site information") {
-            showSiteInformation()
+            if (::address.isInitialized && address.hasFocus()) {
+                address.text?.clear()
+                address.requestFocus()
+            } else {
+                showSiteInformation()
+            }
         }.apply {
             textSize = 21f
             background = rounded(android.graphics.Color.TRANSPARENT, 16)
@@ -825,7 +830,13 @@ class MainActivity : AppCompatActivity() {
                     true
                 } else false
             }
-            setOnFocusChangeListener { _, focused -> if (!focused) updateAddress() }
+            setOnFocusChangeListener { _, focused ->
+                if (!focused) updateAddress()
+                if (::siteInfoButton.isInitialized) {
+                    siteInfoButton.text = if (focused) "×" else "ⓘ"
+                    siteInfoButton.contentDescription = tr(if (focused) "Clear" else "Site information")
+                }
+            }
         }
         addressRow.addView(address, LinearLayout.LayoutParams(0, dp(44), 1f))
 
@@ -978,9 +989,12 @@ class MainActivity : AppCompatActivity() {
             pageIdentity.text = if (tab?.privateMode == true) "${tr("Private")} · $identity" else identity
         }
         if (::siteInfoButton.isInitialized) {
+            val editingAddress = ::address.isInitialized && address.hasFocus()
             val hasSite = tab?.url?.startsWith("http") == true
-            siteInfoButton.isEnabled = hasSite
-            siteInfoButton.alpha = if (hasSite) 1f else 0.55f
+            siteInfoButton.text = if (editingAddress) "×" else "ⓘ"
+            siteInfoButton.contentDescription = tr(if (editingAddress) "Clear" else "Site information")
+            siteInfoButton.isEnabled = editingAddress || hasSite
+            siteInfoButton.alpha = if (siteInfoButton.isEnabled) 1f else 0.55f
         }
         if (::reloadButton.isInitialized) reloadButton.isEnabled = tab != null
         syncUBlockButton()
