@@ -29,6 +29,7 @@ internal class TabsPage(
     private val tabs: List<BrowserTab> get() = tabsProvider()
     private val activeTab: BrowserTab? get() = activeTabProvider()
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
 
     private fun tr(value: String): String = BrowseXStrings.text(activity, value)
     private fun dp(value: Int): Int = (value * activity.resources.displayMetrics.density).toInt()
@@ -65,7 +66,7 @@ internal class TabsPage(
         lateinit var dialog: AlertDialog
         val page = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setPadding(WrenAdaptiveUi.horizontalSafePadding(activity), WrenAdaptiveUi.verticalSafePadding(activity), WrenAdaptiveUi.horizontalSafePadding(activity), dp(if (isTvRemote) 28 else 12))
             setBackgroundColor(colors.canvas)
         }
         val header = LinearLayout(activity).apply {
@@ -75,24 +76,25 @@ internal class TabsPage(
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
             text = tr("Your space")
-            textSize = 25f
+            textSize = if (isTvRemote) 34f else 25f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
             text = if (BrowseXColors.isArabic(activity, store)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
-            textSize = 13f
+            textSize = if (isTvRemote) 16f else 13f
             setTextColor(colors.muted)
             setPadding(0, dp(3), 0, 0)
         })
         header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
         val add = TextView(activity).apply {
             text = "+  ${tr("New tab")}"
-            textSize = 14f
+            textSize = if (isTvRemote) 18f else 14f
             setTextColor(colors.card)
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(11), dp(16), dp(11))
             background = focusableSurface(colors.accent, 22)
+            minimumHeight = dp(if (isTvRemote) 64 else 48)
             isClickable = true
             isFocusable = true
             isFocusableInTouchMode = false
@@ -109,14 +111,15 @@ internal class TabsPage(
         fun sessionAction(label: String, action: () -> Unit) {
             val button = TextView(activity).apply {
                 text = tr(label)
-                textSize = 12f
+                textSize = if (isTvRemote) 16f else 12f
                 gravity = Gravity.CENTER
                 setTextColor(colors.accent)
-                background = rounded(colors.card, 14)
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                minHeight = dp(42)
+                background = focusableSurface(colors.card, 14)
+                setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 14 else 10), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 14 else 10))
+                minHeight = dp(if (isTvRemote) 64 else 48)
                 isClickable = true
                 isFocusable = true
+                isFocusableInTouchMode = false
                 setOnClickListener { action() }
             }
             sessionActions.addView(button, LinearLayout.LayoutParams(0, -2, 1f).apply {
@@ -282,9 +285,9 @@ internal class TabsPage(
 
         val hint = TextView(activity).apply {
             text = tr("Tap a card to return to it")
-            textSize = 12f
+            textSize = if (isTvRemote) 16f else 12f
             setTextColor(colors.muted)
-            setPadding(0, dp(15), 0, dp(12))
+            setPadding(0, dp(if (isTvRemote) 22 else 15), 0, dp(12))
         }
         page.addView(hint)
 
@@ -311,7 +314,7 @@ internal class TabsPage(
                     setPadding(dp(13), dp(13), dp(13), dp(12))
                     background = focusableSurface(if (selected) colors.selected else colors.card, 18)
                     elevation = dp(if (selected) 4 else 1).toFloat()
-                    minimumHeight = dp(if (tvRemote) 270 else 200)
+                    minimumHeight = dp(if (tvRemote) 300 else 200)
                     isClickable = true
                     isFocusable = true
                     isFocusableInTouchMode = false
@@ -342,7 +345,7 @@ internal class TabsPage(
                 card.addView(preview, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 150 else 104)))
                 card.addView(TextView(activity).apply {
                     text = (if (tab.privateMode) tr("Private") + " · " else "") + tab.title.ifBlank { "New tab" }
-                    textSize = if (tvRemote) 18f else 14f
+                    textSize = if (tvRemote) 20f else 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(colors.ink)
                     maxLines = 1
@@ -370,8 +373,8 @@ internal class TabsPage(
                     gravity = Gravity.CENTER
                     setTextColor(colors.danger)
                     contentDescription = tr("Close tab")
-                    minimumWidth = dp(48)
-                    minimumHeight = dp(48)
+                    minimumWidth = dp(if (tvRemote) 60 else 48)
+                    minimumHeight = dp(if (tvRemote) 60 else 48)
                     background = focusableSurface(colors.card, 12)
                     isFocusable = true
                     isFocusableInTouchMode = false
@@ -407,7 +410,7 @@ internal class TabsPage(
             isFocusableInTouchMode = false
             setPadding(dp(20), dp(13), dp(20), dp(13))
         }
-        page.addView(done, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })
+        page.addView(done, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 64 else 48)).apply { topMargin = dp(8) })
 
         dialog = AlertDialog.Builder(activity).setView(page).create()
         done.setOnClickListener { dialog.dismiss() }
@@ -417,5 +420,6 @@ internal class TabsPage(
         }
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        if (tvRemote) add.post { if (dialog.isShowing) add.requestFocus() }
     }
 }
