@@ -90,6 +90,42 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun userHighContrastOverridesBlurAndSelectsHighContrastMode() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(
+                sdkInt = 36,
+                isHardwareAccelerated = true,
+                blurCurrentlyEnabled = true,
+                hasVerifiedBackdropBlurPath = true,
+                ramTier = DeviceRamTier.HIGH,
+                systemHighContrast = true
+            )
+        )
+
+        assertEquals(WrenMaterialMode.HIGH_CONTRAST, result.materialMode)
+        assertTrue(result.reasonCodes.contains("high-contrast"))
+    }
+
+    @Test
+    fun userReducedMotionDisablesNonEssentialAnimationAndBlur() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(
+                sdkInt = 36,
+                isHardwareAccelerated = true,
+                blurCurrentlyEnabled = true,
+                hasVerifiedBackdropBlurPath = true,
+                ramTier = DeviceRamTier.HIGH,
+                reduceMotion = true
+            )
+        )
+
+        assertTrue(result.reduceMotion)
+        assertFalse(result.allowNonEssentialAnimation)
+        assertFalse(result.allowSpeculativeVisualWork)
+        assertEquals(WrenMaterialMode.GLASS_TINTED, result.materialMode)
+    }
+
+    @Test
     fun userReducedTransparencySelectsOpaqueMatteSurfaceEvenOnHighTierDevice() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(
