@@ -296,6 +296,14 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 9. Create a separate Android TV shell and complete D-pad/focus tests before TV launcher registration.
 10. Evaluate Tizen and webOS as separate future clients only when product, engine and distribution budgets are approved.
 
+## 8A. Current implementation checkpoint
+
+The first pure policy layer has been added:
+- `AdaptivePresentationPolicy.kt` resolves a current-window layout class, address placement, material mode, motion policy and reason codes.
+- `AdaptivePresentationPolicyTest.kt` covers phone/tablet/TV layouts, reduced transparency/high contrast, battery saver, constrained memory, measured jank and the rule that API availability alone must not enable backdrop blur.
+
+This policy is currently **not wired into the live Activity or material renderer**. The next code phase is to probe current Activity/window bounds and actual platform/input capabilities, then wire policy output into the shared design system. Do not claim automatic runtime fallback is shipped until that integration is implemented and device-tested.
+
 ## 9. Acceptance checklist
 
 - [ ] No API newer than minSdk is called without a correct guard or AndroidX compatibility path.
