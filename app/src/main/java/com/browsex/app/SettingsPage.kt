@@ -71,7 +71,7 @@ internal class SettingsPage(
         lateinit var dialog: AlertDialog
         val page = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(if (isTvRemote) 30 else 18), dp(if (isTvRemote) 26 else 16), dp(if (isTvRemote) 30 else 18), dp(16))
+            setPadding(WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), WrenAdaptiveUi.verticalSafePadding(activity, if (isTvRemote) 26 else 16), WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), dp(if (isTvRemote) 28 else 16))
             setBackgroundColor(canvas)
             BrowseXColors.applyDirection(this, store)
         }
@@ -319,6 +319,29 @@ internal class SettingsPage(
         ) {
             val nextValue = !settings.reduceTransparency
             activity.updateBrowserSettings({ it.copy(reduceTransparency = nextValue) }) {
+                dialog.dismiss()
+                show()
+            }
+        }
+
+        row(
+            "Increase contrast",
+            "Strengthen borders and foreground contrast across browser controls",
+            t(if (settings.highContrast) "On" else "Off")
+        ) {
+            val nextValue = !settings.highContrast
+            activity.updateBrowserSettings({ it.copy(highContrast = nextValue) }) {
+                dialog.dismiss()
+                show()
+            }
+        }
+        row(
+            "Reduce motion",
+            "Limit non-essential interface motion and visual transitions",
+            t(if (settings.reduceMotion) "On" else "Off")
+        ) {
+            val nextValue = !settings.reduceMotion
+            activity.updateBrowserSettings({ it.copy(reduceMotion = nextValue) }) {
                 dialog.dismiss()
                 show()
             }
