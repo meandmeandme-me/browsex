@@ -6,13 +6,22 @@ Design a complete, production-quality Android browser experience for **Wren Brow
 
 ## Design direction
 
-- Premium, calm, elegant browser UI with refined glass surfaces used selectively—not excessive blur or low-contrast text.
+- Premium Wren browser UI inspired by familiar Chrome and Safari usage patterns, with refined glass surfaces used selectively—not excessive blur or low-contrast text.
 - Distinctive visual identity, polished spacing, typography, iconography, subtle motion, and clear hierarchy.
 - Mobile-first and adaptive across compact phones, large phones, foldables, and tablets; support portrait and landscape.
 - Light, dark, and system themes.
 - Complete Arabic RTL and English LTR layouts. Mirror directional navigation where appropriate, but do not mirror brand marks, media controls, or universal icons.
 - Accessible contrast, scalable text, screen-reader labels, large touch targets, keyboard/focus support, and reduced-motion alternatives.
 - Design reusable components, variants, tokens, and responsive rules. Avoid one-off styling.
+
+
+
+### Approved Wren phone navigation (2026-11-08)
+- Place the address/search field in the lower glass dock by default on phones.
+- Use a two-row dock: address/search plus site identity/reload; then back, forward, home, bookmark, tab count and overflow menu. Show extension actions only when the extension is truly available.
+- Retain a quiet brand/site identity header at the top and let page content occupy the center.
+- Use Safari-like material restraint and Chrome-like address/navigation conventions as interaction references; create original Wren components and artwork rather than copying proprietary assets or implementation.
+- Provide a contrast-safe translucent fallback on Android versions without supported backdrop blur (minSdk 26).
 
 ## Required deliverable in Figma
 
@@ -28,8 +37,8 @@ Create a structured multi-page Figma file with:
 ## Global browser shell
 
 Design the browser chrome consistently:
-- Home/start page.
-- Address and search bar with URL, search query, secure/insecure indicator, clear, paste, voice-search placeholder only if supported, and loading/progress state.
+- Home/start page using the Wren bird identity.
+- Bottom-anchored address and search bar on phones, with URL/query detection, secure/insecure indicator, clear, paste, and loading/progress state. Keep clear/paste controls only where implemented.
 - Back, forward, reload/stop, home, tabs count, menu, and primary action placement.
 - Page loading, offline, network error, unsupported scheme, certificate/security warning, and page unavailable states.
 - Context menus for links, images, selected text, and page actions.
