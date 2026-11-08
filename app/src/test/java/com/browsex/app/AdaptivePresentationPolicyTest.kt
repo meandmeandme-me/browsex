@@ -98,7 +98,7 @@ class AdaptivePresentationPolicyTest {
                 blurCurrentlyEnabled = true,
                 hasVerifiedBackdropBlurPath = true,
                 ramTier = DeviceRamTier.HIGH,
-                systemHighContrast = true
+                highContrastEnabled = true
             )
         )
 
@@ -273,7 +273,7 @@ class AdaptivePresentationPolicyTest {
         ramTier: DeviceRamTier = DeviceRamTier.BALANCED,
         batterySaverEnabled: Boolean = false,
         thermalStatus: Int = 0,
-        systemHighContrast: Boolean = false,
+        highContrastEnabled: Boolean = false,
         reduceTransparency: Boolean = false,
         reduceMotion: Boolean = false,
         measuredJankPressure: Boolean = false,
@@ -293,7 +293,7 @@ class AdaptivePresentationPolicyTest {
         ramTier = ramTier,
         batterySaverEnabled = batterySaverEnabled,
         thermalStatus = thermalStatus,
-        systemHighContrast = systemHighContrast,
+        highContrastEnabled = highContrastEnabled,
         reduceTransparency = reduceTransparency,
         reduceMotion = reduceMotion,
         measuredJankPressure = measuredJankPressure,
