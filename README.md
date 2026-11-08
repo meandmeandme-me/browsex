@@ -4,7 +4,16 @@ A privacy-focused Android web browser built with Kotlin and Mozilla GeckoView. T
 
 ## Project status
 
-Active development: `rewrite-v2`. Design preparation: `wren-design-prep`. Keep experimental work off `main`.
+Active implementation and approved UI redesign: `wren-design-prep`. Keep all work on this branch until its checks and device tests are reviewed; do not modify `main`.
+
+
+### Approved Wren UI direction (2026-11-08)
+
+- The supplied Wren bird mark is the visible product identity.
+- The Android phone browser uses a bottom-anchored address/search field inside a restrained glass-style dock, with common navigation actions grouped beneath it.
+- Interaction patterns are informed by familiar Chrome and Safari behavior, but the implementation and visual assets are Wren's own.
+- Light/dark glass surfaces keep readable text and a translucent fallback on Android 8–11; essential controls do not depend on backdrop blur.
+- See [Wren design brief](docs/FIGMA_DESIGN_BRIEF.md), [screen map](docs/design/UIDIZARD_SCREEN_MAP.md), and [UI blueprint](docs/design/UI_BLUEPRINT.md).
 
 ### Implemented foundations
 
