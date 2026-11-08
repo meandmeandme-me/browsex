@@ -933,6 +933,30 @@ class MainActivity : AppCompatActivity() {
         val tvRemote = config.addressPlacement == WrenAddressPlacement.TV_REMOTE
         val topDock = config.addressPlacement == WrenAddressPlacement.TOP || tvRemote
 
+        // TV is a 10-foot remote experience: enlarge the brand, address field, targets and focus.
+        pageIdentity.textSize = if (tvRemote) 24f else 17f
+        address.textSize = if (tvRemote) 23f else 15f
+        siteInfoButton.textSize = if (tvRemote) 28f else 21f
+        reloadButton.textSize = if (tvRemote) 29f else 22f
+        val brand = topBar.getChildAt(0) as? ImageView
+        brand?.layoutParams = LinearLayout.LayoutParams(
+            dp(if (tvRemote) 54 else 34),
+            dp(if (tvRemote) 54 else 34)
+        ).apply { marginEnd = dp(if (tvRemote) 14 else 8) }
+        val topParams = topBar.layoutParams as? FrameLayout.LayoutParams
+        topParams?.let {
+            it.height = dp(if (tvRemote) 70 else 46)
+            it.topMargin = dp(if (tvRemote) 16 else 5)
+            it.leftMargin = dp(if (tvRemote) 28 else 13)
+            it.rightMargin = dp(if (tvRemote) 28 else 13)
+            topBar.layoutParams = it
+        }
+        val progressParams = progress.layoutParams as? FrameLayout.LayoutParams
+        progressParams?.let {
+            it.topMargin = dp(if (tvRemote) 90 else 51)
+            progress.layoutParams = it
+        }
+
         // Re-parenting the existing rows preserves all click listeners and browser actions.
         bottomBar.removeAllViews()
         if (sideRail) {
@@ -997,7 +1021,7 @@ class MainActivity : AppCompatActivity() {
                 params.width = minOf(dp(1200), (windowWidthPx - dp(96)).coerceAtLeast(dp(640)))
                 params.height = -2
                 params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                params.topMargin = dp(74)
+                params.topMargin = dp(100)
                 params.bottomMargin = 0
                 params.leftMargin = dp(24)
                 params.rightMargin = dp(24)
@@ -1032,6 +1056,11 @@ class MainActivity : AppCompatActivity() {
         bottomBar.layoutParams = params
         BrowseXColors.applyDirection(bottomBar, browserSettingsSnapshot)
         BrowseXColors.applyDirection(navigationBar, browserSettingsSnapshot)
+        if (tvRemote && !address.hasFocus()) {
+            address.post {
+                if (!isFinishing && !isDestroyed && !address.hasFocus()) address.requestFocus()
+            }
+        }
     }
 
     private fun createBrowserUi(): View {
@@ -1131,6 +1160,7 @@ class MainActivity : AppCompatActivity() {
             setSelectAllOnFocus(true)
             setPadding(dp(8), 0, dp(8), 0)
             background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            foreground = WrenFocusStyle.overlay(this@MainActivity, 14, colors.accent)
             elevation = 0f
             contentDescription = tr("Search or enter URL")
             setOnEditorActionListener { _, action, _ ->
