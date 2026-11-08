@@ -31,6 +31,7 @@ internal class DownloadsPage(
 ) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = activity.currentAdaptivePresentation?.windowLayout == WrenWindowLayout.TV
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
@@ -107,7 +108,7 @@ internal class DownloadsPage(
         lateinit var dialog: AlertDialog
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(14))
+            setPadding(dp(if (isTvRemote) 30 else 18), dp(if (isTvRemote) 26 else 16), dp(if (isTvRemote) 30 else 18), dp(14))
             setBackgroundColor(colors.canvas)
             BrowseXColors.applyDirection(this, store)
         }
@@ -118,38 +119,39 @@ internal class DownloadsPage(
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
             text = t("Downloads", "التنزيلات")
-            textSize = 26f
+            textSize = if (isTvRemote) 34f else 26f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
             text = t("Your Browse X downloads", "تنزيلات BrowseX")
-            textSize = 12f
+            textSize = if (isTvRemote) 15f else 12f
             setTextColor(colors.muted)
         })
         header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
         val refresh = TextView(activity).apply {
             text = "↻"
-            textSize = 23f
+            textSize = if (isTvRemote) 30f else 23f
             gravity = Gravity.CENTER
             setTextColor(colors.accent)
             background = rounded(colors.card, 13)
-            minimumWidth = dp(48)
-            minimumHeight = dp(48)
+            minimumWidth = dp(if (isTvRemote) 60 else 48)
+            minimumHeight = dp(if (isTvRemote) 60 else 48)
             isClickable = true
             isFocusable = true
             isFocusableInTouchMode = false
             foreground = WrenFocusStyle.overlay(activity, 13, colors.accent)
             contentDescription = t("Refresh downloads", "تحديث التنزيلات")
         }
-        header.addView(refresh, LinearLayout.LayoutParams(dp(44), dp(44)))
+        val refreshSize = dp(if (isTvRemote) 60 else 48)
+        header.addView(refresh, LinearLayout.LayoutParams(refreshSize, refreshSize))
         root.addView(header)
         root.addView(TextView(activity).apply {
             text = t(
                 "BrowseX saves the response received from the website directly. Older Android-managed downloads may have different retry and resume limits.",
                 "يحفظ BrowseX الاستجابة التي استلمها من الموقع مباشرة. قد تختلف حدود إعادة المحاولة والاستكمال في التنزيلات القديمة التي يديرها أندرويد."
             )
-            textSize = 11f
+            textSize = if (isTvRemote) 14f else 11f
             setTextColor(colors.muted)
             setPadding(dp(2), dp(9), dp(2), dp(2))
         })
@@ -157,7 +159,7 @@ internal class DownloadsPage(
         val scroll = ScrollView(activity)
         val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(list)
-        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(18) })
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(if (isTvRemote) 26 else 18) })
 
         fun statusText(status: Int): String = when (status) {
             DownloadManager.STATUS_PENDING -> t("Waiting", "في الانتظار")
@@ -219,13 +221,13 @@ internal class DownloadsPage(
                 val item = LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(13), dp(13), dp(10), dp(13))
+                    setPadding(dp(if (isTvRemote) 20 else 13), dp(if (isTvRemote) 18 else 13), dp(if (isTvRemote) 18 else 10), dp(if (isTvRemote) 18 else 13))
                     background = rounded(colors.card, 15)
                 }
                 val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
                 labels.addView(TextView(activity).apply {
                     text = record.displayName
-                    textSize = 14f
+                    textSize = if (isTvRemote) 18f else 14f
                     setTypeface(typeface, Typeface.BOLD)
                     setTextColor(colors.ink)
                     maxLines = 2
@@ -248,7 +250,7 @@ internal class DownloadsPage(
                 val detail = statusLabel + if (recordIsActive || !recordIsFailed) progressText + " · " + date else ""
                 labels.addView(TextView(activity).apply {
                     text = detail
-                    textSize = 10f
+                    textSize = if (isTvRemote) 14f else 10f
                     setTextColor(when {
                         recordIsFailed -> colors.danger
                         recordIsCancelled -> colors.muted
@@ -266,7 +268,7 @@ internal class DownloadsPage(
                     progress = if (record.totalBytes > 0L) {
                         ((record.bytesWritten.coerceAtMost(record.totalBytes).toDouble() / record.totalBytes.toDouble()) * 100.0).toInt().coerceIn(0, 100)
                     } else 0
-                }, LinearLayout.LayoutParams(-1, dp(4)).apply { topMargin = dp(7) })
+                }, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 6 else 4)).apply { topMargin = dp(7) })
                 item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
                 val action = TextView(activity).apply {
                     text = when {
@@ -274,12 +276,12 @@ internal class DownloadsPage(
                         recordIsFailed || recordIsCancelled -> t("Remove", "حذف")
                         else -> t("Open", "فتح")
                     }
-                    textSize = 13f
+                    textSize = if (isTvRemote) 16f else 13f
                     gravity = Gravity.CENTER
                     setTextColor(if (recordIsFailed || recordIsCancelled) colors.danger else colors.accent)
                     setPadding(dp(10), dp(8), dp(6), dp(8))
-                    minimumWidth = dp(48)
-                    minimumHeight = dp(48)
+                    minimumWidth = dp(if (isTvRemote) 60 else 48)
+                    minimumHeight = dp(if (isTvRemote) 60 else 48)
                     isClickable = true
                     isFocusable = true
                     isFocusableInTouchMode = false
@@ -433,7 +435,7 @@ internal class DownloadsPage(
                     val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
                     labels.addView(TextView(activity).apply {
                         text = title
-                        textSize = 14f
+                        textSize = if (isTvRemote) 18f else 14f
                         setTypeface(typeface, Typeface.BOLD)
                         setTextColor(colors.ink)
                         maxLines = 2
@@ -445,19 +447,19 @@ internal class DownloadsPage(
                     val reasonLabel = reasonText(status, reason)
                     labels.addView(TextView(activity).apply {
                         text = listOf(statusText(status), reasonLabel, size + percent, timestamp).filter { it.isNotBlank() }.joinToString(" · ")
-                        textSize = 10f
+                        textSize = if (isTvRemote) 14f else 10f
                         setTextColor(colors.muted)
                         setPadding(0, dp(4), 0, 0)
                     })
                     item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
                     val action = TextView(activity).apply {
                         text = if (status == DownloadManager.STATUS_SUCCESSFUL) t("Open", "فتح") else if (status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_PAUSED) t("Cancel", "إلغاء") else t("Remove", "حذف")
-                        textSize = 13f
+                        textSize = if (isTvRemote) 16f else 13f
                         gravity = Gravity.CENTER
                         setTextColor(if (status == DownloadManager.STATUS_SUCCESSFUL) colors.accent else colors.danger)
                         setPadding(dp(10), dp(8), dp(6), dp(8))
-                        minimumWidth = dp(48)
-                        minimumHeight = dp(48)
+                        minimumWidth = dp(if (isTvRemote) 60 else 48)
+                        minimumHeight = dp(if (isTvRemote) 60 else 48)
                         isClickable = true
                         isFocusable = true
                         isFocusableInTouchMode = false
@@ -589,7 +591,7 @@ internal class DownloadsPage(
                 val stale = LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(13), dp(13), dp(10), dp(13))
+                    setPadding(dp(if (isTvRemote) 20 else 13), dp(if (isTvRemote) 18 else 13), dp(if (isTvRemote) 18 else 10), dp(if (isTvRemote) 18 else 13))
                     background = rounded(colors.card, 15)
                 }
                 stale.addView(TextView(activity).apply {

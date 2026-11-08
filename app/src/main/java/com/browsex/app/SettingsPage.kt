@@ -39,6 +39,7 @@ internal class SettingsPage(
     private val openAutofillSettings: () -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = activity.currentAdaptivePresentation?.windowLayout == WrenWindowLayout.TV
     private val ink get() = colors.ink
     private val muted get() = colors.muted
     private val accent get() = colors.accent
@@ -70,7 +71,7 @@ internal class SettingsPage(
         lateinit var dialog: AlertDialog
         val page = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(16))
+            setPadding(dp(if (isTvRemote) 30 else 18), dp(if (isTvRemote) 26 else 16), dp(if (isTvRemote) 30 else 18), dp(16))
             setBackgroundColor(canvas)
             BrowseXColors.applyDirection(this, store)
         }
@@ -82,13 +83,13 @@ internal class SettingsPage(
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
             text = t("Settings")
-            textSize = 27f
+            textSize = if (isTvRemote) 34f else 27f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ink)
         })
         heading.addView(TextView(activity).apply {
             text = t("Make Browse X work the way you like")
-            textSize = 12f
+            textSize = if (isTvRemote) 15f else 12f
             setTextColor(muted)
             setPadding(0, dp(3), 0, 0)
         })
@@ -104,9 +105,10 @@ internal class SettingsPage(
             isFocusableInTouchMode = false
             contentDescription = t("Close settings")
         }
-        close.minimumWidth = dp(48)
-        close.minimumHeight = dp(48)
-        header.addView(close, LinearLayout.LayoutParams(dp(48), dp(48)))
+        val closeSize = dp(if (isTvRemote) 60 else 48)
+        close.minimumWidth = closeSize
+        close.minimumHeight = closeSize
+        header.addView(close, LinearLayout.LayoutParams(closeSize, closeSize))
         page.addView(header)
 
         val scroll = ScrollView(activity).apply {
@@ -120,7 +122,7 @@ internal class SettingsPage(
         fun section(title: String, subtitle: String? = null) {
             content.addView(TextView(activity).apply {
                 text = t(title).uppercase()
-                textSize = 11f
+                textSize = if (isTvRemote) 14f else 11f
                 letterSpacing = .08f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(muted)
@@ -138,8 +140,8 @@ internal class SettingsPage(
             val item = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(14), dp(13), dp(12), dp(13))
-                minimumHeight = dp(58)
+                setPadding(dp(if (isTvRemote) 20 else 14), dp(if (isTvRemote) 18 else 13), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 13))
+                minimumHeight = dp(if (isTvRemote) 76 else 58)
                 background = rounded(colors.card, 15)
                 foreground = WrenFocusStyle.overlay(activity, 15, accent)
                 isClickable = true
@@ -150,20 +152,20 @@ internal class SettingsPage(
             val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
             labels.addView(TextView(activity).apply {
                 text = t(title)
-                textSize = 14f
+                textSize = if (isTvRemote) 18f else 14f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(ink)
             })
             labels.addView(TextView(activity).apply {
                 text = t(description)
-                textSize = 11f
+                textSize = if (isTvRemote) 14f else 11f
                 setTextColor(muted)
                 setPadding(0, dp(4), 0, 0)
             })
             item.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
             item.addView(TextView(activity).apply {
                 text = t(trailing)
-                textSize = 18f
+                textSize = if (isTvRemote) 24f else 18f
                 gravity = Gravity.CENTER
                 setTextColor(accent)
             })

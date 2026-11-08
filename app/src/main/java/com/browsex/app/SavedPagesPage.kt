@@ -27,6 +27,7 @@ internal class SavedPagesPage(
     private var selectedFolderId: String? = null
     private var dismissDialog: (() -> Unit)? = null
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = activity.currentAdaptivePresentation?.windowLayout == WrenWindowLayout.TV
     private val ink get() = colors.ink
     private val muted get() = colors.muted
     private val accent get() = colors.accent
@@ -44,7 +45,7 @@ internal class SavedPagesPage(
         lateinit var dialog: AlertDialog
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(14))
+            setPadding(dp(if (isTvRemote) 30 else 18), dp(if (isTvRemote) 26 else 16), dp(if (isTvRemote) 30 else 18), dp(14))
             setBackgroundColor(colors.canvas)
             BrowseXColors.applyDirection(this, store)
         }
@@ -55,13 +56,13 @@ internal class SavedPagesPage(
         val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         heading.addView(TextView(activity).apply {
             text = if (title == "Bookmarks") t("Bookmarks", "المفضلة") else t("History", "السجل")
-            textSize = 26f
+            textSize = if (isTvRemote) 34f else 26f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ink)
         })
         heading.addView(TextView(activity).apply {
             text = if (isHistory) t("Pages you have visited", "الصفحات التي زرتها") else t("Websites saved for later", "مواقع حفظتها لوقت لاحق")
-            textSize = 12f
+            textSize = if (isTvRemote) 15f else 12f
             setTextColor(muted)
             setPadding(0, dp(3), 0, 0)
         })
@@ -74,21 +75,25 @@ internal class SavedPagesPage(
             background = rounded(colors.card, 14)
             contentDescription = t("Close", "إغلاق")
         }
-        close.minimumWidth = dp(48)
-        close.minimumHeight = dp(48)
-        header.addView(close, LinearLayout.LayoutParams(dp(48), dp(48)))
+        close.foreground = WrenFocusStyle.overlay(activity, 14, accent)
+        close.isFocusable = true
+        close.isFocusableInTouchMode = false
+        val closeSize = dp(if (isTvRemote) 60 else 48)
+        close.minimumWidth = closeSize
+        close.minimumHeight = closeSize
+        header.addView(close, LinearLayout.LayoutParams(closeSize, closeSize))
         root.addView(header)
 
         val search = EditText(activity).apply {
             hint = if (isHistory) t("Search browsing history", "ابحث في سجل التصفح") else t("Search bookmarks", "ابحث في المفضلة")
-            textSize = 14f
+            textSize = if (isTvRemote) 18f else 14f
             isSingleLine = true
             setTextColor(ink)
             setHintTextColor(muted)
             setPadding(dp(15), 0, dp(15), 0)
             background = rounded(colors.card, 15)
         }
-        root.addView(search, LinearLayout.LayoutParams(-1, dp(48)).apply {
+        root.addView(search, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 60 else 48)).apply {
             topMargin = dp(17)
         })
         val folderBar = LinearLayout(activity).apply {
@@ -167,10 +172,11 @@ internal class SavedPagesPage(
                 val selected = selectedFolderId == id
                 val view = TextView(activity).apply {
                     text = label
-                    textSize = 11f
+                    textSize = if (isTvRemote) 16f else 11f
                     setTypeface(typeface, Typeface.BOLD)
                     setTextColor(if (selected) colors.accent else muted)
-                    setPadding(dp(12), dp(9), dp(12), dp(9))
+                    setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 14 else 9), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 14 else 9))
+                    minimumHeight = dp(if (isTvRemote) 56 else 42)
                     background = rounded(if (selected) colors.selected else colors.card, 18)
                     foreground = WrenFocusStyle.overlay(activity, 18, accent)
                     isClickable = true
@@ -309,14 +315,14 @@ internal class SavedPagesPage(
             val host = Uri.parse(page).host ?: page
             details.addView(TextView(activity).apply {
                 text = pageTitle(page)
-                textSize = 14f
+                textSize = if (isTvRemote) 19f else 14f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(ink)
                 maxLines = 1
             })
             details.addView(TextView(activity).apply {
                 text = page
-                textSize = 10f
+                textSize = if (isTvRemote) 14f else 10f
                 setTextColor(muted)
                 maxLines = 2
                 setPadding(0, dp(4), 0, 0)
@@ -328,9 +334,9 @@ internal class SavedPagesPage(
                 gravity = Gravity.CENTER
                 setTextColor(colors.danger)
                 contentDescription = if (isHistory) t("Remove from history", "حذف من السجل") else t("Remove bookmark", "إزالة من المفضلة")
-                setPadding(dp(12), dp(5), dp(8), dp(5))
-                minimumWidth = dp(48)
-                minimumHeight = dp(48)
+                setPadding(dp(if (isTvRemote) 16 else 12), dp(7), dp(10), dp(7))
+                minimumWidth = dp(if (isTvRemote) 60 else 48)
+                minimumHeight = dp(if (isTvRemote) 60 else 48)
                 foreground = WrenFocusStyle.overlay(activity, 12, accent)
                 isFocusable = true
                 isFocusableInTouchMode = false
