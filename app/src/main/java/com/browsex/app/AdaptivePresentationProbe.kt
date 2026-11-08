@@ -31,7 +31,9 @@ internal class AdaptivePresentationProbe(context: Context) {
         measuredJankPressure: Boolean = false,
         imeVisible: Boolean = false,
         addressBarPreference: AddressBarPreference = AddressBarPreference.AUTO,
-        reduceTransparency: Boolean = false
+        reduceTransparency: Boolean = false,
+        reduceMotionPreference: Boolean = false,
+        highContrastPreference: Boolean = false
     ): PresentationCapabilitySnapshot {
         val packageManager = appContext.packageManager
         val accessibility = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE)
@@ -62,11 +64,12 @@ internal class AdaptivePresentationProbe(context: Context) {
             ramTier = deviceProfile.ramTier,
             batterySaverEnabled = pressure.batterySaverEnabled,
             thermalStatus = pressure.thermalStatus,
-            systemHighContrast = Build.VERSION.SDK_INT >= 36 &&
-                accessibility?.isHighContrastTextEnabled == true,
+            systemHighContrast = highContrastPreference || (Build.VERSION.SDK_INT >= 36 &&
+                accessibility?.isHighContrastTextEnabled == true),
             // No OEM-neutral Android switch exists; use Wren's persisted preference.
             reduceTransparency = reduceTransparency,
-            reduceMotion = !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
+            reduceMotion = reduceMotionPreference ||
+                !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
             measuredJankPressure = measuredJankPressure,
             severeMemoryPressure = memoryInfo.lowMemory,
             imeVisible = imeVisible,
