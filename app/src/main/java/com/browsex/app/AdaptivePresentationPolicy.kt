@@ -99,12 +99,9 @@ internal object AdaptivePresentationPolicy {
             snapshot.thermalStatus >= THERMAL_MODERATE
 
         val material = when {
-            accessibilityOverride -> WrenMaterialMode.HIGH_CONTRAST
+            snapshot.systemHighContrast -> WrenMaterialMode.HIGH_CONTRAST
+            snapshot.reduceTransparency -> WrenMaterialMode.MATTE
             severePressure -> WrenMaterialMode.PERFORMANCE_MINIMAL
-            snapshot.addressBarPreference == AddressBarPreference.TOP &&
-                snapshot.reduceTransparency -> WrenMaterialMode.MATTE
-            snapshot.addressBarPreference == AddressBarPreference.BOTTOM &&
-                snapshot.reduceTransparency -> WrenMaterialMode.MATTE
             constrained -> WrenMaterialMode.GLASS_TINTED
             canUseVerifiedBlur(snapshot) -> WrenMaterialMode.GLASS_BLUR
             else -> WrenMaterialMode.GLASS_TINTED
@@ -127,7 +124,9 @@ internal object AdaptivePresentationPolicy {
     }
 
     private fun resolveLayout(snapshot: PresentationCapabilitySnapshot): WrenWindowLayout {
-        if (snapshot.isLeanbackDevice) return WrenWindowLayout.TV
+        if (snapshot.isLeanbackDevice || (!snapshot.hasTouchscreen && snapshot.hasDpad)) {
+            return WrenWindowLayout.TV
+        }
         val width = snapshot.windowWidthDp
         val height = snapshot.windowHeightDp
         if (width < 600 && height in 1 until 480) return WrenWindowLayout.COMPACT_LANDSCAPE
