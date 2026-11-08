@@ -172,8 +172,10 @@ internal class SavedPagesPage(
                     setTextColor(if (selected) colors.accent else muted)
                     setPadding(dp(12), dp(9), dp(12), dp(9))
                     background = rounded(if (selected) colors.selected else colors.card, 18)
+                    foreground = WrenFocusStyle.overlay(activity, 18, accent)
                     isClickable = true
                     isFocusable = true
+                    isFocusableInTouchMode = false
                     setOnClickListener { selectedFolderId = id; drawFolders(); refresh(search.text?.toString().orEmpty()) }
                 }
                 if (id != null && id != BookmarkFolder.DEFAULT_ID) {
@@ -223,6 +225,10 @@ internal class SavedPagesPage(
                 setTextColor(accent)
                 setPadding(dp(12), dp(5), dp(12), dp(5))
                 background = rounded(colors.card, 18)
+                foreground = WrenFocusStyle.overlay(activity, 18, accent)
+                isClickable = true
+                isFocusable = true
+                isFocusableInTouchMode = false
                 contentDescription = t("Create folder", "إنشاء مجلد")
                 setOnClickListener {
                     val field = EditText(activity).apply {
@@ -294,7 +300,9 @@ internal class SavedPagesPage(
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(13), dp(12), dp(8), dp(12))
                 background = rounded(colors.card, 15)
+                foreground = WrenFocusStyle.overlay(activity, 15, accent)
                 isFocusable = true
+                isFocusableInTouchMode = false
                 isClickable = true
             }
             val details = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -323,6 +331,9 @@ internal class SavedPagesPage(
                 setPadding(dp(12), dp(5), dp(8), dp(5))
                 minimumWidth = dp(48)
                 minimumHeight = dp(48)
+                foreground = WrenFocusStyle.overlay(activity, 12, accent)
+                isFocusable = true
+                isFocusableInTouchMode = false
                 setOnClickListener {
                     if (isHistory) store.removeHistory(page) else store.removeBookmark(page)
                     pages.remove(page)

@@ -1257,8 +1257,10 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             setTextColor(colors.ink)
             minimumWidth = dp(0)
-            minimumHeight = dp(44)
+            minimumHeight = if (adaptivePresentationConfig?.windowLayout == WrenWindowLayout.TV) dp(60) else dp(48)
             isFocusable = true
+            isFocusableInTouchMode = false
+            foreground = WrenFocusStyle.overlay(this@MainActivity, 15, colors.accent)
             setOnClickListener { action() }
         }
 

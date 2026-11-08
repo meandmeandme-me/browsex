@@ -138,6 +138,8 @@ internal class DownloadsPage(
             minimumHeight = dp(48)
             isClickable = true
             isFocusable = true
+            isFocusableInTouchMode = false
+            foreground = WrenFocusStyle.overlay(activity, 13, colors.accent)
             contentDescription = t("Refresh downloads", "تحديث التنزيلات")
         }
         header.addView(refresh, LinearLayout.LayoutParams(dp(44), dp(44)))
@@ -280,6 +282,8 @@ internal class DownloadsPage(
                     minimumHeight = dp(48)
                     isClickable = true
                     isFocusable = true
+                    isFocusableInTouchMode = false
+                    foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                     contentDescription = when {
                         recordIsActive -> t("Cancel download", "إلغاء التنزيل")
                         recordIsFailed || recordIsCancelled -> t("Remove download record", "حذف سجل التنزيل")
@@ -323,6 +327,8 @@ internal class DownloadsPage(
                         minimumHeight = dp(48)
                         isClickable = true
                         isFocusable = true
+                        isFocusableInTouchMode = false
+                        foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                         contentDescription = t("Share downloaded file", "مشاركة الملف المنزّل")
                         setOnClickListener {
                             val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
@@ -356,6 +362,8 @@ internal class DownloadsPage(
                     contentDescription = t("Remove download record", "حذف سجل التنزيل")
                     isClickable = true
                     isFocusable = true
+                    isFocusableInTouchMode = false
+                    foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                     setOnClickListener {
                         AlertDialog.Builder(activity)
                             .setMessage(
@@ -452,6 +460,8 @@ internal class DownloadsPage(
                         minimumHeight = dp(48)
                         isClickable = true
                         isFocusable = true
+                        isFocusableInTouchMode = false
+                        foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                         contentDescription = if (status == DownloadManager.STATUS_SUCCESSFUL) t("Open downloaded file", "فتح الملف المنزّل") else t("Manage download", "إدارة التنزيل")
                         setOnClickListener {
                             if (status == DownloadManager.STATUS_SUCCESSFUL) {
@@ -498,6 +508,8 @@ internal class DownloadsPage(
                             minimumHeight = dp(48)
                             isClickable = true
                             isFocusable = true
+                            isFocusableInTouchMode = false
+                            foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                             contentDescription = t("Share downloaded file", "مشاركة الملف المنزّل")
                             setOnClickListener {
                                 val uri = manager.getUriForDownloadedFile(id)
@@ -533,6 +545,8 @@ internal class DownloadsPage(
                             contentDescription = t("Delete downloaded file", "حذف الملف المنزّل")
                             isClickable = true
                             isFocusable = true
+                            isFocusableInTouchMode = false
+                            foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                             setOnClickListener {
                                 AlertDialog.Builder(activity)
                                     .setMessage(t("Delete this downloaded file from your device?", "حذف هذا الملف المنزّل من جهازك؟"))
@@ -588,6 +602,10 @@ internal class DownloadsPage(
                     contentDescription = t("Remove unavailable download", "حذف التنزيل غير المتاح")
                     setTextColor(colors.danger)
                     setPadding(dp(12), dp(8), dp(6), dp(8))
+                    isClickable = true
+                    isFocusable = true
+                    isFocusableInTouchMode = false
+                    foreground = WrenFocusStyle.overlay(activity, 12, colors.accent)
                     setOnClickListener { activity.lifecycleScope.launch { repository.removeTrackedPlatformDownload(id); reloadRoomRecords() } }
                 })
                 list.addView(stale, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })

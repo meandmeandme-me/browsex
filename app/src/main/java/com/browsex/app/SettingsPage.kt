@@ -99,6 +99,9 @@ internal class SettingsPage(
             gravity = Gravity.CENTER
             setTextColor(ink)
             background = rounded(colors.card, 14)
+            foreground = WrenFocusStyle.overlay(activity, 14, accent)
+            isFocusable = true
+            isFocusableInTouchMode = false
             contentDescription = t("Close settings")
         }
         close.minimumWidth = dp(48)
@@ -138,8 +141,10 @@ internal class SettingsPage(
                 setPadding(dp(14), dp(13), dp(12), dp(13))
                 minimumHeight = dp(58)
                 background = rounded(colors.card, 15)
+                foreground = WrenFocusStyle.overlay(activity, 15, accent)
                 isClickable = true
                 isFocusable = true
+                isFocusableInTouchMode = false
                 setOnClickListener { action() }
             }
             val labels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }

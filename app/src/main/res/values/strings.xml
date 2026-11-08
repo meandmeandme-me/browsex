@@ -333,4 +333,5 @@
     <string name="ui_automatic">Automatic</string>
     <string name="ui_top">Top</string>
     <string name="ui_bottom">Bottom</string>
+    <string name="ui_active">Active</string>
 </resources>

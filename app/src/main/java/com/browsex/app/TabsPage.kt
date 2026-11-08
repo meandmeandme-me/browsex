@@ -360,7 +360,7 @@ internal class TabsPage(
                     setPadding(0, dp(9), 0, 0)
                 }
                 actions.addView(TextView(activity).apply {
-                    text = if (selected) "● Active" else "Open"
+                    text = if (selected) "● ${tr("Active")}" else tr("Open")
                     textSize = 12f
                     setTextColor(if (selected) colors.accent else colors.muted)
                 }, LinearLayout.LayoutParams(0, dp(32), 1f))
