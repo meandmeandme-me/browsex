@@ -787,7 +787,6 @@ class MainActivity : AppCompatActivity() {
 
         // Re-parenting the existing rows preserves all click listeners and browser actions.
         bottomBar.removeAllViews()
-        navigationBar.removeAllViews()
         if (sideRail) {
             bottomBar.orientation = LinearLayout.HORIZONTAL
             bottomBar.gravity = Gravity.CENTER_VERTICAL
@@ -838,7 +837,7 @@ class MainActivity : AppCompatActivity() {
         val params = bottomBar.layoutParams as? FrameLayout.LayoutParams ?: return
         when {
             sideRail -> {
-                params.width = dp(310)
+                params.width = dp(324)
                 params.height = -2
                 params.gravity = (if (rtl) Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
                 params.topMargin = dp(12)
