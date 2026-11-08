@@ -44,6 +44,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.metrics.performance.JankStats
 import kotlinx.coroutines.launch
 import java.util.ArrayDeque
+import java.util.WeakHashMap
 import com.browsex.app.storage.BrowserStorageRuntime
 import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
@@ -110,7 +111,11 @@ class MainActivity : AppCompatActivity() {
             isHostUnavailable = { shuttingDown || isFinishing || isDestroyed },
             attachDelegates = ::attachDelegates,
             runtime = { BrowserRuntimeOwner.runtime(this) },
-            attachSessionToView = { session -> browserView.setSession(session) },
+            attachSessionToView = { session ->
+                activePageScrollY = pageScrollOffsets[session] ?: 0
+                lastFocusedNavigationControl = null
+                browserView.setSession(session)
+            },
             releaseViewSession = { browserView.releaseSession() },
             enforceSessionBudget = ::enforceLiveSessionBudget,
             updateChrome = ::updateChrome,
@@ -289,6 +294,9 @@ class MainActivity : AppCompatActivity() {
     private var lastPresentationHeightPx = 0
     private var initialTvFocusRequested = false
     private var imeVisible = false
+    private var activePageScrollY = 0
+    private var lastFocusedNavigationControl: View? = null
+    private val pageScrollOffsets = WeakHashMap<GeckoSession, Int>()
     private var jankStats: JankStats? = null
     private val recentJankFrames = ArrayDeque<Boolean>(60)
     private var recentJankFrameCount = 0
@@ -1251,31 +1259,44 @@ class MainActivity : AppCompatActivity() {
         }
         addressRow.addView(address, LinearLayout.LayoutParams(0, dp(44), 1f))
 
-        // The address field owns the first TV focus. Down hands control to GeckoView
-        // only after the IME is closed; Up at the top edge returns to browser chrome.
+        // TV focus order is address/search -> navigation row -> web document.
+        // Never skip visible browser controls when the user presses D-pad down.
         address.setOnKeyListener { _, keyCode, event ->
-            if (isTelevisionDevice &&
-                !imeVisible &&
-                event.action == KeyEvent.ACTION_DOWN &&
-                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+            if (!isTelevisionDevice || event.action != KeyEvent.ACTION_DOWN ||
+                keyCode != KeyEvent.KEYCODE_DPAD_DOWN
             ) {
-                browserView.requestFocus()
-            } else {
                 false
+            } else {
+                when (
+                    TvRemoteNavigationPolicy.moveDownFromAddress(
+                        hasVisibleNavigationControls = ::navigationBar.isInitialized &&
+                            navigationBar.visibility == View.VISIBLE &&
+                            (0 until navigationBar.childCount).any { index ->
+                                val child = navigationBar.getChildAt(index)
+                                child.isShown && child.isFocusable && child.isEnabled
+                            },
+                        imeVisible = imeVisible
+                    )
+                ) {
+                    TvFocusTarget.NAVIGATION_CONTROLS -> focusFirstNavigationControl()
+                    TvFocusTarget.WEB_CONTENT -> browserView.requestFocus()
+                    TvFocusTarget.ADDRESS, TvFocusTarget.NONE -> false
+                }
             }
         }
         browserView.apply {
             isFocusable = true
             isFocusableInTouchMode = true
-            setOnKeyListener { view, keyCode, event ->
+            setOnKeyListener { _, keyCode, event ->
                 if (isTelevisionDevice &&
-                    !imeVisible &&
                     event.action == KeyEvent.ACTION_DOWN &&
                     keyCode == KeyEvent.KEYCODE_DPAD_UP &&
-                    !view.canScrollVertically(-1)
+                    TvRemoteNavigationPolicy.shouldReturnToChromeFromWeb(activePageScrollY, imeVisible)
                 ) {
-                    address.requestFocus()
-                    true
+                    val target = lastFocusedNavigationControl
+                        ?.takeIf { it.isShown && it.isFocusable && it.isEnabled }
+                        ?: address
+                    target.requestFocus()
                 } else {
                     false
                 }
@@ -1295,6 +1316,7 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             setPadding(dp(1), dp(5), dp(1), 0)
         }
+        navigationBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         bottomButton(if (BrowseXColors.isRtl(browserSettingsSnapshot)) "›" else "‹", "Go back") {
             activeTab?.takeIf { it.canGoBack }?.session?.goBack()
         }
@@ -1316,6 +1338,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 14f
             background = rounded(0x18FFFFFF, 14)
         }
+        prepareTvNavigationControl(tabsButton)
         navigationBar.addView(tabsButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
             marginStart = dp(1)
             marginEnd = dp(1)
@@ -1327,6 +1350,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 18f
             visibility = View.GONE
         }
+        prepareTvNavigationControl(uBlockButton)
         navigationBar.addView(uBlockButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
             marginStart = dp(1)
             marginEnd = dp(1)
@@ -1396,10 +1420,37 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { action() }
         }
 
+    private fun focusFirstNavigationControl(): Boolean {
+        if (!::navigationBar.isInitialized || navigationBar.visibility != View.VISIBLE) return false
+        val target = (0 until navigationBar.childCount)
+            .map(navigationBar::getChildAt)
+            .firstOrNull { it.isShown && it.isFocusable && it.isEnabled }
+            ?: return false
+        return target.requestFocus()
+    }
+
+    private fun prepareTvNavigationControl(control: View) {
+        control.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) lastFocusedNavigationControl = view
+        }
+        control.setOnKeyListener { _, keyCode, event ->
+            if (!isTelevisionDevice || event.action != KeyEvent.ACTION_DOWN) {
+                false
+            } else {
+                when (TvRemoteNavigationPolicy.moveFromNavigation(keyCode, imeVisible)) {
+                    TvFocusTarget.ADDRESS -> address.requestFocus()
+                    TvFocusTarget.WEB_CONTENT -> browserView.requestFocus()
+                    TvFocusTarget.NAVIGATION_CONTROLS, TvFocusTarget.NONE -> false
+                }
+            }
+        }
+    }
+
     private fun bottomButton(label: String, description: String, action: () -> Unit) =
         actionButton(label, description, action).also {
             it.textSize = 22f
             it.setTextColor(colors.ink)
+            prepareTvNavigationControl(it)
             navigationBar.addView(it, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
                 marginStart = dp(1)
                 marginEnd = dp(1)
@@ -1500,6 +1551,12 @@ class MainActivity : AppCompatActivity() {
             tab.privateMode
         )
         tab.session.permissionDelegate = tab.permissionDelegate
+        tab.session.setScrollDelegate(object : GeckoSession.ScrollDelegate {
+            override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {
+                pageScrollOffsets[session] = scrollY
+                if (session === activeTab?.session) activePageScrollY = scrollY
+            }
+        })
         sessionDelegateFactory.attach(tab)
         uBlockOriginManager?.attachSession(tab.session)
         tab.session.promptDelegate = BrowserCredentialPromptDelegate(
