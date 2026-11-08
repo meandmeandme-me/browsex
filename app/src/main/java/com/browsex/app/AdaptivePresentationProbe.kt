@@ -64,7 +64,7 @@ internal class AdaptivePresentationProbe(context: Context) {
             ramTier = deviceProfile.ramTier,
             batterySaverEnabled = pressure.batterySaverEnabled,
             thermalStatus = pressure.thermalStatus,
-            systemHighContrast = highContrastPreference || (Build.VERSION.SDK_INT >= 36 &&
+            highContrastEnabled = highContrastPreference || (Build.VERSION.SDK_INT >= 36 &&
                 accessibility?.isHighContrastTextEnabled == true),
             // No OEM-neutral Android switch exists; use Wren's persisted preference.
             reduceTransparency = reduceTransparency,
