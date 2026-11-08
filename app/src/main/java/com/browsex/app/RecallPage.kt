@@ -23,6 +23,7 @@ internal class RecallPage(
     private val onOpen: (String) -> Unit
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
@@ -34,7 +35,7 @@ internal class RecallPage(
         lateinit var dialog: AlertDialog
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(14))
+            setPadding(WrenAdaptiveUi.horizontalSafePadding(activity), WrenAdaptiveUi.verticalSafePadding(activity), WrenAdaptiveUi.horizontalSafePadding(activity), dp(if (isTvRemote) 28 else 14))
             setBackgroundColor(colors.canvas)
             BrowseXColors.applyDirection(this, store)
         }
@@ -44,19 +45,18 @@ internal class RecallPage(
         }
         header.addView(TextView(activity).apply {
             text = t("Find anything", "اعثر على أي شيء")
-            textSize = 25f
+            textSize = if (isTvRemote) 34f else 25f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colors.ink)
         }, LinearLayout.LayoutParams(0, -2, 1f))
         val close = TextView(activity).apply {
             text = "×"
-            textSize = 27f
+            textSize = if (isTvRemote) 34f else 27f
             gravity = Gravity.CENTER
             setTextColor(colors.ink)
             background = rounded(colors.card, 14)
             contentDescription = t("Close", "إغلاق")
-            minimumWidth = dp(48)
-            minimumHeight = dp(48)
+            WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.accent, if (isTvRemote) 64 else 48)
         }
         header.addView(close)
         root.addView(header)
@@ -65,20 +65,20 @@ internal class RecallPage(
                 "Search your open tabs, bookmarks and recent history in one place.",
                 "ابحث في التبويبات المفتوحة والمفضلة والسجل الحديث من مكان واحد."
             )
-            textSize = 12f
+            textSize = if (isTvRemote) 17f else 12f
             setTextColor(colors.muted)
-            setPadding(0, dp(4), 0, dp(12))
+            setPadding(0, dp(4), 0, dp(if (isTvRemote) 20 else 12))
         })
         val search = EditText(activity).apply {
             hint = t("Search pages or websites", "ابحث عن صفحة أو موقع")
-            textSize = 14f
+            textSize = if (isTvRemote) 19f else 14f
             isSingleLine = true
             setTextColor(colors.ink)
             setHintTextColor(colors.muted)
             setPadding(dp(14), 0, dp(14), 0)
             background = rounded(colors.card, 15)
         }
-        root.addView(search, LinearLayout.LayoutParams(-1, dp(48)))
+        root.addView(search, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 64 else 48)))
         val scroll = ScrollView(activity).apply { clipToPadding = false }
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -100,7 +100,7 @@ internal class RecallPage(
             if (filtered.isEmpty()) return
             content.addView(TextView(activity).apply {
                 text = label.uppercase()
-                textSize = 11f
+                textSize = if (isTvRemote) 15f else 11f
                 letterSpacing = .07f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colors.muted)
@@ -109,22 +109,23 @@ internal class RecallPage(
             filtered.forEach { (title, url) ->
                 val item = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(13), dp(11), dp(13), dp(11))
+                    setPadding(dp(if (isTvRemote) 20 else 13), dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 20 else 13), dp(if (isTvRemote) 18 else 11))
                     background = rounded(colors.card, 14)
                     isClickable = true
-                    isFocusable = true
+                    WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.accent, if (isTvRemote) 76 else 48)
+                    contentDescription = title.ifBlank { url } + ", " + url
                     setOnClickListener { dialog.dismiss(); onOpen(url) }
                 }
                 item.addView(TextView(activity).apply {
                     text = title.ifBlank { runCatching { Uri.parse(url).host }.getOrNull().orEmpty().ifBlank { url } }
-                    textSize = 14f
+                    textSize = if (isTvRemote) 18f else 14f
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colors.ink)
                     maxLines = 1
                 })
                 item.addView(TextView(activity).apply {
                     text = url
-                    textSize = 11f
+                    textSize = if (isTvRemote) 14f else 11f
                     setTextColor(colors.muted)
                     maxLines = 2
                     setPadding(0, dp(3), 0, 0)
@@ -141,7 +142,7 @@ internal class RecallPage(
             if (content.childCount == 0) {
                 content.addView(TextView(activity).apply {
                     text = t("No matching pages. Try another search.", "لا توجد صفحات مطابقة. جرّب بحثاً آخر.")
-                    textSize = 13f
+                    textSize = if (isTvRemote) 18f else 13f
                     gravity = Gravity.CENTER
                     setTextColor(colors.muted)
                     setPadding(dp(20), dp(34), dp(20), dp(34))
@@ -163,5 +164,6 @@ internal class RecallPage(
         }
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        if (isTvRemote) search.post { if (dialog.isShowing) search.requestFocus() }
     }
 }
