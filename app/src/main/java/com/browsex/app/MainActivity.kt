@@ -182,13 +182,15 @@ class MainActivity : AppCompatActivity() {
     private fun mirrorBrowserSettings(settings: BrowserSettings) {
         val previous = browserSettingsSnapshot
         val wasLoaded = browserSettingsLoaded
-        val homePresentationChanged = wasLoaded && (
+        val homeContentChanged = wasLoaded && (
             previous.themeMode != settings.themeMode ||
                 previous.languageMode != settings.languageMode ||
                 previous.homeShowQuickLinks != settings.homeShowQuickLinks ||
                 previous.homeShowDiscovery != settings.homeShowDiscovery ||
-                previous.homeLayout != settings.homeLayout ||
-                previous.reduceTransparency != settings.reduceTransparency ||
+                previous.homeLayout != settings.homeLayout
+            )
+        val adaptiveAppearanceChanged = wasLoaded && (
+            previous.reduceTransparency != settings.reduceTransparency ||
                 previous.highContrast != settings.highContrast ||
                 previous.reduceMotion != settings.reduceMotion
             )
@@ -217,12 +219,15 @@ class MainActivity : AppCompatActivity() {
         }
         browserRuntime?.settings?.setLocales(engineLocales)
         if (::browserRoot.isInitialized) refreshCurrentAdaptivePresentation(force = true)
-        if (homePresentationChanged) {
-            activeTab?.takeIf { it.sessionOpened && it.url.startsWith(HOME_URL) }?.let { tab ->
-                runCatching { tab.session.loadUri(homePageUrl()) }.onFailure {
-                    android.util.Log.w("Wren", "Could not refresh adaptive home-page presentation", it)
-                }
-            }
+        // Settings that affect policy are refreshed by AdaptivePresentationPolicy above.
+        // Content-only home preferences (theme, language, shortcut sections/layout) use
+        // the same safe URL refresh without duplicating an accessibility/performance reload.
+        if (homeContentChanged && !adaptiveAppearanceChanged) {
+            reloadActiveHomeForPresentation()
+        } else if (homeContentChanged && !::browserRoot.isInitialized) {
+            reloadActiveHomeForPresentation()
+        } else if (adaptiveAppearanceChanged && !::browserRoot.isInitialized) {
+            reloadActiveHomeForPresentation()
         }
     }
 
@@ -876,11 +881,35 @@ class MainActivity : AppCompatActivity() {
 
     private fun tr(value: String): String = BrowseXStrings.text(this@MainActivity, value)
 
-    private fun homePageUrl(): String =
-        "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
+    private fun homePageUrl(): String {
+        val presentation = adaptivePresentationConfig
+        val performanceMinimal = presentation?.materialMode == WrenMaterialMode.PERFORMANCE_MINIMAL ||
+            presentation?.reasonCodes?.any {
+                it == "constrained-memory" || it == "battery-saver" || it == "thermal-pressure"
+            } == true
+        val opaque = browserSettingsSnapshot.reduceTransparency ||
+            browserSettingsSnapshot.highContrast ||
+            performanceMinimal ||
+            presentation?.materialMode == WrenMaterialMode.MATTE
+        val highContrast = browserSettingsSnapshot.highContrast ||
+            presentation?.materialMode == WrenMaterialMode.HIGH_CONTRAST
+        val reduceMotion = browserSettingsSnapshot.reduceMotion || presentation?.reduceMotion == true
+
+        return "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
             "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}" +
-            "&bxtv=$isTelevisionDevice&bxopaque=${browserSettingsSnapshot.reduceTransparency}" +
-            "&bxcontrast=${browserSettingsSnapshot.highContrast}&bxmotion=${browserSettingsSnapshot.reduceMotion}"
+            "&bxtv=$isTelevisionDevice&bxopaque=$opaque&bxcontrast=$highContrast" +
+            "&bxmotion=$reduceMotion&bxminimal=$performanceMinimal"
+    }
+
+    private fun reloadActiveHomeForPresentation() {
+        val tab = activeTab ?: return
+        if (!tab.sessionOpened || !tab.url.startsWith(HOME_URL)) return
+        val targetUrl = homePageUrl()
+        if (tab.url == targetUrl) return
+        runCatching { tab.session.loadUri(targetUrl) }.onFailure {
+            android.util.Log.w("Wren", "Could not refresh home-page performance presentation", it)
+        }
+    }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
@@ -905,6 +934,7 @@ class MainActivity : AppCompatActivity() {
         lastPresentationWidthPx = widthPx
         lastPresentationHeightPx = heightPx
 
+        val previousPresentation = adaptivePresentationConfig
         val probe = AdaptivePresentationProbe(this)
         val pressure = DeviceCapabilityProbe(this).runtimePressure()
         val next = AdaptivePresentationPolicy.resolve(
@@ -931,6 +961,11 @@ class MainActivity : AppCompatActivity() {
         )
         adaptivePresentationConfig = next
         applyAdaptivePresentation(next, widthPx)
+        val homeEffectsChanged = previousPresentation == null ||
+            previousPresentation.materialMode != next.materialMode ||
+            previousPresentation.reduceMotion != next.reduceMotion ||
+            previousPresentation.allowSpeculativeVisualWork != next.allowSpeculativeVisualWork
+        if (homeEffectsChanged) reloadActiveHomeForPresentation()
     }
 
     /** Apply the resolved presentation without changing browser-engine or security behavior. */
