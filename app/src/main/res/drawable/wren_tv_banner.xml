@@ -30,17 +30,17 @@
         <path android:fillColor="#15213B" android:pathData="M36.7,13.5 m-2.1,0 a2.1,2.1 0,1 0,4.2 0 a2.1,2.1 0,1 0,-4.2 0" />
     </group>
     <path android:fillColor="#78A9FF" android:pathData="M160,140h137v3h-137z" />
+    <!-- Original geometric WREN wordmark, optimized for TV distance. -->
     <path
         android:fillColor="#FFFFFF"
-        android:fillType="nonZero"
-        android:pathData="M157,56 L164,56 L171,95 L180,68 L187,68 L196,95 L203,56 L210,56 L198,112 L191,112 L184,86 L176,112 L169,112 Z" />
+        android:pathData="M150,58 L158,58 L164,97 L173,70 L180,70 L189,97 L195,58 L203,58 L192,114 L184,114 L176,90 L168,114 L160,114 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M218,56 L239,56 C251,56 257,63 257,74 C257,83 253,89 246,92 L260,112 L249,112 L237,94 L228,94 L228,112 L218,112 Z M228,65 L228,85 L238,85 C244,85 247,81 247,75 C247,69 244,65 238,65 Z" />
+        android:pathData="M211,58 L230,58 C242,58 248,65 248,76 C248,85 244,91 237,94 L250,114 L240,114 L228,96 L219,96 L219,114 L211,114 Z M219,67 L219,87 L229,87 C236,87 239,83 239,77 C239,71 236,67 229,67 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M266,56 L300,56 L300,65 L276,65 L276,79 L297,79 L297,88 L276,88 L276,103 L301,103 L301,112 L266,112 Z" />
+        android:pathData="M254,58 L286,58 L286,67 L264,67 L264,80 L284,80 L284,89 L264,89 L264,105 L287,105 L287,114 L254,114 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M305,56 L314,56 L314,112 L305,112 Z" />
+        android:pathData="M291,58 L299,58 L311,96 L311,58 L318,58 L318,114 L310,114 L298,76 L298,114 L291,114 Z" />
 </vector>
