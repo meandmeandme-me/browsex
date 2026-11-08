@@ -27,6 +27,7 @@ class SiteInfoPage(
     private val privateMode: Boolean = false
 ) {
     private val colors get() = BrowseXColors.resolve(activity, store)
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private val localPermissionValues = mutableMapOf<Pair<Int, String>, Int>()
     private var activePageDialog: AlertDialog? = null
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
@@ -59,46 +60,46 @@ class SiteInfoPage(
         val secure = uri.scheme.equals("https", true)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(18))
+            setPadding(WrenAdaptiveUi.horizontalSafePadding(activity, 20), WrenAdaptiveUi.verticalSafePadding(activity, 18), WrenAdaptiveUi.horizontalSafePadding(activity, 20), dp(if (isTvRemote) 28 else 18))
             setBackgroundColor(colors.canvas)
             BrowseXColors.applyDirection(this, store)
         }
         root.addView(TextView(activity).apply {
             text = t("SITE INFORMATION", "معلومات الموقع")
-            textSize = 11f
+            textSize = if (isTvRemote) 15f else 11f
             letterSpacing = 0.08f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colors.muted)
         })
         root.addView(TextView(activity).apply {
             text = host
-            textSize = 23f
+            textSize = if (isTvRemote) 34f else 23f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colors.ink)
             setPadding(0, dp(12), 0, dp(4))
         })
         root.addView(TextView(activity).apply {
             text = if (secure) t("✓  HTTPS connection", "✓ اتصال HTTPS آمن") else t("⚠  Not using HTTPS", "⚠ الاتصال غير مشفّر")
-            textSize = 13f
+            textSize = if (isTvRemote) 18f else 13f
             setTextColor(if (secure) colors.success else colors.danger)
             setPadding(0, 0, 0, dp(14))
         })
         root.addView(TextView(activity).apply {
             text = title.ifBlank { t("Untitled page", "صفحة بلا عنوان") }
-            textSize = 14f
+            textSize = if (isTvRemote) 18f else 14f
             setTextColor(colors.ink)
             setPadding(0, 0, 0, dp(8))
         })
         root.addView(TextView(activity).apply {
             text = url
-            textSize = 11f
+            textSize = if (isTvRemote) 14f else 11f
             setTextColor(colors.muted)
             setPadding(0, 0, 0, dp(20))
             setTextIsSelectable(true)
         })
         root.addView(TextView(activity).apply {
             text = t("SITE PERMISSIONS", "أذونات الموقع")
-            textSize = 11f
+            textSize = if (isTvRemote) 15f else 11f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.06f
             setTextColor(colors.muted)
@@ -131,16 +132,16 @@ class SiteInfoPage(
                 val row = LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(12), dp(11), dp(12), dp(11))
-                    minimumHeight = dp(54)
+                    setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11))
+                    minimumHeight = dp(if (isTvRemote) 76 else 54)
                     background = cardBackground()
                     isClickable = true
-                    isFocusable = true
+                    WrenAdaptiveUi.prepareFocusable(this, activity, 15, colors.accent, if (isTvRemote) 76 else 48)
                 }
                 val name = permissionNames[permission.permission] ?: t("Website permission", "إذن الموقع")
                 row.addView(TextView(activity).apply {
                     text = name
-                    textSize = 14f
+                    textSize = if (isTvRemote) 18f else 14f
                     setTextColor(colors.ink)
                 }, LinearLayout.LayoutParams(0, -2, 1f))
                 val storedDecision = storedFeatureForPermission(permission.permission)?.let(siteDecisions::get)
@@ -158,7 +159,7 @@ class SiteInfoPage(
                 }
                 row.addView(TextView(activity).apply {
                     text = "$status  ›"
-                    textSize = 12f
+                    textSize = if (isTvRemote) 15f else 12f
                     setTextColor(when (effectiveValue) {
                         GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW -> colors.success
                         GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY -> colors.danger
@@ -182,16 +183,16 @@ class SiteInfoPage(
             val row = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(12), dp(11), dp(12), dp(11))
+                setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 18 else 11))
                 background = cardBackground()
-                minimumHeight = dp(54)
+                minimumHeight = dp(if (isTvRemote) 76 else 54)
                 isClickable = true
-                isFocusable = true
+                WrenAdaptiveUi.prepareFocusable(this, activity, 15, colors.accent, if (isTvRemote) 76 else 48)
             }
             val name = if (feature == "camera") t("Camera", "الكاميرا") else t("Microphone", "الميكروفون")
             row.addView(TextView(activity).apply {
                 text = name
-                textSize = 14f
+                textSize = if (isTvRemote) 18f else 14f
                 setTextColor(colors.ink)
             }, LinearLayout.LayoutParams(0, -2, 1f))
             row.addView(TextView(activity).apply {
@@ -200,7 +201,7 @@ class SiteInfoPage(
                     "deny" -> t("Blocked", "محظور")
                     else -> t("Ask", "اسأل")
                 } + "  ›"
-                textSize = 12f
+                textSize = if (isTvRemote) 15f else 12f
                 setTextColor(colors.muted)
             })
             row.contentDescription = t("Change ", "تغيير إذن ") + name
@@ -217,21 +218,21 @@ class SiteInfoPage(
                 "Tap a permission to allow, block or ask again. Persistent storage cannot be revoked after it is granted.",
                 "اضغط على الإذن للسماح أو الحظر أو السؤال مجددًا. لا يمكن إلغاء إذن التخزين الدائم بعد منحه."
             )
-            textSize = 11f
+            textSize = if (isTvRemote) 14f else 11f
             setTextColor(colors.muted)
             setPadding(0, dp(12), 0, dp(8))
         })
         if (!privateMode) {
         val reset = TextView(activity).apply {
             text = t("Reset site permissions", "إعادة ضبط أذونات الموقع")
-            textSize = 13f
+            textSize = if (isTvRemote) 17f else 13f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setTextColor(colors.danger)
             setPadding(dp(12), dp(14), dp(12), dp(14))
             background = cardBackground()
             isClickable = true
-            isFocusable = true
+            WrenAdaptiveUi.prepareFocusable(this, activity, 15, colors.danger, if (isTvRemote) 64 else 48)
             setOnClickListener {
                 AlertDialog.Builder(activity)
                     .setTitle(t("Reset permissions?", "إعادة ضبط الأذونات؟"))
@@ -250,14 +251,14 @@ class SiteInfoPage(
         root.addView(reset, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
         val clearSiteData = TextView(activity).apply {
             text = t("Clear this site's data", "مسح بيانات هذا الموقع")
-            textSize = 13f
+            textSize = if (isTvRemote) 17f else 13f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setTextColor(colors.danger)
             setPadding(dp(12), dp(14), dp(12), dp(14))
             background = cardBackground()
             isClickable = true
-            isFocusable = true
+            WrenAdaptiveUi.prepareFocusable(this, activity, 15, colors.danger, if (isTvRemote) 64 else 48)
             setOnClickListener {
                 AlertDialog.Builder(activity)
                     .setTitle(t("Clear site data?", "مسح بيانات الموقع؟"))
@@ -282,7 +283,12 @@ class SiteInfoPage(
         activePageDialog = dialog
         dialog.setOnDismissListener { if (activePageDialog === dialog) activePageDialog = null }
         dialog.show()
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        if (isTvRemote) {
+            val maxWidth = minOf(WrenAdaptiveUi.dp(activity, 1100), activity.resources.displayMetrics.widthPixels - WrenAdaptiveUi.dp(activity, 96))
+            dialog.window?.setLayout(maxWidth.coerceAtLeast(WrenAdaptiveUi.dp(activity, 560)), ViewGroup.LayoutParams.MATCH_PARENT)
+        } else {
+            dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
     }
 
     private fun showPermissionChoices(
