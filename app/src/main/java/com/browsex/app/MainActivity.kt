@@ -254,6 +254,7 @@ class MainActivity : AppCompatActivity() {
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
+    private var imeVisible = false
     private var jankStats: JankStats? = null
     private val recentJankFrames = ArrayDeque<Boolean>(60)
     private var recentJankFrameCount = 0
@@ -883,7 +884,8 @@ class MainActivity : AppCompatActivity() {
                 isHardwareAccelerated = hardwareAccelerated,
                 deviceProfile = deviceCapabilityProfile,
                 pressure = pressure,
-                measuredJankPressure = measuredJankPressure
+                measuredJankPressure = measuredJankPressure,
+                imeVisible = imeVisible
             )
         )
         adaptivePresentationConfig = next
@@ -916,6 +918,7 @@ class MainActivity : AppCompatActivity() {
             WrenMaterialMode.HIGH_CONTRAST, WrenMaterialMode.PERFORMANCE_MINIMAL -> 0f
         }
 
+        navigationBar.visibility = if (config.showNavigationActions) View.VISIBLE else View.GONE
         val rtl = BrowseXColors.isRtl(browserSettingsSnapshot)
         val sideRail = config.addressPlacement == WrenAddressPlacement.SIDE
         val tvRemote = config.addressPlacement == WrenAddressPlacement.TV_REMOTE
@@ -973,7 +976,7 @@ class MainActivity : AppCompatActivity() {
         val params = bottomBar.layoutParams as? FrameLayout.LayoutParams ?: return
         when {
             sideRail -> {
-                params.width = dp(324)
+                params.width = dp(if (config.showNavigationActions) 324 else 280)
                 params.height = -2
                 params.gravity = (if (rtl) Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
                 params.topMargin = dp(12)
@@ -996,7 +999,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     minOf(dp(720), (windowWidthPx - dp(32)).coerceAtLeast(dp(280)))
                 }
-                params.height = dp(118)
+                params.height = if (config.showNavigationActions) dp(118) else -2
                 params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                 params.topMargin = dp(58)
                 params.bottomMargin = 0
@@ -1009,7 +1012,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     minOf(dp(720), (windowWidthPx - dp(32)).coerceAtLeast(dp(280)))
                 }
-                params.height = dp(118)
+                params.height = if (config.showNavigationActions) dp(118) else -2
                 params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
                 params.topMargin = 0
                 params.bottomMargin = dp(7)
@@ -1033,6 +1036,13 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            val nextImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (imeVisible != nextImeVisible) {
+                imeVisible = nextImeVisible
+                if (adaptivePresentationConfig != null) {
+                    refreshCurrentAdaptivePresentation(force = true)
+                }
+            }
             insets
         }
 
