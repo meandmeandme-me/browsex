@@ -32,11 +32,17 @@ engine/dependency strategy and potentially a distinct build variant, not a runti
 
 ## Current implementation
 
-- `DeviceCapabilityProbe` gathers a device snapshot using APIs available from minSdk 26.
-- `AdaptiveRuntimePolicy` is pure and covered by unit tests.
-- The policy is deliberately not yet wired into MainActivity's session lifecycle. Wire it
-  only after the host/runtime responsibilities are extracted, so the UI reset does not
-  entangle device policy with Activity code.
+- `DeviceCapabilityProbe` gathers stable resource facts; `AdaptiveRuntimePolicy` supplies the live Gecko session budget used by the Activity's session lifecycle.
+- `AdaptivePresentationPolicy` is a separate pure resolver with unit tests. It classifies the current window, address placement, material mode and optional visual work.
+- `AdaptivePresentationProbe` reads the current root-window bounds, density, hardware acceleration, touch/D-pad/Leanback features, system high-contrast text where the platform exposes it (API 36+), system animation state, current battery/thermal pressure and `ActivityManager.MemoryInfo.lowMemory`.
+- `MainActivity` now re-evaluates presentation when the root window changes size, when the Activity resumes, and when power-saver, thermal or memory-pressure callbacks fire.
+- AndroidX JankStats tracks frame timing only while the Activity is resumed. A rolling 60-frame sample enters visual-minimal mode at 20% jank and exits it at 10% or less. Only boolean frame outcomes are retained locally; no page, URL or browsing data is collected.
+- The live UI applies tinted-glass, matte, high-contrast and performance-minimal surfaces, and changes between phone-bottom, tablet-top, large-window side rail and a preliminary remote-first TV layout.
+- **Live backdrop blur is intentionally not enabled yet.** The Android probe sets `hasVerifiedBackdropBlurPath=false`; the actual chrome is the safe tinted-glass style, which works on Android 8–10. No user warning is shown. A blur path must be implemented and benchmarked for the exact in-window renderer before it can be marked verified.
+- The address preference resolver supports AUTO/TOP/BOTTOM, but the current Activity uses AUTO; a user-facing placement setting is still future work.
+- Reduced-transparency has no universal OEM-neutral Android setting probe and currently defaults to false. System high-contrast text is detected only through the public API on API 36+; earlier systems retain the baseline contrast-safe design.
+- TV layout detection is present, but this does **not** mean Android TV distribution is complete: no Leanback launcher/banner release path or complete D-pad certification has been declared. Fold-hinge posture handling also remains future work.
+
 
 ## Initial policy defaults
 
@@ -65,14 +71,11 @@ changing defaults. The device screen class is exposed separately for future resp
 
 ## Next integration sequence
 
-1. Extract browser runtime/session ownership from MainActivity.
-2. Inject the capability snapshot and resolved policy into the runtime/session lifecycle.
-3. Replace the fixed live-session limit with the resolved budget.
-4. Add memory-pressure overrides via existing lifecycle callbacks.
-5. Add device-matrix tests for API 26, 29, 33, and current Android; test low-memory behavior
-   on a 2 GB class device.
-6. Only then remove the old visual shell and keep a minimal host entry point for engine
-   verification; the future Uizard UI will be added as a separate presentation layer.
+1. Continue extracting runtime/session ownership from MainActivity without weakening current lifecycle safety.
+2. Add fold/hinge and connected-display posture probes, and expose a user-facing top/bottom address-bar preference.
+3. Add a verified, measured in-window blur renderer only if it beats the tinted fallback on representative hardware; keep it disabled otherwise.
+4. Add TV banner/Leanback launcher support only after remote focus and core journeys pass physical/emulated TV testing.
+5. Validate API 26, Android 10, Android 12+, API 36, 2 GB-class hardware, split-screen, tablet and Android TV behavior. Tizen/webOS remain separate clients.
 
 ## Adaptive presentation and Glass UI extension (2026-11-08)
 
@@ -84,7 +87,7 @@ A separate, pure `AdaptivePresentationPolicy` has now been added in `AdaptivePre
 - A material mode (`GLASS_BLUR`, `GLASS_TINTED`, `MATTE`, `HIGH_CONTRAST` or `PERFORMANCE_MINIMAL`).
 - Motion/speculative-visual-work flags and local reason codes.
 
-The policy is currently a pure, tested decision layer; it is **not yet wired into MainActivity or the Glass UI renderer**. Platform probes, runtime listeners, window/fold observations and design-system application remain next integration work. Accessibility overrides first; then explicit user choice; then a verified rendering path; then performance suitability. Unknown or missing data selects a readable fallback.
+The policy is wired into the live Activity and Wren chrome through `AdaptivePresentationProbe`. Window bounds trigger responsive repositioning; battery-saver and thermal listeners, low-memory callbacks and a rolling JankStats window trigger visual/performance re-resolution. The renderer currently applies tinted glass or opaque fallback surfaces. **Actual live backdrop blur remains disabled** because the current in-window View path has not been verified or benchmarked; the probe deliberately reports no verified blur path. Accessibility overrides come before blur/performance choices, and unknown data selects a readable fallback. The address-position preference is currently AUTO; the UI setting is not yet exposed.
 
 Do not equate Android API >= 31 with guaranteed blur. Cross-window blur availability can change at runtime and may be disabled by GPU constraints, power-saving or system conditions. Use the relevant API/listener only for the specific window-blur feature it controls. It is not a universal backdrop-blur switch. In-window RenderEffect and CSS backdrop-filter are separate rendering paths and must be measured independently.
 
