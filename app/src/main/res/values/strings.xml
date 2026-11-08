@@ -326,4 +326,6 @@
     <string name="ui_settings_are_temporarily_unavailable">Settings are temporarily unavailable</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">Private browsing does not read or save site permission choices.</string>
     <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">No Wren downloads yet. Files you download from websites will appear here.</string>
+    <string name="ui_wren_browser">Wren browser</string>
+    <string name="ui_reload_page">Reload page</string>
 </resources>
