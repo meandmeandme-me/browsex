@@ -884,7 +884,13 @@ class MainActivity : AppCompatActivity() {
         })
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
         root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(bottomBar, LinearLayout.LayoutParams(-1, dp(108)).apply {
+        val dockWidth = if (resources.configuration.screenWidthDp >= 600) {
+            dp(720).coerceAtMost(
+                (resources.displayMetrics.widthPixels - dp(32)).coerceAtLeast(dp(280))
+            )
+        } else -1
+        root.addView(bottomBar, LinearLayout.LayoutParams(dockWidth, dp(118)).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
             setMargins(dp(10), dp(6), dp(10), dp(7))
         })
         BrowseXColors.applyDirection(root, browserSettingsSnapshot)
