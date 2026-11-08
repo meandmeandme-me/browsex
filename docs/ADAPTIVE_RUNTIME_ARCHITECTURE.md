@@ -74,6 +74,32 @@ changing defaults. The device screen class is exposed separately for future resp
 6. Only then remove the old visual shell and keep a minimal host entry point for engine
    verification; the future Uizard UI will be added as a separate presentation layer.
 
+## Adaptive presentation and Glass UI extension (2026-11-08)
+
+The existing `DeviceCapabilityProbe` and `AdaptiveRuntimePolicy` remain the resource-budget source of truth. Do not overload their RAM tiers or `smallestScreenWidthDp` with all presentation decisions.
+
+Add a separate, pure `AdaptivePresentationPolicy` consuming:
+- Stable platform facts (API, ABI, low-RAM, optional hardware features).
+- Current window metrics and posture (width/height dp, insets, folding features, orientation, multi-window/external display).
+- Input modalities (touch, pointer, keyboard, D-pad/remote).
+- Dynamic state (battery saver, thermal state, memory pressure, measured jank).
+- Accessibility and explicit user preferences (reduced motion/transparency, contrast, top/bottom address field).
+
+Its output chooses a form-factor layout and a material mode: `GLASS_BLUR`, `GLASS_TINTED`, `MATTE`, `HIGH_CONTRAST`, or `PERFORMANCE_MINIMAL`. Accessibility overrides first; then explicit user choice; then API/runtime capability; then performance suitability. Unknown or missing data selects a readable tinted/matte fallback.
+
+Do not equate Android API >= 31 with guaranteed blur. Cross-window blur availability can change at runtime and may be disabled by GPU constraints, power-saving or system conditions. Use the relevant API/listener only for the specific window-blur feature it controls. It is not a universal backdrop-blur switch. In-window RenderEffect and CSS backdrop-filter are separate rendering paths and must be measured independently.
+
+Maintain these boundaries:
+- `AdaptiveRuntimePolicy`: Gecko session/resource budgets and memory/thermal behavior.
+- `AdaptivePresentationPolicy`: responsive layout, glass/material tier, and motion tier.
+- Design System: renders semantic tokens/material variants; never probes hardware directly.
+- Screen components: render state and accept actions; never make ad-hoc API/RAM checks.
+- Device/window probes: gather facts; never directly choose colors or layouts.
+
+The same user-visible geometry, semantics, focus order and touch targets must survive changes between blur, tinted glass and matte modes. Do not alert users when a visual effect falls back. Never reduce privacy/security to save GPU or memory.
+
+See [Wren adaptive UX research](WREN_ADAPTIVE_UX_RESEARCH_2026-11-08.md) for browser comparisons, Uiverse guidance, phone/tablet/TV layouts, capability matrix, test gates and source references.
+
 ## UI refoundation status
 
 The current Activity now hosts GeckoView directly without rendering the legacy browser
