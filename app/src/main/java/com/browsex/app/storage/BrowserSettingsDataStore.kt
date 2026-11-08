@@ -58,6 +58,7 @@ internal class BrowserSettingsDataStore(
         homeShowDiscovery = p[Keys.homeShowDiscovery] ?: true,
         homeLayout = BrowserPreferencePolicy.normalizeHomeLayout(p[Keys.homeLayout]),
         addressBarPosition = BrowserPreferencePolicy.normalizeAddressBarPosition(p[Keys.addressBarPosition]),
+        reduceTransparency = p[Keys.reduceTransparency] ?: false,
         searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
         deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
     )
@@ -76,6 +77,7 @@ internal class BrowserSettingsDataStore(
         p[Keys.homeShowDiscovery] = settings.homeShowDiscovery
         p[Keys.homeLayout] = BrowserPreferencePolicy.normalizeHomeLayout(settings.homeLayout)
         p[Keys.addressBarPosition] = BrowserPreferencePolicy.normalizeAddressBarPosition(settings.addressBarPosition)
+        p[Keys.reduceTransparency] = settings.reduceTransparency
         p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
         p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
     }
@@ -91,6 +93,7 @@ internal class BrowserSettingsDataStore(
         val homeShowDiscovery = booleanPreferencesKey("home_show_discovery")
         val homeLayout = stringPreferencesKey("home_layout")
         val addressBarPosition = stringPreferencesKey("address_bar_position")
+        val reduceTransparency = booleanPreferencesKey("reduce_transparency")
         val searchEngine = stringPreferencesKey("search_engine")
         val deniedPlatformPermissions = stringSetPreferencesKey("denied_platform_permissions")
     }
@@ -107,6 +110,7 @@ internal data class BrowserSettings(
     val homeShowDiscovery: Boolean = true,
     val homeLayout: String = "grid",
     val addressBarPosition: String = "auto",
+    val reduceTransparency: Boolean = false,
     val searchEngine: String = "Google",
     val deniedPlatformPermissions: Set<String> = emptySet()
 )
