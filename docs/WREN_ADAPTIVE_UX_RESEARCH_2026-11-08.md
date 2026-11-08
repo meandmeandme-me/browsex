@@ -68,7 +68,7 @@ Measure task completion, time, mis-taps, backtracking, abandonment, recall error
 | **Opera Android** | Different phone and tablet layouts; phone menu at the bottom and tablet menu at the top; includes ad blocking and start-page customization. | Treat form factor as a layout decision, not merely scaling. Keep menu entry points predictable. |
 | **Brave** | Shields combine ad/tracker blocking, fingerprinting protection, HTTPS upgrades and per-site controls. | Privacy must be a real subsystem with exceptions and honest status—not a decorative shield icon or an unverified toggle. |
 | **DuckDuckGo** | Privacy protection is a central onboarding/product promise. | Make privacy explanations understandable and brief; keep protections visible but do not overwhelm ordinary browsing. |
-| **Samsung Internet** | Mobile browser patterns and toolbar customization show that users value control over the navigation layout. | Offer simple personalization after stable defaults; do not front-load dozens of settings. |
+| **Samsung Internet** | Bottom toolbar, customizable menu (up to seven toolbar features), tab navigation gestures and a bottom address-bar option documented for supported mobile/tablet versions. | Offer a small, user-controlled toolbar customization surface after stable defaults; do not front-load dozens of settings. |
 
 ### Product decisions
 
@@ -337,6 +337,9 @@ This policy is currently **not wired into the live Activity or material renderer
 - Opera Android FAQ: https://help.opera.com/en/mobile/android/
 - Brave feature overview: https://support.brave.app/hc/en-us/articles/15872271230221-What-are-all-the-features-Brave-Browser-offers
 - DuckDuckGo Android browser: https://duckduckgo.com/duckduckgo-help-pages/mobile/android
+- Samsung Internet Android overview: https://developer.samsung.com/browser/android/overview.html
+- Samsung toolbar customization: https://www.samsung.com/us/apps/samsung-browser/
+- Samsung bottom address-bar availability notes: https://hptotosamsung.com/africa_en/apps/samsung-browser/
 
 ### Glass and components
 - Uiverse glass components: https://uiverse.io/ui/glassmorphism-ui
