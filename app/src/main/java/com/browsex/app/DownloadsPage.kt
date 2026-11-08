@@ -31,7 +31,7 @@ internal class DownloadsPage(
 ) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val colors get() = BrowseXColors.resolve(activity, store)
-    private val isTvRemote get() = activity.currentAdaptivePresentation?.windowLayout == WrenWindowLayout.TV
+    private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
