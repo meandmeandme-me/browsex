@@ -4,7 +4,7 @@
 
 ## Design system direction
 
-- Premium, calm, glass-inspired browser chrome; use translucency selectively and preserve text contrast.
+- Premium Wren browser chrome inspired by familiar Chrome/Safari interaction patterns; use selective translucent glass surfaces and preserve text contrast. The phone default places search/address at the bottom.
 - One spacing, radius, elevation, typography and color-token system. System / Light / Dark themes.
 - Phone-first controls with thumb reach, then adaptive layouts for large phones, landscape, foldables and tablets.
 - RTL and LTR are first-class. Test Arabic RTL with mixed Latin URL, numbers, email and punctuation examples.
@@ -15,7 +15,7 @@
 ## Global navigation model
 
 Primary browser surface:
-- Top or bottom address/search field (position is a user preference in the design concept, not an assumed implementation).
+- Bottom-anchored address/search field on phones, inside the Wren glass dock; the dock also contains core navigation actions. Adapt its placement and density for landscape/tablets while preserving thumb reach on phones.
 - Tab switcher with visible count.
 - New tab.
 - Back / forward / reload.
