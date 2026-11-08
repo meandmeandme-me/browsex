@@ -315,24 +315,38 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 
 ## 8A. Current implementation checkpoint
 
-- Latest checked commit: `0c4d34ce6e82bd095b57e4d39082713fc7c68fd3`; CI run [#42525156452](https://github.com/meandmeandme-me/browsex/actions/runs/42525156452) completed successfully for locale validation, tests, lint, debug APK build, schema/checksum verification and ARM32/ARM64/Universal artifact upload. Release signing was skipped because release secrets are not configured.
+**Latest verified branch state (8 November 2026):**
+- Branch: `wren-design-prep`
+- Verified commit: `062ae581ddb3fa1bf5fb95e934fa6f417cb58220`
+- CI run [#42527954402](https://github.com/meandmeandme-me/browsex/actions/runs/42527954402) completed successfully: locale validator, Kotlin unit tests, Android Lint, Debug APK builds, Room schema verification, output/checksum verification and ARM32/ARM64/Universal artifact uploads. Release signing was skipped because release signing secrets are not configured.
+- CI proves compilation/tests/lint/build for this commit; it does not prove physical device behavior or store certification.
 
-**Implemented in the working branch (not yet device-certified):**
-- `AdaptivePresentationPolicy.kt` resolves current-window layout, address placement, material mode, motion policy and reason codes. Unit tests cover phone/tablet/TV decisions, accessibility overrides, battery saver, system low memory, constrained RAM, thermal state, measured jank and the requirement that API version alone never enables blur.
-- `AdaptivePresentationProbe.kt` reads current Activity root dimensions and actual touch/D-pad/Leanback features, RAM tier, battery/thermal pressure, system low-memory state, system animation preference and API 36+ high-contrast text where the public API exists.
-- `MainActivity` applies the resolved presentation to the live Wren toolbar: compact phone uses bottom chrome; compact landscape and medium/expanded windows use top chrome; large/extra-large windows use a side rail; detected TV/remote environments use a larger remote-oriented top dock.
-- Power-saver and thermal changes, Activity resume, root-window resize and memory-pressure callbacks cause policy re-evaluation.
-- AndroidX JankStats observes window-frame jank while the Activity is resumed. Wren keeps a rolling 60-frame boolean sample locally; sustained jank (at least 20%) selects performance-minimal surfaces; recovery to 10% or less allows the normal presentation to return. No URL, page content or browsing history is collected for this.
-- The fallback surfaces are applied automatically without a user-facing warning. Matte/performance surfaces are fully opaque; tinted-glass surfaces keep the same dimensions and actions.
+**Implemented in code (not yet device-certified):**
+- `AdaptivePresentationPolicy.kt` and `AdaptivePresentationProbe.kt` resolve current-window layout, address placement, material mode and motion/performance policy. Probes observe window bounds, density, hardware acceleration, RAM tier, touch/D-pad/Leanback/Television, battery saver, thermal status, system low memory, Android animation preference, local JankStats pressure and API 36+ system high-contrast text.
+- `MainActivity` applies compact phone bottom chrome, medium/expanded top chrome, large-window side rail and a preliminary Android TV/Google TV remote-first dock. It re-evaluates after window resize, Activity resume, battery saver, thermal changes, Android memory callbacks and sustained jank changes.
+- JankStats retains only a local rolling 60-frame Boolean sample. Sustained jank (at least 20%) enters performance-minimal mode; recovery (10% or less) restores the normal presentation. No page URL, content or history is captured for this decision.
+- Accessibility preferences are stored in DataStore: **Reduce transparency**, **Increase contrast** and **Reduce motion**. They apply to the shared native color palette in both light/dark themes and to Wren's internal start page. Reduced transparency/high contrast produce opaque native panel/card/field surfaces; high contrast strengthens text and borders; reduce motion removes non-essential motion from the start-page CSS.
+- Performance pressure also propagates to the internal Wren start page through a validated `bxminimal` flag. It disables home-page backdrop filters, shadows and transitions. Only the active Wren home page is reloaded when the presentation mode changes; ordinary websites are not rewritten or reloaded.
+- TV path includes optional Leanback launcher metadata, a 320×180px xhdpi banner, remote-first initial focus, address-to-web-content D-pad handoff, 10-foot start page, overscan-safe margins (48dp horizontal/28dp vertical) and TV-specific focus/target sizing in key screens: tabs, settings, downloads, bookmarks/history library, search/recall, site info/permissions, reader and privacy.
+- The bookmark/history folder strip now scrolls horizontally rather than clipping folders on narrow/TV layouts. The TV focus ring is shared with the browser chrome through `WrenAdaptiveUi` and `WrenFocusStyle`.
 
-**Limitations that remain:**
-- The current probe deliberately sets `hasVerifiedBackdropBlurPath=false`. There is no verified in-window live backdrop-blur implementation yet, so even newer/high-end devices currently use tinted glass rather than live blur. This avoids confusing Android cross-window blur support with in-window toolbar blur and avoids claiming a GPU path that has not been measured.
-- Address-bar placement is saved in DataStore and exposed as Automatic/Top/Bottom in Settings. The Bottom preference applies on compact windows; medium/expanded windows use a top/side layout to preserve usable content space.
-- Android's public high-contrast-text API is only used on API 36+. Reduced-transparency is not automatically detectable through one consistent public Android API and is not wired to a Wren setting yet.
-- TV layout detection uses Leanback/Television features or Android TV UI mode; a connected D-pad alone does not turn a regular phone/tablet into TV mode. Android TV mode now includes optional Leanback launcher metadata, a banner, larger remote-first chrome, a remote-readable start page, adaptive tab grid and enlarged settings/library/downloads controls. Physical/emulator D-pad certification, IME handoff, overscan and complete TV journeys remain outstanding. Tizen and webOS need separate clients; they cannot install the Android APK.
-- Fold-hinge posture and multi-window edge-case QA remain to be added. The layout does respond to current Activity window bounds, including ordinary resizing.
+**Intentional design boundaries:**
+- Live in-window backdrop blur is **not enabled**. All current devices use tinted-glass layering or opaque fallback. GeckoView's SurfaceView path is retained for performance; BlurView/TextureView has not been proven to capture the browser page correctly and keep video/DRM, memory and frame-time budgets healthy.
+- Android TV code is an initial Android/Google TV path only. A D-pad/IME/focus pass on a physical TV or emulator, full focus traversal through every dialog, overscan validation on real TV models, 4K asset/readability, TalkBack and Switch Access remain to be certified.
+- Tizen (Samsung) and webOS (LG) require separate TV clients; an Android APK cannot be made installable on those operating systems by changing its layout.
+- Fold/hinge posture is **not yet integrated**. The app reacts to current window bounds, but it does not yet consume Jetpack WindowManager `FoldingFeature` bounds/state/occlusion. A book/tabletop posture could otherwise place important controls across a hinge. Jetpack WindowManager 1.5.1 is currently the stable line; use `WindowInfoTracker` and `FoldingFeature` to detect posture and separating hinges in the next phase.
+- Android public high-contrast text is observed only where API 36+ exposes it; the Wren setting covers earlier versions. Android has no single OEM-neutral reduced-transparency API, so the Wren preference is the reliable control.
+- Native English and Arabic resources are the only complete translated packs today. The all-languages goal remains outstanding; new locale packs need full translation, RTL/LTR QA and placeholder parity, not only translated headings.
+- No controlled worldwide usability study has been performed. Browser comparisons and published tab/one-handed/TV guidance are desk research and hypotheses. Wren still needs task-based tests across user groups and hardware.
+- No physical device test on the user's Android 10 low-memory phone, foldable, tablet or TV has been performed in this workflow.
 
-The latest CI run is used to validate compilation/tests/lint/build. A passing CI run is not physical-device verification; test on Android 10/low-memory hardware, tablets, landscape and Android TV before claiming release readiness.
+**Next priorities from the gap audit:**
+1. Add Jetpack WindowManager 1.5.1 fold/hinge observation and a pure posture/layout resolver; ensure controls never straddle a separating hinge.
+2. Add automated accessibility checks (Espresso AccessibilityChecks/Robolectric) and manual TalkBack, Switch Access, font scaling and contrast testing. Test every TV focus path and IME transition.
+3. Test on real Android 10/low-memory hardware, a 600/840/1200/1600dp tablet/resizable matrix, a foldable in flat/half-opened book/tabletop posture, and Android TV with remote. Measure start-up, tab switch, scroll jank, memory/thermal behavior.
+4. Add more fully translated locale packs and verify date/number/plural/RTL behavior.
+5. Only prototype live blur after an in-window GeckoView prototype proves it can sample the intended page surface and meet frame/memory/video budgets. Do not use a library simply to claim Glass UI.
+
 
 ## 9. Acceptance checklist
 
