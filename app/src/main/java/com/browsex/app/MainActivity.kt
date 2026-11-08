@@ -9,6 +9,8 @@ import android.webkit.CookieManager
 import android.os.Environment
 
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -256,6 +258,16 @@ class MainActivity : AppCompatActivity() {
     private val recentJankFrames = ArrayDeque<Boolean>(60)
     private var recentJankFrameCount = 0
     @Volatile private var measuredJankPressure = false
+    private var powerSaveReceiverRegistered = false
+    private val powerSaveModeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            refreshCurrentAdaptivePresentation(force = true)
+        }
+    }
+    private var thermalStatusListenerRegistered = false
+    private val thermalStatusListener = PowerManager.OnThermalStatusChangedListener {
+        refreshCurrentAdaptivePresentation(force = true)
+    }
     private lateinit var address: EditText
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
@@ -596,14 +608,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         ensureJankStats()
         jankStats?.isTrackingEnabled = true
-        if (::browserRoot.isInitialized) {
-            refreshAdaptivePresentation(
-                browserRoot.width,
-                browserRoot.height,
-                browserRoot.isHardwareAccelerated,
-                force = true
-            )
-        }
+        refreshCurrentAdaptivePresentation(force = true)
     }
 
     override fun onPause() {
@@ -659,6 +664,28 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (!powerSaveReceiverRegistered) {
+            runCatching {
+                ContextCompat.registerReceiver(
+                    this,
+                    powerSaveModeReceiver,
+                    IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED),
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+                powerSaveReceiverRegistered = true
+            }.onFailure {
+                android.util.Log.w("Wren", "Could not observe power-saver changes", it)
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !thermalStatusListenerRegistered) {
+            runCatching {
+                getSystemService(PowerManager::class.java)
+                    .addThermalStatusListener(mainExecutor, thermalStatusListener)
+                thermalStatusListenerRegistered = true
+            }.onFailure {
+                android.util.Log.w("Wren", "Could not observe thermal-state changes", it)
+            }
+        }
         hostLifecycleCoordinator.onStart()
     }
 
@@ -667,6 +694,17 @@ class MainActivity : AppCompatActivity() {
         uBlockOriginManager?.closePopup()
         if (::credentialVault.isInitialized) credentialVault.lock()
         hostLifecycleCoordinator.onStop()
+        if (powerSaveReceiverRegistered) {
+            runCatching { unregisterReceiver(powerSaveModeReceiver) }
+            powerSaveReceiverRegistered = false
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && thermalStatusListenerRegistered) {
+            runCatching {
+                getSystemService(PowerManager::class.java)
+                    .removeThermalStatusListener(thermalStatusListener)
+            }
+            thermalStatusListenerRegistered = false
+        }
         super.onStop()
     }
 
@@ -807,6 +845,16 @@ class MainActivity : AppCompatActivity() {
             "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}"
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun refreshCurrentAdaptivePresentation(force: Boolean) {
+        if (!::browserRoot.isInitialized) return
+        refreshAdaptivePresentation(
+            browserRoot.width,
+            browserRoot.height,
+            browserRoot.isHardwareAccelerated,
+            force = force
+        )
+    }
 
     private fun refreshAdaptivePresentation(
         widthPx: Int,
