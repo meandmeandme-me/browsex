@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.animation.ValueAnimator
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.view.InputDevice
@@ -23,7 +24,8 @@ internal class AdaptivePresentationProbe(context: Context) {
         density: Float,
         isHardwareAccelerated: Boolean,
         deviceProfile: DeviceCapabilityProfile,
-        pressure: RuntimePressure
+        pressure: RuntimePressure,
+        measuredJankPressure: Boolean = false
     ): PresentationCapabilitySnapshot {
         val packageManager = appContext.packageManager
         val accessibility = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE)
@@ -32,6 +34,9 @@ internal class AdaptivePresentationProbe(context: Context) {
         val leanback = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
             packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
         val hasDpad = hasDpadInput() || leanback
+        val memoryInfo = ActivityManager.MemoryInfo().also { info ->
+            (appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(info)
+        }
         val safeDensity = density.takeIf { it > 0f } ?: appContext.resources.displayMetrics.density
         val widthDp = (windowWidthPx / safeDensity).toInt().coerceAtLeast(0)
         val heightDp = (windowHeightPx / safeDensity).toInt().coerceAtLeast(0)
@@ -54,7 +59,8 @@ internal class AdaptivePresentationProbe(context: Context) {
             // across all OEM versions. The app preference can populate this separately.
             reduceTransparency = false,
             reduceMotion = !runCatching { ValueAnimator.areAnimatorsEnabled() }.getOrDefault(true),
-            measuredJankPressure = false
+            measuredJankPressure = measuredJankPressure,
+            severeMemoryPressure = memoryInfo.lowMemory
         )
     }
 
