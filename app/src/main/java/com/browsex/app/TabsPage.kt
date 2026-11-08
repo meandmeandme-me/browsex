@@ -34,6 +34,7 @@ internal class TabsPage(
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
+        setStroke(dp(1), colors.line)
     }
 
     /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
@@ -283,7 +284,7 @@ internal class TabsPage(
                     background = rounded(if (selected) colors.selected else colors.panel, 12)
                 }
                 preview.addView(TextView(activity).apply {
-                    text = "Browse X"
+                    text = "Wren"
                     textSize = 11f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(colors.accent)
