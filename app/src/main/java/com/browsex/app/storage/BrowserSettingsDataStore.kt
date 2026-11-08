@@ -59,6 +59,8 @@ internal class BrowserSettingsDataStore(
         homeLayout = BrowserPreferencePolicy.normalizeHomeLayout(p[Keys.homeLayout]),
         addressBarPosition = BrowserPreferencePolicy.normalizeAddressBarPosition(p[Keys.addressBarPosition]),
         reduceTransparency = p[Keys.reduceTransparency] ?: false,
+        reduceMotion = p[Keys.reduceMotion] ?: false,
+        highContrast = p[Keys.highContrast] ?: false,
         searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
         deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
     )
@@ -78,6 +80,8 @@ internal class BrowserSettingsDataStore(
         p[Keys.homeLayout] = BrowserPreferencePolicy.normalizeHomeLayout(settings.homeLayout)
         p[Keys.addressBarPosition] = BrowserPreferencePolicy.normalizeAddressBarPosition(settings.addressBarPosition)
         p[Keys.reduceTransparency] = settings.reduceTransparency
+        p[Keys.reduceMotion] = settings.reduceMotion
+        p[Keys.highContrast] = settings.highContrast
         p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
         p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
     }
@@ -94,6 +98,8 @@ internal class BrowserSettingsDataStore(
         val homeLayout = stringPreferencesKey("home_layout")
         val addressBarPosition = stringPreferencesKey("address_bar_position")
         val reduceTransparency = booleanPreferencesKey("reduce_transparency")
+        val reduceMotion = booleanPreferencesKey("reduce_motion")
+        val highContrast = booleanPreferencesKey("high_contrast")
         val searchEngine = stringPreferencesKey("search_engine")
         val deniedPlatformPermissions = stringSetPreferencesKey("denied_platform_permissions")
     }
@@ -111,6 +117,8 @@ internal data class BrowserSettings(
     val homeLayout: String = "grid",
     val addressBarPosition: String = "auto",
     val reduceTransparency: Boolean = false,
+    val reduceMotion: Boolean = false,
+    val highContrast: Boolean = false,
     val searchEngine: String = "Google",
     val deniedPlatformPermissions: Set<String> = emptySet()
 )
