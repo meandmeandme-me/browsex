@@ -18,6 +18,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -262,6 +263,7 @@ class MainActivity : AppCompatActivity() {
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
+    private var initialTvFocusRequested = false
     private var imeVisible = false
     private var jankStats: JankStats? = null
     private val recentJankFrames = ArrayDeque<Boolean>(60)
@@ -1064,7 +1066,10 @@ class MainActivity : AppCompatActivity() {
         bottomBar.layoutParams = params
         BrowseXColors.applyDirection(bottomBar, browserSettingsSnapshot)
         BrowseXColors.applyDirection(navigationBar, browserSettingsSnapshot)
-        if (tvRemote && !address.hasFocus()) {
+        // Request an initial search focus only once. Performance/power refreshes must
+        // never steal focus after the viewer has moved to page content or TV controls.
+        if (tvRemote && !initialTvFocusRequested) {
+            initialTvFocusRequested = true
             address.post {
                 if (!isFinishing && !isDestroyed && !address.hasFocus()) address.requestFocus()
             }
@@ -1187,6 +1192,37 @@ class MainActivity : AppCompatActivity() {
             }
         }
         addressRow.addView(address, LinearLayout.LayoutParams(0, dp(44), 1f))
+
+        // The address field owns the first TV focus. Down hands control to GeckoView
+        // only after the IME is closed; Up at the top edge returns to browser chrome.
+        address.setOnKeyListener { _, keyCode, event ->
+            if (isTelevisionDevice &&
+                !imeVisible &&
+                event.action == KeyEvent.ACTION_DOWN &&
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+            ) {
+                browserView.requestFocus()
+            } else {
+                false
+            }
+        }
+        browserView.apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnKeyListener { view, keyCode, event ->
+                if (isTelevisionDevice &&
+                    !imeVisible &&
+                    event.action == KeyEvent.ACTION_DOWN &&
+                    keyCode == KeyEvent.KEYCODE_DPAD_UP &&
+                    !view.canScrollVertically(-1)
+                ) {
+                    address.requestFocus()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
 
         reloadButton = actionButton("↻", "Reload page") {
             activeTab?.session?.reload()
