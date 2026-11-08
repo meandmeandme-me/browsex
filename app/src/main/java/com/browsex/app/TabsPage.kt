@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.net.Uri
 import android.view.Gravity
 import android.view.View
@@ -37,6 +38,28 @@ internal class TabsPage(
         setStroke(dp(1), this@TabsPage.colors.line)
     }
 
+    /** Visible keyboard/remote focus ring without changing a card's normal surface. */
+    private fun focusableSurface(fill: Int, radius: Int): StateListDrawable =
+        StateListDrawable().apply {
+            addState(
+                intArrayOf(android.R.attr.state_focused),
+                GradientDrawable().apply {
+                    setColor(colors.selected)
+                    cornerRadius = dp(radius).toFloat()
+                    setStroke(dp(3), colors.accent)
+                }
+            )
+            addState(
+                intArrayOf(android.R.attr.state_pressed),
+                GradientDrawable().apply {
+                    setColor(colors.selected)
+                    cornerRadius = dp(radius).toFloat()
+                    setStroke(dp(2), colors.accent)
+                }
+            )
+            addState(intArrayOf(), rounded(fill, radius))
+        }
+
     /** Full-screen visual tab workspace, sized for phones and wide tablet layouts. */
     fun show() {
         lateinit var dialog: AlertDialog
@@ -69,7 +92,10 @@ internal class TabsPage(
             setTextColor(colors.card)
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(11), dp(16), dp(11))
-            background = rounded(colors.accent, 22)
+            background = focusableSurface(colors.accent, 22)
+            isClickable = true
+            isFocusable = true
+            isFocusableInTouchMode = false
             setOnClickListener { onCreateTab(homePageUrlProvider()); dialog.dismiss(); show() }
         }
         header.addView(add)
@@ -265,7 +291,16 @@ internal class TabsPage(
         val scroll = ScrollView(activity)
         val grid = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(grid)
-        val columns = if (activity.resources.configuration.screenWidthDp >= 600) 3 else 2
+        val windowLayout = activity.currentAdaptivePresentation?.windowLayout
+            ?: when {
+                activity.resources.configuration.screenWidthDp < 600 -> WrenWindowLayout.PHONE_COMPACT
+                activity.resources.configuration.screenWidthDp < 840 -> WrenWindowLayout.MEDIUM
+                activity.resources.configuration.screenWidthDp < 1200 -> WrenWindowLayout.EXPANDED
+                activity.resources.configuration.screenWidthDp < 1600 -> WrenWindowLayout.LARGE
+                else -> WrenWindowLayout.EXTRA_LARGE
+            }
+        val columns = AdaptiveTabGridPolicy.columns(windowLayout)
+        val tvRemote = windowLayout == WrenWindowLayout.TV
         val rows = tabs.chunked(columns)
         rows.forEach { rowTabs ->
             val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
@@ -274,8 +309,15 @@ internal class TabsPage(
                 val card = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(dp(13), dp(13), dp(13), dp(12))
-                    background = rounded(colors.card, 18)
+                    background = focusableSurface(if (selected) colors.selected else colors.card, 18)
                     elevation = dp(if (selected) 4 else 1).toFloat()
+                    minimumHeight = dp(if (tvRemote) 270 else 200)
+                    isClickable = true
+                    isFocusable = true
+                    isFocusableInTouchMode = false
+                    isSelected = selected
+                    contentDescription = (if (tab.privateMode) tr("Private") + " · " else "") +
+                        tab.title.ifBlank { tr("New tab") } + ", " + tab.url
                 }
                 val preview = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
@@ -290,17 +332,17 @@ internal class TabsPage(
                     setTextColor(colors.accent)
                 })
                 preview.addView(TextView(activity).apply {
-                    text = (if (tab.privateMode) tr("Private") + " · " else "") + tab.title.ifBlank { "New tab" }
-                    textSize = 13f
+                    text = (if (tab.privateMode) tr("Private") + " · " else "") + tab.title.ifBlank { tr("New tab") }
+                    textSize = if (tvRemote) 17f else 13f
                     setTextColor(colors.ink)
                     maxLines = 2
                     gravity = Gravity.CENTER
                     setPadding(0, dp(7), 0, dp(3))
                 })
-                card.addView(preview, LinearLayout.LayoutParams(-1, dp(104)))
+                card.addView(preview, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 150 else 104)))
                 card.addView(TextView(activity).apply {
                     text = (if (tab.privateMode) tr("Private") + " · " else "") + tab.title.ifBlank { "New tab" }
-                    textSize = 14f
+                    textSize = if (tvRemote) 18f else 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(colors.ink)
                     maxLines = 1
@@ -308,7 +350,7 @@ internal class TabsPage(
                 })
                 card.addView(TextView(activity).apply {
                     text = tab.url.removePrefix("https://").removePrefix("http://").ifBlank { "Start page" }
-                    textSize = 11f
+                    textSize = if (tvRemote) 14f else 11f
                     setTextColor(colors.muted)
                     maxLines = 2
                 })
@@ -327,7 +369,12 @@ internal class TabsPage(
                     textSize = 22f
                     gravity = Gravity.CENTER
                     setTextColor(colors.danger)
-                    contentDescription = "Close tab"
+                    contentDescription = tr("Close tab")
+                    minimumWidth = dp(48)
+                    minimumHeight = dp(48)
+                    background = focusableSurface(colors.card, 12)
+                    isFocusable = true
+                    isFocusableInTouchMode = false
                     setPadding(dp(12), 0, dp(5), 0)
                     setOnClickListener {
                         onCloseTab(tab)
@@ -351,11 +398,13 @@ internal class TabsPage(
         }
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val done = TextView(activity).apply {
-            text = "Done"
-            textSize = 14f
+            text = tr("Done")
+            textSize = if (tvRemote) 18f else 14f
             gravity = Gravity.CENTER
             setTextColor(colors.card)
-            background = rounded(colors.ink, 24)
+            background = focusableSurface(colors.ink, 24)
+            isFocusable = true
+            isFocusableInTouchMode = false
             setPadding(dp(20), dp(13), dp(20), dp(13))
         }
         page.addView(done, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })

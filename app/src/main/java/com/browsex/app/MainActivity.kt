@@ -141,6 +141,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var store: BrowserStore
     private var browserSettingsSnapshot = BrowserSettings()
     internal val currentBrowserSettings: BrowserSettings get() = browserSettingsSnapshot
+    internal val currentAdaptivePresentation: AdaptivePresentationConfig? get() = adaptivePresentationConfig
     private var browserSettingsLoaded = false
     internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
