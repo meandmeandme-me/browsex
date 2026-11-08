@@ -81,10 +81,10 @@ internal object AdaptivePresentationPolicy {
         val placement = resolveAddressPlacement(snapshot, layout)
         val reasons = linkedSetOf<String>()
 
-        val accessibilityOverride = snapshot.systemHighContrast || snapshot.reduceTransparency
         if (snapshot.systemHighContrast) reasons += "system-high-contrast"
         if (snapshot.reduceTransparency) reasons += "reduced-transparency"
         if (snapshot.isLeanbackDevice) reasons += "leanback-device"
+        if (!snapshot.hasTouchscreen && snapshot.hasDpad) reasons += "remote-only-input"
         if (snapshot.windowWidthDp < 600) reasons += "compact-window"
         if (snapshot.windowHeightDp in 1 until 480) reasons += "compact-height"
         if (snapshot.batterySaverEnabled) reasons += "battery-saver"
