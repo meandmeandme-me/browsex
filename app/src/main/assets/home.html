@@ -24,6 +24,50 @@ header,.section-head{display:flex;align-items:center;justify-content:space-betwe
 dialog{width:min(420px,calc(100% - 32px));border:1px solid #ffffffb8;border-radius:24px;padding:0;background:var(--card);color:var(--ink);box-shadow:0 24px 80px #0b203855;backdrop-filter:blur(24px)}dialog::backdrop{background:#0c203b80;backdrop-filter:blur(5px)}.dialog-body{padding:23px}.dialog-body h2{font-size:20px;margin:0 0 6px}.dialog-body p{font-size:12px;color:var(--muted);margin:0 0 17px}label{display:block;font-size:12px;font-weight:700;margin:12px 0 6px}input{width:100%;height:46px;border:1px solid var(--line);border-radius:14px;padding:0 12px;background:var(--canvas);color:var(--ink);font-size:14px;outline-color:var(--blue)}.dialog-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.dialog-actions button{flex:1 1 calc(50% - 8px);min-height:44px;border:0;border-radius:14px;font-weight:700;cursor:pointer}.primary{background:linear-gradient(135deg,#277be9,#5b70df);color:#fff}.secondary{background:var(--canvas);color:var(--ink)}.danger{background:#fff0f0;color:#b42332}
 body.dark{color-scheme:dark;--canvas:#101d2d;--ink:#edf5ff;--muted:#aab9c9;--line:#354a61;--card:rgba(28,46,66,.78);--glass:rgba(25,44,64,.66);--blue:#8bc1ff;--shadow:0 18px 48px rgba(0,0,0,.2);--soft-shadow:0 8px 26px rgba(0,0,0,.17);background:radial-gradient(ellipse at 8% 4%,#1c4654 0,transparent 34%),radial-gradient(ellipse at 94% 12%,#30335b 0,transparent 34%),linear-gradient(135deg,#111e2c,#1a263d 55%,#252640)}body.dark .mark{background:linear-gradient(145deg,#24344d,#17243a);border-color:#52627b;box-shadow:none}body.dark .editorial-art{filter:brightness(.8) saturate(.8)}body.dark .shortcut-edit{background:#294d76;color:#cfe5ff}body.dark .shortcut-icon{background:linear-gradient(145deg,#2b4058,#1e3046);border-color:#526a82}body.dark .date-chip{border-color:#ffffff20;background:#172b42}body.dark .danger{background:#492d38;color:#ffc5cc}
 @media(hover:hover){.shortcut:hover{background:#ffffff66;transform:translateY(-2px)}.reading-card:hover{transform:translateY(-2px);box-shadow:0 22px 55px rgba(35,67,102,.13)}}@media(max-width:380px){.date-chip{display:none}main{padding:19px 14px 34px}.shortcuts{gap:4px}.shortcut{padding-inline:2px}.shortcut-icon,.add-shortcut{width:53px;height:53px;border-radius:18px}.shortcut-name,.add-label{font-size:10px}h1{letter-spacing:-1.2px}}@media(min-width:700px){.shortcuts{gap:22px}.shortcut-icon,.add-shortcut{width:70px;height:70px}.shortcut{padding:14px}.reading-card{padding:15px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Dedicated 10-foot start page for Android TV / Google TV remotes. */
+body.tv-mode main{width:min(100%,1320px);padding:48px 54px 64px}
+body.tv-mode header{margin-bottom:58px}
+body.tv-mode .brand{gap:18px}
+body.tv-mode .mark{width:64px;height:64px}
+body.tv-mode .brand-name{font-size:34px}
+body.tv-mode .date-chip{font-size:15px;padding:14px 20px}
+body.tv-mode .icon-btn{width:62px;height:62px;font-size:25px}
+body.tv-mode .greeting{margin-bottom:54px}
+body.tv-mode .eyebrow{font-size:14px;letter-spacing:2px}
+body.tv-mode h1{font-size:clamp(52px,5.2vw,78px);letter-spacing:-1.4px;line-height:1.06}
+body.tv-mode .greeting p{font-size:20px}
+body.tv-mode .section-head{margin-bottom:24px}
+body.tv-mode .section-head h2{font-size:25px}
+body.tv-mode .text-action{font-size:17px;padding:14px 16px;min-height:48px}
+body.tv-mode .shortcuts{grid-template-columns:repeat(5,minmax(0,1fr));gap:24px;margin-bottom:48px}
+body.tv-mode .shortcut{gap:14px;padding:18px 12px 16px;border:1px solid transparent;min-height:148px}
+body.tv-mode .shortcut-icon,body.tv-mode .add-shortcut{width:96px;height:96px;border-radius:28px;font-size:34px}
+body.tv-mode .shortcut-name{font-size:17px;max-width:180px}
+body.tv-mode .shortcut-edit{width:50px;height:50px;font-size:18px}
+body.tv-mode .add-label{font-size:16px}
+body.tv-mode .reading-card{padding:18px;border-radius:30px}
+body.tv-mode .editorial-art{height:260px}
+body.tv-mode .article-info{padding:22px 12px 8px}
+body.tv-mode .kicker{font-size:14px}
+body.tv-mode .article-title{font-size:32px}
+body.tv-mode .article-meta{font-size:17px}
+body.tv-mode .search-hint{font-size:16px;margin-top:28px}
+body.tv-mode :is(a,button,input,[tabindex]):focus-visible{outline:4px solid var(--blue);outline-offset:5px}
+body.tv-mode .shortcut:focus-visible,body.tv-mode .reading-card:focus-visible,body.tv-mode .icon-btn:focus-visible{background:var(--glass);box-shadow:0 0 0 5px rgba(75,125,225,.24)}
+body.tv-mode dialog{width:min(680px,calc(100% - 64px));border-radius:30px}
+body.tv-mode .dialog-body{padding:34px}
+body.tv-mode .dialog-body h2{font-size:29px}
+body.tv-mode .dialog-body p,body.tv-mode label{font-size:17px}
+body.tv-mode input{height:60px;font-size:20px;padding:0 18px}
+body.tv-mode .dialog-actions{gap:12px}
+body.tv-mode .dialog-actions button{min-height:60px;font-size:18px}
+@media(max-width:900px){
+ body.tv-mode main{padding:30px 28px 48px}
+ body.tv-mode .shortcuts{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+ body.tv-mode .shortcut-icon,body.tv-mode .add-shortcut{width:78px;height:78px}
+}
+@media(prefers-reduced-motion:reduce){body.tv-mode :is(a,button){transition:none!important;transform:none!important}}
 </style>
 </head>
 <body>
@@ -64,6 +108,8 @@ body.dark{color-scheme:dark;--canvas:#101d2d;--ink:#edf5ff;--muted:#aab9c9;--lin
 (()=>{
  const $=id=>document.getElementById(id);
  const params=new URLSearchParams(location.search);
+ const tvMode=params.get('bxtv')==='true';
+ if(tvMode)document.body.classList.add('tv-mode');
  const selectedLanguage=params.get('bxlang')||'system';
  const language=selectedLanguage==='system'?(navigator.language||'en'):selectedLanguage;
  const languageCode=language.toLowerCase().split('-')[0];
@@ -99,6 +145,7 @@ body.dark{color-scheme:dark;--canvas:#101d2d;--ink:#edf5ff;--muted:#aab9c9;--lin
   morning:'Good morning. Where to next?',afternoon:'Good afternoon. Where to next?',evening:'Good evening. Where to next?'
  };
 
+ if(tvMode)copy.search=arabic?'استخدم شريط Wren بالأعلى للبحث أو إدخال عنوان موقع.':'Use the Wren search bar above to search or enter a website address.';
  const defaults=[
   {name:'Wikipedia',url:'https://www.wikipedia.org'},
   {name:'Are.na',url:'https://www.are.na'},
