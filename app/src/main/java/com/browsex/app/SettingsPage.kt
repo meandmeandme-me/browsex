@@ -52,6 +52,7 @@ internal class SettingsPage(
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
+        setStroke(dp(1), colors.line)
     }
 
     fun show() {
