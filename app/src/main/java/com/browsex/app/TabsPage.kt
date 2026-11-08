@@ -44,17 +44,17 @@ internal class TabsPage(
             addState(
                 intArrayOf(android.R.attr.state_focused),
                 GradientDrawable().apply {
-                    setColor(colors.selected)
+                    setColor(this@TabsPage.colors.selected)
                     cornerRadius = dp(radius).toFloat()
-                    setStroke(dp(3), colors.accent)
+                    setStroke(dp(3), this@TabsPage.colors.accent)
                 }
             )
             addState(
                 intArrayOf(android.R.attr.state_pressed),
                 GradientDrawable().apply {
-                    setColor(colors.selected)
+                    setColor(this@TabsPage.colors.selected)
                     cornerRadius = dp(radius).toFloat()
-                    setStroke(dp(2), colors.accent)
+                    setStroke(dp(2), this@TabsPage.colors.accent)
                 }
             )
             addState(intArrayOf(), rounded(fill, radius))
