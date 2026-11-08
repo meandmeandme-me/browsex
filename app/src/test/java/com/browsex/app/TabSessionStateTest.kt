@@ -51,6 +51,16 @@ class TabSessionStateTest {
         assertEquals(listOf(customized), TabSessionState.normalize(listOf(customized, invalid), 0, home).urls)
     }
 
+    @Test fun restoresTvAndAccessibilityHomePreferencesButRejectsMalformedFlags() {
+        val adaptive = "$home?bxlang=ar&bxtheme=dark&bxtv=true&bxopaque=true&bxcontrast=true&bxmotion=true"
+        val malformed = "$home?bxlang=ar&bxtheme=dark&bxtv=true&bxmotion=yes"
+
+        assertEquals(
+            listOf(adaptive),
+            TabSessionState.normalize(listOf(adaptive, malformed), 0, home).urls
+        )
+    }
+
     @Test fun invalidAndEmptySnapshotsFallBackToHome() {
         assertEquals(TabSessionState.Snapshot(listOf(home), 0),
             TabSessionState.normalize(listOf("file:///etc/passwd"), 99, home))
