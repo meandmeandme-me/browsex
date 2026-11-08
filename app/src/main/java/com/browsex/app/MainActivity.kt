@@ -899,8 +899,12 @@ class MainActivity : AppCompatActivity() {
         val opaque = config.materialMode == WrenMaterialMode.MATTE ||
             config.materialMode == WrenMaterialMode.HIGH_CONTRAST ||
             config.materialMode == WrenMaterialMode.PERFORMANCE_MINIMAL
-        val fill = if (opaque) colors.card else colors.panel
-        val fieldFill = if (opaque) colors.canvas else colors.field
+        // BrowseXColors.card has a slight alpha for glass layering; Matte and performance
+        // modes must be truly opaque rather than merely less translucent.
+        val opaqueSurface = if (colors.isDark) Color.rgb(30, 45, 70) else Color.WHITE
+        val opaqueField = if (colors.isDark) Color.rgb(13, 25, 41) else Color.rgb(244, 247, 252)
+        val fill = if (opaque) opaqueSurface else colors.panel
+        val fieldFill = if (opaque) opaqueField else colors.field
         val stroke = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) colors.ink else colors.line
 
         topBar.background = glassSurface(20, fill, stroke)
