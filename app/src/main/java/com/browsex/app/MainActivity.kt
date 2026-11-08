@@ -21,6 +21,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -732,9 +733,10 @@ class MainActivity : AppCompatActivity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun createBrowserUi(): View {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        val root = FrameLayout(this).apply {
             setBackgroundColor(colors.canvas)
+            clipChildren = false
+            clipToPadding = false
             BrowseXColors.applyDirection(this, browserSettingsSnapshot)
         }
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
@@ -748,6 +750,8 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(5), dp(2), dp(5), dp(2))
+            background = glassSurface(20, colors.panel, colors.line)
+            isClickable = true
         }
         val brandMark = ImageView(this).apply {
             setImageResource(R.drawable.ic_browsex)
@@ -783,6 +787,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(8), dp(8), dp(8), dp(7))
             background = glassSurface(28, colors.panel, colors.line)
             elevation = dp(8).toFloat()
+            isClickable = true
         }
         addressRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -879,19 +884,27 @@ class MainActivity : AppCompatActivity() {
             topMargin = dp(3)
         })
 
-        root.addView(topBar, LinearLayout.LayoutParams(-1, dp(46)).apply {
+        // The page remains full-height behind the translucent chrome, like a floating glass dock.
+        root.addView(browserView, FrameLayout.LayoutParams(-1, -1))
+        root.addView(topBar, FrameLayout.LayoutParams(-1, dp(46), Gravity.TOP).apply {
             setMargins(dp(13), dp(5), dp(13), dp(3))
         })
-        root.addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
-        root.addView(browserView, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(progress, FrameLayout.LayoutParams(-1, dp(2), Gravity.TOP).apply {
+            topMargin = dp(51)
+            leftMargin = dp(13)
+            rightMargin = dp(13)
+        })
         val dockWidth = if (resources.configuration.screenWidthDp >= 600) {
             dp(720).coerceAtMost(
                 (resources.displayMetrics.widthPixels - dp(32)).coerceAtLeast(dp(280))
             )
         } else -1
-        root.addView(bottomBar, LinearLayout.LayoutParams(dockWidth, dp(118)).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
-            setMargins(dp(10), dp(6), dp(10), dp(7))
+        root.addView(bottomBar, FrameLayout.LayoutParams(
+            dockWidth, dp(118), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        ).apply {
+            bottomMargin = dp(7)
+            leftMargin = dp(10)
+            rightMargin = dp(10)
         })
         BrowseXColors.applyDirection(root, browserSettingsSnapshot)
         return root
