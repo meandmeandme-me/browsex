@@ -26,7 +26,7 @@ object TabSessionState {
                     key.takeIf { it.isNotBlank() }?.let { it to value }
                 }.toMap()
                 params.keys.containsAll(setOf("bxlang", "bxtheme")) &&
-                    params.keys.all { it in setOf("bxlang", "bxtheme", "bxquick", "bxdiscovery", "bxlayout", "bxtv", "bxopaque", "bxcontrast", "bxmotion") } &&
+                    params.keys.all { it in setOf("bxlang", "bxtheme", "bxquick", "bxdiscovery", "bxlayout", "bxtv", "bxopaque", "bxcontrast", "bxmotion", "bxminimal") } &&
                     params["bxlang"]?.let { it == "system" || BrowserPreferencePolicy.normalizeLanguageTag(it) != "system" } == true &&
                     params["bxtheme"]?.let { it in setOf("system", "light", "dark") } == true &&
                     params["bxquick"]?.let { it in setOf("true", "false") } != false &&
@@ -35,7 +35,8 @@ object TabSessionState {
                     params["bxtv"]?.let { it in setOf("true", "false") } != false &&
                     params["bxopaque"]?.let { it in setOf("true", "false") } != false &&
                     params["bxcontrast"]?.let { it in setOf("true", "false") } != false &&
-                    params["bxmotion"]?.let { it in setOf("true", "false") } != false
+                    params["bxmotion"]?.let { it in setOf("true", "false") } != false &&
+                    params["bxminimal"]?.let { it in setOf("true", "false") } != false
             }
             if (url == homeUrl || isConfiguredHome || url == "about:blank" || NavigationInput.isValidWebUrl(url)) {
                 index to url
