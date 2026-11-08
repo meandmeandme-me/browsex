@@ -78,14 +78,13 @@ changing defaults. The device screen class is exposed separately for future resp
 
 The existing `DeviceCapabilityProbe` and `AdaptiveRuntimePolicy` remain the resource-budget source of truth. Do not overload their RAM tiers or `smallestScreenWidthDp` with all presentation decisions.
 
-Add a separate, pure `AdaptivePresentationPolicy` consuming:
-- Stable platform facts (API, ABI, low-RAM, optional hardware features).
-- Current window metrics and posture (width/height dp, insets, folding features, orientation, multi-window/external display).
-- Input modalities (touch, pointer, keyboard, D-pad/remote).
-- Dynamic state (battery saver, thermal state, memory pressure, measured jank).
-- Accessibility and explicit user preferences (reduced motion/transparency, contrast, top/bottom address field).
+A separate, pure `AdaptivePresentationPolicy` has now been added in `AdaptivePresentationPolicy.kt`, with unit tests in `AdaptivePresentationPolicyTest.kt`. It consumes a platform/window/input/accessibility/performance snapshot and resolves:
+- A current-window layout class (compact phone, compact landscape, medium, expanded, large, extra-large or TV).
+- Address placement (top, bottom, side or TV remote-first).
+- A material mode (`GLASS_BLUR`, `GLASS_TINTED`, `MATTE`, `HIGH_CONTRAST` or `PERFORMANCE_MINIMAL`).
+- Motion/speculative-visual-work flags and local reason codes.
 
-Its output chooses a form-factor layout and a material mode: `GLASS_BLUR`, `GLASS_TINTED`, `MATTE`, `HIGH_CONTRAST`, or `PERFORMANCE_MINIMAL`. Accessibility overrides first; then explicit user choice; then API/runtime capability; then performance suitability. Unknown or missing data selects a readable tinted/matte fallback.
+The policy is currently a pure, tested decision layer; it is **not yet wired into MainActivity or the Glass UI renderer**. Platform probes, runtime listeners, window/fold observations and design-system application remain next integration work. Accessibility overrides first; then explicit user choice; then a verified rendering path; then performance suitability. Unknown or missing data selects a readable fallback.
 
 Do not equate Android API >= 31 with guaranteed blur. Cross-window blur availability can change at runtime and may be disabled by GPU constraints, power-saving or system conditions. Use the relevant API/listener only for the specific window-blur feature it controls. It is not a universal backdrop-blur switch. In-window RenderEffect and CSS backdrop-filter are separate rendering paths and must be measured independently.
 
