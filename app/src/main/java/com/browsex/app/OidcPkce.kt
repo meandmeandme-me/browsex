@@ -188,12 +188,15 @@ internal object OidcPkce {
 
     private fun isSafeRedirectBase(uri: URI): Boolean {
         val scheme = uri.scheme?.lowercase() ?: return false
-        if (scheme == "http") return false
-        if (scheme != "https" && !scheme.matches(Regex("^[a-z][a-z0-9+.-]*$"))) return false
         if (uri.rawUserInfo != null || uri.rawQuery != null || uri.rawFragment != null) return false
-        if (scheme == "https" && uri.host.isNullOrBlank()) return false
-        if (scheme != "https" && uri.rawAuthority == null && uri.rawPath.isNullOrBlank()) return false
-        return true
+        return when (scheme) {
+            "https" -> !uri.host.isNullOrBlank() && uri.port != 0 && uri.port <= 65535
+            "http", "file", "content", "javascript", "intent" -> false
+            else -> scheme.matches(Regex("^[a-z][a-z0-9+.-]{2,63}$")) &&
+                uri.rawAuthority == null &&
+                !uri.rawPath.isNullOrBlank() &&
+                uri.rawPath.startsWith("/")
+        }
     }
 
     private fun sameRedirectBase(expected: URI, actual: URI): Boolean =
