@@ -357,4 +357,20 @@
     <string name="ui_close_all_tabs">Close all tabs</string>
     <string name="ui_close_every_open_tab">Close every open tab?</string>
     <string name="ui_close_all">Close all</string>
+    <string name="ui_ublock_origin_not_installed">uBlock Origin: not installed</string>
+    <string name="ui_ublock_origin_installed_currently_off">uBlock Origin: installed, currently off</string>
+    <string name="ui_protection_status">Protection status</string>
+    <string name="ui_built_in_tracking_protection_regular_tabs">Built-in tracking protection — regular tabs</string>
+    <string name="ui_built_in_tracking_protection_private_tabs">Built-in tracking protection — private tabs</string>
+    <string name="ui_blocking_totals_are_not_reported_here_because_reliable_per_page_counts_are_not_available">Blocking totals are not reported here because reliable per-page counts are not available.</string>
+    <string name="ui_manage_protection">Manage protection</string>
+    <string name="ui_could_not_load_site_permissions">Could not load site permissions</string>
+    <string name="ui_no_saved_website_permission_decisions_yet">No saved website permission decisions yet.</string>
+    <string name="ui_saved_site_permissions">Saved site permissions</string>
+    <string name="ui_reset_all">Reset all</string>
+    <string name="ui_reset_all_site_permissions">Reset all site permissions?</string>
+    <string name="ui_every_saved_choice_will_return_to_ask_websites_may_request_permission_again">Every saved choice will return to Ask. Websites may request permission again.</string>
+    <string name="ui_could_not_reset_permissions">Could not reset permissions</string>
+    <string name="ui_permission_updated">Permission updated</string>
+    <string name="ui_could_not_update_permission">Could not update permission</string>
 </resources>
