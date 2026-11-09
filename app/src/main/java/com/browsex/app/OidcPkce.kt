@@ -99,7 +99,9 @@ internal object OidcAuthorizationRequestBuilder {
 
     private fun isValidVerifier(value: String): Boolean =
         value.length in 43..128 &&
-            value.all { it.isLetterOrDigit() || it in "-._~" }
+            value.all {
+                it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' || it in "-._~"
+            }
 
     private fun isValidOpaqueValue(value: String): Boolean =
         value.length in 16..512 && value.all { it.code in 0x21..0x7E }
@@ -170,7 +172,9 @@ internal object OidcPkce {
             ) return null
 
             val returnedState = parameters["state"] ?: return null
-            val code = parameters["code"]?.takeIf { it.isNotBlank() } ?: return null
+            val code = parameters["code"]?.takeIf {
+                it.isNotBlank() && it.length <= 8192 && it.all { char -> char.code in 0x21..0x7E }
+            } ?: return null
             if (!constantTimeEquals(returnedState, expectedState)) return null
             OidcAuthorizationCodeCallback(code, returnedState)
         }.getOrNull()
