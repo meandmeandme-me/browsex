@@ -38,9 +38,20 @@ internal class SavedSessionsPage(
                         android.R.id.text1,
                         sessions.map { "${it.name}\n${it.urls.size} " + t("tabs", "تبويبات") + " · " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.savedAt)) }
                     )
+                    val empty = android.widget.TextView(activity).apply {
+                        text = t("No saved sessions yet. Save your current tabs to return to them later.", "لا توجد جلسات محفوظة بعد. احفظ التبويبات الحالية للعودة إليها لاحقًا.")
+                        gravity = android.view.Gravity.CENTER
+                        setPadding(32, 32, 32, 32)
+                    }
+                    val content = LinearLayout(activity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(list, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 320)))
+                        addView(empty, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 160)))
+                        list.emptyView = empty
+                    }
                     val dialog = AlertDialog.Builder(activity)
                         .setTitle(t("Saved sessions", "الجلسات المحفوظة"))
-                        .setView(list)
+                        .setView(content)
                         .setPositiveButton(t("Save current tabs", "حفظ التبويبات الحالية")) { _, _ -> promptSave(repository, ::render) }
                         .setNegativeButton(t("Close", "إغلاق"), null)
                         .create()
@@ -70,15 +81,6 @@ internal class SavedSessionsPage(
                                 }
                             }.show()
                         true
-                    }
-                    if (sessions.isEmpty()) {
-                        dialog.setOnShowListener {
-                            val empty = android.widget.TextView(activity).apply {
-                                text = t("No saved sessions yet. Save your current tabs to return to them later.", "لا توجد جلسات محفوظة بعد. احفظ التبويبات الحالية للعودة إليها لاحقًا.")
-                                setPadding(32, 32, 32, 32)
-                            }
-                            dialog.setView(empty)
-                        }
                     }
                     dialog.show()
                 }
