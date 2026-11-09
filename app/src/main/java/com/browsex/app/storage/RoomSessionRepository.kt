@@ -42,6 +42,12 @@ internal class RoomSessionRepository(
         return dao.removeSavedSession(id)
     }
 
+    suspend fun renameSession(id: String, rawName: String): Boolean {
+        val name = rawName.trim().take(MAX_SESSION_NAME)
+        if (id.isBlank() || name.isBlank()) return false
+        return dao.renameSavedSessionIfNameAvailable(id, name)
+    }
+
     suspend fun recentlyClosed(): List<RecentlyClosedTabEntity> {
         pruneExpiredRecentlyClosed()
         return dao.recentlyClosedTabs().take(MAX_RECENTLY_CLOSED)
