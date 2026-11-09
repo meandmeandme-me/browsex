@@ -286,7 +286,7 @@ internal class TabsPage(
                                 }
                             }
                         }
-                        .setNeutralButton(tr("Clear list")) { _, _ ->
+                        .setNeutralButton(tr("Clear list")) { parentDialog, _ ->
                             AlertDialog.Builder(activity)
                                 .setMessage(tr("Clear all recently closed tabs?"))
                                 .setNegativeButton(tr("Cancel"), null)
@@ -295,6 +295,7 @@ internal class TabsPage(
                                         val cleared = runCatching {
                                             activity.storageRuntime.awaitReady().sessions.clearRecentlyClosed()
                                         }.isSuccess
+                                        if (cleared) parentDialog.dismiss()
                                         onToast(if (cleared) "Recently closed list cleared" else "Could not clear recently closed tabs")
                                     }
                                 }
