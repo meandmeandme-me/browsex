@@ -567,6 +567,20 @@ internal class TabsPage(
             background = focusableSurface(colors.accent, 18)
             isSelected = true
         }
+        val clearSearch = TextView(activity).apply {
+            text = "×"
+            textSize = if (tvRemote) 27f else 23f
+            gravity = Gravity.CENTER
+            setTextColor(colors.muted)
+            contentDescription = tr("Clear tab search")
+            background = focusableSurface(colors.panel, 16)
+            minWidth = dp(if (tvRemote) 60 else 48)
+            minHeight = dp(if (tvRemote) 60 else 50)
+            isClickable = true
+            isFocusable = true
+            isFocusableInTouchMode = false
+            visibility = View.GONE
+        }
         val searchTabs = EditText(activity).apply {
             setHint(tr("Search tabs"))
             setTextSize(if (tvRemote) 18f else 14f)
@@ -586,23 +600,9 @@ internal class TabsPage(
                 override fun afterTextChanged(s: Editable?) = Unit
             })
         }
-        val clearSearch = TextView(activity).apply {
-            text = "×"
-            textSize = if (tvRemote) 27f else 23f
-            gravity = Gravity.CENTER
-            setTextColor(colors.muted)
-            contentDescription = tr("Clear tab search")
-            background = focusableSurface(colors.panel, 16)
-            minWidth = dp(if (tvRemote) 60 else 48)
-            minHeight = dp(if (tvRemote) 60 else 50)
-            isClickable = true
-            isFocusable = true
-            isFocusableInTouchMode = false
-            visibility = View.GONE
-            setOnClickListener {
-                searchTabs.text?.clear()
-                searchTabs.requestFocus()
-            }
+        clearSearch.setOnClickListener {
+            searchTabs.text?.clear()
+            searchTabs.requestFocus()
         }
         val searchRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
