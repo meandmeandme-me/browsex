@@ -290,6 +290,8 @@
     <string name="ui_unlock_browsex_passwords">فتح كلمات المرور في BrowseX</string>
     <string name="ui_verify_your_identity_before_filling_a_saved_sign_in">تحقق من هويتك قبل تعبئة بيانات تسجيل الدخول المحفوظة</string>
     <string name="ui_choose_a_saved_sign_in">اختر بيانات تسجيل دخول محفوظة</string>
+    <string name="ui_username">اسم المستخدم</string>
+    <string name="ui_password">كلمة المرور</string>
     <string name="ui_unlock_saved_passwords">فتح كلمات المرور المحفوظة</string>
     <string name="ui_verify_your_identity_to_view_saved_sign_ins">تحقق من هويتك لعرض بيانات تسجيل الدخول المحفوظة</string>
     <string name="ui_close_private_tabs_to_view_saved_entries">أغلق علامات التبويب الخاصة لعرض البيانات المحفوظة</string>
