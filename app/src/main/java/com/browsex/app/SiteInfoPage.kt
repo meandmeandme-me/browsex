@@ -23,7 +23,8 @@ class SiteInfoPage(
     private val onPermissionChange: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
     private val onResetPermissions: () -> Unit,
     private val onClearSiteData: () -> Unit,
-    private val privateMode: Boolean = false
+    private val privateMode: Boolean = false,
+    private val onMediaPermissionChange: (feature: String, decision: String) -> Unit = { _, _ -> }
 ) {
     private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
@@ -411,6 +412,8 @@ class SiteInfoPage(
                     }.onFailure {
                         android.util.Log.e("BrowseX", "Could not update site permission", it)
                     }
+                    val decision = arrayOf("ask", "allow", "deny")[index]
+                    if (decision != "allow") onMediaPermissionChange(feature, decision)
                     dialog.dismiss()
                     activePageDialog?.dismiss()
                     show()
