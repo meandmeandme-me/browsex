@@ -70,6 +70,7 @@ internal class RecallPage(
         })
         val search = EditText(activity).apply {
             hint = t("Search pages or websites", "ابحث عن صفحة أو موقع")
+            filters = arrayOf(android.text.InputFilter.LengthFilter(MAX_RECALL_QUERY_LENGTH))
             textSize = if (isTvRemote) 19f else 14f
             isSingleLine = true
             setTextColor(colors.ink)
@@ -95,7 +96,12 @@ internal class RecallPage(
             }
         }
         fun section(label: String, rows: List<Pair<String, String>>, query: String) {
-            val filtered = rows.filter { matches(query, it.first, it.second) }.take(12)
+            // Keep a bounded scan even if an imported history/bookmark database is unusually large.
+            val filtered = rows.asSequence()
+                .take(MAX_RECALL_SOURCE_ROWS)
+                .filter { matches(query, it.first, it.second) }
+                .take(MAX_RECALL_SECTION_RESULTS)
+                .toList()
             if (filtered.isEmpty()) return
             content.addView(TextView(activity).apply {
                 text = label.uppercase()
@@ -112,7 +118,11 @@ internal class RecallPage(
                     background = rounded(colors.card, 14)
                     isClickable = true
                     WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.accent, if (isTvRemote) 76 else 48)
-                    contentDescription = title.ifBlank { url } + ", " + url
+                    contentDescription = (
+                        title.filterNot { it.isISOControl() }.take(MAX_RECALL_LABEL_LENGTH)
+                            .ifBlank { url.filterNot { ch -> ch.isISOControl() }.take(MAX_RECALL_LABEL_LENGTH) } +
+                            ", " + url.filterNot { it.isISOControl() }.take(MAX_RECALL_LABEL_LENGTH)
+                        ).take(MAX_RECALL_LABEL_LENGTH * 2)
                     setOnClickListener { dialog.dismiss(); onOpen(url) }
                 }
                 item.addView(TextView(activity).apply {
@@ -123,7 +133,7 @@ internal class RecallPage(
                     maxLines = 1
                 })
                 item.addView(TextView(activity).apply {
-                    text = url
+                    text = url.filterNot { it.isISOControl() }.take(MAX_RECALL_URL_LENGTH)
                     textSize = if (isTvRemote) 14f else 11f
                     setTextColor(colors.muted)
                     maxLines = 2
@@ -164,5 +174,13 @@ internal class RecallPage(
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         if (isTvRemote) search.post { if (dialog.isShowing) search.requestFocus() }
+    }
+
+    private companion object {
+        const val MAX_RECALL_QUERY_LENGTH = 256
+        const val MAX_RECALL_SOURCE_ROWS = 500
+        const val MAX_RECALL_SECTION_RESULTS = 12
+        const val MAX_RECALL_LABEL_LENGTH = 240
+        const val MAX_RECALL_URL_LENGTH = 2048
     }
 }
