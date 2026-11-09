@@ -2173,7 +2173,8 @@ class MainActivity : AppCompatActivity() {
     private fun showPrivacyCenter() {
         PrivacyPage(
             activity = this,
-            clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) }
+            clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) },
+            manageProtection = { showUBlockOriginSettings() }
         ).show()
     }
 
