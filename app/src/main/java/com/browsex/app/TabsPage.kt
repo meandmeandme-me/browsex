@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 /** UI-only tab workspace. All browser mutations are injected through callbacks. */
 internal class TabsPage(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val tabsProvider: () -> List<BrowserTab>,
     private val activeTabProvider: () -> BrowserTab?,
     private val onCreateTab: (String) -> Unit,
@@ -28,7 +27,7 @@ internal class TabsPage(
 ) {
     private val tabs: List<BrowserTab> get() = tabsProvider()
     private val activeTab: BrowserTab? get() = activeTabProvider()
-    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
 
     private fun tr(value: String): String = BrowseXStrings.text(activity, value)
@@ -89,7 +88,7 @@ internal class TabsPage(
             setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
-            text = if (BrowseXColors.isArabic(activity, store)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
+            text = if (BrowseXColors.isArabic(activity.currentBrowserSettings)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
             textSize = if (isTvRemote) 16f else 13f
             setTextColor(colors.muted)
             setPadding(0, dp(3), 0, 0)
