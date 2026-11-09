@@ -15,7 +15,14 @@ internal class RoomHistoryRepository(
         if (normalizedUrl.length > MAX_URL_LENGTH ||
             !NavigationInput.isValidWebUrl(normalizedUrl) || visitedAt < 0L
         ) return false
-        val safeTitle = title.trim().take(MAX_TITLE_LENGTH)
+        // History titles originate in page metadata and can contain invisible control
+        // characters. Remove them before persistence so list rows and accessibility output
+        // cannot be spoofed with embedded line breaks or directional controls.
+        val safeTitle = title
+            .filterNot { it.isISOControl() || it in '\u202A'..'\u202E' || it in '\u2066'..'\u2069' }
+            .replace(WHITESPACE, " ")
+            .trim()
+            .take(MAX_TITLE_LENGTH)
             .ifBlank { android.net.Uri.parse(normalizedUrl).host.orEmpty().ifBlank { normalizedUrl } }
         dao.recordHistoryEntry(HistoryEntryEntity(
             id = "history_${UUID.randomUUID()}",
@@ -39,5 +46,6 @@ internal class RoomHistoryRepository(
         const val MAX_HISTORY = 300
         const val MAX_URL_LENGTH = 4096
         const val MAX_TITLE_LENGTH = 160
+        val WHITESPACE = Regex("\\s+")
     }
 }
