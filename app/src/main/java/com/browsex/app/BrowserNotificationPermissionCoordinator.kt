@@ -14,25 +14,30 @@ internal class BrowserNotificationPermissionCoordinator(
     private val afterResolved: () -> Unit
 ) {
     private val callbacks = mutableListOf<(Boolean) -> Unit>()
+    private val maxPendingCallbacks = 64
     var isInFlight: Boolean = false
         private set
 
     fun request(callback: (Boolean) -> Unit) {
         if (!featureEnabled()) {
-            callback(false)
+            deliver(callback, false)
             return
         }
         if (apiLevel < 33) {
-            callback(notificationsEnabled())
+            deliver(callback, notificationsEnabled())
             return
         }
         if (permissionGranted()) {
             clearDenial()
-            callback(notificationsEnabled())
+            deliver(callback, notificationsEnabled())
             return
         }
         if (previouslyDenied() || !hostAvailable()) {
-            callback(false)
+            deliver(callback, false)
+            return
+        }
+        if (callbacks.size >= maxPendingCallbacks) {
+            deliver(callback, false)
             return
         }
         callbacks.add(callback)
@@ -63,10 +68,14 @@ internal class BrowserNotificationPermissionCoordinator(
         resolveCallbacks(false)
     }
 
+    private fun deliver(callback: (Boolean) -> Unit, result: Boolean) {
+        runCatching { callback(result) }
+    }
+
     private fun resolveCallbacks(result: Boolean) {
         val pending = callbacks.toList()
         callbacks.clear()
-        pending.forEach { callback -> runCatching { callback(result) } }
+        pending.forEach { callback -> deliver(callback, result) }
     }
 }
 
