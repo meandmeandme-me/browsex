@@ -380,4 +380,6 @@
     <string name="ui_private_tabs">الخاصة</string>
     <string name="ui_matching_tabs">علامات مطابقة</string>
     <string name="ui_regular">العادية</string>
+    <string name="ui_no_open_tabs">لا توجد علامات تبويب مفتوحة</string>
+    <string name="ui_create_new_tab">إنشاء علامة تبويب جديدة</string>
 </resources>
