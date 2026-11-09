@@ -12,7 +12,8 @@ internal class BrowserCredentialPromptDelegate(
     private val privateMode: Boolean,
     private val hasPrivateTabsOpen: () -> Boolean,
     private val onDeviceAuthenticated: () -> Unit,
-    private val isStillValid: (GeckoSession, String) -> Boolean
+    private val isStillValid: (GeckoSession, String) -> Boolean,
+    private val translate: (String) -> String
 ) : GeckoSession.PromptDelegate {
 
     override fun onLoginSave(
@@ -29,13 +30,13 @@ internal class BrowserCredentialPromptDelegate(
 
         val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
         AlertDialog.Builder(activity)
-            .setTitle("Save password?")
-            .setMessage("Save the sign-in for " + origin + " under " + option.value.username + "?")
-            .setPositiveButton("Save") { _, _ ->
+            .setTitle(translate("Save password?"))
+            .setMessage(translate("Save the sign-in for %1$s under %2$s?").format(origin, option.value.username))
+            .setPositiveButton(translate("Save")) { _, _ ->
                 BrowserDeviceAuthenticator.authenticate(
                     activity = activity,
-                    title = "Save password",
-                    subtitle = "Verify your identity to encrypt this sign-in",
+                    title = translate("Save password"),
+                    subtitle = translate("Verify your identity to encrypt this sign-in"),
                     onAuthenticated = {
                         onDeviceAuthenticated()
                         result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, origin)) request.confirm(option) else request.dismiss())
@@ -76,7 +77,7 @@ internal class BrowserCredentialPromptDelegate(
         val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
         val labels = options.map { it.value.username }.toTypedArray()
         AlertDialog.Builder(activity)
-            .setTitle("Choose a saved sign-in")
+            .setTitle(translate("Choose a saved sign-in"))
             .setItems(labels) { _, index ->
                 val selected = options.getOrNull(index)
                 val selectedOrigin = selected?.value?.origin?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
