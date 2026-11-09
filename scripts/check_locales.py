@@ -10,7 +10,6 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
-LOCALE_CONFIG = RES / "xml" / "locales_config.xml"
 PLACEHOLDER = re.compile(r"(?<!%)%(?!%)(?:[0-9]+\$)?[-#+0,(]*[0-9]*(?:\.[0-9]+)?[sdif]")
 TRANSLATION_CALL = re.compile(r'\bt\s*\(\s*"([^"]+)"')
 DIRECT_TRANSLATION_CALL = re.compile(r'BrowseXStrings\.text\s*\(\s*[^,]+,\s*"([^"]+)"')
@@ -73,31 +72,17 @@ def main() -> int:
                         f"{source_path}: translation key {key!r} is missing for {english!r}"
                     )
 
-    config_root = ET.parse(LOCALE_CONFIG).getroot()
-    android_name = "{http://schemas.android.com/apk/res/android}name"
-    configured = {
-        element.attrib[android_name]
-        for element in config_root
-        if android_name in element.attrib
-    }
-    configured_normalized = {value.lower() for value in configured}
-    if "en" not in configured_normalized:
-        errors.append(f"{LOCALE_CONFIG}: default English locale 'en' is missing")
-
+    # The in-app language picker supports the full ISO language catalog and follows
+    # Android/Gecko locale fallback for languages without a bundled translation pack.
+    # Validate every bundled translation pack without restricting runtime locales.
     locale_files = sorted(
         path for path in RES.glob("values-*/strings.xml")
         if is_locale_directory(path.parent.name)
     )
     available_locales = {locale_name(path.parent.name).lower() for path in locale_files}
-    missing_packs = sorted(configured_normalized - available_locales - {"en"})
-    if missing_packs:
-        errors.append(
-            f"{LOCALE_CONFIG}: configured locales have no strings.xml pack: {', '.join(missing_packs)}"
-        )
+    if "ar" not in available_locales:
+        errors.append(f"{RES}: Arabic translation pack 'values-ar' is missing")
     for path in locale_files:
-        locale = locale_name(path.parent.name)
-        if locale.lower() not in configured_normalized:
-            errors.append(f"{path}: locale '{locale}' is missing from locales_config.xml")
         translated, duplicates = resources(path)
         errors.extend(f"{path}: duplicate resource {name}" for name in duplicates)
 
