@@ -79,7 +79,7 @@ class SiteInfoPage(
             setPadding(0, dp(12), 0, dp(4))
         })
         root.addView(TextView(activity).apply {
-            text = if (secure) t("✓  HTTPS connection", "✓ اتصال HTTPS آمن") else t("⚠  Not using HTTPS", "⚠ الاتصال غير مشفّر")
+            text = if (secure) t("✓  Encrypted HTTPS connection", "✓ اتصال HTTPS مشفّر") else t("⚠  Connection is not encrypted", "⚠ الاتصال غير مشفّر")
             textSize = if (isTvRemote) 18f else 13f
             setTextColor(if (secure) colors.success else colors.danger)
             setPadding(0, 0, 0, dp(14))
