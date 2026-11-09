@@ -290,6 +290,8 @@
     <string name="ui_unlock_browsex_passwords">Unlock BrowseX passwords</string>
     <string name="ui_verify_your_identity_before_filling_a_saved_sign_in">Verify your identity before filling a saved sign-in</string>
     <string name="ui_choose_a_saved_sign_in">Choose a saved sign-in</string>
+    <string name="ui_username">Username</string>
+    <string name="ui_password">Password</string>
     <string name="ui_unlock_saved_passwords">Unlock saved passwords</string>
     <string name="ui_verify_your_identity_to_view_saved_sign_ins">Verify your identity to view saved sign-ins</string>
     <string name="ui_close_private_tabs_to_view_saved_entries">Close private tabs to view saved entries</string>
