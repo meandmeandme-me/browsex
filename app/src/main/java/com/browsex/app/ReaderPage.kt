@@ -44,7 +44,7 @@ class ReaderPage(
             gravity = Gravity.CENTER_VERTICAL
         }
         val heading = TextView(context).apply {
-            text = t("BROWSE X  ·  READER", "BrowseX · وضع القراءة")
+            text = t("WREN BROWSER  ·  READER", "BrowseX · وضع القراءة")
             textSize = if (isTvRemote) 15f else 11f
             letterSpacing = 0.08f
             setTextColor(colors.muted)
