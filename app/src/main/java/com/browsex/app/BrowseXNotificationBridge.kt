@@ -29,7 +29,7 @@ internal class BrowseXNotificationBridge(
             val source = notification.source
             if (notification.privateBrowsing || !activity.websiteNotificationsEnabled() ||
                 !isSafeWebOrigin(notification.origin) ||
-                (source != null && !isSafeWebOrigin(source))
+                (source != null && (!isSafeWebOrigin(source) || !isSameWebOrigin(notification.origin, source)))
             ) {
                 notification.dismiss()
                 return@post
@@ -153,6 +153,18 @@ internal class BrowseXNotificationBridge(
         val secureLocalHttp = scheme == "http" && host != null &&
             (host == "localhost" || host == "::1" || host == "127.0.0.1")
         (scheme == "https" || secureLocalHttp) && !host.isNullOrBlank() && uri.userInfo == null
+    } catch (_: Exception) { false }
+
+    private fun isSameWebOrigin(first: String, second: String): Boolean = try {
+        val left = Uri.parse(first)
+        val right = Uri.parse(second)
+        val leftScheme = left.scheme?.lowercase()
+        val rightScheme = right.scheme?.lowercase()
+        val leftHost = left.host?.lowercase()?.trimEnd('.')
+        val rightHost = right.host?.lowercase()?.trimEnd('.')
+        leftScheme == rightScheme && leftHost != null && leftHost == rightHost &&
+            (left.port.takeIf { it >= 0 } ?: if (leftScheme == "https") 443 else 80) ==
+            (right.port.takeIf { it >= 0 } ?: if (rightScheme == "https") 443 else 80)
     } catch (_: Exception) { false }
 
     companion object {
