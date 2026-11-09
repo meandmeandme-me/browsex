@@ -138,8 +138,12 @@ internal object SyncConsentPolicy {
     }
 
     fun isEnabled(category: SyncCategory, entries: List<SyncConsentEntry>): Boolean {
-        val current = entries.filter { it.category == category }
-            .maxByOrNull { it.updatedAtEpochMillis } ?: return false
+        val choices = entries.filter { it.category == category }
+        val latestTimestamp = choices.maxOfOrNull { it.updatedAtEpochMillis } ?: return false
+        val latest = choices.filter { it.updatedAtEpochMillis == latestTimestamp }
+        // Conflicting records at the same revision/time fail closed instead of enabling sync.
+        if (latest.map { it.enabled to it.policyVersion }.distinct().size != 1) return false
+        val current = latest.first()
         return current.policyVersion == CURRENT_POLICY_VERSION && current.enabled
     }
 }
