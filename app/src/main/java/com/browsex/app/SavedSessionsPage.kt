@@ -141,24 +141,27 @@ internal class SavedSessionsPage(
                         .setTitle(t("Saved sessions", "الجلسات المحفوظة"))
                         .setView(content)
                         .setPositiveButton(t("Save current tabs", "حفظ التبويبات الحالية")) { _, _ -> promptSave(repository, ::render) }
-                        .setNeutralButton(t("Delete all", "حذف الكل")) { _, _ ->
-                            AlertDialog.Builder(activity)
-                                .setTitle(t("Delete all saved sessions?", "حذف جميع الجلسات المحفوظة؟"))
-                                .setMessage(t("This cannot be undone. Open tabs will not be affected.", "لا يمكن التراجع عن هذا الإجراء. لن تتأثر التبويبات المفتوحة."))
-                                .setNegativeButton(t("Cancel", "إلغاء"), null)
-                                .setPositiveButton(t("Delete all", "حذف الكل")) { _, _ ->
-                                    activity.lifecycleScope.launch {
-                                        sessions.forEach { session -> repository.deleteSession(session.id) }
-                                        dialog.dismiss()
-                                        render()
-                                    }
-                                }
-                                .show()
-                        }
+                        .setNeutralButton(t("Delete all", "حذف الكل"), null)
                         .setNegativeButton(t("Close", "إغلاق"), null)
                         .create()
                     dialog.setOnShowListener {
-                        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.isEnabled = sessions.isNotEmpty()
+                        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.apply {
+                            isEnabled = sessions.isNotEmpty()
+                            setOnClickListener {
+                                AlertDialog.Builder(activity)
+                                    .setTitle(t("Delete all saved sessions?", "حذف جميع الجلسات المحفوظة؟"))
+                                    .setMessage(t("This cannot be undone. Open tabs will not be affected.", "لا يمكن التراجع عن هذا الإجراء. لن تتأثر التبويبات المفتوحة."))
+                                    .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                    .setPositiveButton(t("Delete all", "حذف الكل")) { _, _ ->
+                                        activity.lifecycleScope.launch {
+                                            sessions.forEach { session -> repository.deleteSession(session.id) }
+                                            dialog.dismiss()
+                                            render()
+                                        }
+                                    }
+                                    .show()
+                            }
+                        }
                     }
                     list.setOnItemClickListener { _, _, position, _ ->
                         val selected = visibleSessions.getOrNull(position) ?: return@setOnItemClickListener
