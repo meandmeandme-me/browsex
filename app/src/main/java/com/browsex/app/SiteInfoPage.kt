@@ -114,8 +114,8 @@ class SiteInfoPage(
             GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE to t("Autoplay with sound", "التشغيل التلقائي بالصوت"),
             GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE to t("Silent autoplay", "التشغيل التلقائي الصامت"),
             GeckoSession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS to t("Protected media", "الوسائط المحمية"),
-            GeckoSession.PermissionDelegate.PERMISSION_LOCAL_NETWORK_ACCESS to "Local network",
-            GeckoSession.PermissionDelegate.PERMISSION_LOCAL_DEVICE_ACCESS to "Local device"
+            GeckoSession.PermissionDelegate.PERMISSION_LOCAL_NETWORK_ACCESS to t("Local network", "الشبكة المحلية"),
+            GeckoSession.PermissionDelegate.PERMISSION_LOCAL_DEVICE_ACCESS to t("Local device", "الجهاز المحلي")
         )
         val unique = permissions.distinctBy { it.permission to it.uri }
         val liveStoredFeatures = unique.mapNotNull { storedFeatureForPermission(it.permission) }.toSet()
