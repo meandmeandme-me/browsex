@@ -14,14 +14,14 @@ internal class RoomDownloadRepository(
         totalBytes: Long = -1L,
         createdAt: Long = System.currentTimeMillis()
     ): String? {
-        val name = displayName.trim().take(MAX_DISPLAY_NAME)
+        val name = normalizeDisplayText(displayName, MAX_DISPLAY_NAME)
         if (name.isBlank() || createdAt < 0L || totalBytes < -1L) return null
         val id = "stream_${UUID.randomUUID()}"
         val created = dao.createDownloadRecord(DownloadRecordEntity(
             id = id,
             sourceKind = "stream",
             displayName = name,
-            mimeType = mimeType.trim().take(MAX_MIME_TYPE).ifBlank { DEFAULT_MIME },
+            mimeType = normalizeDisplayText(mimeType, MAX_MIME_TYPE).ifBlank { DEFAULT_MIME },
             uri = "",
             bytesWritten = 0L,
             totalBytes = totalBytes,
@@ -90,11 +90,22 @@ internal class RoomDownloadRepository(
         return dao.finishActiveDownload(
             id = id,
             status = status,
-            error = error.trim().take(MAX_ERROR_LENGTH),
+            error = normalizeDisplayText(error, MAX_ERROR_LENGTH),
             // A missing byte count means preserve the latest progress already stored in Room.
             bytesWritten = bytesWritten ?: -1L
         ) > 0
     }
+
+    /** Removes control and bidi-override characters from untrusted display metadata. */
+    private fun normalizeDisplayText(value: String, maxLength: Int): String =
+        value.asSequence()
+            .filterNot { char ->
+                char.isISOControl() || char in '\\u202A'..'\\u202E' || char in '\\u2066'..'\\u2069'
+            }
+            .joinToString("")
+            .trim()
+            .replace(Regex("\\\\s+"), " ")
+            .take(maxLength)
 
     private companion object {
         const val MAX_DOWNLOADS = 300
