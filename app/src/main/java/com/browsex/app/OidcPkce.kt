@@ -53,7 +53,12 @@ internal object OidcAuthorizationRequestBuilder {
         ) return null
         if (config.clientId.isBlank() || config.clientId.length > 512) return null
         if (!isRegisteredRedirect(config.redirectUri)) return null
-        if (config.scopes.isEmpty() || config.scopes.any { it.isBlank() || it.any(Char::isWhitespace) }) return null
+        if (config.scopes.isEmpty() || config.scopes.any { scope ->
+                scope.isBlank() || scope.any { char ->
+                    val code = char.code
+                    !(code == 0x21 || code in 0x23..0x5B || code in 0x5D..0x7E)
+                }
+            }) return null
         if (!config.scopes.contains("openid")) return null
         if (pkce.codeChallengeMethod != "S256" ||
             !isValidVerifier(pkce.codeVerifier) ||
@@ -86,7 +91,7 @@ internal object OidcAuthorizationRequestBuilder {
         val scheme = uri.scheme?.lowercase() ?: return false
         if (uri.rawUserInfo != null || uri.rawQuery != null || uri.rawFragment != null) return false
         when (scheme) {
-            "https" -> !uri.host.isNullOrBlank()
+            "https" -> !uri.host.isNullOrBlank() && uri.port != 0 && uri.port <= 65535
             // Native-app redirects may use a private URI scheme, but not browser or file destinations.
             "http", "file", "content", "javascript", "intent" -> false
             else -> scheme.matches(Regex("^[a-z][a-z0-9+.-]{2,63}$")) &&
