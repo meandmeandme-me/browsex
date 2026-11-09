@@ -1894,7 +1894,6 @@ class MainActivity : AppCompatActivity() {
                 url = url,
                 title = tab.title,
                 permissions = if (tab.privateMode) emptyList() else tab.sitePermissions,
-                store = store,
                 onPermissionChange = { permission, value ->
                     if (!tab.privateMode) {
                         val storage = browserRuntime?.storageController
@@ -1961,7 +1960,6 @@ class MainActivity : AppCompatActivity() {
     private fun showSettings() {
         SettingsPage(
             activity = this,
-            store = store,
             openBookmarks = { showSavedPages("Bookmarks", emptyList()) },
             openHistory = { showSavedPages("History", emptyList()) },
             openDownloads = { openDownloads() },
@@ -2073,7 +2071,6 @@ class MainActivity : AppCompatActivity() {
     private fun showPrivacyCenter() {
         PrivacyPage(
             activity = this,
-            store = store,
             clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) }
         ).show()
     }
@@ -2118,7 +2115,6 @@ class MainActivity : AppCompatActivity() {
             val historyRows = graph.history.recent(30).map { it.title to it.url }
             RecallPage(
                 activity = this@MainActivity,
-                store = store,
                 openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
                 bookmarkRows = bookmarkRows,
                 historyRows = historyRows,
@@ -2133,7 +2129,6 @@ class MainActivity : AppCompatActivity() {
     private fun showSavedPages(title: String, pages: List<String>) {
         RoomSavedPagesPage(
             activity = this,
-            store = store,
             title = title,
             onOpen = { url -> createTab(url) }
         ).show()
