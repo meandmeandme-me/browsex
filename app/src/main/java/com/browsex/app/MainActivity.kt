@@ -2080,7 +2080,7 @@ class MainActivity : AppCompatActivity() {
             exportBookmarks = { bookmarkExportLauncher.launch("wren-bookmarks.html") },
             showHomePreferences = { showHomePreferences() },
             openPrivacyCenter = { showPrivacyCenter() },
-            openSitePermissions = { SitePermissionsPage(this).show() },
+            openSitePermissions = { SitePermissionsPage(this) { clearBrowsingData(org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS, clearHistory = false) }.show() },
             manageUBlockOrigin = { showUBlockOriginSettings() },
             openAutofillSettings = { openAutofillServiceSettings() }
         ).show()
