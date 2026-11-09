@@ -145,7 +145,11 @@ internal class BrowseXNotificationBridge(
 
     private fun isSafeWebOrigin(raw: String): Boolean = try {
         val uri = Uri.parse(raw)
-        (uri.scheme == "https" || uri.scheme == "http") && !uri.host.isNullOrBlank() && uri.userInfo == null
+        val scheme = uri.scheme?.lowercase()
+        val host = uri.host?.lowercase()?.trimEnd('.')
+        val secureLocalHttp = scheme == "http" && host != null &&
+            (host == "localhost" || host == "::1" || host.startsWith("127."))
+        (scheme == "https" || secureLocalHttp) && !host.isNullOrBlank() && uri.userInfo == null
     } catch (_: Exception) { false }
 
     companion object {
