@@ -102,6 +102,11 @@ internal class AddressSuggestionsController(
     private fun render(query: String, suggestions: List<AddressSuggestion>) {
         rows.removeAllViews()
         val colors = colors
+        panel.background = GradientDrawable().apply {
+            setColor(colors.panel)
+            cornerRadius = dp(22).toFloat()
+            setStroke(dp(1), colors.line)
+        }
         val visible = suggestions.take(5).toMutableList()
         if (query.isNotBlank()) {
             visible += AddressSuggestion(
@@ -199,7 +204,8 @@ internal class AddressSuggestionsController(
         val dockHeight = dock.height.takeIf { it > 0 } ?: dp(118)
         val params = (panel.layoutParams as? FrameLayout.LayoutParams)
             ?: FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-        params.width = (dock.width.takeIf { it > 0 } ?: (availableWidth - dp(24))).coerceAtLeast(dp(280))
+        val maxWidth = (availableWidth - dp(24)).coerceAtLeast(dp(180))
+        params.width = dock.width.takeIf { it > 0 }?.coerceAtMost(maxWidth) ?: maxWidth
         params.bottomMargin = dockHeight + dp(13)
         panel.layoutParams = params
         val rowCount = visible.size + 1
