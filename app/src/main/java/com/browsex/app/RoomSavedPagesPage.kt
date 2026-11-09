@@ -45,6 +45,7 @@ internal class RoomSavedPagesPage(
             var folders = bookmarkRepo.folders()
             var history = historyRepo.recent()
             var selectedFolder: String? = null
+            var sortMode = 0 // 0: saved order / newest first, 1: alphabetical, 2: oldest first
 
             val root = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -109,6 +110,31 @@ internal class RoomSavedPagesPage(
                 addView(folderBar, android.widget.FrameLayout.LayoutParams(-2, -2))
             }
             root.addView(folderScroll)
+            val sortControl = TextView(activity).apply {
+                textSize = if (isTvRemote) 15f else 11f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colors.accent)
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                background = rounded(colors.card, 12)
+                WrenAdaptiveUi.prepareFocusable(this, activity, 12, colors.accent, if (isTvRemote) 56 else 44)
+                setOnClickListener {
+                    sortMode = (sortMode + 1) % 3
+                    text = when (sortMode) {
+                        1 -> t("Sort: A–Z", "الترتيب: أ–ي")
+                        2 -> t("Sort: oldest", "الترتيب: الأقدم")
+                        else -> t(if (isHistory) "Sort: newest" else "Sort: saved order",
+                            if (isHistory) "الترتيب: الأحدث" else "الترتيب: ترتيب الحفظ")
+                    }
+                    render(search.text?.toString().orEmpty())
+                }
+                text = t(if (isHistory) "Sort: newest" else "Sort: saved order",
+                    if (isHistory) "الترتيب: الأحدث" else "الترتيب: ترتيب الحفظ")
+                contentDescription = t("Change sorting", "تغيير الترتيب")
+            }
+            root.addView(sortControl, LinearLayout.LayoutParams(-2, -2).apply {
+                topMargin = dp(6)
+                bottomMargin = dp(4)
+            })
             val scroll = ScrollView(activity).apply { clipToPadding = false }
             val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(4), 0, dp(8)) }
             scroll.addView(list)
@@ -198,10 +224,20 @@ internal class RoomSavedPagesPage(
                 list.removeAllViews()
                 val query = BrowserTextNormalizer.normalize(rawQuery)
                 val rows: List<Triple<String, String, String>> = if (isHistory) {
-                    history.map { Triple(it.title, it.url, "") }
+                    val ordered = when (sortMode) {
+                        1 -> history.sortedBy { BrowserTextNormalizer.normalize(it.title.ifBlank { it.url }) }
+                        2 -> history.sortedBy { it.visitedAt }
+                        else -> history.sortedByDescending { it.visitedAt }
+                    }
+                    ordered.map { Triple(it.title, it.url, "") }
                 } else {
-                    bookmarks.filter { selectedFolder == null || it.folderId == selectedFolder }
-                        .map { bookmark -> Triple(bookmark.title, bookmark.url, bookmark.folderId) }
+                    val selected = bookmarks.filter { selectedFolder == null || it.folderId == selectedFolder }
+                    val ordered = when (sortMode) {
+                        1 -> selected.sortedBy { BrowserTextNormalizer.normalize(it.title.ifBlank { it.url }) }
+                        2 -> selected.sortedByDescending { it.createdAt }
+                        else -> selected.sortedBy { it.sortOrder }
+                    }
+                    ordered.map { bookmark -> Triple(bookmark.title, bookmark.url, bookmark.folderId) }
                 }
                 val filtered = rows.filter { (label, url, _) ->
                     query.isBlank() || listOf(label, url, Uri.parse(url).host.orEmpty())
