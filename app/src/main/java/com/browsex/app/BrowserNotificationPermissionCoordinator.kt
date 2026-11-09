@@ -62,7 +62,7 @@ internal class BrowserNotificationPermissionCoordinator(
         // The runtime result remains authoritative for this request; a later request can
         // retry the preference update without leaving the coordinator stuck in-flight.
         if (granted) runCatching { clearDenial() } else runCatching { markDenied() }
-        val allowed = granted && runCatching { permissionGranted() && notificationsEnabled() }.getOrDefault(false)
+        val allowed = granted && runCatching { notificationsEnabled() }.getOrDefault(false)
         resolveCallbacks(allowed)
         runCatching { afterResolved() }
     }
