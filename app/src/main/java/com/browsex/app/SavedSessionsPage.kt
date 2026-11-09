@@ -16,7 +16,8 @@ internal class SavedSessionsPage(
     private val activity: MainActivity,
     private val currentUrls: List<String>,
     private val activeIndex: Int,
-    private val onRestore: (List<String>, Int) -> Unit
+    private val onRestore: (List<String>, Int) -> Unit,
+    private val onOpenAlongside: (List<String>, Int) -> Unit
 ) {
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
 
@@ -167,11 +168,21 @@ internal class SavedSessionsPage(
                         val selected = visibleSessions.getOrNull(position) ?: return@setOnItemClickListener
                         AlertDialog.Builder(activity)
                             .setTitle(selected.name)
-                            .setMessage(t("Replace the current regular tabs with this saved session?", "استبدال التبويبات العادية الحالية بهذه الجلسة المحفوظة؟"))
-                            .setNegativeButton(t("Cancel", "إلغاء"), null)
-                            .setPositiveButton(t("Restore", "استعادة")) { _, _ ->
-                                onRestore(selected.urls, selected.activeIndex)
-                                dialog.dismiss()
+                            .setItems(arrayOf(
+                                t("Replace current tabs", "استبدال التبويبات الحالية"),
+                                t("Open alongside current tabs", "فتح بجانب التبويبات الحالية"),
+                                t("Cancel", "إلغاء")
+                            )) { _, action ->
+                                when (action) {
+                                    0 -> {
+                                        onRestore(selected.urls, selected.activeIndex)
+                                        dialog.dismiss()
+                                    }
+                                    1 -> {
+                                        onOpenAlongside(selected.urls, selected.activeIndex)
+                                        dialog.dismiss()
+                                    }
+                                }
                             }
                             .show()
                     }
