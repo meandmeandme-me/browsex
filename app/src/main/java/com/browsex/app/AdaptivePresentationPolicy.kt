@@ -161,10 +161,9 @@ internal object AdaptivePresentationPolicy {
         }
         return when (snapshot.addressBarPreference) {
             AddressBarPreference.TOP -> WrenAddressPlacement.TOP
-            AddressBarPreference.BOTTOM -> if (
-                layout == WrenWindowLayout.PHONE_COMPACT ||
-                layout == WrenWindowLayout.COMPACT_LANDSCAPE
-            ) WrenAddressPlacement.BOTTOM else WrenAddressPlacement.TOP
+            // An explicit user choice wins on every non-TV form factor. AUTO remains
+            // responsible for choosing the best placement for the current window.
+            AddressBarPreference.BOTTOM -> WrenAddressPlacement.BOTTOM
             AddressBarPreference.AUTO -> when (layout) {
                 WrenWindowLayout.PHONE_COMPACT -> WrenAddressPlacement.BOTTOM
                 WrenWindowLayout.COMPACT_LANDSCAPE -> WrenAddressPlacement.TOP
