@@ -126,6 +126,41 @@ class RoomBookmarkRepositoryTest {
     }
 
     @Test
+    fun interoperableNetscapeHtmlBookmarksImportAndExportWithFolders() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val dao = database.storageDao()
+            dao.putFolders(listOf(BookmarkFolderEntity(id = "unfiled", name = "Unfiled")))
+            val repository = RoomBookmarkRepository(dao)
+            val html = """
+                <!DOCTYPE NETSCAPE-Bookmark-file-1>
+                <DL><p>
+                  <DT><H3>Work &amp; Projects</H3>
+                  <DL><p>
+                    <DT><A HREF="https://example.test/?a=1&amp;b=2">Example &amp; Docs</A>
+                  </DL><p>
+                </DL><p>
+            """.trimIndent()
+            val preview = repository.previewImport(html)
+            assertEquals(1, preview.totalItems)
+            assertEquals(1, preview.validItems)
+            assertEquals(1, preview.incomingFolders)
+            val result = repository.importBookmarks(html)
+            assertEquals(1, result.importedBookmarks)
+            val bookmark = repository.find("https://example.test/?a=1&b=2")
+            assertEquals("Example & Docs", bookmark?.title)
+            assertEquals("Work & Projects", repository.folders().first { it.id == bookmark?.folderId }.name)
+            val exported = repository.exportBookmarksHtml()
+            assertTrue(exported.contains("<!DOCTYPE NETSCAPE-Bookmark-file-1>"))
+            assertTrue(exported.contains("Work &amp; Projects"))
+            assertTrue(exported.contains("https://example.test/?a=1&amp;b=2"))
+        } finally {
+            database.close()
+        }
+    }
+    @Test
     fun bookmarkBackupRejectsUnsupportedOrOversizedPayloads() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
