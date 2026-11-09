@@ -309,11 +309,27 @@ internal class TabsPage(
                                     return@launch
                                 }
                                 if (restored.isNotEmpty()) {
-                                    restored.forEach { onCreateTab(it.url) }
-                                    parentDialog.dismiss()
-                                    onToast("Restored ${restored.size} tabs")
-                                    if (restored.size < recentlyClosed.size) {
-                                        onToast("Some tabs were skipped because the tab limit was reached")
+                                    // Capacity can change while the Room transaction is suspended.
+                                    // Return any overflow to the restore list before opening tabs.
+                                    val capacityNow = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                                    val toOpen = restored.take(capacityNow)
+                                    val toReturn = restored.drop(capacityNow)
+                                    toReturn.forEach { item ->
+                                        runCatching {
+                                            storage.sessions.recordRecentlyClosed(
+                                                item.url, item.title, item.closedAt
+                                            )
+                                        }.onFailure {
+                                            android.util.Log.e("BrowseX", "Could not return un-restored tab", it)
+                                        }
+                                    }
+                                    toOpen.forEach { onCreateTab(it.url) }
+                                    if (toOpen.isNotEmpty()) parentDialog.dismiss()
+                                    when {
+                                        toOpen.isEmpty() -> onToast("Tab limit reached")
+                                        toOpen.size < recentlyClosed.size ->
+                                            onToast("Restored ${toOpen.size} tabs; some were skipped because the tab limit was reached")
+                                        else -> onToast("Restored ${toOpen.size} tabs")
                                     }
                                 } else {
                                     onToast("No recently closed tabs")
