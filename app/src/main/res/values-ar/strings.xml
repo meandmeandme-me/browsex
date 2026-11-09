@@ -5,6 +5,11 @@
     <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل Wren</string>
     <string name="ui_home">الرئيسية</string>
     <string name="ui_open_tabs">فتح علامات التبويب</string>
+    <string name="ui_search_suggestions">اقتراحات البحث</string>
+    <string name="ui_search_the_web">ابحث في الويب</string>
+    <string name="ui_suggestions">اقتراحات</string>
+    <string name="ui_bookmark">المفضلة</string>
+    <string name="ui_search">بحث</string>
     <string name="ui_search_or_enter_url">ابحث أو أدخل عنوان الموقع</string>
     <string name="ui_private_browsing_search_or_enter_url">التصفح الخاص · ابحث أو أدخل عنوان الموقع</string>
     <string name="ui_your_space">مساحة التصفح</string>
