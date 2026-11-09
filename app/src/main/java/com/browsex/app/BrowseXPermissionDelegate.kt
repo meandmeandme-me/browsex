@@ -228,14 +228,14 @@ internal class BrowseXPermissionDelegate(
                     else callback.reject()
                 }
             }
-            .setNegativeButton("Block") { _, _ ->
+            .setNegativeButton(BrowseXStrings.text(activity, "Block", "حظر")) { _, _ ->
                 activity.lifecycleScope.launch {
                     if (!privateMode && wantsCamera) persistDecision(origin, "camera", "deny")
                     if (!privateMode && wantsMicrophone) persistDecision(origin, "microphone", "deny")
                     callback.reject()
                 }
             }
-            .setNeutralButton("Not now") { _, _ -> callback.reject() }
+            .setNeutralButton(BrowseXStrings.text(activity, "Not now", "ليس الآن")) { _, _ -> callback.reject() }
             .create()
         dialogs.add(dialog)
         dialog.setOnCancelListener { callback.reject(); dialogs.remove(dialog) }
