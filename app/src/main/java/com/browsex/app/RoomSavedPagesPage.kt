@@ -217,6 +217,22 @@ internal class RoomSavedPagesPage(
                         setPadding(0, dp(3), 0, 0)
                     })
                     row.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
+                    val share = TextView(activity).apply {
+                        text = "↗"; textSize = 20f; gravity = Gravity.CENTER
+                        setTextColor(colors.accent)
+                        contentDescription = t("Share page", "مشاركة الصفحة")
+                        WrenAdaptiveUi.prepareFocusable(this, activity, 12, colors.accent, if (isTvRemote) 60 else 48)
+                        setOnClickListener {
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, "$label\n$url")
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, label)
+                            }
+                            activity.startActivity(android.content.Intent.createChooser(
+                                shareIntent, t("Share page", "مشاركة الصفحة")
+                            ))
+                        }
+                    }
                     val remove = TextView(activity).apply {
                         text = "×"; textSize = 22f; gravity = Gravity.CENTER; setTextColor(colors.danger)
                         contentDescription = if (isHistory) t("Remove from history", "حذف من السجل") else t("Remove bookmark", "إزالة من المفضلة")
@@ -228,6 +244,7 @@ internal class RoomSavedPagesPage(
                             }
                         }
                     }
+                    row.addView(share)
                     row.addView(remove)
                     row.setOnClickListener { dialog.dismiss(); onOpen(url) }
                     if (!isHistory) row.setOnLongClickListener {
