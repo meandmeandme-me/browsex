@@ -64,6 +64,37 @@ class BrowserNotificationPermissionCoordinatorTest {
         assertFalse(coordinator.isInFlight)
     }
 
+    @Test fun lateAndroidResultAfterTeardownDoesNotResolveCallbacksTwice() {
+        val results = mutableListOf<Boolean>()
+        val coordinator = coordinator()
+        coordinator.request { value -> results.add(value) }
+        coordinator.rejectAll()
+        coordinator.onResult(true)
+        assertEquals(listOf(false), results)
+        assertFalse(coordinator.isInFlight)
+    }
+
+    @Test fun unavailableHostRejectsWithoutLaunching() {
+        var launches = 0
+        val results = mutableListOf<Boolean>()
+        val coordinator = BrowserNotificationPermissionCoordinator(
+            apiLevel = 35,
+            featureEnabled = { true },
+            permissionGranted = { false },
+            notificationsEnabled = { true },
+            previouslyDenied = { false },
+            clearDenial = {},
+            markDenied = {},
+            hostAvailable = { false },
+            launchRequest = { launches++ },
+            afterResolved = {}
+        )
+        coordinator.request { value -> results.add(value) }
+        assertEquals(listOf(false), results)
+        assertEquals(0, launches)
+        assertFalse(coordinator.isInFlight)
+    }
+
     @Test fun launcherFailureRejectsPendingCallbacksAndAllowsFutureRequests() {
         var attempts = 0
         var fail = true
