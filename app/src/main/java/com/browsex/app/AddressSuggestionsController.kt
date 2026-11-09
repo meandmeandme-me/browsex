@@ -88,6 +88,15 @@ internal class AddressSuggestionsController(
         }
     }
 
+    fun focusFirstSuggestion(): Boolean {
+        if (panel.visibility != View.VISIBLE) return false
+        for (index in 0 until rows.childCount) {
+            val child = rows.getChildAt(index)
+            if (child.isFocusable && child.isShown && child.isEnabled) return child.requestFocus()
+        }
+        return false
+    }
+
     fun hide() {
         queryJob?.cancel()
         panel.visibility = View.GONE
@@ -138,7 +147,8 @@ internal class AddressSuggestionsController(
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 minimumHeight = dp(58)
                 isClickable = true
-                isFocusable = false
+                isFocusable = WrenAdaptiveUi.isTelevision(activity)
+                isFocusableInTouchMode = false
                 background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
                 foreground = WrenFocusStyle.overlay(activity, 14, colors.accent)
                 setOnClickListener { onSelect(suggestion) }
