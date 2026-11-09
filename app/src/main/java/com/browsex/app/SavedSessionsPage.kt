@@ -71,9 +71,36 @@ internal class SavedSessionsPage(
                             override fun afterTextChanged(s: android.text.Editable?) = Unit
                         })
                     }
+                    val clearSearch = android.widget.TextView(activity).apply {
+                        text = "×"
+                        textSize = 24f
+                        gravity = android.view.Gravity.CENTER
+                        contentDescription = t("Clear search", "مسح البحث")
+                        visibility = View.GONE
+                        isFocusable = true
+                        isClickable = true
+                        setOnClickListener {
+                            search.text?.clear()
+                            search.requestFocus()
+                        }
+                        setPadding(WrenAdaptiveUi.dp(activity, 12), 0, WrenAdaptiveUi.dp(activity, 12), 0)
+                    }
+                    search.addTextChangedListener(object : android.text.TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                            clearSearch.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+                        }
+                        override fun afterTextChanged(s: android.text.Editable?) = Unit
+                    })
+                    val searchRow = LinearLayout(activity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                        addView(search, LinearLayout.LayoutParams(0, WrenAdaptiveUi.dp(activity, 52), 1f))
+                        addView(clearSearch, LinearLayout.LayoutParams(WrenAdaptiveUi.dp(activity, 48), WrenAdaptiveUi.dp(activity, 52)))
+                    }
                     val content = LinearLayout(activity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(search, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 52)))
+                        addView(searchRow, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 52)))
                         addView(list, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 320)))
                         addView(empty, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 160)))
                         list.emptyView = empty
