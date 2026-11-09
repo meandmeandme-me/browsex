@@ -81,7 +81,7 @@ internal class BrowserSettingsDataStore(
         p[Keys.reduceTransparency] = settings.reduceTransparency
         p[Keys.reduceMotion] = settings.reduceMotion
         p[Keys.highContrast] = settings.highContrast
-        p[Keys.searchEngine] = BrowserStorePolicy.normalizeSearchEngine(settings.searchEngine)
+        p[Keys.searchEngine] = BrowserPreferencePolicy.normalizeSearchEngine(settings.searchEngine)
         p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
     }
 
