@@ -33,21 +33,19 @@ internal class PrivacyPage(
             settings.adBlockEnabled -> t("uBlock Origin: enabled", "uBlock Origin: مفعّل")
             else -> t("uBlock Origin: installed, currently off", "uBlock Origin: مثبت لكنه متوقف")
         }
-        val regularStatus = if (geckoRegular) "On" else "Off"
-        val privateStatus = if (geckoPrivate) "On" else "Off"
-        val regularArabic = if (geckoRegular) "مفعّلة" else "متوقفة"
-        val privateArabic = if (geckoPrivate) "مفعّلة" else "متوقفة"
+        val regularStatus = if (geckoRegular) t("On", "مفعّلة") else t("Off", "متوقفة")
+        val privateStatus = if (geckoPrivate) t("On", "مفعّلة") else t("Off", "متوقفة")
         val protectionSummary = listOf(
             t("Protection status", "حالة الحماية"),
             uBlockStatus,
             t(
                 "Built-in tracking protection — regular tabs",
-                "حماية التتبع المدمجة — التبويبات العادية: $regularArabic"
-            ),
+                "حماية التتبع المدمجة — التبويبات العادية"
+            ) + ": " + regularStatus,
             t(
                 "Built-in tracking protection — private tabs",
-                "حماية التتبع المدمجة — التبويبات الخاصة: $privateArabic"
-            ),
+                "حماية التتبع المدمجة — التبويبات الخاصة"
+            ) + ": " + privateStatus,
             t(
                 "Blocking totals are not reported here because reliable per-page counts are not available.",
                 "لا نعرض أرقامًا للحظر لأن إحصاءات موثوقة لكل صفحة غير متاحة."
