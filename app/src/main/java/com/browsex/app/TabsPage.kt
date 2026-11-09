@@ -88,7 +88,7 @@ internal class TabsPage(
             setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
-            text = if (BrowseXColors.isArabic(activity.currentBrowserSettings)) "${tabs.size} تبويب مفتوح" else "${tabs.size} open ${if (tabs.size == 1) "tab" else "tabs"}"
+            text = "${tabs.size} · ${tr("Open tabs")}"
             textSize = if (isTvRemote) 16f else 13f
             setTextColor(colors.muted)
             setPadding(0, dp(3), 0, 0)
@@ -400,18 +400,27 @@ internal class TabsPage(
                 val showTabActions = {
                     AlertDialog.Builder(activity)
                         .setTitle(tab.title.ifBlank { tr("New tab") })
-                        .setItems(arrayOf(tr("Open"), tr("Close tab"), tr("Close other tabs"))) { _, index ->
+                        .setItems(arrayOf(tr("Open"), tr("Duplicate tab"), tr("Close tab"), tr("Close other tabs"))) { _, index ->
                             when (index) {
                                 0 -> {
                                     onActivateTab(tab)
                                     dialog.dismiss()
                                 }
                                 1 -> {
-                                    onCloseTab(tab)
+                                    if (tabs.size >= TabSessionState.MAX_TABS) {
+                                        onToast("Tab limit reached")
+                                    } else {
+                                        onCreateTab(tab.url)
+                                    }
                                     dialog.dismiss()
                                     show()
                                 }
                                 2 -> {
+                                    onCloseTab(tab)
+                                    dialog.dismiss()
+                                    show()
+                                }
+                                3 -> {
                                     // Keep the selected tab alive while closing the rest. Work
                                     // from a snapshot because each close mutates the live registry.
                                     tabs.filterNot { it === tab }.forEach(onCloseTab)
