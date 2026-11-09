@@ -28,6 +28,13 @@ class NavigationInputTest {
         assertEquals("https://html.duckduckgo.com/html/?q=hello%20world", NavigationInput.normalize("hello world", "DuckDuckGo", home))
     }
 
+    @Test fun supportsAdditionalPrivacyFocusedAndRegionalSearchProviders() {
+        assertEquals("https://search.brave.com/search?q=privacy%20browser", NavigationInput.normalize("privacy browser", "Brave", home))
+        assertEquals("https://www.ecosia.org/search?q=privacy%20browser", NavigationInput.normalize("privacy browser", "Ecosia", home))
+        assertEquals("https://www.startpage.com/sp/search?query=privacy%20browser", NavigationInput.normalize("privacy browser", "Startpage", home))
+        assertEquals("https://search.yahoo.com/search?p=privacy%20browser", NavigationInput.normalize("privacy browser", "Yahoo", home))
+    }
+
     @Test fun dangerousSchemesAreSearchTextNotNavigated() {
         val result = NavigationInput.normalize("javascript:alert(1)", "Google", home)
         assertTrue(result.startsWith("https://www.google.com/search?q="))
