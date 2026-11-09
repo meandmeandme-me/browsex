@@ -660,7 +660,7 @@ interface BrowseXStorageDao {
     }
 }
 
-/** Room storage schema. Legacy import state is committed atomically with imported rows. */
+/** Room storage schema for Wren browser data. */
 @Database(
     entities = [
         BookmarkFolderEntity::class,
@@ -691,8 +691,8 @@ abstract class BrowseXDatabase : RoomDatabase() {
                 instance ?: androidx.room.Room.databaseBuilder(
                     context.applicationContext,
                     BrowseXDatabase::class.java,
-                    "browsex-storage-v1.db"
-                ).build().also { instance = it }
+                    "wren-browser.db"
+                ).fallbackToDestructiveMigration().build().also { instance = it }
             }
     }
 }
