@@ -1456,6 +1456,8 @@ class MainActivity : AppCompatActivity() {
                 keyCode != KeyEvent.KEYCODE_DPAD_DOWN
             ) {
                 false
+            } else if (addressSuggestionsController?.focusFirstSuggestion() == true) {
+                true
             } else {
                 when (
                     TvRemoteNavigationPolicy.moveDownFromAddress(
