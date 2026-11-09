@@ -19,12 +19,11 @@ import kotlinx.coroutines.launch
 /** Room-backed bookmarks/history surface. Every mutation is asynchronous and persisted. */
 internal class RoomSavedPagesPage(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val title: String,
     private val onOpen: (String) -> Unit
 ) {
     private val isHistory = title.contains("History", ignoreCase = true)
-    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
@@ -51,7 +50,7 @@ internal class RoomSavedPagesPage(
                 orientation = LinearLayout.VERTICAL
                 setPadding(WrenAdaptiveUi.horizontalSafePadding(activity), WrenAdaptiveUi.verticalSafePadding(activity), WrenAdaptiveUi.horizontalSafePadding(activity), dp(if (isTvRemote) 28 else 14))
                 setBackgroundColor(colors.canvas)
-                BrowseXColors.applyDirection(this, store)
+                BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
             }
             val header = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL }
             header.addView(TextView(activity).apply {
@@ -187,7 +186,7 @@ internal class RoomSavedPagesPage(
                         .any { BrowserTextNormalizer.normalize(it).contains(query) }
                 }
                 val count = TextView(activity).apply {
-                    text = if (BrowseXColors.isArabic(activity, store)) "${filtered.size} من ${rows.size} صفحة"
+                    text = if (BrowseXColors.isArabic(activity.currentBrowserSettings)) "${filtered.size} من ${rows.size} صفحة"
                         else "${filtered.size} of ${rows.size} pages"
                     textSize = if (isTvRemote) 15f else 11f; setTextColor(colors.muted); setPadding(dp(2), dp(4), dp(2), dp(8))
                 }
