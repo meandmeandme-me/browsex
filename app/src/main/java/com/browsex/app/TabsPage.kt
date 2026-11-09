@@ -336,13 +336,11 @@ internal class TabsPage(
         var currentSearchQuery = ""
         fun renderTabGrid(query: String = "") {
             grid.removeAllViews()
-            val normalizedQuery = query.trim().lowercase()
+            val normalizedQuery = TabSearchPolicy.normalize(query)
             val visibleTabs = tabs.filter { tab ->
                 (selectedFilter == 0 || (selectedFilter == 1 && !tab.privateMode) ||
                     (selectedFilter == 2 && tab.privateMode)) &&
-                    (normalizedQuery.isEmpty() ||
-                        tab.title.contains(normalizedQuery, ignoreCase = true) ||
-                        tab.url.contains(normalizedQuery, ignoreCase = true))
+                    TabSearchPolicy.matches(tab.title, tab.url, normalizedQuery)
             }
             tabCountLabel.text = if (normalizedQuery.isEmpty() && selectedFilter == 0) {
                 "${tabs.size} · ${tr("Open tabs")}"
