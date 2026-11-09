@@ -268,14 +268,13 @@ internal class SettingsPage(
                 .show()
         }
 
-        val availableLanguages = (
-            java.util.Locale.getISOLanguages().map { java.util.Locale.forLanguageTag(it) } +
-                java.util.Locale.getAvailableLocales().filter {
-                    it.language.length in 2..3 && it.language != "und"
-                }
-            )
-            .distinctBy { it.language to it.script }
-            .sortedBy { it.getDisplayName(it).lowercase(it) }
+        // Offer only languages that currently have complete app string resources.
+        // Device/system languages outside this list continue to use the English fallback
+        // until their translations are added; websites remain free to use any language.
+        val availableLanguages = listOf(
+            java.util.Locale.ENGLISH,
+            java.util.Locale("ar")
+        )
         val languageValues = arrayOf("system") + availableLanguages.map { it.toLanguageTag() }
         val languageLabels = arrayOf(t("System language")) + availableLanguages.map { it.getDisplayName(it) }
         val selectedLocale = java.util.Locale.forLanguageTag(settings.languageMode)
