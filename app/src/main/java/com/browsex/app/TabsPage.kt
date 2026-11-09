@@ -286,6 +286,40 @@ internal class TabsPage(
                                 }
                             }
                         }
+                        .setPositiveButton(tr("Restore all")) { parentDialog, _ ->
+                            activity.lifecycleScope.launch {
+                                val storage = runCatching { activity.storageRuntime.awaitReady() }
+                                    .getOrElse {
+                                        android.util.Log.e("BrowseX", "Could not prepare bulk tab restore", it)
+                                        onToast("Could not restore tabs")
+                                        return@launch
+                                    }
+                                val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                                if (available == 0) {
+                                    onToast("Tab limit reached")
+                                    return@launch
+                                }
+                                val selected = recentlyClosed.take(available)
+                                val restored = runCatching {
+                                    storage.sessions.consumeRecentlyClosed(selected.map { it.id })
+                                }.onFailure {
+                                    android.util.Log.e("BrowseX", "Could not consume recently closed tabs", it)
+                                }.getOrElse {
+                                    onToast("Could not restore tabs")
+                                    return@launch
+                                }
+                                if (restored.isNotEmpty()) {
+                                    restored.forEach { onCreateTab(it.url) }
+                                    parentDialog.dismiss()
+                                    onToast("Restored ${restored.size} tabs")
+                                    if (restored.size < recentlyClosed.size) {
+                                        onToast("Some tabs were skipped because the tab limit was reached")
+                                    }
+                                } else {
+                                    onToast("No recently closed tabs")
+                                }
+                            }
+                        }
                         .setNeutralButton(tr("Clear list")) { parentDialog, _ ->
                             AlertDialog.Builder(activity)
                                 .setMessage(tr("Clear all recently closed tabs?"))
