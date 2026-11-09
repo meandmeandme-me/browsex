@@ -153,6 +153,9 @@ internal class AddressSuggestionsController(
                 isFocusableInTouchMode = false
                 background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
                 foreground = WrenFocusStyle.overlay(activity, 14, palette.accent)
+                setOnFocusChangeListener { _, hasFocus ->
+                    if (!hasFocus && !panel.hasFocus() && !address.hasFocus()) hide()
+                }
                 setOnClickListener { onSelect(suggestion) }
                 contentDescription = listOf(suggestion.title, suggestion.subtitle, kindLabel(suggestion.kind))
                     .filter(String::isNotBlank).joinToString(", ")
