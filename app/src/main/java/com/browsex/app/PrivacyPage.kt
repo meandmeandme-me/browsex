@@ -5,10 +5,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import org.mozilla.geckoview.StorageController
 
-/** User-controlled, explicit clearing of GeckoView browsing data and BrowseX history. */
+/** User-controlled privacy status and explicit clearing of GeckoView browsing data. */
 internal class PrivacyPage(
     private val activity: MainActivity,
-    private val clearData: (flags: Long, clearHistory: Boolean) -> Unit
+    private val clearData: (flags: Long, clearHistory: Boolean) -> Unit,
+    private val manageProtection: () -> Unit
 ) {
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun dp(value: Int) = WrenAdaptiveUi.dp(activity, value)
@@ -16,6 +17,7 @@ internal class PrivacyPage(
         if (BrowseXColors.isArabic(activity.currentBrowserSettings)) ar else en
 
     fun show() {
+        val settings = activity.currentBrowserSettings
         val labels = arrayOf(
             t("Browsing history", "سجل التصفح"),
             t("Cookies and site storage", "ملفات الارتباط وتخزين المواقع"),
@@ -24,46 +26,44 @@ internal class PrivacyPage(
             t("Authentication sessions", "جلسات تسجيل الدخول")
         )
         val selected = booleanArrayOf(true, true, true, false, false)
-        val settings = activity.currentBrowserSettings
-        val trackingStatus = if (settings.adBlockEnabled) {
+        val geckoRegular = !settings.adBlockEnabled
+        val geckoPrivate = !settings.adBlockEnabled || !settings.adBlockPrivateEnabled
+        val uBlockStatus = when {
+            !settings.adBlockInstalled -> t("uBlock Origin: not installed", "uBlock Origin: غير مثبت")
+            settings.adBlockEnabled -> t("uBlock Origin: enabled", "uBlock Origin: مفعّل")
+            else -> t("uBlock Origin: installed, currently off", "uBlock Origin: مثبت لكنه متوقف")
+        }
+        val regularStatus = if (geckoRegular) "On" else "Off"
+        val privateStatus = if (geckoPrivate) "On" else "Off"
+        val regularArabic = if (geckoRegular) "مفعّلة" else "متوقفة"
+        val privateArabic = if (geckoPrivate) "مفعّلة" else "متوقفة"
+        val protectionSummary = listOf(
+            t("Protection status", "حالة الحماية"),
+            uBlockStatus,
             t(
-                "Gecko tracking protection: coordinated with uBlock Origin",
-                "حماية التتبع في Gecko: متناسقة مع uBlock Origin"
-            )
-        } else {
+                "Built-in tracking protection — regular tabs: $regularStatus",
+                "حماية التتبع المدمجة — التبويبات العادية: $regularArabic"
+            ),
             t(
-                "Gecko tracking protection: on",
-                "حماية التتبع المدمجة في Gecko: مفعّلة"
+                "Built-in tracking protection — private tabs: $privateStatus",
+                "حماية التتبع المدمجة — التبويبات الخاصة: $privateArabic"
+            ),
+            t(
+                "Blocking totals are not reported here because reliable per-page counts are not available.",
+                "لا نعرض أرقامًا للحظر لأن إحصاءات موثوقة لكل صفحة غير متاحة."
             )
-        }
-        val adBlockStatus = when {
-            !settings.adBlockInstalled -> t(
-                "uBlock Origin: not installed",
-                "uBlock Origin: غير مثبت"
-            )
-            settings.adBlockEnabled -> t(
-                "uBlock Origin: enabled",
-                "uBlock Origin: مفعّل"
-            )
-            else -> t(
-                "uBlock Origin: installed but disabled",
-                "uBlock Origin: مثبت لكنه متوقف"
-            )
-        }
-        val privateStatus = if (settings.adBlockEnabled && settings.adBlockPrivateEnabled) {
-            t("uBlock in private tabs: allowed", "uBlock في التبويبات الخاصة: مسموح")
-        } else {
-            t("uBlock in private tabs: not enabled", "uBlock في التبويبات الخاصة: غير مفعّل")
-        }
+        ).joinToString("\n")
+
         val dialog = AlertDialog.Builder(activity)
             .setTitle(t("Privacy center", "مركز الخصوصية"))
             .setMessage(
-                "$trackingStatus\n$adBlockStatus\n$privateStatus\n\n" + t(
+                "$protectionSummary\n\n" + t(
                     "Choose what to remove. Clearing cookies or site storage may sign you out of websites. Downloads and bookmarks are not deleted.",
                     "اختر البيانات التي تريد حذفها. قد يؤدي حذف ملفات الارتباط أو تخزين المواقع إلى تسجيل خروجك من المواقع. لن تُحذف التنزيلات أو المفضلة."
                 )
             )
             .setMultiChoiceItems(labels, selected) { _, which, checked -> selected[which] = checked }
+            .setNeutralButton(t("Manage protection", "إدارة الحماية")) { _, _ -> manageProtection() }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
             .setPositiveButton(t("Clear selected", "مسح المحدد")) { _, _ ->
                 val clearHistory = selected[0]
@@ -87,6 +87,7 @@ internal class PrivacyPage(
                 dialog.window?.setLayout(minOf(dp(980), width), android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
                 dialog.findViewById<TextView>(android.R.id.message)?.textSize = 18f
                 listOf(
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL),
                     dialog.getButton(AlertDialog.BUTTON_NEGATIVE),
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 ).forEach { button ->
