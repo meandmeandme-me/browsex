@@ -176,7 +176,7 @@ internal class SavedPagesPage(
                     setTypeface(typeface, Typeface.BOLD)
                     setTextColor(if (selected) colors.accent else muted)
                     setPadding(dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 14 else 9), dp(if (isTvRemote) 18 else 12), dp(if (isTvRemote) 14 else 9))
-                    minimumHeight = dp(if (isTvRemote) 56 else 42)
+                    minimumHeight = dp(if (isTvRemote) 56 else 48)
                     background = rounded(if (selected) colors.selected else colors.card, 18)
                     foreground = WrenFocusStyle.overlay(activity, 18, accent)
                     isClickable = true
@@ -252,7 +252,7 @@ internal class SavedPagesPage(
                         }.show()
                 }
             }
-            folderBar.addView(add, LinearLayout.LayoutParams(dp(42), dp(38)))
+            folderBar.addView(add, LinearLayout.LayoutParams(dp(48), dp(48)))
         }
         drawFolders()
         refresh("")
