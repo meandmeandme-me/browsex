@@ -353,9 +353,8 @@ internal class DownloadsPage(
                     else -> t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة")
                 }
                 val progressText = if (record.totalBytes > 0L) {
-                    " · ${record.bytesWritten / 1024} / ${record.totalBytes / 1024} KB"
-                } else if (recordIsActive) {
-                    " · ${record.bytesWritten / 1024} KB"
+                    val percent = ((record.bytesWritten.coerceAtMost(record.totalBytes) * 100L) / record.totalBytes).coerceIn(0L, 100L)
+                    " · ${record.bytesWritten / 1024} / ${record.totalBytes / 1024} KB · $percent%"
                 } else {
                     " · ${record.bytesWritten / 1024} KB"
                 }
