@@ -34,13 +34,18 @@ internal class RoomBookmarkRepository(
         return root.put("folders", folderArray).put("bookmarks", bookmarkArray).toString(2)
     }
 
+    /** Standard Netscape bookmark HTML for import into other browsers. */
+    suspend fun exportBookmarksHtml(): String =
+        BookmarkHtmlCodec.fromBookmarks(dao.folders(), dao.bookmarks())
+
     /**
      * Imports a versioned backup as a merge. Existing bookmarks are never overwritten;
      * malformed or unsafe rows are skipped and the payload is size/count bounded.
      */
     suspend fun importBookmarks(payload: String, merge: Boolean = true): BookmarkBackupImportResult {
         require(payload.length <= MAX_BACKUP_BYTES) { "Backup file is too large" }
-        val root = runCatching { org.json.JSONObject(payload) }
+        val normalizedPayload = normalizeImportPayload(payload)
+        val root = runCatching { org.json.JSONObject(normalizedPayload) }
             .getOrElse { throw IllegalArgumentException("Invalid bookmark backup", it) }
         require(root.optString("format") == BACKUP_FORMAT && root.optInt("version") == BACKUP_VERSION) {
             "Unsupported bookmark backup"
@@ -194,6 +199,11 @@ internal class RoomBookmarkRepository(
     suspend fun moveWithinFolder(url: String, folderId: String, direction: Int): Boolean {
         if (!isSafeUrl(url) || folderId.isBlank() || direction !in -1..1 || direction == 0) return false
         return dao.moveBookmarkWithinFolder(url, folderId, direction)
+    }
+
+    private fun normalizeImportPayload(payload: String): String {
+        require(payload.length <= MAX_BACKUP_BYTES) { "Backup file is too large" }
+        return if (payload.trimStart().startsWith("<")) BookmarkHtmlCodec.toBackupJson(payload) else payload
     }
 
     private fun isSafeUrl(url: String): Boolean =
