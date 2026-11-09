@@ -89,7 +89,10 @@ android {
             if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("release")
             } else {
-                logger.warn("BrowseX release APK will be unsigned: configure all BROWSEX_RELEASE_* secrets for a distributable build.")
+                // Keep sideloaded CI/dev release APKs installable on real devices.
+                // This fallback is debug-signed and must not be uploaded to Play Store.
+                signingConfig = signingConfigs.getByName("debug")
+                logger.warn("Wren release APK is debug-signed for device testing; configure all BROWSEX_RELEASE_* secrets for a production signature.")
             }
         }
     }
