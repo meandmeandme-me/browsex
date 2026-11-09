@@ -6,7 +6,10 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 /** Central manager for persisted website-level permission decisions. */
-internal class SitePermissionsPage(\n    private val activity: MainActivity,\n    private val clearAllPermissions: () -> Unit\n) {
+internal class SitePermissionsPage(
+    private val activity: MainActivity,
+    private val clearAllPermissions: () -> Unit
+) {
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
 
     fun show() {
