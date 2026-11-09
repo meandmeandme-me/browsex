@@ -286,6 +286,20 @@ internal class TabsPage(
                                 }
                             }
                         }
+                        .setNeutralButton(tr("Clear list")) { _, _ ->
+                            AlertDialog.Builder(activity)
+                                .setMessage(tr("Clear all recently closed tabs?"))
+                                .setNegativeButton(tr("Cancel"), null)
+                                .setPositiveButton(tr("Clear")) { _, _ ->
+                                    activity.lifecycleScope.launch {
+                                        val cleared = runCatching {
+                                            activity.storageRuntime.awaitReady().sessions.clearRecentlyClosed()
+                                        }.isSuccess
+                                        onToast(if (cleared) "Recently closed list cleared" else "Could not clear recently closed tabs")
+                                    }
+                                }
+                                .show()
+                        }
                         .setNegativeButton(tr("Close"), null)
                         .show()
                 }
