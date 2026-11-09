@@ -4,12 +4,18 @@ import kotlin.math.abs
 
 object TabSessionState {
     const val MAX_TABS = 20
+    private const val MAX_URL_LENGTH = 4096
 
     data class Snapshot(val urls: List<String>, val activeIndex: Int)
 
     fun normalize(urls: List<String>, activeIndex: Int, homeUrl: String): Snapshot {
-        val accepted = urls.mapIndexedNotNull { index, raw ->
+        // Bound work even when a damaged database or imported session contains
+        // an unexpectedly large list. A small multiple preserves nearby active tabs
+        // while keeping restore predictable on low-memory devices.
+        val accepted = urls.asSequence().take(MAX_TABS * 4).mapIndexedNotNull { index, raw ->
+            if (raw.length > MAX_URL_LENGTH) return@mapIndexedNotNull null
             val url = raw.trim()
+            if (url.isEmpty() || url.any { it.isISOControl() }) return@mapIndexedNotNull null
             val isConfiguredHome = url.startsWith("$homeUrl?") && run {
                 val params = url.substringAfter('?').split('&').mapNotNull { part ->
                     val key = part.substringBefore('=', "")
@@ -32,7 +38,7 @@ object TabSessionState {
             if (url == homeUrl || isConfiguredHome || url == "about:blank" || NavigationInput.isValidWebUrl(url)) {
                 index to url
             } else null
-        }.take(MAX_TABS)
+        }.take(MAX_TABS).toList()
 
         if (accepted.isEmpty()) return Snapshot(listOf(homeUrl), 0)
 
