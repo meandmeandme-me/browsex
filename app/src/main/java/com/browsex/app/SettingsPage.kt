@@ -25,7 +25,6 @@ import androidx.core.app.NotificationManagerCompat
  */
 internal class SettingsPage(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val openBookmarks: () -> Unit,
     private val openHistory: () -> Unit,
     private val openDownloads: () -> Unit,
@@ -38,7 +37,7 @@ internal class SettingsPage(
     private val manageUBlockOrigin: () -> Unit,
     private val openAutofillSettings: () -> Unit
 ) {
-    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private val ink get() = colors.ink
     private val muted get() = colors.muted
@@ -73,7 +72,7 @@ internal class SettingsPage(
             orientation = LinearLayout.VERTICAL
             setPadding(WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), WrenAdaptiveUi.verticalSafePadding(activity, if (isTvRemote) 26 else 16), WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), dp(if (isTvRemote) 28 else 16))
             setBackgroundColor(canvas)
-            BrowseXColors.applyDirection(this, store)
+            BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
         }
 
         val header = LinearLayout(activity).apply {
