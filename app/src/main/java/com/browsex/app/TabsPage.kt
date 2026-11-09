@@ -489,9 +489,9 @@ internal class TabsPage(
             }
         }
         val searchTabs = EditText(activity).apply {
-            hint = tr("Search tabs")
-            textSize = if (tvRemote) 18f else 14f
-            singleLine = true
+            setHint(tr("Search tabs"))
+            setTextSize(if (tvRemote) 18f else 14f)
+            isSingleLine = true
             setTextColor(colors.ink)
             setHintTextColor(colors.muted)
             setPadding(dp(16), dp(10), dp(16), dp(10))
