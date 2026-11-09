@@ -17,7 +17,9 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -321,6 +323,7 @@ class MainActivity : AppCompatActivity() {
         refreshCurrentAdaptivePresentation(force = true)
     }
     private lateinit var address: EditText
+    private var addressSuggestionsController: AddressSuggestionsController? = null
     private lateinit var progress: ProgressBar
     private lateinit var topBar: LinearLayout
     private lateinit var bottomBar: LinearLayout
@@ -938,6 +941,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         persistTabs()
+        addressSuggestionsController?.destroy()
+        addressSuggestionsController = null
         shuttingDown = true
         if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
         if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
@@ -1423,7 +1428,12 @@ class MainActivity : AppCompatActivity() {
                 } else false
             }
             setOnFocusChangeListener { _, focused ->
-                if (!focused) updateAddress()
+                if (!focused) {
+                    updateAddress()
+                    addressSuggestionsController?.hide()
+                } else {
+                    addressSuggestionsController?.onQueryChanged(address.text?.toString().orEmpty())
+                }
                 if (::siteInfoButton.isInitialized) {
                     siteInfoButton.text = if (focused) "×" else "ⓘ"
                     siteInfoButton.contentDescription = tr(if (focused) "Clear" else "Site information")
@@ -1431,6 +1441,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
         addressRow.addView(address, LinearLayout.LayoutParams(0, dp(48), 1f))
+        address.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                addressSuggestionsController?.onQueryChanged(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
 
         // TV focus order is address/search -> navigation row -> web document.
         // Never skip visible browser controls when the user presses D-pad down.
@@ -1556,6 +1573,34 @@ class MainActivity : AppCompatActivity() {
             leftMargin = dp(10)
             rightMargin = dp(10)
         })
+        addressSuggestionsController = AddressSuggestionsController(
+            activity = this,
+            root = root,
+            dock = bottomBar,
+            address = address,
+            loadSuggestions = ::loadAddressSuggestions,
+            onSelect = { suggestion ->
+                addressSuggestionsController?.hide()
+                when (suggestion.kind) {
+                    AddressSuggestionKind.OPEN_TAB -> {
+                        val match = tabs.firstOrNull { !it.privateMode && it.url == suggestion.value }
+                        if (match != null) {
+                            address.clearFocus()
+                            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                                .hideSoftInputFromWindow(address.windowToken, 0)
+                            activateTab(match)
+                            browserView.requestFocus()
+                        } else {
+                            navigate(suggestion.value)
+                        }
+                    }
+                    AddressSuggestionKind.BOOKMARK,
+                    AddressSuggestionKind.HISTORY,
+                    AddressSuggestionKind.SEARCH -> navigate(suggestion.value)
+                }
+            }
+        )
+        if (address.hasFocus()) addressSuggestionsController?.onQueryChanged(address.text?.toString().orEmpty())
         BrowseXColors.applyDirection(root, browserSettingsSnapshot)
         root.addOnLayoutChangeListener { view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             val width = right - left
@@ -1698,7 +1743,54 @@ class MainActivity : AppCompatActivity() {
 
     private fun safeExternalUrl(uri: Uri): String? = NavigationInput.externalWebUrl(uri.toString())
 
+    private suspend fun loadAddressSuggestions(query: String): List<AddressSuggestion> {
+        val needle = query.trim().lowercase(java.util.Locale.ROOT)
+        fun matches(title: String, url: String): Boolean =
+            needle.isBlank() || title.lowercase(java.util.Locale.ROOT).contains(needle) ||
+                url.lowercase(java.util.Locale.ROOT).contains(needle)
+
+        val openTabs = tabs.asSequence()
+            .filter { !it.privateMode && it.url.startsWith("http", ignoreCase = true) }
+            .filter { matches(it.title, it.url) }
+            .map { tab ->
+                AddressSuggestion(
+                    kind = AddressSuggestionKind.OPEN_TAB,
+                    title = tab.title.ifBlank { android.net.Uri.parse(tab.url).host.orEmpty() },
+                    subtitle = tab.url,
+                    value = tab.url
+                )
+            }
+            .toList()
+        val storage = storageRuntime.awaitReady()
+        val bookmarks = storage.bookmarks.all().asSequence()
+            .filter { matches(it.title, it.url) }
+            .map { item ->
+                AddressSuggestion(
+                    kind = AddressSuggestionKind.BOOKMARK,
+                    title = item.title.ifBlank { android.net.Uri.parse(item.url).host.orEmpty() },
+                    subtitle = item.url,
+                    value = item.url
+                )
+            }
+            .toList()
+        val history = storage.history.recent(80).asSequence()
+            .filter { matches(it.title, it.url) }
+            .map { item ->
+                AddressSuggestion(
+                    kind = AddressSuggestionKind.HISTORY,
+                    title = item.title.ifBlank { android.net.Uri.parse(item.url).host.orEmpty() },
+                    subtitle = item.url,
+                    value = item.url
+                )
+            }
+            .toList()
+        return (openTabs + bookmarks + history)
+            .distinctBy { it.value }
+            .take(5)
+    }
+
     private fun navigate(raw: String) {
+        addressSuggestionsController?.hide()
         val tab = activeTab ?: return
         val target = normalizeInput(raw)
         tab.session.loadUri(target)
