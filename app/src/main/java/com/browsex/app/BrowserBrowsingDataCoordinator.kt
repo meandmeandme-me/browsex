@@ -70,18 +70,31 @@ internal class BrowserBrowsingDataCoordinator(
                 }
                 isClearing = false
                 onBusyChanged(false)
+                var completed = success
                 if (success) {
-                    if (clearHistory) this.clearHistory()
-                    when {
-                        mediaOrigin != null -> clearSiteMediaDecisions(mediaOrigin)
+                    // Cleanup callbacks are supplied by the Activity/repositories. A
+                    // failure in one must not strand the restored tabs or the busy UI.
+                    if (clearHistory && runCatching { this.clearHistory() }.isFailure) {
+                        completed = false
+                    }
+                    val shouldClearPermissions = mediaOrigin != null ||
                         (flags and StorageController.ClearFlags.PERMISSIONS) != 0L ||
-                            (flags and StorageController.ClearFlags.SITE_DATA) != 0L ->
-                            clearSiteMediaDecisions(null)
+                        (flags and StorageController.ClearFlags.SITE_DATA) != 0L
+                    if (shouldClearPermissions &&
+                        runCatching {
+                            clearSiteMediaDecisions(
+                                mediaOrigin.takeIf { it != null } 
+                            )
+                        }.isFailure
+                    ) {
+                        completed = false
                     }
                 }
-                activateRestoredSelection(snapshot.activeIndex)
-                persistTabs()
-                onFinished(success)
+                runCatching { activateRestoredSelection(snapshot.activeIndex) }
+                    .onFailure { android.util.Log.e("BrowseX", "Could not activate restored tab", it); completed = false }
+                runCatching { persistTabs() }
+                    .onFailure { android.util.Log.e("BrowseX", "Could not persist restored tabs", it); completed = false }
+                onFinished(completed)
             }
         }
 
