@@ -114,7 +114,11 @@ internal data class SyncRunStatus(
     val pendingRecordCount: Int = 0,
     val errorCode: String? = null
 ) {
-    init { require(pendingRecordCount >= 0) }
+    init {
+        require(lastSuccessfulSyncEpochMillis == null || lastSuccessfulSyncEpochMillis >= 0L)
+        require(pendingRecordCount >= 0)
+        require(errorCode == null || (errorCode.isNotBlank() && errorCode.length <= 128))
+    }
 }
 
 internal interface SyncStatusRepository {
