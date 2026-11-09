@@ -508,6 +508,9 @@ internal class TabsPage(
                 text = tr(label)
                 textSize = if (tvRemote) 16f else 12f
                 gravity = Gravity.CENTER
+                setTextColor(colors.muted)
+                background = focusableSurface(colors.panel, 18)
+                contentDescription = tr("$label tabs")
                 setPadding(dp(14), dp(9), dp(14), dp(9))
                 minHeight = dp(if (tvRemote) 56 else 44)
                 isClickable = true
