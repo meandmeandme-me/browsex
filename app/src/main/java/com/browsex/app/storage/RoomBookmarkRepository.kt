@@ -61,7 +61,7 @@ internal class RoomBookmarkRepository(
         for (index in 0 until folderArray.length()) {
             val item = folderArray.optJSONObject(index) ?: continue
             val id = item.optString("id").trim().take(80)
-            val name = item.optString("name").trim().take(MAX_FOLDER_NAME_LENGTH)
+            val name = normalizeDisplayText(item.optString("name"), MAX_FOLDER_NAME_LENGTH)
             val normalizedName = name.lowercase(java.util.Locale.ROOT)
             if (id.isBlank() || id == "unfiled" || name.isBlank() ||
                 folders.size >= MAX_BACKUP_FOLDERS - 1 ||
@@ -85,9 +85,8 @@ internal class RoomBookmarkRepository(
                 skipped++
                 continue
             }
-            val title = item.optString("title").trim()
+            val title = normalizeDisplayText(item.optString("title"), MAX_TITLE_LENGTH)
                 .ifBlank { android.net.Uri.parse(url).host.orEmpty().ifBlank { url } }
-                .take(MAX_TITLE_LENGTH)
             val folderId = item.optString("folderId").takeIf(folderIds::contains) ?: "unfiled"
             bookmarks.add(BookmarkEntity(
                 id = "import_${java.util.UUID.randomUUID()}",
@@ -176,7 +175,7 @@ internal class RoomBookmarkRepository(
         if (!isSafeUrl(url) || createdAt < 0L) return false
         if (dao.folder(folderId) == null) return false
         val host = android.net.Uri.parse(url).host.orEmpty()
-        val normalizedTitle = title.trim().ifBlank { host.ifBlank { url } }.take(MAX_TITLE_LENGTH)
+        val normalizedTitle = normalizeDisplayText(title, MAX_TITLE_LENGTH).ifBlank { host.ifBlank { url } }
         val entity = BookmarkEntity(
             id = "bookmark_${UUID.randomUUID()}",
             url = url,
@@ -193,7 +192,7 @@ internal class RoomBookmarkRepository(
 
     suspend fun rename(url: String, title: String): Boolean {
         if (!isSafeUrl(url)) return false
-        val normalized = title.trim().take(MAX_TITLE_LENGTH)
+        val normalized = normalizeDisplayText(title, MAX_TITLE_LENGTH)
         if (normalized.isBlank()) return false
         return dao.updateBookmarkTitle(url, normalized) > 0
     }
@@ -218,7 +217,18 @@ internal class RoomBookmarkRepository(
         url.length <= MAX_URL_LENGTH && NavigationInput.isValidWebUrl(url)
 
     private fun normalizeFolderName(name: String): String? =
-        name.trim().take(MAX_FOLDER_NAME_LENGTH).takeIf { it.isNotBlank() }
+        normalizeDisplayText(name, MAX_FOLDER_NAME_LENGTH).takeIf { it.isNotBlank() }
+
+    /** Removes control and bidi-override characters from untrusted display text. */
+    private fun normalizeDisplayText(value: String, maxLength: Int): String =
+        value.asSequence()
+            .filterNot { char ->
+                char.isISOControl() || char in '\u202A'..'\u202E' || char in '\u2066'..'\u2069'
+            }
+            .joinToString("")
+            .trim()
+            .replace(Regex("\\s+"), " ")
+            .take(maxLength)
 
     private companion object {
         const val DEFAULT_FOLDER_ID = "unfiled"
