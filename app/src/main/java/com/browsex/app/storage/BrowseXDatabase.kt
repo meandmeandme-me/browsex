@@ -177,6 +177,9 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM bookmarks WHERE url = :url")
     suspend fun deleteBookmark(url: String): Int
 
+    @Query("UPDATE bookmarks SET title = :title WHERE url = :url")
+    suspend fun updateBookmarkTitle(url: String, title: String): Int
+
     @Query("SELECT * FROM bookmark_folders WHERE id = :folderId LIMIT 1")
     suspend fun folder(folderId: String): BookmarkFolderEntity?
 
