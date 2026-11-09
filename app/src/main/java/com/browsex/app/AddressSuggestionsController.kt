@@ -102,7 +102,24 @@ internal class AddressSuggestionsController(
 
     fun hide() {
         queryJob?.cancel()
-        panel.visibility = View.GONE
+        panel.animate().cancel()
+        if (panel.visibility != View.VISIBLE) return
+        if (activity.currentBrowserSettings.reduceMotion) {
+            panel.visibility = View.GONE
+            panel.alpha = 1f
+            panel.translationY = 0f
+            return
+        }
+        panel.animate()
+            .alpha(0f)
+            .translationY(dp(6).toFloat())
+            .setDuration(110L)
+            .withEndAction {
+                panel.visibility = View.GONE
+                panel.alpha = 1f
+                panel.translationY = 0f
+            }
+            .start()
     }
 
     fun destroy() {
@@ -233,7 +250,21 @@ internal class AddressSuggestionsController(
         scroll.layoutParams = LinearLayout.LayoutParams(
             -1, minOf(dp(280), availableHeight, dp(rowCount * 58 + 20))
         )
+        panel.animate().cancel()
+        val wasHidden = panel.visibility != View.VISIBLE
         panel.visibility = View.VISIBLE
+        if (wasHidden && !activity.currentBrowserSettings.reduceMotion) {
+            panel.alpha = 0f
+            panel.translationY = dp(6).toFloat()
+            panel.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(145L)
+                .start()
+        } else {
+            panel.alpha = 1f
+            panel.translationY = 0f
+        }
         panel.bringToFront()
     }
 
