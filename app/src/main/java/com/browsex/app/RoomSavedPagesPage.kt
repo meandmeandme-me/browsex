@@ -250,9 +250,17 @@ internal class RoomSavedPagesPage(
                                 putExtra(android.content.Intent.EXTRA_TEXT, "$label\n$url")
                                 putExtra(android.content.Intent.EXTRA_SUBJECT, label)
                             }
-                            activity.startActivity(android.content.Intent.createChooser(
-                                shareIntent, t("Share page", "مشاركة الصفحة")
-                            ))
+                            try {
+                                activity.startActivity(android.content.Intent.createChooser(
+                                    shareIntent, t("Share page", "مشاركة الصفحة")
+                                ))
+                            } catch (error: android.content.ActivityNotFoundException) {
+                                android.widget.Toast.makeText(
+                                    activity,
+                                    t("No app can share this page.", "لا يوجد تطبيق لمشاركة هذه الصفحة."),
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     }
                     val remove = TextView(activity).apply {
