@@ -54,6 +54,7 @@ import java.util.WeakHashMap
 import com.browsex.app.storage.BrowserStorageRuntime
 import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.mozilla.geckoview.GeckoRuntime
@@ -385,6 +386,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Keep system-bar handling consistent on Android 8–16; root insets below protect controls.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         store = BrowserStore(this)
         lifecycleScope.launch {
             runCatching { storageRuntime.settings.snapshot() }
@@ -1166,6 +1169,12 @@ class MainActivity : AppCompatActivity() {
         address.textSize = if (tvRemote) 23f else 15f
         siteInfoButton.textSize = if (tvRemote) 28f else 21f
         reloadButton.textSize = if (tvRemote) 29f else 22f
+        siteInfoButton.layoutParams = LinearLayout.LayoutParams(
+            dp(if (tvRemote) 60 else 48), dp(if (tvRemote) 54 else 48)
+        )
+        reloadButton.layoutParams = LinearLayout.LayoutParams(
+            dp(if (tvRemote) 60 else 48), dp(if (tvRemote) 54 else 48)
+        )
         val brand = topBar.getChildAt(0) as? ImageView
         brand?.layoutParams = LinearLayout.LayoutParams(
             dp(if (tvRemote) 54 else 34),
@@ -1219,7 +1228,7 @@ class MainActivity : AppCompatActivity() {
             navigationBar.orientation = LinearLayout.HORIZONTAL
             navigationBar.gravity = Gravity.CENTER
             navigationBar.setPadding(dp(1), dp(if (tvRemote) 8 else 5), dp(1), 0)
-            val buttonHeight = dp(if (tvRemote) 60 else 44)
+            val buttonHeight = dp(if (tvRemote) 60 else 48)
             for (index in 0 until navigationBar.childCount) {
                 val child = navigationBar.getChildAt(index)
                 child.minimumHeight = buttonHeight
@@ -1312,8 +1321,13 @@ class MainActivity : AppCompatActivity() {
         }
         browserRoot = root
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val safeBars = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            val bars = insets.getInsets(safeBars)
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsControllerCompat(window, view).apply {
+                isAppearanceLightStatusBars = !colors.isDark
+                isAppearanceLightNavigationBars = !colors.isDark
+            }
             val nextImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
             if (imeVisible != nextImeVisible) {
                 imeVisible = nextImeVisible
@@ -1385,7 +1399,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 21f
             background = rounded(android.graphics.Color.TRANSPARENT, 16)
         }
-        addressRow.addView(siteInfoButton, LinearLayout.LayoutParams(dp(42), dp(44)))
+        addressRow.addView(siteInfoButton, LinearLayout.LayoutParams(dp(48), dp(48)))
 
         address = EditText(this).apply {
             // URLs stay readable LTR; ordinary queries can follow Arabic or another RTL locale.
@@ -1418,7 +1432,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        addressRow.addView(address, LinearLayout.LayoutParams(0, dp(44), 1f))
+        addressRow.addView(address, LinearLayout.LayoutParams(0, dp(48), 1f))
 
         // TV focus order is address/search -> navigation row -> web document.
         // Never skip visible browser controls when the user presses D-pad down.
@@ -1470,7 +1484,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 22f
             background = rounded(android.graphics.Color.TRANSPARENT, 16)
         }
-        addressRow.addView(reloadButton, LinearLayout.LayoutParams(dp(42), dp(44)))
+        addressRow.addView(reloadButton, LinearLayout.LayoutParams(dp(48), dp(48)))
 
         navigationBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1500,7 +1514,7 @@ class MainActivity : AppCompatActivity() {
             background = rounded(0x18FFFFFF, 14)
         }
         prepareTvNavigationControl(tabsButton)
-        navigationBar.addView(tabsButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+        navigationBar.addView(tabsButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
             marginStart = dp(1)
             marginEnd = dp(1)
         })
@@ -1512,7 +1526,7 @@ class MainActivity : AppCompatActivity() {
             visibility = View.GONE
         }
         prepareTvNavigationControl(uBlockButton)
-        navigationBar.addView(uBlockButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+        navigationBar.addView(uBlockButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
             marginStart = dp(1)
             marginEnd = dp(1)
         })
@@ -1612,7 +1626,7 @@ class MainActivity : AppCompatActivity() {
             it.textSize = 22f
             it.setTextColor(colors.ink)
             prepareTvNavigationControl(it)
-            navigationBar.addView(it, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+            navigationBar.addView(it, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
                 marginStart = dp(1)
                 marginEnd = dp(1)
             })
