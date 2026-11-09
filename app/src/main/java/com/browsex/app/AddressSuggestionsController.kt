@@ -210,7 +210,13 @@ internal class AddressSuggestionsController(
         params.bottomMargin = dockHeight + dp(13)
         panel.layoutParams = params
         val rowCount = visible.size + 1
-        scroll.layoutParams = LinearLayout.LayoutParams(-1, minOf(dp(280), dp(rowCount * 58 + 20)))
+        val availableHeight = (
+            (root.height.takeIf { it > 0 } ?: activity.resources.displayMetrics.heightPixels) -
+                dockHeight - dp(20)
+            ).coerceAtLeast(dp(100))
+        scroll.layoutParams = LinearLayout.LayoutParams(
+            -1, minOf(dp(280), availableHeight, dp(rowCount * 58 + 20))
+        )
         panel.visibility = View.VISIBLE
         panel.bringToFront()
     }
