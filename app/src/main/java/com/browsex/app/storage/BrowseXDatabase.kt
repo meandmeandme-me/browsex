@@ -651,7 +651,7 @@ interface BrowseXStorageDao {
                 folderMap[incoming.id] = existingByName.id
             } else if (folderCount() < MAX_BOOKMARK_FOLDERS) {
                 val id = if (folder(incoming.id) == null) incoming.id
-                    else "imported_${incoming.id.hashCode().toUInt().toString(16)}"
+                    else "imported_${java.util.UUID.randomUUID()}"
                 val safe = incoming.copy(id = id, sortOrder = folderCount())
                 if (insertFolder(safe) != -1L) {
                     folderMap[incoming.id] = id
