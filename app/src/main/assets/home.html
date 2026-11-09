@@ -169,7 +169,7 @@ body.reduce-motion-mode *::after{
  const language=selectedLanguage==='system'?(navigator.language||'en'):selectedLanguage;
  const languageCode=language.toLowerCase().split('-')[0];
  const arabic=languageCode==='ar';
- const rtlLanguages=new Set(['ar','fa','ur','ps','he','yi','sd','ug','ku']);
+ const rtlLanguages=new Set(['ar','fa','ur','ps','he','yi','sd','ug','ku','dv','syr','nqo','ckb','pnb','rhg','arc','bal','mzn','ks']);
  document.documentElement.lang=language;
  document.documentElement.dir=rtlLanguages.has(languageCode)?'rtl':'ltr';
  const copy=arabic?{
