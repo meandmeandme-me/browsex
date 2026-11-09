@@ -156,4 +156,9 @@ internal object SyncConsentPolicy {
         val current = latest.first()
         return current.policyVersion == CURRENT_POLICY_VERSION && current.enabled
     }
+
+    fun enabledCategories(entries: List<SyncConsentEntry>): Set<SyncCategory> =
+        SyncCategory.values().filterTo(linkedSetOf()) { category ->
+            isEnabled(category, entries)
+        }
 }
