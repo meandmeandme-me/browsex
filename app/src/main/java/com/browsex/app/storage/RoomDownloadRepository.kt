@@ -40,11 +40,18 @@ internal class RoomDownloadRepository(
             dao.updateRunningDownloadProgress(id, bytesWritten) > 0
 
     suspend fun complete(id: String, uri: String, bytesWritten: Long): Boolean {
-        val safeUri = uri.trim().take(MAX_URI_LENGTH)
-        val uriScheme = android.net.Uri.parse(safeUri).scheme?.lowercase()
-        if (id.isBlank() || safeUri.isBlank() ||
-            uriScheme !in COMPLETED_URI_SCHEMES || bytesWritten < 0L
-        ) return false
+        val safeUri = uri.trim()
+        if (id.isBlank() || safeUri.isBlank() || safeUri.length > MAX_URI_LENGTH || bytesWritten < 0L) {
+            return false
+        }
+        val parsedUri = runCatching { android.net.Uri.parse(safeUri) }.getOrNull() ?: return false
+        val uriScheme = parsedUri.scheme?.lowercase()
+        val hasUsableLocation = when (uriScheme) {
+            "content" -> !parsedUri.authority.isNullOrBlank()
+            "file" -> !parsedUri.path.isNullOrBlank()
+            else -> false
+        }
+        if (!hasUsableLocation) return false
         return dao.completeActiveDownload(id, safeUri, bytesWritten) > 0
     }
 
