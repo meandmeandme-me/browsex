@@ -160,6 +160,16 @@ body.reduce-motion-mode *::after{
 (()=>{
  const $=id=>document.getElementById(id);
  const params=new URLSearchParams(location.search);
+ const accentName=params.get('bxaccent')||'ocean';
+ const accentTones={
+  ocean:{light:'#236fe3',dark:'#8bc1ff'},
+  violet:{light:'#6844d6',dark:'#b8a5ff'},
+  emerald:{light:'#16835a',dark:'#75ddb0'},
+  rose:{light:'#c13f70',dark:'#ff9db8'},
+  amber:{light:'#a66a00',dark:'#ffd477'}
+ };
+ const accent=accentTones[accentName]||accentTones.ocean;
+ const applyAccent=dark=>document.documentElement.style.setProperty('--blue',dark?accent.dark:accent.light);
  const tvMode=params.get('bxtv')==='true';
  if(tvMode)document.body.classList.add('tv-mode');
  if(params.get('bxopaque')==='true')document.body.classList.add('matte-mode');
@@ -273,7 +283,7 @@ body.reduce-motion-mode *::after{
  $('shortcuts').classList.toggle('list',shortcutLayout==='list');
  const requestedTheme=params.get('bxtheme')||'system';
  const systemDark=()=>window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
- const applyTheme=(dark)=>{document.body.classList.toggle('dark',dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?copy.themeDark:copy.themeLight);$('theme').title=dark?copy.themeDark:copy.themeLight;};
+ const applyTheme=(dark)=>{document.body.classList.toggle('dark',dark);applyAccent(dark);$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?copy.themeDark:copy.themeLight);$('theme').title=dark?copy.themeDark:copy.themeLight;};
  const shouldDark=requestedTheme==='dark'||(requestedTheme==='system'&&systemDark());
  applyTheme(shouldDark);
  $('theme').addEventListener('click',()=>applyTheme(!document.body.classList.contains('dark')));
