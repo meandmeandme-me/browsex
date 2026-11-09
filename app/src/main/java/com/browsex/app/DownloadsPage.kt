@@ -164,6 +164,7 @@ internal class DownloadsPage(
         })
         val search = android.widget.EditText(activity).apply {
             hint = t("Search downloads by file name", "ابحث في التنزيلات باسم الملف")
+            filters = arrayOf(android.text.InputFilter.LengthFilter(MAX_DOWNLOAD_SEARCH_LENGTH))
             textSize = if (isTvRemote) 18f else 13f
             isSingleLine = true
             setTextColor(colors.ink)
@@ -526,7 +527,9 @@ internal class DownloadsPage(
                     if (idCol < 0) continue
                     val id = c.getLong(idCol)
                     seenIds.add(id)
-                    val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
+                    val title = (if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file")
+                        .filterNot { it.isISOControl() }
+                        .take(MAX_DOWNLOAD_TITLE_LENGTH)
                     if (normalizedSearchQuery.isNotBlank() &&
                         !BrowserTextNormalizer.normalize(title).contains(normalizedSearchQuery)
                     ) continue
@@ -793,7 +796,8 @@ internal class DownloadsPage(
         search.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                searchQuery = s?.toString().orEmpty()
+                searchQuery = s?.toString()?.filterNot { it.isISOControl() }
+                    ?.take(MAX_DOWNLOAD_SEARCH_LENGTH).orEmpty()
                 clearSearch.visibility = if (searchQuery.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
                 render()
             }
@@ -811,5 +815,10 @@ internal class DownloadsPage(
         dialog.setOnDismissListener { refreshHandler.removeCallbacks(refreshRunnable) }
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    }
+
+    private companion object {
+        const val MAX_DOWNLOAD_SEARCH_LENGTH = 256
+        const val MAX_DOWNLOAD_TITLE_LENGTH = 240
     }
 }
