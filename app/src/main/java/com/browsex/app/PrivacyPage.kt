@@ -25,10 +25,17 @@ internal class PrivacyPage(
         )
         val selected = booleanArrayOf(true, true, true, false, false)
         val settings = activity.currentBrowserSettings
-        val trackingStatus = t(
-            "Gecko tracking protection: on",
-            "حماية التتبع المدمجة في Gecko: مفعّلة"
-        )
+        val trackingStatus = if (settings.adBlockEnabled) {
+            t(
+                "Gecko tracking protection: coordinated with uBlock Origin",
+                "حماية التتبع في Gecko: متناسقة مع uBlock Origin"
+            )
+        } else {
+            t(
+                "Gecko tracking protection: on",
+                "حماية التتبع المدمجة في Gecko: مفعّلة"
+            )
+        }
         val adBlockStatus = when {
             !settings.adBlockInstalled -> t(
                 "uBlock Origin: not installed",
