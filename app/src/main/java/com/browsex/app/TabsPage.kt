@@ -3,6 +3,8 @@ package com.browsex.app
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.net.Uri
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -329,8 +331,26 @@ internal class TabsPage(
             }
         val columns = AdaptiveTabGridPolicy.columns(windowLayout)
         val tvRemote = windowLayout == WrenWindowLayout.TV
-        val rows = tabs.chunked(columns)
-        rows.forEach { rowTabs ->
+        fun renderTabGrid(query: String = "") {
+            grid.removeAllViews()
+            val normalizedQuery = query.trim().lowercase()
+            val visibleTabs = tabs.filter { tab ->
+                normalizedQuery.isEmpty() ||
+                    tab.title.contains(normalizedQuery, ignoreCase = true) ||
+                    tab.url.contains(normalizedQuery, ignoreCase = true)
+            }
+            if (visibleTabs.isEmpty()) {
+                grid.addView(TextView(activity).apply {
+                    text = tr("No matching tabs")
+                    textSize = if (tvRemote) 18f else 14f
+                    setTextColor(colors.muted)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(20), dp(36), dp(20), dp(36))
+                }, LinearLayout.LayoutParams(-1, -2))
+                return
+            }
+            val rows = visibleTabs.chunked(columns)
+            rows.forEach { rowTabs ->
             val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
             rowTabs.forEach { tab ->
                 val selected = tab === activeTab
@@ -466,7 +486,29 @@ internal class TabsPage(
                 row.addView(View(activity), LinearLayout.LayoutParams(0, dp(1), 1f))
             }
             grid.addView(row)
+            }
         }
+        val searchTabs = EditText(activity).apply {
+            hint = tr("Search tabs")
+            textSize = if (tvRemote) 18f else 14f
+            singleLine = true
+            setTextColor(colors.ink)
+            setHintTextColor(colors.muted)
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            background = rounded(colors.panel, 16)
+            contentDescription = tr("Search tabs")
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    renderTabGrid(s?.toString().orEmpty())
+                }
+                override fun afterTextChanged(s: Editable?) = Unit
+            })
+        }
+        page.addView(searchTabs, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 60 else 50)).apply {
+            topMargin = dp(12)
+        })
+        renderTabGrid()
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val done = TextView(activity).apply {
             text = tr("Done")
