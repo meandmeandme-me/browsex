@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Wren starts with a separate clean Room database. Legacy SharedPreferences browsing
  * data is intentionally not imported. Until explicit migrations are added, schema
- * changes use Room's destructive fallback as the product is still in active development.
+ * changes use Room's destructive fallback while the product is in active development.
  */
 internal class BrowserStorageRuntime(context: Context) {
     private val appContext = context.applicationContext
