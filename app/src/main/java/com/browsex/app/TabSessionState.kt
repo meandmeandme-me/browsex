@@ -2,15 +2,6 @@ package com.browsex.app
 
 import kotlin.math.abs
 
-/** Validated, bounded snapshot of the tabs that should be reopened on next launch. */
-internal data class SavedBrowserSession(
-    val id: String,
-    val name: String,
-    val urls: List<String>,
-    val activeIndex: Int,
-    val savedAt: Long
-)
-
 object TabSessionState {
     const val MAX_TABS = 20
 
