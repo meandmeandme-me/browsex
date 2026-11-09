@@ -7,7 +7,7 @@ internal object BrowserPreferencePolicy {
     private val themes = setOf("system", "light", "dark")
     private val homeLayouts = setOf("grid", "list")
     private val addressBarPositions = setOf("auto", "top", "bottom")
-    private val searchEngines = setOf("Google", "DuckDuckGo", "Bing")
+    private val searchEngines = setOf("Google", "DuckDuckGo", "Bing", "Brave", "Ecosia", "Startpage", "Yahoo")
 
     fun normalizeTheme(value: String?): String =
         value?.takeIf(themes::contains) ?: "system"
