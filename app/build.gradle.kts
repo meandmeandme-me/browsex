@@ -91,7 +91,7 @@ android {
             } else {
                 // Keep sideloaded CI/dev release APKs installable on real devices.
                 // This fallback is debug-signed and must not be uploaded to Play Store.
-                signingConfig = signingConfigs.getByName("debug")
+                signingConfig = signingConfigs.getByName(if (stableDebugSigningConfigured) "stableDebug" else "debug")
                 logger.warn("Wren release APK is debug-signed for device testing; configure all BROWSEX_RELEASE_* secrets for a production signature.")
             }
         }
