@@ -95,7 +95,7 @@ internal class BrowseXPermissionDelegate(
         }
         val dialog = AlertDialog.Builder(activity)
             .setTitle(BrowseXStrings.text(activity, "Allow this website?", "السماح لهذا الموقع؟"))
-            .setMessage(activity.getString(R.string.ui_site_permission_request_message, origin, BrowseXStrings.text(activity, permission, permission)))
+            .setMessage(activity.getString(R.string.ui_site_permission_request_message, origin, BrowseXStrings.text(activity, permission, if (permission == "your location") "موقعك" else permission)))
             .setPositiveButton(BrowseXStrings.text(activity, "Allow", "سماح")) { _, _ ->
                 if (isSiteNotification) {
                     activity.requestSiteNotificationPermission { granted ->
@@ -214,9 +214,9 @@ internal class BrowseXPermissionDelegate(
             return
         }
         val features = buildList {
-            if (wantsCamera) add("camera")
-            if (wantsMicrophone) add("microphone")
-        }.joinToString(" and ")
+            if (wantsCamera) add(BrowseXStrings.text(activity, "Camera", "الكاميرا"))
+            if (wantsMicrophone) add(BrowseXStrings.text(activity, "Microphone", "الميكروفون"))
+        }.joinToString(" " + BrowseXStrings.text(activity, "and", "و") + " ")
         val dialog = AlertDialog.Builder(activity)
             .setTitle(BrowseXStrings.text(activity, "Allow device access?", "السماح بالوصول إلى الجهاز؟"))
             .setMessage(activity.getString(R.string.ui_device_permission_request_message, origin, features))
