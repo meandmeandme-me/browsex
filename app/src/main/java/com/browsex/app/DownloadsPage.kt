@@ -46,9 +46,17 @@ internal class DownloadsPage(
                 android.widget.Toast.makeText(activity, t("Downloads are temporarily unavailable", "التنزيلات غير متاحة مؤقتًا"), android.widget.Toast.LENGTH_SHORT).show()
                 return@launch
             }
-            val records = repository.all()
-            val platformIds = repository.trackedPlatformDownloadIds()
-            showWithRepository(repository, records, platformIds)
+            val snapshot = runCatching {
+                repository.all() to repository.trackedPlatformDownloadIds()
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not load download history", error)
+                android.widget.Toast.makeText(
+                    activity,
+                    t("Downloads are temporarily unavailable", "التنزيلات غير متاحة مؤقتًا"),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }.getOrElse { return@launch }
+            showWithRepository(repository, snapshot.first, snapshot.second)
         }
     }
 
