@@ -130,8 +130,13 @@ internal class SavedSessionsPage(
                             updateEmptyState()
                         }
                     }
+                    val importButton = android.widget.Button(activity).apply {
+                        text = t("Import session from text", "استيراد جلسة من نص")
+                        setOnClickListener { promptImport(repository, ::render) }
+                    }
                     val content = LinearLayout(activity).apply {
                         orientation = LinearLayout.VERTICAL
+                        addView(importButton, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 48)))
                         addView(searchRow, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 52)))
                         addView(sortButton, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 48)))
                         addView(list, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 320)))
@@ -298,6 +303,62 @@ internal class SavedSessionsPage(
             render()
         }
     }
+
+    private fun promptImport(repository: com.browsex.app.storage.RoomSessionRepository, refresh: () -> Unit) {
+        val nameInput = EditText(activity).apply {
+            hint = t("Session name", "اسم الجلسة")
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setSingleLine(true)
+        }
+        val urlsInput = EditText(activity).apply {
+            hint = t("Paste a shared session or one website URL per line", "الصق جلسة مشتركة أو رابط موقع في كل سطر")
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            minLines = 6
+            maxLines = 10
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
+        }
+        val fields = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(4))
+            addView(nameInput, LinearLayout.LayoutParams(-1, dp(52)))
+            addView(urlsInput, LinearLayout.LayoutParams(-1, dp(180)))
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(t("Import browsing session", "استيراد جلسة تصفح"))
+            .setView(fields)
+            .setNegativeButton(t("Cancel", "إلغاء"), null)
+            .setPositiveButton(t("Import", "استيراد")) { _, _ ->
+                val urls = urlsInput.text?.toString().orEmpty()
+                    .lineSequence()
+                    .map { it.trim().replace(Regex("^\\\\d+[.)]\\\\s*"), "") }
+                    .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
+                    .filter(NavigationInput::isValidWebUrl)
+                    .distinct()
+                    .take(50)
+                    .toList()
+                if (urls.isEmpty()) {
+                    android.widget.Toast.makeText(activity, t("No valid website URLs found", "لم يتم العثور على روابط مواقع صالحة"), android.widget.Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                activity.lifecycleScope.launch {
+                    val saved = runCatching {
+                        repository.saveSession(nameInput.text?.toString().orEmpty(), urls, 0)
+                    }.onFailure { android.util.Log.e("Wren", "Could not import browsing session", it) }
+                        .getOrDefault(false)
+                    android.widget.Toast.makeText(
+                        activity,
+                        if (saved) t("Session imported", "تم استيراد الجلسة")
+                        else t("Could not import. Check the name and the 10-session limit.", "تعذر الاستيراد. تحقق من الاسم وحد 10 جلسات."),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    if (saved) refresh()
+                }
+            }
+            .show()
+    }
+
+    private fun dp(value: Int): Int = WrenAdaptiveUi.dp(activity, value)
 
     private fun promptSave(repository: com.browsex.app.storage.RoomSessionRepository, refresh: () -> Unit) {
         if (currentUrls.isEmpty()) {
