@@ -89,12 +89,13 @@ internal class TabsPage(
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(colors.ink)
         })
-        heading.addView(TextView(activity).apply {
+        val tabCountLabel = TextView(activity).apply {
             text = "${tabs.size} · ${tr("Open tabs")}"
             textSize = if (isTvRemote) 16f else 13f
             setTextColor(colors.muted)
             setPadding(0, dp(3), 0, 0)
-        })
+        }
+        heading.addView(tabCountLabel)
         header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
         val add = TextView(activity).apply {
             text = "+  ${tr("New tab")}"
@@ -331,13 +332,21 @@ internal class TabsPage(
             }
         val columns = AdaptiveTabGridPolicy.columns(windowLayout)
         val tvRemote = windowLayout == WrenWindowLayout.TV
+        var selectedFilter = 0 // 0 = all, 1 = regular, 2 = private
         fun renderTabGrid(query: String = "") {
             grid.removeAllViews()
             val normalizedQuery = query.trim().lowercase()
             val visibleTabs = tabs.filter { tab ->
-                normalizedQuery.isEmpty() ||
-                    tab.title.contains(normalizedQuery, ignoreCase = true) ||
-                    tab.url.contains(normalizedQuery, ignoreCase = true)
+                (selectedFilter == 0 || (selectedFilter == 1 && !tab.privateMode) ||
+                    (selectedFilter == 2 && tab.privateMode)) &&
+                    (normalizedQuery.isEmpty() ||
+                        tab.title.contains(normalizedQuery, ignoreCase = true) ||
+                        tab.url.contains(normalizedQuery, ignoreCase = true))
+            }
+            tabCountLabel.text = if (normalizedQuery.isEmpty() && selectedFilter == 0) {
+                "${tabs.size} · ${tr("Open tabs")}"
+            } else {
+                "${visibleTabs.size} · ${tr("Matching tabs")}"
             }
             if (visibleTabs.isEmpty()) {
                 grid.addView(TextView(activity).apply {
@@ -488,6 +497,43 @@ internal class TabsPage(
             grid.addView(row)
             }
         }
+        val filterRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val filterButtons = mutableListOf<TextView>()
+        listOf("All", "Regular", "Private").forEachIndexed { index, label ->
+            val chip = TextView(activity).apply {
+                text = tr(label)
+                textSize = if (tvRemote) 16f else 12f
+                gravity = Gravity.CENTER
+                setPadding(dp(14), dp(9), dp(14), dp(9))
+                minHeight = dp(if (tvRemote) 56 else 44)
+                isClickable = true
+                isFocusable = true
+                isFocusableInTouchMode = false
+                setOnClickListener {
+                    selectedFilter = index
+                    filterButtons.forEachIndexed { buttonIndex, button ->
+                        button.setTextColor(if (buttonIndex == selectedFilter) colors.card else colors.muted)
+                        button.background = focusableSurface(
+                            if (buttonIndex == selectedFilter) colors.accent else colors.panel, 18
+                        )
+                        button.isSelected = buttonIndex == selectedFilter
+                    }
+                    renderTabGrid(searchTabs.text?.toString().orEmpty())
+                }
+            }
+            filterButtons += chip
+            filterRow.addView(chip, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                marginEnd = dp(6)
+            })
+        }
+        filterButtons.first().apply {
+            setTextColor(colors.card)
+            background = focusableSurface(colors.accent, 18)
+            isSelected = true
+        }
         val searchTabs = EditText(activity).apply {
             setHint(tr("Search tabs"))
             setTextSize(if (tvRemote) 18f else 14f)
@@ -505,8 +551,11 @@ internal class TabsPage(
                 override fun afterTextChanged(s: Editable?) = Unit
             })
         }
-        page.addView(searchTabs, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 60 else 50)).apply {
+        page.addView(filterRow, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(12)
+        })
+        page.addView(searchTabs, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 60 else 50)).apply {
+            topMargin = dp(8)
         })
         renderTabGrid()
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
