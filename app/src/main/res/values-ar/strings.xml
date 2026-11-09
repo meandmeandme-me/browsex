@@ -375,4 +375,8 @@
     <string name="ui_could_not_update_permission">تعذر تحديث الإذن</string>
     <string name="ui_search_tabs">البحث في علامات التبويب</string>
     <string name="ui_no_matching_tabs">لا توجد علامات تبويب مطابقة</string>
+    <string name="ui_all_tabs">الكل</string>
+    <string name="ui_regular_tabs">العادية</string>
+    <string name="ui_private_tabs">الخاصة</string>
+    <string name="ui_matching_tabs">علامات مطابقة</string>
 </resources>
