@@ -13,34 +13,6 @@ internal data class BrowseXColors(
     val danger: Int, val success: Int, val selected: Int, val isDark: Boolean
 ) {
     companion object {
-        fun resolve(context: Context, store: BrowserStore): BrowseXColors {
-            val settings = (context as? MainActivity)?.currentBrowserSettings ?: BrowserSettings(
-                themeMode = store.themeMode,
-                languageMode = store.languageMode
-            )
-            return resolve(context, settings)
-        }
-
-        fun isArabic(context: Context, store: BrowserStore): Boolean =
-            (context as? MainActivity)?.currentBrowserSettings?.let(::isArabic) ?: isArabic(store)
-
-        fun isArabic(store: BrowserStore): Boolean = when {
-            store.languageMode == "system" -> Locale.getDefault().language.equals("ar", ignoreCase = true)
-            else -> store.languageMode.substringBefore('-').equals("ar", ignoreCase = true)
-        }
-
-        fun isRtl(store: BrowserStore): Boolean {
-            val locale = if (store.languageMode == "system") Locale.getDefault() else Locale.forLanguageTag(store.languageMode)
-            return TextUtils.getLayoutDirectionFromLocale(locale) == View.LAYOUT_DIRECTION_RTL
-        }
-
-        fun applyDirection(view: View, store: BrowserStore) {
-            val settings = (view.context as? MainActivity)?.currentBrowserSettings ?: BrowserSettings(
-                languageMode = store.languageMode
-            )
-            applyDirection(view, settings)
-        }
-
         fun resolve(context: Context, settings: BrowserSettings): BrowseXColors {
             val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             val dark = when (settings.themeMode) { "dark" -> true; "light" -> false; else -> night }
