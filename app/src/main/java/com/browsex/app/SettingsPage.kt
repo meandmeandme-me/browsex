@@ -239,15 +239,27 @@ internal class SettingsPage(
                 .setNegativeButton(t("Cancel"), null)
                 .show()
         }
-        val availableLanguages = java.util.Locale.getISOLanguages()
-            .map { java.util.Locale.forLanguageTag(it) }
-            .filter { it.language.isNotBlank() }
-            .distinctBy { it.language }
+        val availableLanguages = (
+            java.util.Locale.getISOLanguages().map { java.util.Locale.forLanguageTag(it) } +
+                java.util.Locale.getAvailableLocales().filter {
+                    it.language.length in 2..3 && it.language != "und"
+                }
+            )
+            .distinctBy { it.language to it.script }
             .sortedBy { it.getDisplayName(it).lowercase(it) }
-        val languageValues = arrayOf("system") + availableLanguages.map { it.language }
+        val languageValues = arrayOf("system") + availableLanguages.map { it.toLanguageTag() }
         val languageLabels = arrayOf(t("System language")) + availableLanguages.map { it.getDisplayName(it) }
-        val selectedLanguage = languageValues.indexOf(settings.languageMode).takeIf { it >= 0 }
-            ?: languageValues.indexOf(settings.languageMode.substringBefore('-')).coerceAtLeast(0)
+        val selectedLocale = java.util.Locale.forLanguageTag(settings.languageMode)
+        val exactLanguageIndex = languageValues.indexOf(settings.languageMode)
+        val matchingLanguageIndex = availableLanguages.indexOfFirst {
+            it.language == selectedLocale.language &&
+                (selectedLocale.script.isBlank() || it.script == selectedLocale.script)
+        }
+        val selectedLanguage = when {
+            exactLanguageIndex >= 0 -> exactLanguageIndex
+            matchingLanguageIndex >= 0 -> matchingLanguageIndex + 1
+            else -> 0
+        }
         val currentLanguageLabel = if (settings.languageMode == "system") {
             t("System language")
         } else {
