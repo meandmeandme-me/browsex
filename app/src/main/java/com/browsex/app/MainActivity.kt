@@ -1948,6 +1948,22 @@ class MainActivity : AppCompatActivity() {
                         "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
                     ))
                 }
+            },
+            onOpenAlongside = { savedUrls, savedIndex ->
+                val opened = mutableListOf<BrowserTab>()
+                savedUrls.forEach { savedUrl ->
+                    val before = tabs.size
+                    createTab(savedUrl)
+                    if (tabs.size > before) tabs.lastOrNull()?.let(opened::add)
+                }
+                opened.getOrNull(savedIndex.coerceIn(0, (opened.size - 1).coerceAtLeast(0)))?.let(::activateTab)
+                if (opened.size < savedUrls.size) {
+                    toast(BrowseXStrings.text(
+                        this,
+                        "Some tabs could not be opened because the tab limit was reached",
+                        "تعذر فتح بعض التبويبات بسبب بلوغ الحد الأقصى"
+                    ))
+                }
             }
         ).show()
     }
