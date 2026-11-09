@@ -77,6 +77,7 @@ internal class SitePermissionsPage(
                         if (updated) t("Permission updated", "تم تحديث الإذن") else t("Could not update permission", "تعذر تحديث الإذن"),
                         Toast.LENGTH_SHORT
                     ).show()
+                    if (updated && !activity.isFinishing && !activity.isDestroyed) show()
                 }
             }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
