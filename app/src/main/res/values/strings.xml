@@ -388,4 +388,6 @@
     <string name="ui_recently_closed_list_cleared">Recently closed list cleared</string>
     <string name="ui_could_not_clear_recently_closed_tabs">Could not clear recently closed tabs</string>
     <string name="ui_restore_all">Restore all</string>
+    <string name="ui_tabs_restored">Tabs restored</string>
+    <string name="ui_some_tabs_restored_tab_limit_reached">Some tabs restored; tab limit reached</string>
 </resources>
