@@ -354,4 +354,7 @@
     <string name="ui_limit_non_essential_interface_motion_and_visual_transitions">Limit non-essential interface motion and visual transitions</string>
     <string name="ui_close_other_tabs">Close other tabs</string>
     <string name="ui_duplicate_tab">Duplicate tab</string>
+    <string name="ui_close_all_tabs">Close all tabs</string>
+    <string name="ui_close_every_open_tab">Close every open tab?</string>
+    <string name="ui_close_all">Close all</string>
 </resources>
