@@ -34,8 +34,11 @@ internal class BrowserTabController(
 
     /** Restores validated regular tabs and opens the selected tab (or the home tab). */
     fun restoreInitialTabs(urls: List<String>, activeIndex: Int, externalUrl: String?) {
-        registry.replaceAll(urls.map { url -> BrowserTab(url = url) })
-        val restoredActive = tabs.getOrNull(activeIndex)
+        // Revalidate at the controller boundary as well as at storage/import boundaries.
+        // This keeps callers from accidentally restoring unsafe, oversized or excessive tab lists.
+        val snapshot = TabSessionState.normalize(urls, activeIndex, homeUrl())
+        registry.replaceAll(snapshot.urls.map { url -> BrowserTab(url = url) })
+        val restoredActive = tabs.getOrNull(snapshot.activeIndex)
         if (externalUrl != null) {
             if (tabs.size >= maxTabs) {
                 val discardIndex = tabs.indices.firstOrNull { tabs[it] !== restoredActive } ?: 0
