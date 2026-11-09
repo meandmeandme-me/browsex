@@ -373,4 +373,6 @@
     <string name="ui_could_not_reset_permissions">تعذر إعادة ضبط الأذونات</string>
     <string name="ui_permission_updated">تم تحديث الإذن</string>
     <string name="ui_could_not_update_permission">تعذر تحديث الإذن</string>
+    <string name="ui_search_tabs">البحث في علامات التبويب</string>
+    <string name="ui_no_matching_tabs">لا توجد علامات تبويب مطابقة</string>
 </resources>
