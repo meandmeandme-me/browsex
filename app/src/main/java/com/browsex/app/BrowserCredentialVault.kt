@@ -93,23 +93,38 @@ internal class BrowserCredentialVault(
     fun entries(): List<StoredCredentialSummary> {
         if (!accessPolicy.canFetchCredentials(privateBrowsingActive)) return emptyList()
         return runCatching {
-        read().map { StoredCredentialSummary(it.optString("id"), it.optString("origin"),
-            it.optString("username")) }
-    }.getOrElse { android.util.Log.e("BrowseX", "Credential list unavailable", it); emptyList() }
+            read().asSequence()
+                .mapNotNull { row ->
+                    val id = row.optString("id")
+                    val origin = row.optString("origin")
+                    val username = row.optString("username")
+                    val canonicalOrigin = CredentialOriginPolicy.canonicalHttpsOrigin(origin)
+                    if (id.isBlank() || id.length > MAX_CREDENTIAL_ID_LENGTH ||
+                        canonicalOrigin != origin || username.isBlank() ||
+                        username.length > MAX_USERNAME_LENGTH
+                    ) null else StoredCredentialSummary(id, origin, username)
+                }
+                .take(MAX_CREDENTIALS)
+                .toList()
+        }.getOrElse { android.util.Log.e("BrowseX", "Credential list unavailable", it); emptyList() }
     }
 
     @Synchronized
     fun passwordFor(id: String): String? {
-        if (!accessPolicy.canFetchCredentials(privateBrowsingActive)) return null
+        if (id.isBlank() || id.length > MAX_CREDENTIAL_ID_LENGTH ||
+            !accessPolicy.canFetchCredentials(privateBrowsingActive)
+        ) return null
         return runCatching {
             read().firstOrNull { it.optString("id") == id }
-                ?.optString("secret")?.takeIf { it.isNotEmpty() }
+                ?.optString("secret")?.takeIf { it.isNotEmpty() && it.length <= MAX_PASSWORD_LENGTH }
         }.getOrElse { android.util.Log.e("BrowseX", "Saved credential unavailable", it); null }
     }
 
     @Synchronized
     fun delete(id: String): Boolean {
-        if (!accessPolicy.canFetchCredentials(privateBrowsingActive)) return false
+        if (id.isBlank() || id.length > MAX_CREDENTIAL_ID_LENGTH ||
+            !accessPolicy.canFetchCredentials(privateBrowsingActive)
+        ) return false
         val rows = runCatching { read() }.getOrElse { return false }
         val filtered = rows.filterNot { it.optString("id") == id }
         if (filtered.size == rows.size) return false
@@ -165,7 +180,9 @@ internal class BrowserCredentialVault(
         val origin = CredentialOriginPolicy.canonicalHttpsOrigin(login.origin) ?: return
         val action = login.formActionOrigin?.takeIf { it.isNotBlank() }?.let(CredentialOriginPolicy::canonicalHttpsOrigin)
         if (login.formActionOrigin?.isNotBlank() == true && action != origin) return
-        if (login.username.isBlank() || login.password.isBlank() || login.password.length > 4096) return
+        if (login.username.isBlank() || login.username.length > MAX_USERNAME_LENGTH ||
+            login.password.isBlank() || login.password.length > MAX_PASSWORD_LENGTH
+        ) return
         val rows = runCatching { read() }.getOrElse {
             android.util.Log.e("BrowseX", "Refusing to overwrite unreadable credential data", it)
             return
@@ -173,7 +190,9 @@ internal class BrowserCredentialVault(
             it.optString("id") == login.guid ||
                 (it.optString("origin") == origin && it.optString("username") == login.username)
         }.toMutableList()
-        rows.add(0, JSONObject().put("id", login.guid ?: UUID.randomUUID().toString())
+        val credentialId = login.guid?.takeIf { it.isNotBlank() && it.length <= MAX_CREDENTIAL_ID_LENGTH }
+            ?: UUID.randomUUID().toString()
+        rows.add(0, JSONObject().put("id", credentialId)
             .put("origin", origin).put("action", action).put("realm", login.httpRealm)
             .put("username", login.username.take(512)).put("secret", login.password))
         write(JSONArray().also { array -> rows.take(500).forEach(array::put) })
@@ -257,5 +276,9 @@ internal class BrowserCredentialVault(
         const val LEGACY_KEY_ALIAS = "browsex.credentials.aes.v1"
         const val PRIVATE_TABS_OPEN_KEY = "private_tabs_open"
         const val PRIVATE_TABS_PROCESS_KEY = "private_tabs_process"
+        const val MAX_CREDENTIALS = 500
+        const val MAX_CREDENTIAL_ID_LENGTH = 128
+        const val MAX_USERNAME_LENGTH = 512
+        const val MAX_PASSWORD_LENGTH = 4096
     }
 }
