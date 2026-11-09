@@ -216,6 +216,11 @@ internal class BrowserCredentialVault(
         if (ivText == null || dataText == null) {
             throw IllegalStateException("Credential vault payload is incomplete")
         }
+        if (ivText.length > MAX_IV_BASE64_LENGTH ||
+            dataText.isEmpty() || dataText.length > MAX_VAULT_BASE64_LENGTH
+        ) {
+            throw IllegalStateException("Credential vault payload exceeds the supported size")
+        }
         return try {
             val version = prefs.getInt("version", 1)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -237,9 +242,13 @@ internal class BrowserCredentialVault(
     }
 
     private fun write(json: JSONArray) {
+        val plaintext = json.toString().toByteArray(Charsets.UTF_8)
+        require(plaintext.size in 1..MAX_VAULT_PLAINTEXT_BYTES) {
+            "Credential vault payload exceeds the supported size"
+        }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
-        val encrypted = cipher.doFinal(json.toString().toByteArray(Charsets.UTF_8))
+        val encrypted = cipher.doFinal(plaintext)
         check(prefs.edit().putString("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
             .putString("data", Base64.encodeToString(encrypted, Base64.NO_WRAP))
             .putInt("version", 2).commit())
@@ -291,5 +300,8 @@ internal class BrowserCredentialVault(
         const val MAX_CREDENTIAL_ID_LENGTH = 128
         const val MAX_USERNAME_LENGTH = 512
         const val MAX_PASSWORD_LENGTH = 4096
+        const val MAX_VAULT_PLAINTEXT_BYTES = 16 * 1024 * 1024
+        const val MAX_VAULT_BASE64_LENGTH = 24 * 1024 * 1024
+        const val MAX_IV_BASE64_LENGTH = 64
     }
 }
