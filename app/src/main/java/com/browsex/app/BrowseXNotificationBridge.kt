@@ -38,7 +38,7 @@ internal class BrowseXNotificationBridge(
                 val siteAllows = runCatching {
                     activity.storageRuntime.awaitReady().sitePermissions.decision(
                         notification.origin, "notifications"
-                    ) != "deny"
+                    ) == "allow"
                 }.onFailure {
                     android.util.Log.e("BrowseX", "Could not verify website notification permission", it)
                 }.getOrDefault(false)
@@ -57,7 +57,7 @@ internal class BrowseXNotificationBridge(
                                 val stillAllowed = runCatching {
                                     activity.storageRuntime.awaitReady().sitePermissions.decision(
                                         notification.origin, "notifications"
-                                    ) != "deny"
+                                    ) == "allow"
                                 }.getOrDefault(false)
                                 if (stillAllowed && !activity.isFinishing && !activity.isDestroyed) {
                                     showInAndroid(notification)
