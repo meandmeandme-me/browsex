@@ -1880,7 +1880,7 @@ class MainActivity : AppCompatActivity() {
                 if (bookmarked) "Remove bookmark" else "Add bookmark",
                 "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
                 "Site information", "Search engine", "Clear browsing history", "Settings",
-                "New private tab", "Close private tabs", "Find anything", "Passwords"
+                "New private tab", "Close private tabs", "Find anything", "Passwords", "Saved sessions"
             ).map(::tr).toTypedArray()
             AlertDialog.Builder(this@MainActivity).setTitle("Wren").setItems(actions) { _, index ->
                 when (index) {
@@ -1917,9 +1917,32 @@ class MainActivity : AppCompatActivity() {
                     }
                     14 -> showRecall()
                     15 -> passwordManager.show()
+                    16 -> showSavedSessions()
                 }
             }.show()
         }
+    }
+
+    private fun showSavedSessions() {
+        val regularTabs = tabs.filterNot { it.privateMode }
+        val urls = regularTabs.map { it.url }
+        val selectedIndex = regularTabs.indexOfFirst { it === activeTab }.coerceAtLeast(0)
+        SavedSessionsPage(
+            activity = this,
+            currentUrls = urls,
+            activeIndex = selectedIndex,
+            onRestore = { savedUrls, savedIndex ->
+                // Keep private tabs isolated; only replace the regular browsing workspace.
+                tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
+                val restored = mutableListOf<BrowserTab>()
+                savedUrls.forEach { savedUrl ->
+                    val before = tabs.size
+                    createTab(savedUrl)
+                    if (tabs.size > before) tabs.lastOrNull()?.let(restored::add)
+                }
+                restored.getOrNull(savedIndex.coerceIn(0, (restored.size - 1).coerceAtLeast(0)))?.let(::activateTab)
+            }
+        ).show()
     }
 
     private fun toggleBookmarkInRoom(url: String, title: String) {
