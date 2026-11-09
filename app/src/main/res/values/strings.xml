@@ -387,4 +387,5 @@
     <string name="ui_clear_all_recently_closed_tabs">Clear all recently closed tabs?</string>
     <string name="ui_recently_closed_list_cleared">Recently closed list cleared</string>
     <string name="ui_could_not_clear_recently_closed_tabs">Could not clear recently closed tabs</string>
+    <string name="ui_restore_all">Restore all</string>
 </resources>
