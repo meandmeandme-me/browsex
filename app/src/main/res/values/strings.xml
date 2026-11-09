@@ -383,4 +383,8 @@
     <string name="ui_no_open_tabs">No open tabs</string>
     <string name="ui_create_new_tab">Create new tab</string>
     <string name="ui_clear_tab_search">Clear tab search</string>
+    <string name="ui_clear_list">Clear list</string>
+    <string name="ui_clear_all_recently_closed_tabs">Clear all recently closed tabs?</string>
+    <string name="ui_recently_closed_list_cleared">Recently closed list cleared</string>
+    <string name="ui_could_not_clear_recently_closed_tabs">Could not clear recently closed tabs</string>
 </resources>
