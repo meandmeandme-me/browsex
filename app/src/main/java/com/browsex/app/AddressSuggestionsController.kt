@@ -97,6 +97,8 @@ internal class AddressSuggestionsController(
         return false
     }
 
+    fun hasFocusInside(): Boolean = panel.hasFocus()
+
     fun hide() {
         queryJob?.cancel()
         panel.visibility = View.GONE
