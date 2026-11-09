@@ -387,4 +387,5 @@
     <string name="ui_clear_all_recently_closed_tabs">هل تريد مسح كل علامات التبويب المغلقة مؤخرًا؟</string>
     <string name="ui_recently_closed_list_cleared">تم مسح قائمة المغلق مؤخرًا</string>
     <string name="ui_could_not_clear_recently_closed_tabs">تعذر مسح قائمة علامات التبويب المغلقة مؤخرًا</string>
+    <string name="ui_restore_all">استعادة الكل</string>
 </resources>
