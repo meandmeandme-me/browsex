@@ -354,4 +354,7 @@
     <string name="ui_limit_non_essential_interface_motion_and_visual_transitions">تقليل الحركات والانتقالات البصرية غير الضرورية في الواجهة</string>
     <string name="ui_close_other_tabs">إغلاق علامات التبويب الأخرى</string>
     <string name="ui_duplicate_tab">نسخ التبويب</string>
+    <string name="ui_close_all_tabs">إغلاق جميع علامات التبويب</string>
+    <string name="ui_close_every_open_tab">هل تريد إغلاق جميع علامات التبويب المفتوحة؟</string>
+    <string name="ui_close_all">إغلاق الكل</string>
 </resources>
