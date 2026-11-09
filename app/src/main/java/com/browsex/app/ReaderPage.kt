@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import com.browsex.app.storage.BrowserSettings
 
 /** Native, accessible reading surface for text extracted by GeckoView. */
 class ReaderPage(
@@ -21,9 +22,8 @@ class ReaderPage(
     private val pageTitle: String,
     private val sourceUrl: String,
     private val articleText: String,
-    private val store: BrowserStore
 ) {
-    private val colors get() = BrowseXColors.resolve(context, store)
+    private val colors get() = BrowseXColors.resolve(context, (context as? MainActivity)?.currentBrowserSettings ?: BrowserSettings())
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(context)
     private val density = context.resources.displayMetrics.density
     private fun t(en: String, ar: String) = BrowseXStrings.text(context, en, ar)
@@ -37,7 +37,7 @@ class ReaderPage(
             orientation = LinearLayout.VERTICAL
             setPadding(WrenAdaptiveUi.horizontalSafePadding(context, 22), WrenAdaptiveUi.verticalSafePadding(context, 18), WrenAdaptiveUi.horizontalSafePadding(context, 22), dp(if (isTvRemote) 28 else 16))
             setBackgroundColor(background)
-            BrowseXColors.applyDirection(this, store)
+            (context as? MainActivity)?.let { BrowseXColors.applyDirection(this, it.currentBrowserSettings) }
         }
         val top = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
