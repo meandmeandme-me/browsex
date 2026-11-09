@@ -234,11 +234,10 @@ internal class DownloadsPage(
                 null
             }
             var count = 0
+            val normalizedSearchQuery = BrowserTextNormalizer.normalize(searchQuery)
             streamRecords.forEach { record ->
-                if (searchQuery.isNotBlank() &&
-                    !BrowserTextNormalizer.normalize(record.displayName).contains(
-                        BrowserTextNormalizer.normalize(searchQuery)
-                    )
+                if (normalizedSearchQuery.isNotBlank() &&
+                    !BrowserTextNormalizer.normalize(record.displayName).contains(normalizedSearchQuery)
                 ) return@forEach
                 count++
                 val recordIsActive = record.status == "queued" || record.status == "running"
@@ -443,10 +442,8 @@ internal class DownloadsPage(
                     seenIds.add(id)
                     count++
                     val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
-                    if (searchQuery.isNotBlank() &&
-                        !BrowserTextNormalizer.normalize(title).contains(
-                            BrowserTextNormalizer.normalize(searchQuery)
-                        )
+                    if (normalizedSearchQuery.isNotBlank() &&
+                        !BrowserTextNormalizer.normalize(title).contains(normalizedSearchQuery)
                     ) continue
                     val status = if (statusCol >= 0) c.getInt(statusCol) else -1
                     if (status == DownloadManager.STATUS_PENDING ||
@@ -645,7 +642,11 @@ internal class DownloadsPage(
                 count++
             }
             if (count == 0) list.addView(TextView(activity).apply {
-                text = t("No Wren downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
+                text = if (normalizedSearchQuery.isNotBlank()) {
+                    t("No downloads match your search.", "لا توجد تنزيلات تطابق بحثك.")
+                } else {
+                    t("No Wren downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
+                }
                 textSize = 13f
                 gravity = Gravity.CENTER
                 setTextColor(colors.muted)
