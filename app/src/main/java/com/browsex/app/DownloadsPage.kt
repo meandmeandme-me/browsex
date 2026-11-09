@@ -534,7 +534,10 @@ internal class DownloadsPage(
                     val isPlatformActive = status == DownloadManager.STATUS_PENDING ||
                         status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PAUSED
                     val isPlatformCompleted = status == DownloadManager.STATUS_SUCCESSFUL
-                    val isPlatformIssue = status == DownloadManager.STATUS_FAILED
+                    // Surface unexpected platform states under Issues instead of hiding them
+                    // from every focused filter.
+                    val isPlatformIssue = status == DownloadManager.STATUS_FAILED ||
+                        (!isPlatformActive && !isPlatformCompleted)
                     val matchesFilter = when (selectedFilter) {
                         "active" -> isPlatformActive
                         "completed" -> isPlatformCompleted
