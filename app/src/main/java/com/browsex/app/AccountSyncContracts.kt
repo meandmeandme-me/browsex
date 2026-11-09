@@ -100,3 +100,36 @@ internal interface AccountDataLifecycleRepository {
     suspend fun exportAccountData(): ByteArray
     suspend fun deleteCloudData()
 }
+
+/**
+ * Consent is category-scoped and opt-in for sensitive browsing data.
+ * A policy-version mismatch disables sync until the user reviews consent again.
+ */
+internal object SyncConsentPolicy {
+    const val CURRENT_POLICY_VERSION = 1
+
+    private val enabledByDefault = setOf(
+        SyncCategory.BOOKMARKS,
+        SyncCategory.READING_LIST,
+        SyncCategory.BROWSER_PREFERENCES,
+        SyncCategory.NAMED_SESSIONS
+    )
+
+    fun initialChoices(nowEpochMillis: Long): List<SyncConsentEntry> {
+        require(nowEpochMillis >= 0L)
+        return SyncCategory.entries.map { category ->
+            SyncConsentEntry(
+                category = category,
+                enabled = category in enabledByDefault,
+                updatedAtEpochMillis = nowEpochMillis,
+                policyVersion = CURRENT_POLICY_VERSION
+            )
+        }
+    }
+
+    fun isEnabled(category: SyncCategory, entries: List<SyncConsentEntry>): Boolean {
+        val current = entries.filter { it.category == category }
+            .maxByOrNull { it.updatedAtEpochMillis } ?: return false
+        return current.policyVersion == CURRENT_POLICY_VERSION && current.enabled
+    }
+}
