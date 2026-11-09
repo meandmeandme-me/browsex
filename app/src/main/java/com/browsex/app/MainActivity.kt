@@ -1061,6 +1061,7 @@ class MainActivity : AppCompatActivity() {
 
         return "$HOME_URL?bxlang=${browserSettingsSnapshot.languageMode}&bxtheme=${browserSettingsSnapshot.themeMode}" +
             "&bxquick=${browserSettingsSnapshot.homeShowQuickLinks}&bxdiscovery=${browserSettingsSnapshot.homeShowDiscovery}&bxlayout=${browserSettingsSnapshot.homeLayout}" +
+            "&bxengine=${java.net.URLEncoder.encode(browserSettingsSnapshot.searchEngine, "UTF-8")}" +
             "&bxtv=$isTelevisionDevice&bxfold=${foldPosture.name.lowercase()}&bxopaque=$opaque&bxcontrast=$highContrast" +
             "&bxmotion=$reduceMotion&bxminimal=$performanceMinimal"
     }
