@@ -1,9 +1,9 @@
 # Wren adaptive-device quality and release QA matrix
 
-Updated: 2026-11-08
+Updated: 2026-11-09
 Branch: `wren-design-prep`
 
-This matrix turns Android adaptive-app quality guidance into repeatable Wren acceptance criteria. CI passing proves compilation, unit tests, lint and packaged APK outputs only; it does not certify physical devices.
+This matrix turns Android adaptive-app quality guidance into repeatable Wren acceptance criteria. Current release target: Android 16 / API 36. Google Play requires new apps and updates to target API 36+ from 31 August 2026. CI passing proves compilation, unit tests, lint and packaged APK outputs only; it does not certify physical devices.
 
 ## Required configuration matrix
 
@@ -24,7 +24,7 @@ This matrix turns Android adaptive-app quality guidance into repeatable Wren acc
 
 - Test Android font scaling at maximum 200% on API 34+; do not infer support from using SP alone.
 - Test TalkBack on browser chrome, tabs, Settings, Downloads, Saved Pages, dialogs and site-permission controls.
-- Keep interactive targets at least 48×48dp unless a documented platform-specific exception applies.
+- Keep interactive targets at least 48×48dp unless a documented platform-specific exception applies. The address-site/reload controls and primary navigation actions are 48dp on touch devices and larger on TV.
 - Verify contrast and visible keyboard/D-pad focus in light, dark, matte and high-contrast modes.
 - Verify reduced-transparency selects truly opaque controls and reduced-motion suppresses non-essential animation.
 - Check Arabic RTL, mixed URL/email text, punctuation, keyboard navigation order and bidirectional labels.
@@ -33,6 +33,15 @@ This matrix turns Android adaptive-app quality guidance into repeatable Wren acc
 ## Browser workflow regression
 
 Test these on each relevant form factor: open/search URL, tab creation/switch/close, private tab, restore saved session, bookmarks/folders/import/export, history, file upload/download/cancel/share, camera/microphone/geolocation permissions, website notifications, uBlock install/pause/resume, fullscreen video, WebRTC, popups, reader mode, find-in-page, and process-crash recovery.
+
+## Android 16 / API 36 migration gates
+
+- [ ] Verify edge-to-edge on API 36, including status bar, 3-button navigation, gesture navigation, display cutouts and IME resize.
+- [ ] Confirm system bar icon contrast in light/dark theme and high-contrast mode.
+- [ ] Confirm `WindowCompat.setDecorFitsSystemWindows(false)` and inset handling do not double-apply padding or leave controls under the IME.
+- [ ] Verify predictive back through `OnBackPressedDispatcher`: fullscreen exit, web history, close tab, and app finish remain in the expected order.
+- [ ] Re-test camera, microphone, file chooser and location permission flows after targeting API 36.
+- [ ] Keep an Android 17 / API 37 readiness test: no orientation/resizability lock assumptions on width >= 600dp; state survives freeform resize, rotation and fold posture changes.
 
 ## Release gates
 
@@ -52,3 +61,10 @@ Test these on each relevant form factor: open/search URL, tab creation/switch/cl
 - Android TV publishing checklist: https://developer.android.com/training/tv/publishing/checklist
 - Android accessibility testing / TalkBack: https://developer.android.com/guide/topics/ui/accessibility/testing
 - Android 14+ font scaling to 200%: https://developer.android.com/about/versions/14/features#accessibility
+
+
+## Target API policy
+
+- Current application `targetSdk`: 36 (Android 16). `compileSdk`: 36. `minSdk`: 26.
+- Android TV has a lower Play target API floor, but Wren is a single phone/tablet/TV-capable product, so the mobile submission requirement governs the shared APK and remains API 36+.
+- Plan an API 37 compatibility pass before Google Play's next target-API deadline. Android 17 removes the large-screen orientation/resizability opt-out for apps targeting 37.
