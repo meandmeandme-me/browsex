@@ -60,9 +60,15 @@ internal class SavedSessionsPage(
                         addTextChangedListener(object : android.text.TextWatcher {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                val query = TabSearchPolicy.normalize(s?.toString().orEmpty())
+                                currentQuery = TabSearchPolicy.normalize(s?.toString().orEmpty())
                                 visibleSessions = sessions.filter { session ->
-                                    TabSearchPolicy.matchesNormalized(session.name, session.urls.joinToString(" "), query)
+                                    TabSearchPolicy.matchesNormalized(session.name, session.urls.joinToString(" "), currentQuery)
+                                }.let { filtered ->
+                                    when (sortMode) {
+                                        1 -> filtered.sortedBy { it.savedAt }
+                                        2 -> filtered.sortedBy { it.name.lowercase(java.util.Locale.ROOT) }
+                                        else -> filtered.sortedByDescending { it.savedAt }
+                                    }
                                 }
                                 adapter.clear()
                                 adapter.addAll(visibleSessions.map { "${it.name}\n${it.urls.size} " + t("tabs", "تبويبات") + " · " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.savedAt)) })
@@ -98,9 +104,33 @@ internal class SavedSessionsPage(
                         addView(search, LinearLayout.LayoutParams(0, WrenAdaptiveUi.dp(activity, 52), 1f))
                         addView(clearSearch, LinearLayout.LayoutParams(WrenAdaptiveUi.dp(activity, 48), WrenAdaptiveUi.dp(activity, 52)))
                     }
+                    val sortButton = android.widget.Button(activity).apply {
+                        text = t("Sort: newest", "الترتيب: الأحدث")
+                        setOnClickListener {
+                            sortMode = (sortMode + 1) % 3
+                            visibleSessions = sessions.filter { session ->
+                                TabSearchPolicy.matchesNormalized(session.name, session.urls.joinToString(" "), currentQuery)
+                            }.let { filtered ->
+                                when (sortMode) {
+                                    1 -> filtered.sortedBy { it.savedAt }
+                                    2 -> filtered.sortedBy { it.name.lowercase(java.util.Locale.ROOT) }
+                                    else -> filtered.sortedByDescending { it.savedAt }
+                                }
+                            }
+                            text = when (sortMode) {
+                                1 -> t("Sort: oldest", "الترتيب: الأقدم")
+                                2 -> t("Sort: name", "الترتيب: الاسم")
+                                else -> t("Sort: newest", "الترتيب: الأحدث")
+                            }
+                            adapter.clear()
+                            adapter.addAll(visibleSessions.map { "${it.name}\n${it.urls.size} " + t("tabs", "تبويبات") + " · " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.savedAt)) })
+                            updateEmptyState()
+                        }
+                    }
                     val content = LinearLayout(activity).apply {
                         orientation = LinearLayout.VERTICAL
                         addView(searchRow, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 52)))
+                        addView(sortButton, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 48)))
                         addView(list, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 320)))
                         addView(empty, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 160)))
                         list.emptyView = empty
