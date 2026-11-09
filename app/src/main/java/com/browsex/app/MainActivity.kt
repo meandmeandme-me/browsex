@@ -2064,6 +2064,9 @@ class MainActivity : AppCompatActivity() {
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
                     )
+                    // A reload tears down any active camera/microphone capture tracks;
+                    // the cleared decisions are then re-evaluated as Ask by Gecko.
+                    if (activeTab === tab && tab.url == url) tab.session.reload()
                     toast("Site permissions reset")
                 },
                 privateMode = tab.privateMode,
