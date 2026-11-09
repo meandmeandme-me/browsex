@@ -32,7 +32,9 @@ internal class SavedSessionsPage(
                 activity.lifecycleScope.launch {
                     val sessions = runCatching { repository.sessions() }.getOrDefault(emptyList())
                     val list = ListView(activity)
-                    var visibleSessions = sessions
+                    var visibleSessions = sessions.sortedByDescending { it.savedAt }
+                    var sortMode = 0
+                    var currentQuery = ""
                     val adapter = ArrayAdapter(
                         activity,
                         android.R.layout.simple_list_item_2,
