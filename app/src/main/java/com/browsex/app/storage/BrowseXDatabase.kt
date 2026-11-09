@@ -13,7 +13,7 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 
-/** Room schema for the production browser storage graph; see BrowserStorageRuntime for migration gating. */
+/** Room schema for Wren's clean browser storage graph. */
 @Entity(tableName = "bookmark_folders")
 data class BookmarkFolderEntity(
     @PrimaryKey val id: String,
