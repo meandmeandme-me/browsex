@@ -44,8 +44,8 @@ android {
         applicationId = "com.browsex.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         // Do not restrict ABIs: let Android select the native GeckoView library
         // supported by the device. A forced arm64-only APK rejects 32-bit devices.
     }
