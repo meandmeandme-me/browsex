@@ -233,6 +233,11 @@
     <string name="ui_this_removes_cookies_site_storage_cache_and_permissions_for_this_host_it_may_sign_you_out_data_owned_by_other_third_party_hosts_is_not_included">سيحذف هذا ملفات الارتباط وتخزين الموقع والذاكرة المؤقتة والأذونات لهذا المضيف. قد يؤدي ذلك إلى تسجيل خروجك. لا يشمل بيانات مضيفي الجهات الخارجية.</string>
     <string name="ui_clear_data">مسح البيانات</string>
     <string name="ui_ask_every_time">اسأل في كل مرة</string>
+    <string name="ui_allow_this_website">السماح لهذا الموقع؟</string>
+    <string name="ui_site_permission_request_message">يريد %1$s استخدام %2$s.</string>
+    <string name="ui_allow_device_access">السماح بالوصول إلى الجهاز؟</string>
+    <string name="ui_device_permission_request_message">يريد %1$s استخدام %2$s لديك.</string>
+    <string name="ui_not_now">ليس الآن</string>
     <string name="ui_allow">سماح</string>
     <string name="ui_block">حظر</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">لا يدعم GeckoView إلغاء إذن التخزين الدائم بعد منحه.</string>
