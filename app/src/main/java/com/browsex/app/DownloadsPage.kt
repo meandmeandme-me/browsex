@@ -359,7 +359,7 @@ internal class DownloadsPage(
                     textSize = 20f
                     gravity = Gravity.CENTER
                     setTextColor(colors.muted)
-                    minimumWidth = dp(40)
+                    minimumWidth = dp(48)
                     minimumHeight = dp(48)
                     contentDescription = t("Remove download record", "حذف سجل التنزيل")
                     isClickable = true
