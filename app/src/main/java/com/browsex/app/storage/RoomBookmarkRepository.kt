@@ -191,6 +191,13 @@ internal class RoomBookmarkRepository(
     suspend fun remove(url: String): Boolean =
         url.takeIf(::isSafeUrl)?.let { dao.deleteBookmark(it) > 0 } ?: false
 
+    suspend fun rename(url: String, title: String): Boolean {
+        if (!isSafeUrl(url)) return false
+        val normalized = title.trim().take(MAX_TITLE_LENGTH)
+        if (normalized.isBlank()) return false
+        return dao.updateBookmarkTitle(url, normalized) > 0
+    }
+
     suspend fun move(url: String, folderId: String): Boolean {
         if (!isSafeUrl(url) || dao.folder(folderId) == null) return false
         return dao.moveBookmark(url, folderId) > 0
