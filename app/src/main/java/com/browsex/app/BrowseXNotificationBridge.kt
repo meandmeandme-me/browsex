@@ -109,9 +109,12 @@ internal class BrowseXNotificationBridge(
             )
             val builder = NotificationCompat.Builder(activity, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_browsex)
-                .setContentTitle(notification.title?.takeIf { it.isNotBlank() } ?: Uri.parse(notification.origin).host.orEmpty())
-                .setContentText(notification.text.orEmpty())
-                .setStyle(NotificationCompat.BigTextStyle().bigText(notification.text.orEmpty()))
+                .setContentTitle(
+                    notification.title?.takeIf { it.isNotBlank() }?.take(MAX_TITLE_LENGTH)
+                        ?: Uri.parse(notification.origin).host.orEmpty()
+                )
+                .setContentText(notification.text.orEmpty().take(MAX_TEXT_LENGTH))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(notification.text.orEmpty().take(MAX_TEXT_LENGTH)))
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setContentIntent(tap)
                 .setDeleteIntent(delete)
@@ -160,5 +163,7 @@ internal class BrowseXNotificationBridge(
         const val EXTRA_NOTIFICATION_ID = "browsex.extra.NOTIFICATION_ID"
         const val EXTRA_NOTIFICATION_TAG = "browsex.extra.NOTIFICATION_TAG"
         private const val NOTIFICATION_ID = 0
+        private const val MAX_TITLE_LENGTH = 200
+        private const val MAX_TEXT_LENGTH = 4_000
     }
 }
