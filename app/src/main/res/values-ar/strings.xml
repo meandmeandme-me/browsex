@@ -290,6 +290,16 @@
     <string name="ui_unlock_browsex_passwords">فتح كلمات المرور في BrowseX</string>
     <string name="ui_verify_your_identity_before_filling_a_saved_sign_in">تحقق من هويتك قبل تعبئة بيانات تسجيل الدخول المحفوظة</string>
     <string name="ui_choose_a_saved_sign_in">اختر بيانات تسجيل دخول محفوظة</string>
+    <string name="ui_unlock_saved_passwords">فتح كلمات المرور المحفوظة</string>
+    <string name="ui_verify_your_identity_to_view_saved_sign_ins">تحقق من هويتك لعرض بيانات تسجيل الدخول المحفوظة</string>
+    <string name="ui_close_private_tabs_to_view_saved_entries">أغلق علامات التبويب الخاصة لعرض البيانات المحفوظة</string>
+    <string name="ui_no_saved_passwords_yet">لا توجد كلمات مرور محفوظة بعد</string>
+    <string name="ui_reveal_saved_password">إظهار كلمة المرور المحفوظة</string>
+    <string name="ui_verify_your_identity_to_reveal_or_copy_this_sign_in">تحقق من هويتك لإظهار بيانات تسجيل الدخول أو نسخها</string>
+    <string name="ui_saved_entry_unavailable">بيانات تسجيل الدخول المحفوظة غير متاحة</string>
+    <string name="ui_password_copied">تم نسخ كلمة المرور</string>
+    <string name="ui_saved_password_deleted">تم حذف كلمة المرور المحفوظة</string>
+    <string name="ui_authentication_required">المصادقة مطلوبة</string>
     <string name="ui_save_password_question">حفظ كلمة المرور؟</string>
     <string name="ui_save_sign_in_question">حفظ بيانات تسجيل الدخول لهذا الموقع؟</string>
     <string name="ui_save_sign_in_for_site_under_user">هل تريد حفظ تسجيل الدخول إلى %1$s باسم %2$s؟</string>
