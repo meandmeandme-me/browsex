@@ -328,8 +328,8 @@ internal class TabsPage(
                                     when {
                                         toOpen.isEmpty() -> onToast("Tab limit reached")
                                         toOpen.size < recentlyClosed.size ->
-                                            onToast("Restored ${toOpen.size} tabs; some were skipped because the tab limit was reached")
-                                        else -> onToast("Restored ${toOpen.size} tabs")
+                                            onToast("Some tabs restored; tab limit reached")
+                                        else -> onToast("Tabs restored")
                                     }
                                 } else {
                                     onToast("No recently closed tabs")
