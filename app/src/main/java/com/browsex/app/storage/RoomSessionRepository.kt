@@ -11,8 +11,23 @@ internal class RoomSessionRepository(
     suspend fun sessions(): List<RoomSavedSession> {
         val tabsBySession = dao.savedSessionTabs().groupBy { it.sessionId }
         return dao.savedSessions().mapNotNull { saved ->
-            val urls = tabsBySession[saved.id].orEmpty().sortedBy { it.position }.map { it.url }
-            if (urls.isEmpty()) null else RoomSavedSession(saved.id, saved.name, urls, saved.activeIndex, saved.savedAt)
+            val name = saved.name.filterNot { it.isISOControl() }.trim().take(MAX_SESSION_NAME)
+            if (saved.id.length !in 1..MAX_SESSION_ID_LENGTH ||
+                !saved.id.startsWith("session_") || name.isBlank() || saved.savedAt < 0L
+            ) return@mapNotNull null
+
+            // Bound corrupt rows before normalization, then reuse the same URL policy as
+            // live tab restoration. The original positions remain intact so a rejected
+            // active tab falls back to the nearest surviving regular tab.
+            val rawUrls = tabsBySession[saved.id].orEmpty()
+                .asSequence()
+                .sortedBy { it.position }
+                .take(MAX_SESSION_SCAN)
+                .map { it.url }
+                .toList()
+            if (rawUrls.none(::isSafeRestorableUrl)) return@mapNotNull null
+            val snapshot = TabSessionState.normalize(rawUrls, saved.activeIndex, HOME_URL)
+            RoomSavedSession(saved.id, name, snapshot.urls, snapshot.activeIndex, saved.savedAt)
         }
     }
 
@@ -50,7 +65,12 @@ internal class RoomSessionRepository(
 
     suspend fun recentlyClosed(): List<RecentlyClosedTabEntity> {
         pruneExpiredRecentlyClosed()
-        return dao.recentlyClosedTabs().take(MAX_RECENTLY_CLOSED)
+        return dao.recentlyClosedTabs()
+            .asSequence()
+            .filter { it.id.length in 1..MAX_RECENT_ID_LENGTH && it.id.startsWith("closed_") }
+            .filter { it.closedAt >= 0L && isSafeRestorableUrl(it.url) && it.url != HOME_URL }
+            .take(MAX_RECENTLY_CLOSED)
+            .toList()
     }
 
     suspend fun recordRecentlyClosed(
@@ -81,7 +101,13 @@ internal class RoomSessionRepository(
 
     suspend fun consumeRecentlyClosed(id: String): RecentlyClosedTabEntity? {
         pruneExpiredRecentlyClosed()
-        return dao.consumeRecentlyClosedTab(id)
+        return dao.consumeRecentlyClosedTab(id)?.takeIf {
+            it.id.length in 1..MAX_RECENT_ID_LENGTH &&
+                it.id.startsWith("closed_") &&
+                it.closedAt >= 0L &&
+                isSafeRestorableUrl(it.url) &&
+                it.url != HOME_URL
+        }
     }
 
     /** Atomically consumes only the requested restore entries, preserving newer unselected items. */
@@ -94,7 +120,13 @@ internal class RoomSessionRepository(
             .take(MAX_RECENTLY_CLOSED)
             .toList()
         if (safeIds.isEmpty()) return emptyList()
-        return dao.consumeRecentlyClosedTabs(safeIds)
+        return dao.consumeRecentlyClosedTabs(safeIds).filter {
+            it.id.length in 1..MAX_RECENT_ID_LENGTH &&
+                it.id.startsWith("closed_") &&
+                it.closedAt >= 0L &&
+                isSafeRestorableUrl(it.url) &&
+                it.url != HOME_URL
+        }
     }
 
     private suspend fun pruneExpiredRecentlyClosed(now: Long = System.currentTimeMillis()) {
@@ -112,6 +144,8 @@ internal class RoomSessionRepository(
         const val HOME_URL = "resource://android/assets/home.html"
         const val MAX_URL_LENGTH = 4096
         const val MAX_SESSION_NAME = 40
+        const val MAX_SESSION_ID_LENGTH = 64
+        const val MAX_SESSION_SCAN = TabSessionState.MAX_TABS * 4
         const val MAX_RECENT_TITLE = 180
         const val MAX_RECENT_ID_LENGTH = 64
         const val MAX_RECENTLY_CLOSED = 10
