@@ -94,9 +94,9 @@ internal class BrowseXPermissionDelegate(
             else -> "a browser feature"
         }
         val dialog = AlertDialog.Builder(activity)
-            .setTitle("Allow $origin?")
-            .setMessage("This website wants to use $permission.")
-            .setPositiveButton("Allow") { _, _ ->
+            .setTitle(BrowseXStrings.text(activity, "Allow this website?", "السماح لهذا الموقع؟"))
+            .setMessage(activity.getString(R.string.ui_site_permission_request_message, origin, BrowseXStrings.text(activity, permission, permission)))
+            .setPositiveButton(BrowseXStrings.text(activity, "Allow", "سماح")) { _, _ ->
                 if (isSiteNotification) {
                     activity.requestSiteNotificationPermission { granted ->
                         activity.lifecycleScope.launch {
@@ -115,13 +115,13 @@ internal class BrowseXPermissionDelegate(
                     }
                 }
             }
-            .setNegativeButton("Block") { _, _ ->
+            .setNegativeButton(BrowseXStrings.text(activity, "Block", "حظر")) { _, _ ->
                 activity.lifecycleScope.launch {
                     if (persistedFeature != null) persistDecision(origin, persistedFeature, "deny")
                     result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
                 }
             }
-            .setNeutralButton("Not now") { _, _ ->
+            .setNeutralButton(BrowseXStrings.text(activity, "Not now", "ليس الآن")) { _, _ ->
                 result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT)
             }
             .create()
@@ -218,9 +218,9 @@ internal class BrowseXPermissionDelegate(
             if (wantsMicrophone) add("microphone")
         }.joinToString(" and ")
         val dialog = AlertDialog.Builder(activity)
-            .setTitle("Allow device access?")
-            .setMessage("$origin wants to use your $features.")
-            .setPositiveButton("Allow") { _, _ ->
+            .setTitle(BrowseXStrings.text(activity, "Allow device access?", "السماح بالوصول إلى الجهاز؟"))
+            .setMessage(activity.getString(R.string.ui_device_permission_request_message, origin, features))
+            .setPositiveButton(BrowseXStrings.text(activity, "Allow", "سماح")) { _, _ ->
                 activity.lifecycleScope.launch {
                     if (!privateMode && wantsCamera) persistDecision(origin, "camera", "allow")
                     if (!privateMode && wantsMicrophone) persistDecision(origin, "microphone", "allow")
