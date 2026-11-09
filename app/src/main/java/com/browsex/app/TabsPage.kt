@@ -288,6 +288,24 @@ internal class TabsPage(
                 }
             }
         }
+        sessionAction("Close all tabs") {
+            if (tabs.isEmpty()) {
+                onToast("No open tabs")
+            } else {
+                AlertDialog.Builder(activity)
+                    .setTitle(tr("Close all tabs"))
+                    .setMessage(tr("Close every open tab?"))
+                    .setNegativeButton(tr("Cancel"), null)
+                    .setPositiveButton(tr("Close all")) { _, _ ->
+                        // Close a stable snapshot: the controller may create a fresh home
+                        // tab after the final close, and that replacement must remain alive.
+                        tabs.toList().forEach(onCloseTab)
+                        dialog.dismiss()
+                        show()
+                    }
+                    .show()
+            }
+        }
         page.addView(sessionActions)
 
         val hint = TextView(activity).apply {
