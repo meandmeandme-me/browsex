@@ -382,4 +382,5 @@
     <string name="ui_regular">العادية</string>
     <string name="ui_no_open_tabs">لا توجد علامات تبويب مفتوحة</string>
     <string name="ui_create_new_tab">إنشاء علامة تبويب جديدة</string>
+    <string name="ui_clear_tab_search">مسح البحث عن علامات التبويب</string>
 </resources>
