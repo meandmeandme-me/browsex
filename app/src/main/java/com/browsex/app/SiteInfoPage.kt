@@ -405,12 +405,21 @@ class SiteInfoPage(
             .setTitle(name)
             .setSingleChoiceItems(labels, selected) { dialog, index ->
                 activity.lifecycleScope.launch {
-                    runCatching {
+                    val updated = runCatching {
                         activity.storageRuntime.awaitReady().sitePermissions.setDecision(
                             originForStore(), feature, arrayOf("ask", "allow", "deny")[index]
                         )
+                        true
                     }.onFailure {
                         android.util.Log.e("BrowseX", "Could not update site permission", it)
+                    }.getOrDefault(false)
+                    if (!updated) {
+                        android.widget.Toast.makeText(
+                            activity,
+                            t("Could not update this permission", "تعذر تحديث هذا الإذن"),
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        return@launch
                     }
                     val decision = arrayOf("ask", "allow", "deny")[index]
                     if (decision != "allow") onMediaPermissionChange(feature, decision)
