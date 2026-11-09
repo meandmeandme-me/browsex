@@ -75,6 +75,12 @@ internal class RoomSessionRepository(
         return dao.consumeRecentlyClosedTab(id)
     }
 
+    /** Atomically consumes only the requested restore entries, preserving newer unselected items. */
+    suspend fun consumeRecentlyClosed(ids: List<String>): List<RecentlyClosedTabEntity> {
+        pruneExpiredRecentlyClosed()
+        return dao.consumeRecentlyClosedTabs(ids)
+    }
+
     private suspend fun pruneExpiredRecentlyClosed(now: Long = System.currentTimeMillis()) {
         val cutoff = (now - RECENTLY_CLOSED_RETENTION_MILLIS).coerceAtLeast(0L)
         dao.deleteRecentlyClosedBefore(cutoff)
