@@ -61,7 +61,7 @@ internal class RoomSessionRepository(
 
     suspend fun recentlyClosed(): List<RecentlyClosedTabEntity> {
         pruneExpiredRecentlyClosed()
-        return dao.recentlyClosedTabs(MAX_RECENTLY_CLOSED)
+        return dao.recentlyClosedTabs(MAX_RECENT_SCAN)
             .asSequence()
             .filter { it.id.length in 1..MAX_RECENT_ID_LENGTH && it.id.startsWith("closed_") }
             .filter { it.closedAt >= 0L && isSafeRestorableUrl(it.url) && it.url != HOME_URL }
@@ -155,6 +155,7 @@ internal class RoomSessionRepository(
         const val MAX_RECENT_TITLE = 180
         const val MAX_RECENT_ID_LENGTH = 64
         const val MAX_RECENTLY_CLOSED = 10
+        const val MAX_RECENT_SCAN = MAX_RECENTLY_CLOSED * 4
         const val RECENTLY_CLOSED_RETENTION_MILLIS = 30L * 24L * 60L * 60L * 1000L
     }
 }
