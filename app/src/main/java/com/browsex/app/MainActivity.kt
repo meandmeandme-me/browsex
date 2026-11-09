@@ -2054,8 +2054,19 @@ class MainActivity : AppCompatActivity() {
                     val uri = Uri.parse(url)
                     val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
                     lifecycleScope.launch {
-                        runCatching { storageRuntime.awaitReady().sitePermissions.clearOrigin(origin) }
-                            .onFailure { error -> android.util.Log.e("BrowseX", "Could not reset saved site permissions", error) }
+                        val cleared = runCatching {
+                            storageRuntime.awaitReady().sitePermissions.clearOrigin(origin)
+                            true
+                        }.onFailure { error ->
+                            android.util.Log.e("BrowseX", "Could not reset saved site permissions", error)
+                        }.getOrDefault(false)
+                        if (cleared && activeTab === tab && tab.url == url) {
+                            // Clear persisted camera/microphone grants before reloading so
+                            // Gecko cannot immediately reuse a stale allow decision.
+                            tab.session.reload()
+                        } else if (!cleared) {
+                            toast(BrowseXStrings.text(this@MainActivity, "Could not reset saved site permissions", "تعذر إعادة ضبط أذونات الموقع"))
+                        }
                     }
                     tab.sitePermissions = emptyList()
                     storage?.getPermissions(url, false)?.accept(
@@ -2064,9 +2075,6 @@ class MainActivity : AppCompatActivity() {
                         } },
                         { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
                     )
-                    // A reload tears down any active camera/microphone capture tracks;
-                    // the cleared decisions are then re-evaluated as Ask by Gecko.
-                    if (activeTab === tab && tab.url == url) tab.session.reload()
                     toast("Site permissions reset")
                 },
                 privateMode = tab.privateMode,
