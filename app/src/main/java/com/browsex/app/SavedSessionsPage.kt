@@ -159,7 +159,7 @@ internal class SavedSessionsPage(
                         val selected = visibleSessions.getOrNull(position) ?: return@setOnItemLongClickListener true
                         AlertDialog.Builder(activity)
                             .setTitle(selected.name)
-                            .setItems(arrayOf(t("Rename session", "إعادة تسمية الجلسة"), t("Delete session", "حذف الجلسة"))) { _, action ->
+                            .setItems(arrayOf(t("Rename session", "إعادة تسمية الجلسة"), t("Share session", "مشاركة الجلسة"), t("Delete session", "حذف الجلسة"))) { _, action ->
                                 if (action == 0) {
                                     val input = EditText(activity).apply {
                                         setText(selected.name)
@@ -191,6 +191,27 @@ internal class SavedSessionsPage(
                                             }
                                         }
                                         .show()
+                                } else if (action == 1) {
+                                    val shareText = buildString {
+                                        append(selected.name)
+                                        append("\\n\\n")
+                                        selected.urls.forEachIndexed { index, url ->
+                                            append(index + 1)
+                                            append(". ")
+                                            append(url)
+                                            append('\\n')
+                                        }
+                                    }
+                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, selected.name)
+                                        putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    runCatching {
+                                        activity.startActivity(android.content.Intent.createChooser(send, t("Share browsing session", "مشاركة جلسة التصفح")))
+                                    }.onFailure {
+                                        android.widget.Toast.makeText(activity, t("No app available to share this session", "لا يوجد تطبيق متاح لمشاركة هذه الجلسة"), android.widget.Toast.LENGTH_SHORT).show()
+                                    }
                                 } else {
                                     AlertDialog.Builder(activity)
                                         .setTitle(t("Delete session?", "حذف الجلسة؟"))
