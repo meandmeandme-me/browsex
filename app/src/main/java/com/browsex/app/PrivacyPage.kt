@@ -8,13 +8,12 @@ import org.mozilla.geckoview.StorageController
 /** User-controlled, explicit clearing of GeckoView browsing data and BrowseX history. */
 internal class PrivacyPage(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val clearData: (flags: Long, clearHistory: Boolean) -> Unit
 ) {
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun dp(value: Int) = WrenAdaptiveUi.dp(activity, value)
     private fun t(en: String, ar: String): String =
-        if (BrowseXColors.isArabic(activity, store)) ar else en
+        if (BrowseXColors.isArabic(activity.currentBrowserSettings)) ar else en
 
     fun show() {
         val labels = arrayOf(
