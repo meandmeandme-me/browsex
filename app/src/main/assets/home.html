@@ -223,8 +223,31 @@ body.reduce-motion-mode *::after{
  ];
  const key='browsex.home.shortcuts';
  let shortcuts=defaults,editing=-1;
- try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(Array.isArray(saved))shortcuts=saved.filter(x=>x&&typeof x.name==='string'&&typeof x.url==='string').slice(0,8)}catch(_){}
- const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'||u.protocol==='http:'}catch(_){return false}};
+ // Treat persisted browser data as untrusted: old versions or edited storage may
+ // contain script/data URLs, oversized labels, or malformed entries.
+ const validUrl=value=>{
+  if(typeof value!=='string'||value.length>2048)return false;
+  try{
+   const u=new URL(value);
+   return (u.protocol==='https:'||u.protocol==='http:')&&!u.username&&!u.password&&!!u.hostname;
+  }catch(_){return false}
+ };
+ try{
+  const saved=JSON.parse(localStorage.getItem(key)||'null');
+  if(Array.isArray(saved)){
+   const seen=new Set();
+   shortcuts=saved.filter(item=>{
+    if(!item||typeof item.name!=='string'||typeof item.url!=='string')return false;
+    const name=item.name.trim().slice(0,24),url=item.url.trim();
+    if(!name||!validUrl(url))return false;
+    const canonical=new URL(url).href;
+    if(seen.has(canonical))return false;
+    seen.add(canonical);
+    item.name=name;item.url=canonical;
+    return true;
+   }).slice(0,8);
+  }
+ }catch(_){shortcuts=defaults.map(item=>({...item}))}
  const save=()=>{try{localStorage.setItem(key,JSON.stringify(shortcuts))}catch(_){}};
  const render=()=>{
   const nav=$('shortcuts');nav.replaceChildren();
