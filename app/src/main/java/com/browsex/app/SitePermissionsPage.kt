@@ -6,7 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 /** Central manager for persisted website-level permission decisions. */
-internal class SitePermissionsPage(private val activity: MainActivity) {
+internal class SitePermissionsPage(\n    private val activity: MainActivity,\n    private val clearAllPermissions: () -> Unit\n) {
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
 
     fun show() {
@@ -51,11 +51,7 @@ internal class SitePermissionsPage(private val activity: MainActivity) {
                         .setMessage(t("Every saved choice will return to Ask. Websites may request permission again.", "ستعود جميع القرارات المحفوظة إلى خيار اسأل. قد تطلب المواقع الإذن من جديد."))
                         .setNegativeButton(t("Cancel", "إلغاء"), null)
                         .setPositiveButton(t("Reset", "إعادة ضبط")) { _, _ ->
-                            activity.lifecycleScope.launch {
-                                runCatching { activity.storageRuntime.awaitReady().sitePermissions.clearAll() }
-                                    .onSuccess { Toast.makeText(activity, t("Site permissions reset", "تمت إعادة ضبط أذونات المواقع"), Toast.LENGTH_SHORT).show() }
-                                    .onFailure { Toast.makeText(activity, t("Could not reset permissions", "تعذر إعادة ضبط الأذونات"), Toast.LENGTH_SHORT).show() }
-                            }
+                            clearAllPermissions()
                         }.show()
                 }
                 .setPositiveButton(t("Done", "تم"), null)
