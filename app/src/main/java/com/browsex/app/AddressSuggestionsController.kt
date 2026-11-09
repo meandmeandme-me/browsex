@@ -140,6 +140,7 @@ internal class AddressSuggestionsController(
                 isClickable = true
                 isFocusable = false
                 background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+                foreground = WrenFocusStyle.overlay(activity, 14, colors.accent)
                 setOnClickListener { onSelect(suggestion) }
                 contentDescription = listOf(suggestion.title, suggestion.subtitle, kindLabel(suggestion.kind))
                     .filter(String::isNotBlank).joinToString(", ")
