@@ -100,11 +100,11 @@ internal class RoomDownloadRepository(
     private fun normalizeDisplayText(value: String, maxLength: Int): String =
         value.asSequence()
             .filterNot { char ->
-                char.isISOControl() || char in '\\u202A'..'\\u202E' || char in '\\u2066'..'\\u2069'
+                char.isISOControl() || char in '\u202A'..'\u202E' || char in '\u2066'..'\u2069'
             }
             .joinToString("")
             .trim()
-            .replace(Regex("\\\\s+"), " ")
+            .replace(Regex("\\s+"), " ")
             .take(maxLength)
 
     private companion object {
