@@ -357,4 +357,20 @@
     <string name="ui_close_all_tabs">إغلاق جميع علامات التبويب</string>
     <string name="ui_close_every_open_tab">هل تريد إغلاق جميع علامات التبويب المفتوحة؟</string>
     <string name="ui_close_all">إغلاق الكل</string>
+    <string name="ui_ublock_origin_not_installed">uBlock Origin: غير مثبت</string>
+    <string name="ui_ublock_origin_installed_currently_off">uBlock Origin: مثبت لكنه متوقف</string>
+    <string name="ui_protection_status">حالة الحماية</string>
+    <string name="ui_built_in_tracking_protection_regular_tabs">حماية التتبع المدمجة — التبويبات العادية</string>
+    <string name="ui_built_in_tracking_protection_private_tabs">حماية التتبع المدمجة — التبويبات الخاصة</string>
+    <string name="ui_blocking_totals_are_not_reported_here_because_reliable_per_page_counts_are_not_available">لا نعرض أرقامًا للحظر لأن إحصاءات موثوقة لكل صفحة غير متاحة.</string>
+    <string name="ui_manage_protection">إدارة الحماية</string>
+    <string name="ui_could_not_load_site_permissions">تعذر تحميل أذونات المواقع</string>
+    <string name="ui_no_saved_website_permission_decisions_yet">لا توجد قرارات أذونات محفوظة للمواقع حتى الآن.</string>
+    <string name="ui_saved_site_permissions">أذونات المواقع المحفوظة</string>
+    <string name="ui_reset_all">إعادة ضبط الكل</string>
+    <string name="ui_reset_all_site_permissions">إعادة ضبط جميع أذونات المواقع؟</string>
+    <string name="ui_every_saved_choice_will_return_to_ask_websites_may_request_permission_again">ستعود جميع القرارات المحفوظة إلى خيار اسأل. قد تطلب المواقع الإذن من جديد.</string>
+    <string name="ui_could_not_reset_permissions">تعذر إعادة ضبط الأذونات</string>
+    <string name="ui_permission_updated">تم تحديث الإذن</string>
+    <string name="ui_could_not_update_permission">تعذر تحديث الإذن</string>
 </resources>
