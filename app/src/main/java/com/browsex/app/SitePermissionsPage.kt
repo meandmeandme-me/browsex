@@ -30,12 +30,7 @@ internal class SitePermissionsPage(
                     .show()
                 return@launch
             }
-            val featureLabels = mapOf(
-                "camera" to t("Camera", "الكاميرا"),
-                "microphone" to t("Microphone", "الميكروفون"),
-                "notifications" to t("Notifications", "الإشعارات"),
-                "geolocation" to t("Location", "الموقع")
-            )
+            val featureLabels = entries.map { it.feature }.distinct().associateWith(::featureLabel)
             val status = entries.map { entry ->
                 val feature = featureLabels[entry.feature] ?: entry.feature
                 val decision = when (entry.decision) {
@@ -62,10 +57,18 @@ internal class SitePermissionsPage(
         }
     }
 
+    private fun featureLabel(feature: String): String = when (feature) {
+        "camera" -> t("Camera", "الكاميرا")
+        "microphone" -> t("Microphone", "الميكروفون")
+        "notifications" -> t("Notifications", "الإشعارات")
+        "geolocation" -> t("Location", "الموقع")
+        else -> feature
+    }
+
     private fun showDecision(origin: String, feature: String) {
         val choices = arrayOf(t("Ask every time", "اسأل في كل مرة"), t("Allow", "سماح"), t("Block", "حظر"))
         AlertDialog.Builder(activity)
-            .setTitle("${origin}\n${feature}")
+            .setTitle("${origin}\n${featureLabel(feature)}")
             .setItems(choices) { _, which ->
                 val decision = when (which) { 1 -> "allow"; 2 -> "deny"; else -> "ask" }
                 activity.lifecycleScope.launch {
