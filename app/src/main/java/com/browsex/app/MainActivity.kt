@@ -161,6 +161,8 @@ class MainActivity : AppCompatActivity() {
     internal val currentBrowserSettings: BrowserSettings get() = browserSettingsSnapshot
     internal val currentAdaptivePresentation: AdaptivePresentationConfig? get() = adaptivePresentationConfig
     private var browserSettingsLoaded = false
+    // Transitional UI compatibility facade; feature persistence is owned by Room/DataStore.
+    private val store: BrowserStore by lazy(LazyThreadSafetyMode.NONE) { BrowserStore(this) }
     internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
     internal fun updateBrowserSettings(
