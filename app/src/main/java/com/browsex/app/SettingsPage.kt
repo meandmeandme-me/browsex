@@ -239,15 +239,25 @@ internal class SettingsPage(
                 .setNegativeButton(t("Cancel"), null)
                 .show()
         }
-        row("Language", "Choose the app language", t(when (settings.languageMode) {
-            "ar" -> "Arabic"; "en" -> "English"; else -> "System language"
-        })) {
-            val values = arrayOf("system", "ar", "en")
-            val labels = arrayOf(t("System language"), t("Arabic"), t("English"))
+        val availableLanguages = java.util.Locale.getISOLanguages()
+            .map { java.util.Locale.forLanguageTag(it) }
+            .filter { it.language.isNotBlank() }
+            .distinctBy { it.language }
+            .sortedBy { it.getDisplayName(it).lowercase(it) }
+        val languageValues = arrayOf("system") + availableLanguages.map { it.language }
+        val languageLabels = arrayOf(t("System language")) + availableLanguages.map { it.getDisplayName(it) }
+        val selectedLanguage = languageValues.indexOf(settings.languageMode).takeIf { it >= 0 }
+            ?: languageValues.indexOf(settings.languageMode.substringBefore('-')).coerceAtLeast(0)
+        val currentLanguageLabel = if (settings.languageMode == "system") {
+            t("System language")
+        } else {
+            java.util.Locale.forLanguageTag(settings.languageMode).let { it.getDisplayName(it) }
+        }
+        row("Language", "Choose the app language", currentLanguageLabel) {
             AlertDialog.Builder(activity)
                 .setTitle(t("Language"))
-                .setSingleChoiceItems(labels, values.indexOf(settings.languageMode).coerceAtLeast(0)) { choice, index ->
-                    activity.updateBrowserSettings({ it.copy(languageMode = values[index]) }) { updated ->
+                .setSingleChoiceItems(languageLabels, selectedLanguage) { choice, index ->
+                    activity.updateBrowserSettings({ it.copy(languageMode = languageValues[index]) }) { updated ->
                         AppCompatDelegate.setApplicationLocales(
                             LocaleListCompat.forLanguageTags(if (updated.languageMode == "system") "" else updated.languageMode)
                         )
