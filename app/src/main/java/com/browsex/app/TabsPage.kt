@@ -350,13 +350,42 @@ internal class TabsPage(
                 "${visibleTabs.size} · ${tr("Matching tabs")}"
             }
             if (visibleTabs.isEmpty()) {
-                grid.addView(TextView(activity).apply {
-                    text = tr("No matching tabs")
-                    textSize = if (tvRemote) 18f else 14f
-                    setTextColor(colors.muted)
+                val emptyState = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
-                    setPadding(dp(20), dp(36), dp(20), dp(36))
+                    setPadding(dp(20), dp(34), dp(20), dp(34))
+                    background = rounded(colors.panel, 20)
+                }
+                emptyState.addView(TextView(activity).apply {
+                    text = if (tabs.isEmpty()) tr("No open tabs") else tr("No matching tabs")
+                    textSize = if (tvRemote) 19f else 15f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(colors.ink)
+                    gravity = Gravity.CENTER
                 }, LinearLayout.LayoutParams(-1, -2))
+                if (tabs.isEmpty()) {
+                    emptyState.addView(TextView(activity).apply {
+                        text = tr("Create new tab")
+                        textSize = if (tvRemote) 17f else 14f
+                        gravity = Gravity.CENTER
+                        setTextColor(colors.card)
+                        setPadding(dp(20), dp(12), dp(20), dp(12))
+                        background = focusableSurface(colors.accent, 18)
+                        minimumHeight = dp(if (tvRemote) 60 else 48)
+                        isClickable = true
+                        isFocusable = true
+                        isFocusableInTouchMode = false
+                        contentDescription = tr("Create new tab")
+                        setOnClickListener {
+                            onCreateTab(homePageUrlProvider())
+                            dialog.dismiss()
+                            show()
+                        }
+                    }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(16) })
+                }
+                grid.addView(emptyState, LinearLayout.LayoutParams(-1, -2).apply {
+                    setMargins(dp(4), dp(8), dp(4), dp(12))
+                })
                 return
             }
             val rows = visibleTabs.chunked(columns)
