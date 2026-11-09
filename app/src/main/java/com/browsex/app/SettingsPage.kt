@@ -240,6 +240,34 @@ internal class SettingsPage(
                 .setNegativeButton(t("Cancel"), null)
                 .show()
         }
+        row(
+            "Accent color",
+            "Choose the highlight color used across browser controls",
+            t(when (settings.accentColor) {
+                "violet" -> "Violet"
+                "emerald" -> "Emerald"
+                "rose" -> "Rose"
+                "amber" -> "Amber"
+                else -> "Ocean"
+            })
+        ) {
+            val values = arrayOf("ocean", "violet", "emerald", "rose", "amber")
+            val labels = arrayOf(
+                t("Ocean"), t("Violet"), t("Emerald"), t("Rose"), t("Amber")
+            )
+            AlertDialog.Builder(activity)
+                .setTitle(t("Accent color"))
+                .setSingleChoiceItems(labels, values.indexOf(settings.accentColor).coerceAtLeast(0)) { choice, index ->
+                    activity.updateBrowserSettings({ it.copy(accentColor = values[index]) }) {
+                        choice.dismiss()
+                        dialog.dismiss()
+                        show()
+                    }
+                }
+                .setNegativeButton(t("Cancel"), null)
+                .show()
+        }
+
         val availableLanguages = (
             java.util.Locale.getISOLanguages().map { java.util.Locale.forLanguageTag(it) } +
                 java.util.Locale.getAvailableLocales().filter {
