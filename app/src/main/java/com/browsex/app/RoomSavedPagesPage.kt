@@ -110,6 +110,7 @@ internal class RoomSavedPagesPage(
                 addView(folderBar, android.widget.FrameLayout.LayoutParams(-2, -2))
             }
             root.addView(folderScroll)
+            lateinit var render: (String) -> Unit
             val sortControl = TextView(activity).apply {
                 textSize = if (isTvRemote) 15f else 11f
                 typeface = Typeface.DEFAULT_BOLD
@@ -146,7 +147,6 @@ internal class RoomSavedPagesPage(
                 folders = bookmarkRepo.folders()
                 history = historyRepo.recent()
             }
-            lateinit var render: (String) -> Unit
             lateinit var drawFolders: () -> Unit
 
             fun createFolderDialog() {
