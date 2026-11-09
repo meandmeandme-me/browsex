@@ -334,7 +334,7 @@ interface BrowseXStorageDao {
 
     @Transaction
     suspend fun renameSavedSessionIfNameAvailable(sessionId: String, name: String): Boolean {
-        if (name.isBlank() || savedSessions().none { it.id == sessionId }) return false
+        if (name.isBlank() || savedSessions(10).none { it.id == sessionId }) return false
         if (otherSavedSessionNameCount(sessionId, name) > 0) return false
         return updateSavedSessionName(sessionId, name) > 0
     }
