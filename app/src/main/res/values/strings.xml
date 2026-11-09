@@ -238,6 +238,7 @@
     <string name="ui_allow_device_access">Allow device access?</string>
     <string name="ui_device_permission_request_message">%1$s wants to use your %2$s.</string>
     <string name="ui_not_now">Not now</string>
+    <string name="ui_and">and</string>
     <string name="ui_allow">Allow</string>
     <string name="ui_block">Block</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">GeckoView does not support revoking this persistent-storage grant.</string>
