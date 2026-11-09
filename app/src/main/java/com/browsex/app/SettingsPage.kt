@@ -176,7 +176,7 @@ internal class SettingsPage(
 
         section("General", "Choose how you browse")
         row("Search engine", "Currently: ${settings.searchEngine}", "Change") {
-            val engines = arrayOf("Google", "DuckDuckGo", "Bing")
+            val engines = arrayOf("Google", "DuckDuckGo", "Bing", "Brave", "Ecosia", "Startpage", "Yahoo")
             AlertDialog.Builder(activity)
                 .setTitle("Default search engine")
                 .setSingleChoiceItems(engines, engines.indexOf(settings.searchEngine).coerceAtLeast(0)) { choice, index ->
