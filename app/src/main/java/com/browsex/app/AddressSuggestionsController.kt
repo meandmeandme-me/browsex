@@ -37,6 +37,7 @@ internal class AddressSuggestionsController(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var queryJob: Job? = null
+    private var queryGeneration: Long = 0L
     private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val panel = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
@@ -72,19 +73,29 @@ internal class AddressSuggestionsController(
     }
 
     fun onQueryChanged(raw: String) {
+        queryGeneration += 1L
+        val generation = queryGeneration
         queryJob?.cancel()
         if (!address.hasFocus()) {
             hide()
             return
         }
-        val query = raw.trim()
+        // Bound work from pasted or automated input before it reaches history/bookmark lookup.
+        val query = raw
+            .filterNot { it.isISOControl() }
+            .trim()
+            .take(MAX_QUERY_LENGTH)
         queryJob = scope.launch {
-            delay(110)
+            delay(SUGGESTION_DEBOUNCE_MS)
             val suggestions = runCatching { loadSuggestions(query) }.getOrElse {
                 android.util.Log.w("Wren", "Address suggestions could not be loaded", it)
                 emptyList()
             }
-            if (!address.hasFocus() || address.text?.toString()?.trim() != query) return@launch
+            if (
+                generation != queryGeneration ||
+                !address.hasFocus() ||
+                address.text?.toString()?.filterNot { it.isISOControl() }?.trim()?.take(MAX_QUERY_LENGTH) != query
+            ) return@launch
             render(query, suggestions)
         }
     }
@@ -101,6 +112,7 @@ internal class AddressSuggestionsController(
     fun hasFocusInside(): Boolean = panel.hasFocus()
 
     fun hide() {
+        queryGeneration += 1L
         queryJob?.cancel()
         panel.animate().cancel()
         if (panel.visibility != View.VISIBLE) return
@@ -277,4 +289,9 @@ internal class AddressSuggestionsController(
 
     private fun dp(value: Int): Int =
         (value * activity.resources.displayMetrics.density).toInt()
+
+    private companion object {
+        const val MAX_QUERY_LENGTH = 256
+        const val SUGGESTION_DEBOUNCE_MS = 110L
+    }
 }
