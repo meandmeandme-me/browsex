@@ -39,6 +39,11 @@ class BrowserSiteOriginPolicyTest {
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https:///missing-host"))
     }
 
+    @Test fun rejectsMalformedIpv6Literals() {
+        assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://[::::]/"))
+        assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://[2001:db8::gg]/"))
+    }
+
     @Test fun rejectsMalformedAndOutOfRangePorts() {
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://example.com:99999"))
         assertNull(BrowserSiteOriginPolicy.canonicalOrigin("https://example.com:"))
