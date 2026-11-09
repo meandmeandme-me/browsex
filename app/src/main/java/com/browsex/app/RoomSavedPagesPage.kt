@@ -315,6 +315,7 @@ internal class RoomSavedPagesPage(
                     row.setOnClickListener { dialog.dismiss(); onOpen(url) }
                     if (!isHistory) row.setOnLongClickListener {
                         val actions = arrayOf(
+                            t("Edit title", "تعديل العنوان"),
                             t("Move to folder", "نقل إلى مجلد"),
                             t("Move up in folder", "تحريك للأعلى في المجلد"),
                             t("Move down in folder", "تحريك للأسفل في المجلد")
@@ -322,6 +323,27 @@ internal class RoomSavedPagesPage(
                         AlertDialog.Builder(activity).setTitle(t("Organize bookmark", "تنظيم المفضلة"))
                             .setItems(actions) { _, action ->
                                 if (action == 0) {
+                                    val field = EditText(activity).apply {
+                                        setText(label)
+                                        maxLines = 2
+                                        setSelection(text?.length ?: 0)
+                                    }
+                                    AlertDialog.Builder(activity)
+                                        .setTitle(t("Edit bookmark title", "تعديل عنوان المفضلة"))
+                                        .setView(field)
+                                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                        .setPositiveButton(t("Save", "حفظ")) { _, _ ->
+                                            activity.lifecycleScope.launch {
+                                                val saved = bookmarkRepo.rename(url, field.text?.toString().orEmpty())
+                                                if (!saved) android.widget.Toast.makeText(
+                                                    activity,
+                                                    t("Enter a valid title.", "أدخل عنوانًا صالحًا."),
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                                reload(); render(search.text?.toString().orEmpty())
+                                            }
+                                        }.show()
+                                } else if (action == 1) {
                                     val currentFolders = folders
                                     val folderLabels = currentFolders.map {
                                         if (it.id == "unfiled") t("Unfiled", "غير مصنف") else it.name
@@ -336,7 +358,7 @@ internal class RoomSavedPagesPage(
                                         }.show()
                                 } else {
                                     activity.lifecycleScope.launch {
-                                        val direction = if (action == 1) -1 else 1
+                                        val direction = if (action == 2) -1 else 1
                                         val moved = bookmarkRepo.moveWithinFolder(url, folderId, direction)
                                         if (!moved) android.widget.Toast.makeText(
                                             activity,
