@@ -28,7 +28,7 @@ internal interface DeviceRegistryRepository {
     suspend fun revokeDevice(deviceId: String)
 }
 
-/** SHA-256 integrity digest is calculated over the decrypted canonical payload bytes. */
+/** SHA-256 digest covers ciphertext only; plaintext hashes must never be exposed as sync metadata. */
 internal data class EncryptedSyncRecord(
     val metadata: SyncRecordMetadata,
     val ciphertext: ByteArray,
@@ -46,13 +46,13 @@ internal data class EncryptedSyncRecord(
 }
 
 internal object SyncPayloadIntegrity {
-    fun digest(plaintext: ByteArray): String =
+    fun digest(ciphertext: ByteArray): String =
         java.security.MessageDigest.getInstance("SHA-256")
-            .digest(plaintext)
+            .digest(ciphertext)
             .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 
-    fun matches(record: EncryptedSyncRecord, plaintext: ByteArray): Boolean {
-        val expected = digest(plaintext)
+    fun matches(record: EncryptedSyncRecord, ciphertext: ByteArray): Boolean {
+        val expected = digest(ciphertext)
         return java.security.MessageDigest.isEqual(
             expected.toByteArray(Charsets.US_ASCII),
             record.payloadDigest.lowercase().toByteArray(Charsets.US_ASCII)
