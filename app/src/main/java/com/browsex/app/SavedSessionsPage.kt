@@ -70,16 +70,56 @@ internal class SavedSessionsPage(
                     list.setOnItemLongClickListener { _, _, position, _ ->
                         val selected = sessions.getOrNull(position) ?: return@setOnItemLongClickListener true
                         AlertDialog.Builder(activity)
-                            .setTitle(t("Delete session?", "حذف الجلسة؟"))
-                            .setMessage(selected.name)
-                            .setNegativeButton(t("Cancel", "إلغاء"), null)
-                            .setPositiveButton(t("Delete", "حذف")) { _, _ ->
-                                activity.lifecycleScope.launch {
-                                    repository.deleteSession(selected.id)
-                                    dialog.dismiss()
-                                    render()
+                            .setTitle(selected.name)
+                            .setItems(arrayOf(t("Rename session", "إعادة تسمية الجلسة"), t("Delete session", "حذف الجلسة"))) { _, action ->
+                                if (action == 0) {
+                                    val input = EditText(activity).apply {
+                                        setText(selected.name)
+                                        setSelection(text.length)
+                                        hint = t("Session name", "اسم الجلسة")
+                                        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                                        setSingleLine(true)
+                                    }
+                                    AlertDialog.Builder(activity)
+                                        .setTitle(t("Rename session", "إعادة تسمية الجلسة"))
+                                        .setView(input)
+                                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                        .setPositiveButton(t("Save", "حفظ")) { _, _ ->
+                                            activity.lifecycleScope.launch {
+                                                val renamed = runCatching {
+                                                    repository.renameSession(selected.id, input.text?.toString().orEmpty())
+                                                }.onFailure { android.util.Log.e("Wren", "Could not rename saved session", it) }
+                                                    .getOrDefault(false)
+                                                android.widget.Toast.makeText(
+                                                    activity,
+                                                    if (renamed) t("Session renamed", "تمت إعادة تسمية الجلسة")
+                                                    else t("Name is empty or already used. Choose a unique name up to 40 characters.", "الاسم فارغ أو مستخدم. اختر اسمًا فريدًا لا يتجاوز 40 حرفًا."),
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                                if (renamed) {
+                                                    dialog.dismiss()
+                                                    render()
+                                                }
+                                            }
+                                        }
+                                        .show()
+                                } else {
+                                    AlertDialog.Builder(activity)
+                                        .setTitle(t("Delete session?", "حذف الجلسة؟"))
+                                        .setMessage(selected.name)
+                                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                        .setPositiveButton(t("Delete", "حذف")) { _, _ ->
+                                            activity.lifecycleScope.launch {
+                                                repository.deleteSession(selected.id)
+                                                dialog.dismiss()
+                                                render()
+                                            }
+                                        }
+                                        .show()
                                 }
-                            }.show()
+                            }
+                            .setNegativeButton(t("Cancel", "إلغاء"), null)
+                            .show()
                         true
                     }
                     dialog.show()
