@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BrowserNotificationPermissionCoordinatorTest {
+    @Test fun websiteNotificationsRequireAnExplicitPersistedGrant() {
+        assertTrue(BrowserSiteNotificationPolicy.isAllowed("allow"))
+        assertFalse(BrowserSiteNotificationPolicy.isAllowed("deny"))
+        assertFalse(BrowserSiteNotificationPolicy.isAllowed("ask"))
+        assertFalse(BrowserSiteNotificationPolicy.isAllowed(null))
+        assertFalse(BrowserSiteNotificationPolicy.isAllowed(""))
+    }
+
     @Test fun coalescesConcurrentRequestsAndResolvesEveryCallback() {
         var launched = 0
         var cleared = 0
