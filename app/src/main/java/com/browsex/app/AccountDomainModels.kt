@@ -86,4 +86,6 @@ data class BrowseXAccount(
     val identity: AccountIdentity,
     val connectionState: AccountConnectionState,
     val connectedAtEpochMillis: Long? = null
-)
+) {
+    init { require(connectedAtEpochMillis == null || connectedAtEpochMillis >= 0L) }
+}
