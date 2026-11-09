@@ -60,7 +60,10 @@ internal class RoomSessionRepository(
     ): Boolean {
         val normalized = url.trim()
         if (!isSafeRestorableUrl(normalized) || normalized == HOME_URL || closedAt < 0L) return false
-        val safeTitle = title.trim().take(MAX_RECENT_TITLE)
+        val safeTitle = title
+            .filterNot { it.isISOControl() }
+            .trim()
+            .take(MAX_RECENT_TITLE)
             .ifBlank { android.net.Uri.parse(normalized).host.orEmpty().ifBlank { normalized } }
         pruneExpiredRecentlyClosed(closedAt)
         dao.recordRecentlyClosed(RecentlyClosedTabEntity(
@@ -84,7 +87,14 @@ internal class RoomSessionRepository(
     /** Atomically consumes only the requested restore entries, preserving newer unselected items. */
     suspend fun consumeRecentlyClosed(ids: List<String>): List<RecentlyClosedTabEntity> {
         pruneExpiredRecentlyClosed()
-        return dao.consumeRecentlyClosedTabs(ids)
+        // A restore action should never be able to submit an unbounded batch from stale UI state.
+        val safeIds = ids.asSequence()
+            .filter { it.length in 1..MAX_RECENT_ID_LENGTH && it.startsWith("closed_") }
+            .distinct()
+            .take(MAX_RECENTLY_CLOSED)
+            .toList()
+        if (safeIds.isEmpty()) return emptyList()
+        return dao.consumeRecentlyClosedTabs(safeIds)
     }
 
     private suspend fun pruneExpiredRecentlyClosed(now: Long = System.currentTimeMillis()) {
@@ -103,6 +113,7 @@ internal class RoomSessionRepository(
         const val MAX_URL_LENGTH = 4096
         const val MAX_SESSION_NAME = 40
         const val MAX_RECENT_TITLE = 180
+        const val MAX_RECENT_ID_LENGTH = 64
         const val MAX_RECENTLY_CLOSED = 10
         const val RECENTLY_CLOSED_RETENTION_MILLIS = 30L * 24L * 60L * 60L * 1000L
     }
