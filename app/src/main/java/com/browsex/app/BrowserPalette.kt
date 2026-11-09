@@ -28,11 +28,21 @@ internal data class BrowseXColors(
                 0xFFBE414B.toInt(), 0xFF1C7D53.toInt(), 0xFFE5EDFF.toInt(), false
             )
 
+            val accentPair = when (settings.accentColor) {
+                "violet" -> if (dark) 0xFFB8A5FF.toInt() to 0xFF40336A.toInt() else 0xFF6844D6.toInt() to 0xFFECE5FF.toInt()
+                "emerald" -> if (dark) 0xFF75DDB0.toInt() to 0xFF244E43.toInt() else 0xFF16835A.toInt() to 0xFFDDF5E9.toInt()
+                "rose" -> if (dark) 0xFFFF9DB8.toInt() to 0xFF5B3043.toInt() else 0xFFC13F70.toInt() to 0xFFFFE5EE.toInt()
+                "amber" -> if (dark) 0xFFFFD477.toInt() to 0xFF594627.toInt() else 0xFFA66A00.toInt() to 0xFFFFF0D1.toInt()
+                else -> base.accent to base.selected
+            }
+
             // Accessibility preferences apply to every native page, not just the main dock.
             // Reduced transparency removes alpha layers; high contrast also strengthens text,
             // borders and selected states. Keep semantic colors and the base Wren identity.
             val opaqueSurfaces = settings.reduceTransparency || settings.highContrast
             return base.copy(
+                accent = accentPair.first,
+                selected = accentPair.second,
                 panel = if (opaqueSurfaces) {
                     if (dark) 0xFF17283E.toInt() else 0xFFFFFFFF.toInt()
                 } else base.panel,
