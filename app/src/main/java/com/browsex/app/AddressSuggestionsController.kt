@@ -3,6 +3,7 @@ package com.browsex.app
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -40,9 +41,9 @@ internal class AddressSuggestionsController(
     private val panel = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         background = GradientDrawable().apply {
-            setColor(colors.panel)
+            setColor(this@AddressSuggestionsController.colors.panel)
             cornerRadius = dp(22).toFloat()
-            setStroke(dp(1), colors.line)
+            setStroke(dp(1), this@AddressSuggestionsController.colors.line)
         }
         elevation = dp(18).toFloat()
         clipToOutline = true
@@ -59,7 +60,7 @@ internal class AddressSuggestionsController(
     private val rows = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
 
     init {
-        scroll.addView(rows, ScrollView.LayoutParams(-1, -2))
+        scroll.addView(rows, ViewGroup.LayoutParams(-1, -2))
         panel.addView(scroll, LinearLayout.LayoutParams(-1, -2))
         root.addView(panel, FrameLayout.LayoutParams(
             -1, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
@@ -138,7 +139,7 @@ internal class AddressSuggestionsController(
             letterSpacing = .06f
             setTextColor(palette.muted)
             setPadding(dp(13), dp(8), dp(13), dp(9))
-            isImportantForAccessibility = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         rows.addView(heading, LinearLayout.LayoutParams(-1, -2))
 
