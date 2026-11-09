@@ -176,6 +176,53 @@ internal class DownloadsPage(
             topMargin = dp(12)
         })
         var searchQuery = ""
+        var selectedFilter = "all"
+        val filterBar = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val filterLabels = listOf(
+            "all" to t("All", "الكل"),
+            "active" to t("In progress", "قيد التنزيل"),
+            "completed" to t("Completed", "مكتملة"),
+            "issues" to t("Issues", "تحتاج انتباهًا")
+        )
+        val filterButtons = mutableMapOf<String, TextView>()
+        fun renderFilterSelection() {
+            filterButtons.forEach { (key, button) ->
+                val selected = key == selectedFilter
+                button.setTextColor(if (selected) colors.accent else colors.muted)
+                button.background = rounded(if (selected) colors.card else colors.canvas, 18)
+                button.alpha = if (selected) 1f else 0.78f
+            }
+        }
+        filterLabels.forEach { (key, label) ->
+            val chip = TextView(activity).apply {
+                text = label
+                textSize = if (isTvRemote) 15f else 11f
+                gravity = Gravity.CENTER
+                setPadding(dp(13), dp(9), dp(13), dp(9))
+                minimumHeight = dp(if (isTvRemote) 54 else 42)
+                isClickable = true
+                isFocusable = true
+                isFocusableInTouchMode = false
+                foreground = WrenFocusStyle.overlay(activity, 18, colors.accent)
+                contentDescription = label
+                setOnClickListener {
+                    selectedFilter = key
+                    renderFilterSelection()
+                    render()
+                }
+            }
+            filterButtons[key] = chip
+            filterBar.addView(chip, LinearLayout.LayoutParams(-2, -2).apply {
+                marginEnd = dp(7)
+            })
+        }
+        root.addView(filterBar, LinearLayout.LayoutParams(-1, -2).apply {
+            topMargin = dp(8)
+        })
+        renderFilterSelection()
 
         val scroll = ScrollView(activity)
         val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -239,10 +286,18 @@ internal class DownloadsPage(
                 if (normalizedSearchQuery.isNotBlank() &&
                     !BrowserTextNormalizer.normalize(record.displayName).contains(normalizedSearchQuery)
                 ) return@forEach
-                count++
                 val recordIsActive = record.status == "queued" || record.status == "running"
                 val recordIsFailed = record.status == "failed"
                 val recordIsCancelled = record.status == "cancelled"
+                val recordIsCompleted = !recordIsActive && !recordIsFailed && !recordIsCancelled
+                val matchesFilter = when (selectedFilter) {
+                    "active" -> recordIsActive
+                    "completed" -> recordIsCompleted
+                    "issues" -> recordIsFailed || recordIsCancelled
+                    else -> true
+                }
+                if (!matchesFilter) return@forEach
+                count++
                 val item = LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -440,12 +495,23 @@ internal class DownloadsPage(
                     if (idCol < 0) continue
                     val id = c.getLong(idCol)
                     seenIds.add(id)
-                    count++
                     val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
                     if (normalizedSearchQuery.isNotBlank() &&
                         !BrowserTextNormalizer.normalize(title).contains(normalizedSearchQuery)
                     ) continue
                     val status = if (statusCol >= 0) c.getInt(statusCol) else -1
+                    val isPlatformActive = status == DownloadManager.STATUS_PENDING ||
+                        status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PAUSED
+                    val isPlatformCompleted = status == DownloadManager.STATUS_SUCCESSFUL
+                    val isPlatformIssue = status == DownloadManager.STATUS_FAILED
+                    val matchesFilter = when (selectedFilter) {
+                        "active" -> isPlatformActive
+                        "completed" -> isPlatformCompleted
+                        "issues" -> isPlatformIssue
+                        else -> true
+                    }
+                    if (!matchesFilter) continue
+                    count++
                     if (status == DownloadManager.STATUS_PENDING ||
                         status == DownloadManager.STATUS_RUNNING ||
                         status == DownloadManager.STATUS_PAUSED
@@ -642,10 +708,19 @@ internal class DownloadsPage(
                 count++
             }
             if (count == 0) list.addView(TextView(activity).apply {
-                text = if (normalizedSearchQuery.isNotBlank()) {
-                    t("No downloads match your search.", "لا توجد تنزيلات تطابق بحثك.")
-                } else {
-                    t("No Wren downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
+                text = when {
+                    normalizedSearchQuery.isNotBlank() && selectedFilter != "all" ->
+                        t("No downloads match this search and filter.", "لا توجد تنزيلات تطابق البحث والتصفية.")
+                    normalizedSearchQuery.isNotBlank() ->
+                        t("No downloads match your search.", "لا توجد تنزيلات تطابق بحثك.")
+                    selectedFilter == "active" ->
+                        t("No downloads are in progress.", "لا توجد تنزيلات قيد التنفيذ.")
+                    selectedFilter == "completed" ->
+                        t("No completed downloads yet.", "لا توجد تنزيلات مكتملة بعد.")
+                    selectedFilter == "issues" ->
+                        t("No downloads need attention.", "لا توجد تنزيلات تحتاج إلى انتباه.")
+                    else ->
+                        t("No Wren downloads yet. Files you download from websites will appear here.", "لا توجد تنزيلات بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.")
                 }
                 textSize = 13f
                 gravity = Gravity.CENTER
