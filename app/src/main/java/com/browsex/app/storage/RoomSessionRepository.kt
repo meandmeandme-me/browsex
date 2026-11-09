@@ -9,7 +9,7 @@ internal class RoomSessionRepository(
     private val dao: BrowseXStorageDao
 ) {
     suspend fun sessions(): List<RoomSavedSession> {
-        return dao.savedSessions().take(MAX_SAVED_SESSIONS).mapNotNull { saved ->
+        return dao.savedSessions(MAX_SAVED_SESSIONS).mapNotNull { saved ->
             val name = normalizeDisplayText(saved.name, MAX_SESSION_NAME)
             if (saved.id.length !in 1..MAX_SESSION_ID_LENGTH ||
                 !saved.id.startsWith("session_") || name.isBlank() || saved.savedAt < 0L
@@ -61,7 +61,7 @@ internal class RoomSessionRepository(
 
     suspend fun recentlyClosed(): List<RecentlyClosedTabEntity> {
         pruneExpiredRecentlyClosed()
-        return dao.recentlyClosedTabs()
+        return dao.recentlyClosedTabs(MAX_RECENTLY_CLOSED)
             .asSequence()
             .filter { it.id.length in 1..MAX_RECENT_ID_LENGTH && it.id.startsWith("closed_") }
             .filter { it.closedAt >= 0L && isSafeRestorableUrl(it.url) && it.url != HOME_URL }
