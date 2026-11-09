@@ -275,6 +275,15 @@ class AdaptivePresentationPolicyTest {
     }
 
     @Test
+    fun userCanChooseBottomBarOnExpandedWindow() {
+        val result = AdaptivePresentationPolicy.resolve(
+            snapshot(windowWidthDp = 900, addressBarPreference = AddressBarPreference.BOTTOM)
+        )
+
+        assertEquals(WrenAddressPlacement.BOTTOM, result.addressPlacement)
+    }
+
+    @Test
     fun userCanChooseTopBarOnPhone() {
         val result = AdaptivePresentationPolicy.resolve(
             snapshot(addressBarPreference = AddressBarPreference.TOP)
