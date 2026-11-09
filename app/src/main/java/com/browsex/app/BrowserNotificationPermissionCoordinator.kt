@@ -28,7 +28,7 @@ internal class BrowserNotificationPermissionCoordinator(
             return
         }
         if (permissionGranted()) {
-            clearDenial()
+            runCatching { clearDenial() }
             deliver(callback, notificationsEnabled())
             return
         }
@@ -50,7 +50,7 @@ internal class BrowserNotificationPermissionCoordinator(
                 // a launcher failure must resolve every waiting Gecko callback exactly once.
                 isInFlight = false
                 resolveCallbacks(false)
-                afterResolved()
+                runCatching { afterResolved() }
             }
         }
     }
@@ -58,9 +58,13 @@ internal class BrowserNotificationPermissionCoordinator(
     fun onResult(granted: Boolean) {
         if (!isInFlight) return
         isInFlight = false
-        if (granted) clearDenial() else markDenied()
-        resolveCallbacks(granted && notificationsEnabled())
-        afterResolved()
+        // Persistence failures must never strand Gecko's waiting permission callbacks.
+        // The runtime result remains authoritative for this request; a later request can
+        // retry the preference update without leaving the coordinator stuck in-flight.
+        if (granted) runCatching { clearDenial() } else runCatching { markDenied() }
+        val allowed = granted && runCatching { permissionGranted() && notificationsEnabled() }.getOrDefault(false)
+        resolveCallbacks(allowed)
+        runCatching { afterResolved() }
     }
 
     fun rejectAll() {
