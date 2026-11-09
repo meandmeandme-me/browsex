@@ -20,13 +20,12 @@ class SiteInfoPage(
     private val url: String,
     private val title: String,
     private val permissions: List<GeckoSession.PermissionDelegate.ContentPermission>,
-    private val store: BrowserStore,
     private val onPermissionChange: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
     private val onResetPermissions: () -> Unit,
     private val onClearSiteData: () -> Unit,
     private val privateMode: Boolean = false
 ) {
-    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private val localPermissionValues = mutableMapOf<Pair<Int, String>, Int>()
     private var activePageDialog: AlertDialog? = null
@@ -62,7 +61,7 @@ class SiteInfoPage(
             orientation = LinearLayout.VERTICAL
             setPadding(WrenAdaptiveUi.horizontalSafePadding(activity, 20), WrenAdaptiveUi.verticalSafePadding(activity, 18), WrenAdaptiveUi.horizontalSafePadding(activity, 20), dp(if (isTvRemote) 28 else 18))
             setBackgroundColor(colors.canvas)
-            BrowseXColors.applyDirection(this, store)
+            BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
         }
         root.addView(TextView(activity).apply {
             text = t("SITE INFORMATION", "معلومات الموقع")
