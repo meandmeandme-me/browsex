@@ -37,6 +37,12 @@ internal data class EncryptedSyncRecord(
     init {
         require(ciphertext.size in 1..MAX_CIPHERTEXT_BYTES)
         require(payloadDigest.matches(SHA256_HEX))
+        require(
+            java.security.MessageDigest.isEqual(
+                payloadDigest.lowercase().toByteArray(Charsets.US_ASCII),
+                SyncPayloadIntegrity.digest(ciphertext).toByteArray(Charsets.US_ASCII)
+            )
+        ) { "Encrypted sync payload digest does not match ciphertext" }
     }
 
     private companion object {
@@ -51,7 +57,8 @@ internal object SyncPayloadIntegrity {
             .digest(ciphertext)
             .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 
-    fun matches(record: EncryptedSyncRecord, ciphertext: ByteArray): Boolean {
+    fun matches(record: EncryptedSyncRecord, ciphertext: ByteArray = record.ciphertext): Boolean {
+        if (ciphertext.size !in 1..8 * 1024 * 1024) return false
         val expected = digest(ciphertext)
         return java.security.MessageDigest.isEqual(
             expected.toByteArray(Charsets.US_ASCII),
