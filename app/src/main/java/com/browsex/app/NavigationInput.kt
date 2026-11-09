@@ -12,6 +12,10 @@ internal object NavigationInput {
     private const val GOOGLE = "https://www.google.com/search?q="
     private const val DUCK_DUCK_GO = "https://html.duckduckgo.com/html/?q="
     private const val BING = "https://www.bing.com/search?q="
+    private const val BRAVE = "https://search.brave.com/search?q="
+    private const val ECOSIA = "https://www.ecosia.org/search?q="
+    private const val STARTPAGE = "https://www.startpage.com/sp/search?query="
+    private const val YAHOO = "https://search.yahoo.com/search?p="
 
     fun normalize(raw: String, searchEngine: String, homeUrl: String): String {
         val value = raw.trim()
@@ -90,6 +94,10 @@ internal object NavigationInput {
         val base = when (engine) {
             "DuckDuckGo" -> DUCK_DUCK_GO
             "Bing" -> BING
+            "Brave" -> BRAVE
+            "Ecosia" -> ECOSIA
+            "Startpage" -> STARTPAGE
+            "Yahoo" -> YAHOO
             else -> GOOGLE
         }
         val encoded = URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
