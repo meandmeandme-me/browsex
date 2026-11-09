@@ -58,7 +58,7 @@ internal class RoomSessionRepository(
     }
 
     suspend fun renameSession(id: String, rawName: String): Boolean {
-        val name = rawName.trim().take(MAX_SESSION_NAME)
+        val name = normalizeDisplayText(rawName, MAX_SESSION_NAME)
         if (id.isBlank() || name.isBlank()) return false
         return dao.renameSavedSessionIfNameAvailable(id, name)
     }
@@ -70,7 +70,7 @@ internal class RoomSessionRepository(
             .filter { it.id.length in 1..MAX_RECENT_ID_LENGTH && it.id.startsWith("closed_") }
             .filter { it.closedAt >= 0L && isSafeRestorableUrl(it.url) && it.url != HOME_URL }
             .take(MAX_RECENTLY_CLOSED)
-            .toList()
+            .map { it.copy(title = normalizeDisplayText(it.title, MAX_RECENT_TITLE)) }
     }
 
     suspend fun recordRecentlyClosed(
