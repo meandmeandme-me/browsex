@@ -300,6 +300,18 @@ For Android TV distribution, the app needs the proper Leanback feature declarati
 
 Thresholds must be tuned from measured frame time and memory behavior, not chosen based on marketing model lists.
 
+## 7A. Current platform submission baseline (reviewed 9 November 2026)
+
+The Gradle project was updated from target SDK 35 to **target SDK 36 (Android 16)**. This is not just a design preference: Google Play states that from 31 August 2026, new apps and app updates must target API 36+ (with separate lower floors for Android TV-only and some other form factors). Wren is a shared mobile/tablet/TV Android app, so the shared mobile target must meet API 36.
+
+Targeting API 36 also means:
+- Android 16 enforces edge-to-edge; the prior opt-out is disabled on API 36. Wren uses `WindowCompat.setDecorFitsSystemWindows(window, false)`, safe inset padding including display cutouts, IME visibility tracking, and system-bar icon appearance derived from the active theme. Validate gesture and three-button navigation separately.
+- Predictive back is active by default on Android 16. Wren already uses `OnBackPressedDispatcher`; regression-test the back priority: exit fullscreen, navigate Gecko history, close the active tab when multiple tabs exist, then finish the Activity.
+- Large-screen windows must adapt across portrait/landscape, split-screen and arbitrary resizing. Keep the existing folding observer and current-window layout policy, but verify the actual browser content and overlays do not cross hinge/occlusion bounds.
+- Android 17 / API 37 makes large-screen orientation/resizability restrictions non-optional for apps targeting 37. Keep it in the forward-compatibility matrix; do not add fixed orientation/aspect-ratio assumptions.
+
+The current change raises targetSdk and hardens insets; CI must confirm compilation, tests, lint and APK packaging. It does not replace physical-device validation on API 36.
+
 ## 8. Implementation sequence
 
 1. Keep the current browser engine and product features stable while research becomes a versioned design contract.
@@ -401,6 +413,12 @@ Thresholds must be tuned from measured frame time and memory behavior, not chose
 - Android WindowManager blur availability: https://developer.android.com/reference/android/view/WindowManager
 - Android RenderEffect: https://developer.android.com/reference/android/graphics/RenderEffect
 - MDN backdrop-filter compatibility: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter
+
+### Play and Android 16/17 platform requirements
+- Google Play target API requirement (31 August 2026): https://support.google.com/googleplay/android-developer/answer/11926878
+- Android 16 behavior changes for target API 36 (edge-to-edge and predictive back): https://developer.android.com/about/versions/16/behavior-changes-16
+- Android Views edge-to-edge guide: https://developer.android.com/develop/ui/views/layout/edge-to-edge
+- Android 17 large-screen resizability: https://developer.android.com/about/versions/17/changes/ff-restrictions-ignored
 
 ### Adaptive devices, TV and performance
 - Android window size classes: https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes
