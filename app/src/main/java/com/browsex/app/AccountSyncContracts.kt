@@ -108,19 +108,13 @@ internal interface AccountDataLifecycleRepository {
 internal object SyncConsentPolicy {
     const val CURRENT_POLICY_VERSION = 1
 
-    private val enabledByDefault = setOf(
-        SyncCategory.BOOKMARKS,
-        SyncCategory.READING_LIST,
-        SyncCategory.BROWSER_PREFERENCES,
-        SyncCategory.NAMED_SESSIONS
-    )
-
     fun initialChoices(nowEpochMillis: Long): List<SyncConsentEntry> {
         require(nowEpochMillis >= 0L)
-        return SyncCategory.entries.map { category ->
+        return SyncCategory.values().map { category ->
             SyncConsentEntry(
                 category = category,
-                enabled = category in enabledByDefault,
+                // Cloud sync remains off until the user explicitly enables each category.
+                enabled = false,
                 updatedAtEpochMillis = nowEpochMillis,
                 policyVersion = CURRENT_POLICY_VERSION
             )
