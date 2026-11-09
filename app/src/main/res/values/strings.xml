@@ -373,4 +373,6 @@
     <string name="ui_could_not_reset_permissions">Could not reset permissions</string>
     <string name="ui_permission_updated">Permission updated</string>
     <string name="ui_could_not_update_permission">Could not update permission</string>
+    <string name="ui_search_tabs">Search tabs</string>
+    <string name="ui_no_matching_tabs">No matching tabs</string>
 </resources>
