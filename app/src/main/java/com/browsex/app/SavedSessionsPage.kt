@@ -111,7 +111,7 @@ internal class SavedSessionsPage(
                     }.onFailure { android.util.Log.e("Wren", "Could not save session", it) }.getOrDefault(false)
                     android.widget.Toast.makeText(
                         activity,
-                        if (saved) t("Session saved", "تم حفظ الجلسة") else t("Could not save session. Names must be unique and up to 10 sessions are supported.", "تعذر حفظ الجلسة. يجب أن يكون الاسم فريدًا والحد الأقصى 10 جلسات."),
+                        if (saved) t("Session saved", "تم حفظ الجلسة") else t("Could not save session. Use a name up to 40 characters; up to 10 sessions are supported.", "تعذر حفظ الجلسة. استخدم اسمًا لا يتجاوز 40 حرفًا؛ الحد الأقصى 10 جلسات."),
                         android.widget.Toast.LENGTH_SHORT
                     ).show()
                     if (saved) refresh()
