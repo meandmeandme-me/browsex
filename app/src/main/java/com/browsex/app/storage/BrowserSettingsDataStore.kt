@@ -61,6 +61,7 @@ internal class BrowserSettingsDataStore(
         reduceMotion = p[Keys.reduceMotion] ?: false,
         highContrast = p[Keys.highContrast] ?: false,
         searchEngine = BrowserPreferencePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
+        accentColor = BrowserPreferencePolicy.normalizeAccentColor(p[Keys.accentColor]),
         deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
     )
 
@@ -82,6 +83,7 @@ internal class BrowserSettingsDataStore(
         p[Keys.reduceMotion] = settings.reduceMotion
         p[Keys.highContrast] = settings.highContrast
         p[Keys.searchEngine] = BrowserPreferencePolicy.normalizeSearchEngine(settings.searchEngine)
+        p[Keys.accentColor] = BrowserPreferencePolicy.normalizeAccentColor(settings.accentColor)
         p[Keys.deniedPlatformPermissions] = settings.deniedPlatformPermissions
     }
 
@@ -100,6 +102,7 @@ internal class BrowserSettingsDataStore(
         val reduceMotion = booleanPreferencesKey("reduce_motion")
         val highContrast = booleanPreferencesKey("high_contrast")
         val searchEngine = stringPreferencesKey("search_engine")
+        val accentColor = stringPreferencesKey("accent_color")
         val deniedPlatformPermissions = stringSetPreferencesKey("denied_platform_permissions")
     }
 }
@@ -119,7 +122,8 @@ internal data class BrowserSettings(
     val reduceMotion: Boolean = false,
     val highContrast: Boolean = false,
     val searchEngine: String = "Google",
-    val deniedPlatformPermissions: Set<String> = emptySet()
+    val deniedPlatformPermissions: Set<String> = emptySet(),
+    val accentColor: String = "ocean"
 )
 
 private val Context.browserSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
