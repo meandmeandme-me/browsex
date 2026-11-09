@@ -46,7 +46,7 @@ internal object BookmarkHtmlCodec {
                     val folderName = folderStack.lastOrNull()?.takeIf(String::isNotBlank)
                     val folderId = folderName?.let { name ->
                         folderIds.getOrPut(name.lowercase(java.util.Locale.ROOT)) {
-                            val id = "html_\${UUID.randomUUID()}"
+                            val id = "html_${UUID.randomUUID()}"
                             if (folders.length() < MAX_FOLDERS) {
                                 folders.put(JSONObject().put("id", id).put("name", name))
                                 id
