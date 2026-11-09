@@ -11,6 +11,14 @@ class BrowserPreferencePolicyTest {
     }
 
     @Test
+    fun normalizesSearchEngineAndRejectsUnsupportedValues() {
+        assertEquals("Google", BrowserPreferencePolicy.normalizeSearchEngine(null))
+        assertEquals("Google", BrowserPreferencePolicy.normalizeSearchEngine("Other"))
+        assertEquals("Bing", BrowserPreferencePolicy.normalizeSearchEngine(" Bing "))
+        assertEquals("DuckDuckGo", BrowserPreferencePolicy.normalizeSearchEngine("DuckDuckGo"))
+    }
+
+    @Test
     fun fallsBackToSystemForInvalidLanguageTags() {
         assertEquals("system", BrowserPreferencePolicy.normalizeLanguageTag(null))
         assertEquals("system", BrowserPreferencePolicy.normalizeLanguageTag("system"))
