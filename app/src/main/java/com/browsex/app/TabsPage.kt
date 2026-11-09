@@ -581,14 +581,41 @@ internal class TabsPage(
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     currentSearchQuery = s?.toString().orEmpty()
                     renderTabGrid(currentSearchQuery)
+                    clearSearch.visibility = if (currentSearchQuery.isEmpty()) View.GONE else View.VISIBLE
                 }
                 override fun afterTextChanged(s: Editable?) = Unit
+            })
+        }
+        val clearSearch = TextView(activity).apply {
+            text = "×"
+            textSize = if (tvRemote) 27f else 23f
+            gravity = Gravity.CENTER
+            setTextColor(colors.muted)
+            contentDescription = tr("Clear tab search")
+            background = focusableSurface(colors.panel, 16)
+            minWidth = dp(if (tvRemote) 60 else 48)
+            minHeight = dp(if (tvRemote) 60 else 50)
+            isClickable = true
+            isFocusable = true
+            isFocusableInTouchMode = false
+            visibility = View.GONE
+            setOnClickListener {
+                searchTabs.text?.clear()
+                searchTabs.requestFocus()
+            }
+        }
+        val searchRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(searchTabs, LinearLayout.LayoutParams(0, dp(if (tvRemote) 60 else 50), 1f))
+            addView(clearSearch, LinearLayout.LayoutParams(dp(if (tvRemote) 60 else 48), dp(if (tvRemote) 60 else 50)).apply {
+                marginStart = dp(6)
             })
         }
         page.addView(filterRow, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(12)
         })
-        page.addView(searchTabs, LinearLayout.LayoutParams(-1, dp(if (tvRemote) 60 else 50)).apply {
+        page.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(8)
         })
         renderTabGrid()
