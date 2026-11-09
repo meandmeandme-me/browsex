@@ -88,7 +88,7 @@ internal class SettingsPage(
             setTextColor(ink)
         })
         heading.addView(TextView(activity).apply {
-            text = t("Make Browse X work the way you like")
+            text = t("Make Wren Browser work the way you like")
             textSize = if (isTvRemote) 15f else 12f
             setTextColor(muted)
             setPadding(0, dp(3), 0, 0)
@@ -452,14 +452,14 @@ internal class SettingsPage(
         row("About Browse X", "A calmer way to explore the web", "ⓘ") {
             AlertDialog.Builder(activity)
                 .setTitle("Browse X")
-                .setMessage(t("Browse X is powered by Mozilla GeckoView. Some browser features are still being built."))
+                .setMessage(t("Wren Browser is powered by Mozilla GeckoView. Some browser features are still being built."))
                 .setPositiveButton(t("Done"), null)
                 .show()
         }
 
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val footer = TextView(activity).apply {
-            text = t("Browse X  ·  Built for the open web")
+            text = t("Wren Browser  ·  Built for the open web")
             textSize = 11f
             gravity = Gravity.CENTER
             setTextColor(muted)
