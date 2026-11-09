@@ -77,3 +77,10 @@ CI runs JVM tests, Android Lint, APK checks, and artifact generation. A successf
 4. Keep UI state, domain rules, persistence, and browser-engine integration separated.
 5. Update tests and documentation whenever behavior changes.
 6. Mark each feature as implemented, tested, or planned accurately.
+
+
+## Android compatibility
+
+- Minimum Android: API 26 (Android 8.0).
+- Compile SDK: 36; target SDK: 36 (Android 16) for current Google Play submissions.
+- Adaptive UI target: compact and large phones, foldables, tablets, desktop/connected displays, and a dedicated Android TV remote flow. Samsung Tizen and LG webOS require separate clients.
