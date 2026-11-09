@@ -14,7 +14,11 @@ data class AccountIdentity(
     val email: String? = null,
     val emailVerified: Boolean = false
 ) {
-    init { require(providerSubject.isNotBlank()) }
+    init {
+        require(providerSubject.isNotBlank() && providerSubject.length <= 1024)
+        require(displayName == null || displayName.length <= 256)
+        require(email == null || email.length <= 320)
+    }
 }
 
 enum class AccountConnectionState {
@@ -50,8 +54,8 @@ data class SyncDevice(
     val canRevoke: Boolean
 ) {
     init {
-        require(deviceId.isNotBlank())
-        require(displayName.isNotBlank())
+        require(deviceId.isNotBlank() && deviceId.length <= 256)
+        require(displayName.isNotBlank() && displayName.length <= 128)
         require(lastSeenEpochMillis >= 0L)
     }
 }
@@ -68,11 +72,11 @@ data class SyncRecordMetadata(
     val originDeviceId: String
 ) {
     init {
-        require(recordId.isNotBlank())
-        require(schemaVersion > 0)
+        require(recordId.isNotBlank() && recordId.length <= 256)
+        require(schemaVersion in 1..10_000)
         require(revision >= 0L)
         require(modifiedAtEpochMillis >= 0L)
-        require(originDeviceId.isNotBlank())
+        require(originDeviceId.isNotBlank() && originDeviceId.length <= 256)
     }
 }
 
