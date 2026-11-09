@@ -161,8 +161,6 @@ class MainActivity : AppCompatActivity() {
     internal val currentBrowserSettings: BrowserSettings get() = browserSettingsSnapshot
     internal val currentAdaptivePresentation: AdaptivePresentationConfig? get() = adaptivePresentationConfig
     private var browserSettingsLoaded = false
-    // Transitional UI compatibility facade; feature persistence is owned by Room/DataStore.
-    private val store: BrowserStore by lazy(LazyThreadSafetyMode.NONE) { BrowserStore(this) }
     internal val storageRuntime: BrowserStorageRuntime
         get() = (application as BrowseXApplication).storageRuntime
     internal fun updateBrowserSettings(
@@ -1760,7 +1758,6 @@ class MainActivity : AppCompatActivity() {
     private fun showTabs() {
         TabsPage(
             activity = this,
-            store = store,
             tabsProvider = { tabs },
             activeTabProvider = { activeTab },
             onCreateTab = { url -> createTab(url) },
@@ -1865,7 +1862,7 @@ class MainActivity : AppCompatActivity() {
                     if (content.isBlank()) {
                         toast(BrowseXStrings.text(this@MainActivity, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
                     } else {
-                        ReaderPage(this, tab.title, sourceUrl, content, store).show()
+                        ReaderPage(this, tab.title, sourceUrl, content).show()
                     }
                 }
             },
@@ -2144,7 +2141,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
-        DownloadsPage(this, store) { downloadId ->
+        DownloadsPage(this) { downloadId ->
             streamDownloadCoordinator.cancel(downloadId)
         }.show()
     }
