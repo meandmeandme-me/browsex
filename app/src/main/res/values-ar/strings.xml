@@ -379,4 +379,5 @@
     <string name="ui_regular_tabs">العادية</string>
     <string name="ui_private_tabs">الخاصة</string>
     <string name="ui_matching_tabs">علامات مطابقة</string>
+    <string name="ui_regular">العادية</string>
 </resources>
