@@ -1753,8 +1753,9 @@ class MainActivity : AppCompatActivity() {
             needle.isBlank() || title.lowercase(java.util.Locale.ROOT).contains(needle) ||
                 url.lowercase(java.util.Locale.ROOT).contains(needle)
 
+        val privateMode = activeTab?.privateMode == true
         val openTabs = tabs.asSequence()
-            .filter { !it.privateMode && it.url.startsWith("http", ignoreCase = true) }
+            .filter { it.privateMode == privateMode && it.url.startsWith("http", ignoreCase = true) }
             .filter { matches(it.title, it.url) }
             .map { tab ->
                 AddressSuggestion(
@@ -1777,17 +1778,21 @@ class MainActivity : AppCompatActivity() {
                 )
             }
             .toList()
-        val history = storage.history.recent(80).asSequence()
-            .filter { matches(it.title, it.url) }
-            .map { item ->
-                AddressSuggestion(
-                    kind = AddressSuggestionKind.HISTORY,
-                    title = item.title.ifBlank { android.net.Uri.parse(item.url).host.orEmpty() },
-                    subtitle = item.url,
-                    value = item.url
-                )
-            }
-            .toList()
+        val history = if (privateMode) {
+            emptyList()
+        } else {
+            storage.history.recent(80).asSequence()
+                .filter { matches(it.title, it.url) }
+                .map { item ->
+                    AddressSuggestion(
+                        kind = AddressSuggestionKind.HISTORY,
+                        title = item.title.ifBlank { android.net.Uri.parse(item.url).host.orEmpty() },
+                        subtitle = item.url,
+                        value = item.url
+                    )
+                }
+                .toList()
+        }
         return (openTabs + bookmarks + history)
             .distinctBy { it.value }
             .take(5)
