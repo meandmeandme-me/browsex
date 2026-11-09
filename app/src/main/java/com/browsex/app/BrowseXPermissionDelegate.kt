@@ -100,8 +100,9 @@ internal class BrowseXPermissionDelegate(
                 if (isSiteNotification) {
                     activity.requestSiteNotificationPermission { granted ->
                         activity.lifecycleScope.launch {
-                            val allowed = granted && activity.websiteNotificationsEnabled() && isActiveSession(session)
-                            if (allowed) persistDecision(origin, "notifications", "allow")
+                            val allowed = granted && activity.websiteNotificationsEnabled() &&
+                                isActiveSession(session) &&
+                                persistDecision(origin, "notifications", "allow")
                             result.complete(
                                 if (allowed) GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
                                 else GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
@@ -248,10 +249,13 @@ internal class BrowseXPermissionDelegate(
             .onFailure { android.util.Log.e("BrowseX", "Could not read saved site permission", it) }
             .getOrNull()
 
-    private suspend fun persistDecision(origin: String, feature: String, decision: String) {
-        runCatching { activity.storageRuntime.awaitReady().sitePermissions.setDecision(origin, feature, decision) }
-            .onFailure { android.util.Log.e("BrowseX", "Could not save site permission", it) }
-    }
+    private suspend fun persistDecision(origin: String, feature: String, decision: String): Boolean =
+        runCatching {
+            activity.storageRuntime.awaitReady().sitePermissions.setDecision(origin, feature, decision)
+            true
+        }.onFailure {
+            android.util.Log.e("BrowseX", "Could not save site permission", it)
+        }.getOrDefault(false)
 
     fun cancelPending() {
         dialogs.toList().forEach { if (it.isShowing) it.cancel() }
