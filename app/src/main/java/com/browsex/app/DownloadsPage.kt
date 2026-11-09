@@ -172,7 +172,32 @@ internal class DownloadsPage(
             background = rounded(colors.card, 13)
             contentDescription = t("Search downloads", "البحث في التنزيلات")
         }
-        root.addView(search, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 62 else 48)).apply {
+        val searchRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        searchRow.addView(search, LinearLayout.LayoutParams(0, dp(if (isTvRemote) 62 else 48), 1f))
+        val clearSearch = TextView(activity).apply {
+            text = "×"
+            textSize = if (isTvRemote) 30f else 24f
+            gravity = Gravity.CENTER
+            setTextColor(colors.muted)
+            background = rounded(colors.card, 13)
+            contentDescription = t("Clear search", "مسح البحث")
+            visibility = android.view.View.GONE
+            isClickable = true
+            isFocusable = true
+            isFocusableInTouchMode = false
+            foreground = WrenFocusStyle.overlay(activity, 13, colors.accent)
+            setOnClickListener {
+                search.text?.clear()
+                search.requestFocus()
+            }
+        }
+        searchRow.addView(clearSearch, LinearLayout.LayoutParams(dp(if (isTvRemote) 62 else 48), dp(if (isTvRemote) 62 else 48)).apply {
+            marginStart = dp(8)
+        })
+        root.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(12)
         })
         var searchQuery = ""
@@ -767,6 +792,7 @@ internal class DownloadsPage(
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 searchQuery = s?.toString().orEmpty()
+                clearSearch.visibility = if (searchQuery.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
                 render()
             }
             override fun afterTextChanged(s: android.text.Editable?) = Unit
