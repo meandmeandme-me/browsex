@@ -14,18 +14,23 @@ internal class BrowserPasswordManagerCoordinator(
     private val showMessage: (String) -> Unit,
     private val translate: (String) -> String
 ) {
-    fun show() {
-        if (isHostUnavailable()) return
+    private fun canManagePasswords(): Boolean {
+        if (isHostUnavailable()) return false
         if (vault.privateBrowsingActive) {
             showMessage(translate("Close private tabs to view saved entries"))
-            return
+            return false
         }
+        return true
+    }
+
+    fun show() {
+        if (!canManagePasswords()) return
         BrowserDeviceAuthenticator.authenticate(
             activity = activity,
             title = translate("Unlock saved passwords"),
             subtitle = translate("Verify your identity to view saved sign-ins"),
             onAuthenticated = {
-                if (isHostUnavailable()) return@authenticate
+                if (!canManagePasswords()) return@authenticate
                 vault.unlockForSession()
                 val saved = vault.entries()
                 if (saved.isEmpty()) {
@@ -34,13 +39,14 @@ internal class BrowserPasswordManagerCoordinator(
                 }
                 val labels = saved.map { it.username + " · " + Uri.parse(it.origin).host.orEmpty() }.toTypedArray()
                 AlertDialog.Builder(activity).setTitle(translate("Saved passwords")).setItems(labels) { _, index ->
+                    if (!canManagePasswords()) return@setItems
                     val item = saved.getOrNull(index) ?: return@setItems
                     BrowserDeviceAuthenticator.authenticate(
                         activity = activity,
                         title = translate("Reveal saved password"),
                         subtitle = translate("Verify your identity to reveal or copy this sign-in"),
                         onAuthenticated = {
-                            if (isHostUnavailable()) return@authenticate
+                            if (!canManagePasswords()) return@authenticate
                             vault.unlockForSession()
                             val secret = vault.passwordFor(item.id)
                             if (secret == null) {
@@ -60,6 +66,7 @@ internal class BrowserPasswordManagerCoordinator(
                                 }
                                 .setNegativeButton(translate("Close"), null)
                                 .setNeutralButton(translate("Delete")) { _, _ ->
+                                    if (!canManagePasswords()) return@setNeutralButton
                                     if (vault.delete(item.id)) showMessage(translate("Saved password deleted"))
                                 }.create()
                             dialog.setOnShowListener { dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE) }
