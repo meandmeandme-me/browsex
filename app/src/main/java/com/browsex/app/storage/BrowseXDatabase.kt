@@ -349,6 +349,15 @@ interface BrowseXStorageDao {
     }
 
     @Transaction
+    suspend fun consumeRecentlyClosedTabs(ids: List<String>): List<RecentlyClosedTabEntity> {
+        if (ids.isEmpty()) return emptyList()
+        val requested = ids.filter { it.isNotBlank() }.distinct()
+        if (requested.isEmpty()) return emptyList()
+        val available = requested.mapNotNull { recentlyClosedTab(it) }
+        return available.filter { deleteRecentlyClosedById(it.id) > 0 }
+    }
+
+    @Transaction
     suspend fun saveNamedSession(session: SavedSessionEntity, tabs: List<SavedSessionTabEntity>): Boolean {
         val existing = savedSessions().firstOrNull { it.name.equals(session.name, ignoreCase = true) }
         if (existing == null && savedSessionCount() >= 10) return false
