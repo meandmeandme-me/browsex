@@ -1941,6 +1941,13 @@ class MainActivity : AppCompatActivity() {
                     if (tabs.size > before) tabs.lastOrNull()?.let(restored::add)
                 }
                 restored.getOrNull(savedIndex.coerceIn(0, (restored.size - 1).coerceAtLeast(0)))?.let(::activateTab)
+                if (restored.size < savedUrls.size) {
+                    toast(BrowseXStrings.text(
+                        this,
+                        "Some tabs could not be restored because the tab limit was reached",
+                        "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
+                    ))
+                }
             }
         ).show()
     }
