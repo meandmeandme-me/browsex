@@ -333,6 +333,7 @@ internal class TabsPage(
         val columns = AdaptiveTabGridPolicy.columns(windowLayout)
         val tvRemote = windowLayout == WrenWindowLayout.TV
         var selectedFilter = 0 // 0 = all, 1 = regular, 2 = private
+        var currentSearchQuery = ""
         fun renderTabGrid(query: String = "") {
             grid.removeAllViews()
             val normalizedQuery = query.trim().lowercase()
@@ -521,7 +522,7 @@ internal class TabsPage(
                         )
                         button.isSelected = buttonIndex == selectedFilter
                     }
-                    renderTabGrid(searchTabs.text?.toString().orEmpty())
+                    renderTabGrid(currentSearchQuery)
                 }
             }
             filterButtons += chip
@@ -546,7 +547,8 @@ internal class TabsPage(
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    renderTabGrid(s?.toString().orEmpty())
+                    currentSearchQuery = s?.toString().orEmpty()
+                    renderTabGrid(currentSearchQuery)
                 }
                 override fun afterTextChanged(s: Editable?) = Unit
             })
