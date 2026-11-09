@@ -9,8 +9,7 @@ internal class RoomSessionRepository(
     private val dao: BrowseXStorageDao
 ) {
     suspend fun sessions(): List<RoomSavedSession> {
-        val tabsBySession = dao.savedSessionTabs().groupBy { it.sessionId }
-        return dao.savedSessions().mapNotNull { saved ->
+        return dao.savedSessions().take(MAX_SAVED_SESSIONS).mapNotNull { saved ->
             val name = normalizeDisplayText(saved.name, MAX_SESSION_NAME)
             if (saved.id.length !in 1..MAX_SESSION_ID_LENGTH ||
                 !saved.id.startsWith("session_") || name.isBlank() || saved.savedAt < 0L
@@ -19,12 +18,9 @@ internal class RoomSessionRepository(
             // Bound corrupt rows before normalization, then reuse the same URL policy as
             // live tab restoration. The original positions remain intact so a rejected
             // active tab falls back to the nearest surviving regular tab.
-            val rawUrls = tabsBySession[saved.id].orEmpty()
-                .asSequence()
-                .sortedBy { it.position }
-                .take(MAX_SESSION_SCAN)
-                .map { it.url }
-                .toList()
+            // Query only this session and cap rows in SQLite itself. Avoid loading
+            // every saved-session tab into memory before applying the restore bound.
+            val rawUrls = dao.savedSessionTabs(saved.id, MAX_SESSION_SCAN).map { it.url }
             if (rawUrls.none(::isSafeRestorableUrl)) return@mapNotNull null
             val snapshot = TabSessionState.normalize(rawUrls, saved.activeIndex, HOME_URL)
             RoomSavedSession(saved.id, name, snapshot.urls, snapshot.activeIndex, saved.savedAt)
@@ -154,6 +150,7 @@ internal class RoomSessionRepository(
         const val MAX_URL_LENGTH = 4096
         const val MAX_SESSION_NAME = 40
         const val MAX_SESSION_ID_LENGTH = 64
+        const val MAX_SAVED_SESSIONS = 10
         const val MAX_SESSION_SCAN = TabSessionState.MAX_TABS * 4
         const val MAX_RECENT_TITLE = 180
         const val MAX_RECENT_ID_LENGTH = 64
