@@ -192,8 +192,10 @@ internal class DownloadsPage(
             filterButtons.forEach { (key, button) ->
                 val selected = key == selectedFilter
                 button.setTextColor(if (selected) colors.accent else colors.muted)
+                button.setTypeface(button.typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
                 button.background = rounded(if (selected) colors.card else colors.canvas, 18)
                 button.alpha = if (selected) 1f else 0.78f
+                button.isSelected = selected
             }
         }
         filterLabels.forEach { (key, label) ->
@@ -219,7 +221,12 @@ internal class DownloadsPage(
                 marginEnd = dp(7)
             })
         }
-        root.addView(filterBar, LinearLayout.LayoutParams(-1, -2).apply {
+        val filterScroller = android.widget.HorizontalScrollView(activity).apply {
+            isHorizontalScrollBarEnabled = false
+            clipToPadding = false
+            addView(filterBar, ViewGroup.LayoutParams(-2, -2))
+        }
+        root.addView(filterScroller, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(8)
         })
         renderFilterSelection()
