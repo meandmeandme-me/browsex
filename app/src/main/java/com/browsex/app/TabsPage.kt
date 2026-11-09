@@ -401,7 +401,7 @@ internal class TabsPage(
         var currentSearchQuery = ""
         fun renderTabGrid(query: String = "") {
             grid.removeAllViews()
-            val normalizedQuery = TabSearchPolicy.normalize(query)
+            val normalizedQuery = TabSearchPolicy.normalize(query.take(MAX_TAB_SEARCH_LENGTH))
             val visibleTabs = tabs.filter { tab ->
                 (selectedFilter == 0 || (selectedFilter == 1 && !tab.privateMode) ||
                     (selectedFilter == 2 && tab.privateMode)) &&
@@ -466,8 +466,11 @@ internal class TabsPage(
                     isFocusable = true
                     isFocusableInTouchMode = false
                     isSelected = selected
-                    contentDescription = (if (tab.privateMode) tr("Private") + " · " else "") +
-                        tab.title.ifBlank { tr("New tab") } + ", " + tab.url
+                    contentDescription = (
+                        (if (tab.privateMode) tr("Private") + " · " else "") +
+                            tab.title.filterNot { it.isISOControl() }.take(MAX_ACCESSIBILITY_LABEL_LENGTH) +
+                            ", " + tab.url.filterNot { it.isISOControl() }.take(MAX_ACCESSIBILITY_LABEL_LENGTH)
+                        ).take(MAX_ACCESSIBILITY_LABEL_LENGTH * 2)
                 }
                 val preview = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
@@ -646,6 +649,7 @@ internal class TabsPage(
         }
         val searchTabs = EditText(activity).apply {
             setHint(tr("Search tabs"))
+            filters = arrayOf(android.text.InputFilter.LengthFilter(MAX_TAB_SEARCH_LENGTH))
             setTextSize(if (tvRemote) 18f else 14f)
             isSingleLine = true
             setTextColor(colors.ink)
@@ -704,5 +708,10 @@ internal class TabsPage(
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         if (tvRemote) add.post { if (dialog.isShowing) add.requestFocus() }
+    }
+
+    private companion object {
+        const val MAX_TAB_SEARCH_LENGTH = 256
+        const val MAX_ACCESSIBILITY_LABEL_LENGTH = 300
     }
 }
