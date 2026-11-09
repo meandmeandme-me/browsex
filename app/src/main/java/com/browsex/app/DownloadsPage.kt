@@ -131,7 +131,7 @@ internal class DownloadsPage(
             setTextColor(colors.ink)
         })
         heading.addView(TextView(activity).apply {
-            text = t("Your Browse X downloads", "تنزيلات BrowseX")
+            text = t("Your Wren Browser downloads", "تنزيلات BrowseX")
             textSize = if (isTvRemote) 15f else 12f
             setTextColor(colors.muted)
         })
