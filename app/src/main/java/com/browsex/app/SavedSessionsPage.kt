@@ -260,12 +260,12 @@ internal class SavedSessionsPage(
                                 } else if (action == 2) {
                                     val shareText = buildString {
                                         append(selected.name)
-                                        append("\\n\\n")
+                                        append("\n\n")
                                         selected.urls.forEachIndexed { index, url ->
                                             append(index + 1)
                                             append(". ")
                                             append(url)
-                                            append('\\n')
+                                            append('\n')
                                         }
                                     }
                                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
