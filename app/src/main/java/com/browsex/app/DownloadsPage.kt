@@ -162,6 +162,20 @@ internal class DownloadsPage(
             setTextColor(colors.muted)
             setPadding(dp(2), dp(9), dp(2), dp(2))
         })
+        val search = android.widget.EditText(activity).apply {
+            hint = t("Search downloads by file name", "ابحث في التنزيلات باسم الملف")
+            textSize = if (isTvRemote) 18f else 13f
+            isSingleLine = true
+            setTextColor(colors.ink)
+            setHintTextColor(colors.muted)
+            setPadding(dp(14), 0, dp(14), 0)
+            background = rounded(colors.card, 13)
+            contentDescription = t("Search downloads", "البحث في التنزيلات")
+        }
+        root.addView(search, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 62 else 48)).apply {
+            topMargin = dp(12)
+        })
+        var searchQuery = ""
 
         val scroll = ScrollView(activity)
         val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -221,6 +235,11 @@ internal class DownloadsPage(
             }
             var count = 0
             streamRecords.forEach { record ->
+                if (searchQuery.isNotBlank() &&
+                    !BrowserTextNormalizer.normalize(record.displayName).contains(
+                        BrowserTextNormalizer.normalize(searchQuery)
+                    )
+                ) return@forEach
                 count++
                 val recordIsActive = record.status == "queued" || record.status == "running"
                 val recordIsFailed = record.status == "failed"
@@ -424,6 +443,11 @@ internal class DownloadsPage(
                     seenIds.add(id)
                     count++
                     val title = if (titleCol >= 0) c.getString(titleCol) ?: "Downloaded file" else "Downloaded file"
+                    if (searchQuery.isNotBlank() &&
+                        !BrowserTextNormalizer.normalize(title).contains(
+                            BrowserTextNormalizer.normalize(searchQuery)
+                        )
+                    ) continue
                     val status = if (statusCol >= 0) c.getInt(statusCol) else -1
                     if (status == DownloadManager.STATUS_PENDING ||
                         status == DownloadManager.STATUS_RUNNING ||
@@ -656,6 +680,14 @@ internal class DownloadsPage(
             }
         }
         refresh.setOnClickListener { reloadRoomRecords() }
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchQuery = s?.toString().orEmpty()
+                render()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) = Unit
+        })
         render()
         dialog = AlertDialog.Builder(activity).setView(root).create()
         dialog.setOnShowListener {
