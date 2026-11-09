@@ -157,7 +157,6 @@ class MainActivity : AppCompatActivity() {
             showMessage = ::toast
         )
     }
-    private lateinit var store: BrowserStore
     private var browserSettingsSnapshot = BrowserSettings()
     internal val currentBrowserSettings: BrowserSettings get() = browserSettingsSnapshot
     internal val currentAdaptivePresentation: AdaptivePresentationConfig? get() = adaptivePresentationConfig
@@ -388,7 +387,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         // Keep system-bar handling consistent on Android 8–16; root insets below protect controls.
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        store = BrowserStore(this)
         lifecycleScope.launch {
             runCatching { storageRuntime.settings.snapshot() }
                 .onSuccess(::mirrorBrowserSettings)
