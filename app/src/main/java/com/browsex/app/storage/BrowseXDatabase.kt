@@ -375,7 +375,7 @@ interface BrowseXStorageDao {
 
     @Transaction
     suspend fun saveNamedSession(session: SavedSessionEntity, tabs: List<SavedSessionTabEntity>): Boolean {
-        val existing = savedSessions().firstOrNull { it.name.equals(session.name, ignoreCase = true) }
+        val existing = savedSessions(10).firstOrNull { it.name.equals(session.name, ignoreCase = true) }
         if (existing == null && savedSessionCount() >= 10) return false
         val stableId = existing?.id ?: session.id
         clearTabsForSession(stableId)
@@ -388,18 +388,18 @@ interface BrowseXStorageDao {
     suspend fun recordRecentlyClosed(tab: RecentlyClosedTabEntity) {
         deleteRecentlyClosedByUrl(tab.url)
         putRecentlyClosed(listOf(tab))
-        val overflow = recentlyClosedTabs().drop(10)
+        val overflow = recentlyClosedTabs(11).drop(10)
         overflow.forEach { deleteRecentlyClosedById(it.id) }
     }
 
-    @Query("SELECT * FROM saved_sessions ORDER BY saved_at DESC")
-    suspend fun savedSessions(): List<SavedSessionEntity>
+    @Query("SELECT * FROM saved_sessions ORDER BY saved_at DESC LIMIT :limit")
+    suspend fun savedSessions(limit: Int): List<SavedSessionEntity>
 
     @Query("SELECT * FROM saved_session_tabs WHERE session_id = :sessionId ORDER BY position LIMIT :limit")
     suspend fun savedSessionTabs(sessionId: String, limit: Int): List<SavedSessionTabEntity>
 
-    @Query("SELECT * FROM recently_closed_tabs ORDER BY closed_at DESC")
-    suspend fun recentlyClosedTabs(): List<RecentlyClosedTabEntity>
+    @Query("SELECT * FROM recently_closed_tabs ORDER BY closed_at DESC LIMIT :limit")
+    suspend fun recentlyClosedTabs(limit: Int): List<RecentlyClosedTabEntity>
 
     @Query("SELECT * FROM site_permission_decisions WHERE origin = :origin AND feature = :feature LIMIT 1")
     suspend fun permissionDecision(origin: String, feature: String): SitePermissionDecisionEntity?
