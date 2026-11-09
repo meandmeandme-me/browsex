@@ -41,11 +41,11 @@ internal class PrivacyPage(
             t("Protection status", "حالة الحماية"),
             uBlockStatus,
             t(
-                "Built-in tracking protection — regular tabs: $regularStatus",
+                "Built-in tracking protection — regular tabs",
                 "حماية التتبع المدمجة — التبويبات العادية: $regularArabic"
             ),
             t(
-                "Built-in tracking protection — private tabs: $privateStatus",
+                "Built-in tracking protection — private tabs",
                 "حماية التتبع المدمجة — التبويبات الخاصة: $privateArabic"
             ),
             t(
