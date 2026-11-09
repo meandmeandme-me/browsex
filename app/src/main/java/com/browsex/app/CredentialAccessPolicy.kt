@@ -17,5 +17,5 @@ internal class CredentialAccessPolicy(
     fun lock() { unlockedUntil = 0L }
 
     fun canFetchCredentials(privateTabsOpen: Boolean): Boolean =
-        !privateTabsOpen && nowElapsedRealtime() < unlockedUntil
+        !privateTabsOpen && nowElapsedRealtime().coerceAtLeast(0L) < unlockedUntil
 }
