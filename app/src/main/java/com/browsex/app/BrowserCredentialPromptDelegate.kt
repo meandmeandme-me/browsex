@@ -31,7 +31,7 @@ internal class BrowserCredentialPromptDelegate(
         val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
         AlertDialog.Builder(activity)
             .setTitle(translate("Save password?"))
-            .setMessage(translate("Save the sign-in for %1$s under %2$s?").format(origin, option.value.username))
+            .setMessage(translate("Save this website sign-in?") + "\n" + origin + "\n" + option.value.username)
             .setPositiveButton(translate("Save")) { _, _ ->
                 BrowserDeviceAuthenticator.authenticate(
                     activity = activity,
