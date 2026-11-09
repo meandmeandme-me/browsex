@@ -397,20 +397,38 @@ internal class TabsPage(
                     onActivateTab(tab)
                     dialog.dismiss()
                 }
-                card.setOnContextClickListener {
+                val showTabActions = {
                     AlertDialog.Builder(activity)
                         .setTitle(tab.title.ifBlank { tr("New tab") })
-                        .setItems(arrayOf(tr("Open"), tr("Close tab"))) { _, index ->
-                            if (index == 0) {
-                                onActivateTab(tab)
-                                dialog.dismiss()
-                            } else {
-                                onCloseTab(tab)
-                                dialog.dismiss()
-                                show()
+                        .setItems(arrayOf(tr("Open"), tr("Close tab"), tr("Close other tabs"))) { _, index ->
+                            when (index) {
+                                0 -> {
+                                    onActivateTab(tab)
+                                    dialog.dismiss()
+                                }
+                                1 -> {
+                                    onCloseTab(tab)
+                                    dialog.dismiss()
+                                    show()
+                                }
+                                2 -> {
+                                    // Keep the selected tab alive while closing the rest. Work
+                                    // from a snapshot because each close mutates the live registry.
+                                    tabs.filterNot { it === tab }.forEach(onCloseTab)
+                                    onActivateTab(tab)
+                                    dialog.dismiss()
+                                    show()
+                                }
                             }
                         }
                         .show()
+                }
+                card.setOnContextClickListener {
+                    showTabActions()
+                    true
+                }
+                card.setOnLongClickListener {
+                    showTabActions()
                     true
                 }
                 row.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
