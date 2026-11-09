@@ -2036,7 +2036,14 @@ class MainActivity : AppCompatActivity() {
                     )
                     toast("Site permissions reset")
                 },
-                privateMode = tab.privateMode
+                privateMode = tab.privateMode,
+                onMediaPermissionChange = { _, decision ->
+                    // Reloading ends any live getUserMedia tracks before the new Ask/Block
+                    // decision is evaluated by Gecko on the next page load.
+                    if (decision != "allow" && activeTab === tab && tab.url == url) {
+                        tab.session.reload()
+                    }
+                }
             ).show()
         }
         val storage = browserRuntime?.storageController
