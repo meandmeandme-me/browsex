@@ -32,19 +32,48 @@ internal class SavedSessionsPage(
                 activity.lifecycleScope.launch {
                     val sessions = runCatching { repository.sessions() }.getOrDefault(emptyList())
                     val list = ListView(activity)
-                    list.adapter = ArrayAdapter(
+                    var visibleSessions = sessions
+                    val adapter = ArrayAdapter(
                         activity,
                         android.R.layout.simple_list_item_2,
                         android.R.id.text1,
-                        sessions.map { "${it.name}\n${it.urls.size} " + t("tabs", "تبويبات") + " · " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.savedAt)) }
+                        visibleSessions.map { "${it.name}\n${it.urls.size} " + t("tabs", "تبويبات") + " · " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.savedAt)) }
                     )
+                    list.adapter = adapter
                     val empty = android.widget.TextView(activity).apply {
-                        text = t("No saved sessions yet. Save your current tabs to return to them later.", "لا توجد جلسات محفوظة بعد. احفظ التبويبات الحالية للعودة إليها لاحقًا.")
                         gravity = android.view.Gravity.CENTER
                         setPadding(32, 32, 32, 32)
                     }
+                    fun updateEmptyState() {
+                        empty.text = when {
+                            sessions.isEmpty() -> t("No saved sessions yet. Save your current tabs to return to them later.", "لا توجد جلسات محفوظة بعد. احفظ التبويبات الحالية للعودة إليها لاحقًا.")
+                            else -> t("No sessions match your search.", "لا توجد جلسات تطابق البحث.")
+                        }
+                    }
+                    updateEmptyState()
+                    val search = EditText(activity).apply {
+                        hint = t("Search saved sessions", "ابحث في الجلسات المحفوظة")
+                        inputType = InputType.TYPE_CLASS_TEXT
+                        setSingleLine(true)
+                        setPadding(WrenAdaptiveUi.dp(activity, 14), WrenAdaptiveUi.dp(activity, 10), WrenAdaptiveUi.dp(activity, 14), WrenAdaptiveUi.dp(activity, 10))
+                        BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
+                        addTextChangedListener(object : android.text.TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                                val query = TabSearchPolicy.normalize(s?.toString().orEmpty())
+                                visibleSessions = sessions.filter { session ->
+                                    TabSearchPolicy.matchesNormalized(session.name, session.urls.joinToString(" "), query)
+                                }
+                                adapter.clear()
+                                adapter.addAll(visibleSessions.map { "${it.name}\n${it.urls.size} " + t("tabs", "تبويبات") + " · " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it.savedAt)) })
+                                updateEmptyState()
+                            }
+                            override fun afterTextChanged(s: android.text.Editable?) = Unit
+                        })
+                    }
                     val content = LinearLayout(activity).apply {
                         orientation = LinearLayout.VERTICAL
+                        addView(search, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 52)))
                         addView(list, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 320)))
                         addView(empty, LinearLayout.LayoutParams(-1, WrenAdaptiveUi.dp(activity, 160)))
                         list.emptyView = empty
@@ -56,7 +85,7 @@ internal class SavedSessionsPage(
                         .setNegativeButton(t("Close", "إغلاق"), null)
                         .create()
                     list.setOnItemClickListener { _, _, position, _ ->
-                        val selected = sessions.getOrNull(position) ?: return@setOnItemClickListener
+                        val selected = visibleSessions.getOrNull(position) ?: return@setOnItemClickListener
                         AlertDialog.Builder(activity)
                             .setTitle(selected.name)
                             .setMessage(t("Replace the current regular tabs with this saved session?", "استبدال التبويبات العادية الحالية بهذه الجلسة المحفوظة؟"))
@@ -68,7 +97,7 @@ internal class SavedSessionsPage(
                             .show()
                     }
                     list.setOnItemLongClickListener { _, _, position, _ ->
-                        val selected = sessions.getOrNull(position) ?: return@setOnItemLongClickListener true
+                        val selected = visibleSessions.getOrNull(position) ?: return@setOnItemLongClickListener true
                         AlertDialog.Builder(activity)
                             .setTitle(selected.name)
                             .setItems(arrayOf(t("Rename session", "إعادة تسمية الجلسة"), t("Delete session", "حذف الجلسة"))) { _, action ->
