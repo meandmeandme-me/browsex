@@ -34,17 +34,33 @@ internal data class EncryptedSyncRecord(
     val payloadDigest: String
 ) {
     init {
-        require(ciphertext.isNotEmpty())
-        require(payloadDigest.isNotBlank())
+        require(ciphertext.size in 1..MAX_CIPHERTEXT_BYTES)
+        require(payloadDigest.matches(SHA256_HEX))
+    }
+
+    private companion object {
+        const val MAX_CIPHERTEXT_BYTES = 8 * 1024 * 1024
+        val SHA256_HEX = Regex("^[a-fA-F0-9]{64}$")
     }
 }
 
-internal data class SyncCursor(val value: String?) 
+internal data class SyncCursor(val value: String?) {
+    init { require(value == null || value.length <= 4096) }
+}
 
 internal data class SyncBatch(
     val records: List<EncryptedSyncRecord>,
     val nextCursor: SyncCursor
-)
+) {
+    init {
+        require(records.size <= MAX_RECORDS_PER_BATCH)
+        require(records.map { it.metadata.recordId }.toSet().size == records.size)
+    }
+
+    private companion object {
+        const val MAX_RECORDS_PER_BATCH = 500
+    }
+}
 
 internal interface EncryptedSyncTransport {
     suspend fun upload(records: List<EncryptedSyncRecord>)
