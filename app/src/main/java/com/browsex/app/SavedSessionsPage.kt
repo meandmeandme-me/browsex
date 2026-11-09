@@ -159,7 +159,7 @@ internal class SavedSessionsPage(
                         val selected = visibleSessions.getOrNull(position) ?: return@setOnItemLongClickListener true
                         AlertDialog.Builder(activity)
                             .setTitle(selected.name)
-                            .setItems(arrayOf(t("Rename session", "إعادة تسمية الجلسة"), t("Share session", "مشاركة الجلسة"), t("Delete session", "حذف الجلسة"))) { _, action ->
+                            .setItems(arrayOf(t("Rename session", "إعادة تسمية الجلسة"), t("Duplicate session", "نسخ الجلسة"), t("Share session", "مشاركة الجلسة"), t("Delete session", "حذف الجلسة"))) { _, action ->
                                 if (action == 0) {
                                     val input = EditText(activity).apply {
                                         setText(selected.name)
@@ -192,6 +192,36 @@ internal class SavedSessionsPage(
                                         }
                                         .show()
                                 } else if (action == 1) {
+                                    val input = EditText(activity).apply {
+                                        setText("${selected.name} (copy)")
+                                        setSelection(text.length)
+                                        hint = t("New session name", "اسم الجلسة الجديدة")
+                                        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                                        setSingleLine(true)
+                                    }
+                                    AlertDialog.Builder(activity)
+                                        .setTitle(t("Duplicate session", "نسخ الجلسة"))
+                                        .setView(input)
+                                        .setNegativeButton(t("Cancel", "إلغاء"), null)
+                                        .setPositiveButton(t("Save copy", "حفظ النسخة")) { _, _ ->
+                                            activity.lifecycleScope.launch {
+                                                val duplicated = runCatching {
+                                                    repository.saveSession(input.text?.toString().orEmpty(), selected.urls, selected.activeIndex)
+                                                }.onFailure { android.util.Log.e("Wren", "Could not duplicate saved session", it) }.getOrDefault(false)
+                                                android.widget.Toast.makeText(
+                                                    activity,
+                                                    if (duplicated) t("Session duplicated", "تم نسخ الجلسة")
+                                                    else t("Could not duplicate. Check the name and the 10-session limit.", "تعذر نسخ الجلسة. تحقق من الاسم وحد 10 جلسات."),
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                                if (duplicated) {
+                                                    dialog.dismiss()
+                                                    render()
+                                                }
+                                            }
+                                        }
+                                        .show()
+                                } else if (action == 2) {
                                     val shareText = buildString {
                                         append(selected.name)
                                         append("\\n\\n")
