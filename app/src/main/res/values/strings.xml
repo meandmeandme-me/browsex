@@ -233,6 +233,11 @@
     <string name="ui_this_removes_cookies_site_storage_cache_and_permissions_for_this_host_it_may_sign_you_out_data_owned_by_other_third_party_hosts_is_not_included">This removes cookies, site storage, cache and permissions for this host. It may sign you out. Data owned by other third-party hosts is not included.</string>
     <string name="ui_clear_data">Clear data</string>
     <string name="ui_ask_every_time">Ask every time</string>
+    <string name="ui_allow_this_website">Allow this website?</string>
+    <string name="ui_site_permission_request_message">%1$s wants to use %2$s.</string>
+    <string name="ui_allow_device_access">Allow device access?</string>
+    <string name="ui_device_permission_request_message">%1$s wants to use your %2$s.</string>
+    <string name="ui_not_now">Not now</string>
     <string name="ui_allow">Allow</string>
     <string name="ui_block">Block</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">GeckoView does not support revoking this persistent-storage grant.</string>
