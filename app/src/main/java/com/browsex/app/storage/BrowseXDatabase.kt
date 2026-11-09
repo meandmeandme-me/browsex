@@ -395,8 +395,8 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM saved_sessions ORDER BY saved_at DESC")
     suspend fun savedSessions(): List<SavedSessionEntity>
 
-    @Query("SELECT * FROM saved_session_tabs ORDER BY session_id, position")
-    suspend fun savedSessionTabs(): List<SavedSessionTabEntity>
+    @Query("SELECT * FROM saved_session_tabs WHERE session_id = :sessionId ORDER BY position LIMIT :limit")
+    suspend fun savedSessionTabs(sessionId: String, limit: Int): List<SavedSessionTabEntity>
 
     @Query("SELECT * FROM recently_closed_tabs ORDER BY closed_at DESC")
     suspend fun recentlyClosedTabs(): List<RecentlyClosedTabEntity>
