@@ -340,7 +340,7 @@ internal class TabsPage(
             val visibleTabs = tabs.filter { tab ->
                 (selectedFilter == 0 || (selectedFilter == 1 && !tab.privateMode) ||
                     (selectedFilter == 2 && tab.privateMode)) &&
-                    TabSearchPolicy.matches(tab.title, tab.url, normalizedQuery)
+                    TabSearchPolicy.matchesNormalized(tab.title, tab.url, normalizedQuery)
             }
             tabCountLabel.text = if (normalizedQuery.isEmpty() && selectedFilter == 0) {
                 "${tabs.size} · ${tr("Open tabs")}"
