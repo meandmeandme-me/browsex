@@ -411,10 +411,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         streamDownloadCoordinator = StreamDownloadCoordinator(storageRuntime, DownloadResponseWriter(applicationContext))
-        bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri ->
             if (uri != null) lifecycleScope.launch {
                 runCatching {
-                    val payload = storageRuntime.awaitReady().bookmarks.exportBookmarks()
+                    val payload = storageRuntime.awaitReady().bookmarks.exportBookmarksHtml()
                     contentResolver.openOutputStream(uri)?.use { output ->
                         output.write(payload.toByteArray(Charsets.UTF_8))
                     } ?: error("Could not open destination")
@@ -2075,8 +2075,8 @@ class MainActivity : AppCompatActivity() {
                 updateBrowserSettings(transform = { it.copy(siteNotificationsEnabled = enabled) })
                 if (!enabled) NotificationManagerCompat.from(this).cancelAll()
             },
-            importBookmarks = { bookmarkImportLauncher.launch(arrayOf("application/json", "text/json", "text/plain")) },
-            exportBookmarks = { bookmarkExportLauncher.launch("browsex-bookmarks.json") },
+            importBookmarks = { bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain")) },
+            exportBookmarks = { bookmarkExportLauncher.launch("wren-bookmarks.html") },
             showHomePreferences = { showHomePreferences() },
             openPrivacyCenter = { showPrivacyCenter() },
             manageUBlockOrigin = { showUBlockOriginSettings() },
