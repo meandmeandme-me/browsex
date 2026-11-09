@@ -148,7 +148,7 @@ internal class BrowseXNotificationBridge(
         val scheme = uri.scheme?.lowercase()
         val host = uri.host?.lowercase()?.trimEnd('.')
         val secureLocalHttp = scheme == "http" && host != null &&
-            (host == "localhost" || host == "::1" || host.startsWith("127."))
+            (host == "localhost" || host == "::1" || host == "127.0.0.1")
         (scheme == "https" || secureLocalHttp) && !host.isNullOrBlank() && uri.userInfo == null
     } catch (_: Exception) { false }
 
