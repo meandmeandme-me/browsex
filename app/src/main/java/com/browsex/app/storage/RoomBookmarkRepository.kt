@@ -112,7 +112,8 @@ internal class RoomBookmarkRepository(
 
     suspend fun previewImport(payload: String): BookmarkImportPreview {
         require(payload.length <= MAX_BACKUP_BYTES) { "Backup file is too large" }
-        val root = runCatching { org.json.JSONObject(payload) }
+        val normalizedPayload = normalizeImportPayload(payload)
+        val root = runCatching { org.json.JSONObject(normalizedPayload) }
             .getOrElse { throw IllegalArgumentException("Invalid bookmark backup", it) }
         require(root.optString("format") == BACKUP_FORMAT && root.optInt("version") == BACKUP_VERSION) {
             "Unsupported bookmark backup"
