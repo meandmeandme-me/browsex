@@ -55,8 +55,11 @@ internal object OidcAuthorizationRequestBuilder {
         if (!isRegisteredRedirect(config.redirectUri)) return null
         if (config.scopes.isEmpty() || config.scopes.any { it.isBlank() || it.any(Char::isWhitespace) }) return null
         if (!config.scopes.contains("openid")) return null
-        if (pkce.codeChallengeMethod != "S256" || pkce.codeVerifier.length !in 43..128 ||
-            pkce.state.isBlank() || pkce.nonce.isBlank()
+        if (pkce.codeChallengeMethod != "S256" ||
+            !isValidVerifier(pkce.codeVerifier) ||
+            !isValidOpaqueValue(pkce.state) ||
+            !isValidOpaqueValue(pkce.nonce) ||
+            !isChallengeForVerifier(pkce.codeVerifier, pkce.codeChallenge)
         ) return null
 
         val parameters = linkedMapOf(
@@ -84,10 +87,35 @@ internal object OidcAuthorizationRequestBuilder {
         if (uri.rawUserInfo != null || uri.rawQuery != null || uri.rawFragment != null) return false
         when (scheme) {
             "https" -> !uri.host.isNullOrBlank()
-            else -> scheme.matches(Regex("^[a-z][a-z0-9+.-]*$")) &&
-                uri.rawAuthority == null && !uri.rawPath.isNullOrBlank()
+            // Native-app redirects may use a private URI scheme, but not browser or file destinations.
+            "http", "file", "content", "javascript", "intent" -> false
+            else -> scheme.matches(Regex("^[a-z][a-z0-9+.-]{2,63}$")) &&
+                uri.rawAuthority == null &&
+                !uri.rawPath.isNullOrBlank() &&
+                uri.rawPath.startsWith("/")
         }
         }.getOrDefault(false)
+    }
+
+    private fun isValidVerifier(value: String): Boolean =
+        value.length in 43..128 &&
+            value.all { it.isLetterOrDigit() || it in "-._~" }
+
+    private fun isValidOpaqueValue(value: String): Boolean =
+        value.length in 16..512 && value.all { it.code in 0x21..0x7E }
+
+    private fun isChallengeForVerifier(verifier: String, challenge: String): Boolean {
+        if (challenge.length != 43 ||
+            challenge.any { !(it.isLetterOrDigit() || it == '-' || it == '_') }
+        ) return false
+        val expected = Base64.getUrlEncoder().withoutPadding().encodeToString(
+            MessageDigest.getInstance("SHA-256")
+                .digest(verifier.toByteArray(StandardCharsets.US_ASCII))
+        )
+        return MessageDigest.isEqual(
+            expected.toByteArray(StandardCharsets.US_ASCII),
+            challenge.toByteArray(StandardCharsets.US_ASCII)
+        )
     }
 
     private fun encodeQuery(value: String): String =
