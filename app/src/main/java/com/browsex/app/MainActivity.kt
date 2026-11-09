@@ -2080,6 +2080,7 @@ class MainActivity : AppCompatActivity() {
             exportBookmarks = { bookmarkExportLauncher.launch("wren-bookmarks.html") },
             showHomePreferences = { showHomePreferences() },
             openPrivacyCenter = { showPrivacyCenter() },
+            openSitePermissions = { SitePermissionsPage(this).show() },
             manageUBlockOrigin = { showUBlockOriginSettings() },
             openAutofillSettings = { openAutofillServiceSettings() }
         ).show()
