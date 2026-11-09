@@ -74,7 +74,29 @@ internal class RoomSavedPagesPage(
                 setTextColor(colors.ink); setHintTextColor(colors.muted)
                 setPadding(dp(14), 0, dp(14), 0); background = rounded(colors.card, 14)
             }
-            root.addView(search, LinearLayout.LayoutParams(-1, dp(if (isTvRemote) 64 else 48)).apply { topMargin = dp(12) })
+            val searchRow = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            searchRow.addView(search, LinearLayout.LayoutParams(0, dp(if (isTvRemote) 64 else 48), 1f))
+            val clearSearch = TextView(activity).apply {
+                text = "×"
+                textSize = if (isTvRemote) 30f else 24f
+                gravity = Gravity.CENTER
+                setTextColor(colors.muted)
+                background = rounded(colors.card, 14)
+                contentDescription = t("Clear search", "مسح البحث")
+                visibility = android.view.View.GONE
+                WrenAdaptiveUi.prepareFocusable(this, activity, 14, colors.accent, if (isTvRemote) 64 else 48)
+                setOnClickListener {
+                    search.text?.clear()
+                    search.requestFocus()
+                }
+            }
+            searchRow.addView(clearSearch, LinearLayout.LayoutParams(dp(if (isTvRemote) 64 else 48), dp(if (isTvRemote) 64 else 48)).apply {
+                marginStart = dp(8)
+            })
+            root.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
             val folderBar = LinearLayout(activity).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(0, dp(8), 0, dp(4))
@@ -306,7 +328,10 @@ internal class RoomSavedPagesPage(
             render("")
             search.addTextChangedListener(object : android.text.TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = render(s?.toString().orEmpty())
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    clearSearch.visibility = if (s.isNullOrEmpty()) android.view.View.GONE else android.view.View.VISIBLE
+                    render(s?.toString().orEmpty())
+                }
                 override fun afterTextChanged(s: android.text.Editable?) = Unit
             })
             dialog = AlertDialog.Builder(activity).setView(root).create()
