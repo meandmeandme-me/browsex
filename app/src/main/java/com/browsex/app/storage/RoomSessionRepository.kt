@@ -11,7 +11,7 @@ internal class RoomSessionRepository(
     suspend fun sessions(): List<RoomSavedSession> {
         val tabsBySession = dao.savedSessionTabs().groupBy { it.sessionId }
         return dao.savedSessions().mapNotNull { saved ->
-            val name = saved.name.filterNot { it.isISOControl() }.trim().take(MAX_SESSION_NAME)
+            val name = normalizeDisplayText(saved.name, MAX_SESSION_NAME)
             if (saved.id.length !in 1..MAX_SESSION_ID_LENGTH ||
                 !saved.id.startsWith("session_") || name.isBlank() || saved.savedAt < 0L
             ) return@mapNotNull null
@@ -37,7 +37,7 @@ internal class RoomSessionRepository(
         activeIndex: Int,
         savedAt: Long = System.currentTimeMillis()
     ): Boolean {
-        val name = rawName.trim().take(MAX_SESSION_NAME)
+        val name = normalizeDisplayText(rawName, MAX_SESSION_NAME)
         if (name.isBlank() || urls.isEmpty() || savedAt < 0L) return false
         val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL)
         val session = SavedSessionEntity(
@@ -81,9 +81,7 @@ internal class RoomSessionRepository(
         val normalized = url.trim()
         if (!isSafeRestorableUrl(normalized) || normalized == HOME_URL || closedAt < 0L) return false
         val safeTitle = title
-            .filterNot { it.isISOControl() }
-            .trim()
-            .take(MAX_RECENT_TITLE)
+            .let { normalizeDisplayText(it, MAX_RECENT_TITLE) }
             .ifBlank { android.net.Uri.parse(normalized).host.orEmpty().ifBlank { normalized } }
         pruneExpiredRecentlyClosed(closedAt)
         dao.recordRecentlyClosed(RecentlyClosedTabEntity(
@@ -133,6 +131,17 @@ internal class RoomSessionRepository(
         val cutoff = (now - RECENTLY_CLOSED_RETENTION_MILLIS).coerceAtLeast(0L)
         dao.deleteRecentlyClosedBefore(cutoff)
     }
+
+    /** Removes control and bidi-override characters from untrusted session labels. */
+    private fun normalizeDisplayText(value: String, maxLength: Int): String =
+        value.asSequence()
+            .filterNot { char ->
+                char.isISOControl() || char in '\u202A'..'\u202E' || char in '\u2066'..'\u2069'
+            }
+            .joinToString("")
+            .trim()
+            .replace(Regex("\\s+"), " ")
+            .take(maxLength)
 
     private fun isSafeRestorableUrl(url: String): Boolean =
         url.length <= MAX_URL_LENGTH && (
