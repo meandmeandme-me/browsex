@@ -16,6 +16,8 @@ class BrowserPreferencePolicyTest {
         assertEquals("Google", BrowserPreferencePolicy.normalizeSearchEngine("Other"))
         assertEquals("Bing", BrowserPreferencePolicy.normalizeSearchEngine(" Bing "))
         assertEquals("DuckDuckGo", BrowserPreferencePolicy.normalizeSearchEngine("DuckDuckGo"))
+        assertEquals("Brave", BrowserPreferencePolicy.normalizeSearchEngine("Brave"))
+        assertEquals("Startpage", BrowserPreferencePolicy.normalizeSearchEngine("Startpage"))
     }
 
     @Test
