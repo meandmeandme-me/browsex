@@ -16,13 +16,12 @@ import androidx.appcompat.app.AlertDialog
 /** One searchable surface for returning to open regular tabs, bookmarks and recent history. */
 internal class RecallPage(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val openTabs: List<Pair<String, String>>,
     private val bookmarkRows: List<Pair<String, String>>,
     private val historyRows: List<Pair<String, String>>,
     private val onOpen: (String) -> Unit
 ) {
-    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
@@ -37,7 +36,7 @@ internal class RecallPage(
             orientation = LinearLayout.VERTICAL
             setPadding(WrenAdaptiveUi.horizontalSafePadding(activity), WrenAdaptiveUi.verticalSafePadding(activity), WrenAdaptiveUi.horizontalSafePadding(activity), dp(if (isTvRemote) 28 else 14))
             setBackgroundColor(colors.canvas)
-            BrowseXColors.applyDirection(this, store)
+            BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
         }
         val header = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
