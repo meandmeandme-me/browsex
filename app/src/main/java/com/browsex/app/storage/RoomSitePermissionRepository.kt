@@ -46,7 +46,17 @@ internal class RoomSitePermissionRepository(
 
     suspend fun clearAll() = dao.clearAllPermissionDecisions()
 
-    suspend fun all(): List<SitePermissionDecisionEntity> = dao.permissionDecisions()
+    suspend fun all(): List<SitePermissionDecisionEntity> =
+        dao.permissionDecisions()
+            .asSequence()
+            .filter { item ->
+                BrowserSiteOriginPolicy.canonicalOrigin(item.origin) == item.origin &&
+                    item.feature in FEATURES &&
+                    item.decision in setOf("allow", "deny") &&
+                    item.updatedAt >= 0L
+            }
+            .sortedWith(compareBy<SitePermissionDecisionEntity> { it.origin }.thenBy { it.feature })
+            .toList()
 
     private companion object {
         // Keep these values aligned with the browser's site-permission feature identifiers.
