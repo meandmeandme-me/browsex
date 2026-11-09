@@ -1,6 +1,8 @@
 package com.browsex.app
 
 import java.net.IDN
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.URI
 import java.util.Locale
 
@@ -34,8 +36,13 @@ internal object BrowserSiteOriginPolicy {
                 suffix.startsWith(":") && suffix.length > 1 -> suffix.substring(1)
                 else -> return null
             }
-            // Only accept literal IPv6 characters; zone identifiers are deliberately excluded.
-            if (!rawHost.substring(1, rawHost.length - 1).matches(Regex("[0-9A-Fa-f:.]+"))) return null
+            // Validate the literal as an actual IPv6 address; character filtering alone accepts
+            // malformed values such as "::::". The colon requirement keeps this on the
+            // numeric-literal parser path rather than allowing hostname resolution.
+            val ipv6Literal = rawHost.substring(1, rawHost.length - 1)
+            if (':' !in ipv6Literal || !ipv6Literal.matches(Regex("[0-9A-Fa-f:.]+"))) return null
+            val parsedAddress = runCatching { InetAddress.getByName(ipv6Literal) }.getOrNull()
+            if (parsedAddress !is Inet6Address) return null
         } else {
             val colon = authority.lastIndexOf(':')
             if (colon >= 0 && authority.indexOf(':') != colon) return null
