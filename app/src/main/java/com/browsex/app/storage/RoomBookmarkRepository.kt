@@ -6,7 +6,7 @@ import java.util.UUID
 
 /**
  * Room-backed bookmark and folder operations. The Activity's library and backup flows
- * use this repository after BrowserStorageRuntime completes the legacy snapshot migration.
+ * use this repository directly; the clean Wren database has no legacy-data import step.
  */
 internal class RoomBookmarkRepository(
     private val dao: BrowseXStorageDao
