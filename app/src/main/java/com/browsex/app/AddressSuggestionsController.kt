@@ -110,11 +110,11 @@ internal class AddressSuggestionsController(
 
     private fun render(query: String, suggestions: List<AddressSuggestion>) {
         rows.removeAllViews()
-        val colors = colors
+        val palette = colors
         panel.background = GradientDrawable().apply {
-            setColor(colors.panel)
+            setColor(palette.panel)
             cornerRadius = dp(22).toFloat()
-            setStroke(dp(1), colors.line)
+            setStroke(dp(1), palette.line)
         }
         val visible = suggestions.take(5).toMutableList()
         if (query.isNotBlank()) {
@@ -134,7 +134,7 @@ internal class AddressSuggestionsController(
             text = BrowseXStrings.text(activity, "Suggestions", "اقتراحات")
             textSize = 11f
             letterSpacing = .06f
-            setTextColor(colors.muted)
+            setTextColor(palette.muted)
             setPadding(dp(13), dp(8), dp(13), dp(9))
             isImportantForAccessibility = false
         }
@@ -150,7 +150,7 @@ internal class AddressSuggestionsController(
                 isFocusable = WrenAdaptiveUi.isTelevision(activity)
                 isFocusableInTouchMode = false
                 background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
-                foreground = WrenFocusStyle.overlay(activity, 14, colors.accent)
+                foreground = WrenFocusStyle.overlay(activity, 14, palette.accent)
                 setOnClickListener { onSelect(suggestion) }
                 contentDescription = listOf(suggestion.title, suggestion.subtitle, kindLabel(suggestion.kind))
                     .filter(String::isNotBlank).joinToString(", ")
@@ -164,9 +164,9 @@ internal class AddressSuggestionsController(
                 }
                 textSize = 19f
                 gravity = Gravity.CENTER
-                setTextColor(colors.accent)
+                setTextColor(palette.accent)
                 background = GradientDrawable().apply {
-                    setColor(colors.selected)
+                    setColor(palette.selected)
                     cornerRadius = dp(12).toFloat()
                 }
             }
@@ -179,7 +179,7 @@ internal class AddressSuggestionsController(
                 textSize = 13.5f
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setTextColor(colors.ink)
+                setTextColor(palette.ink)
                 typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
             })
             details.addView(TextView(activity).apply {
@@ -187,14 +187,14 @@ internal class AddressSuggestionsController(
                 textSize = 11f
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-                setTextColor(colors.muted)
+                setTextColor(palette.muted)
                 setPadding(0, dp(3), 0, 0)
             })
             row.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
             row.addView(TextView(activity).apply {
                 text = kindLabel(suggestion.kind)
                 textSize = 10f
-                setTextColor(colors.muted)
+                setTextColor(palette.muted)
                 gravity = Gravity.CENTER
                 maxLines = 1
             }, LinearLayout.LayoutParams(-2, -2).apply {
@@ -203,7 +203,7 @@ internal class AddressSuggestionsController(
             rows.addView(row, LinearLayout.LayoutParams(-1, -2))
             if (index != visible.lastIndex) {
                 rows.addView(View(activity).apply {
-                    setBackgroundColor(colors.line)
+                    setBackgroundColor(palette.line)
                 }, LinearLayout.LayoutParams(-1, dp(1)).apply {
                     leftMargin = dp(58)
                     rightMargin = dp(10)
