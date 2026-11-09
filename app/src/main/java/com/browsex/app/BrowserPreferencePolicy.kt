@@ -7,6 +7,7 @@ internal object BrowserPreferencePolicy {
     private val themes = setOf("system", "light", "dark")
     private val homeLayouts = setOf("grid", "list")
     private val addressBarPositions = setOf("auto", "top", "bottom")
+    private val searchEngines = setOf("Google", "DuckDuckGo", "Bing")
 
     fun normalizeTheme(value: String?): String =
         value?.takeIf(themes::contains) ?: "system"
@@ -16,6 +17,9 @@ internal object BrowserPreferencePolicy {
 
     fun normalizeAddressBarPosition(value: String?): String =
         value?.trim()?.lowercase(Locale.ROOT)?.takeIf(addressBarPositions::contains) ?: "auto"
+
+    fun normalizeSearchEngine(value: String?): String =
+        value?.trim()?.takeIf(searchEngines::contains) ?: "Google"
 
     fun normalizeLanguageTag(value: String?): String {
         val raw = value?.trim().orEmpty()
