@@ -82,8 +82,14 @@ internal class BrowserCredentialVault(
         }
         requestAuthentication(
             {
-                unlockForSession()
-                if (privateBrowsingActive) onRejected() else onAuthenticated()
+                val authorized = runCatching {
+                    unlockForSession()
+                    !privateBrowsingActive
+                }.getOrElse {
+                    android.util.Log.e("BrowseX", "External credential authorization failed", it)
+                    false
+                }
+                if (authorized) onAuthenticated() else onRejected()
             },
             onRejected
         )
@@ -148,10 +154,15 @@ internal class BrowserCredentialVault(
         val result = GeckoResult<Array<Autocomplete.LoginEntry>>()
         requestAuthentication(
             {
-                unlockForSession()
-                val entries = synchronized(this) {
-                    if (accessPolicy.canFetchCredentials(privateBrowsingActive)) loadEntriesForDomain(domain)
-                    else emptyArray()
+                val entries = runCatching {
+                    unlockForSession()
+                    synchronized(this) {
+                        if (accessPolicy.canFetchCredentials(privateBrowsingActive)) loadEntriesForDomain(domain)
+                        else emptyArray()
+                    }
+                }.getOrElse {
+                    android.util.Log.e("BrowseX", "Credential autofill authorization failed", it)
+                    emptyArray()
                 }
                 result.complete(entries)
             },
