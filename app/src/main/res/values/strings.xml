@@ -375,4 +375,8 @@
     <string name="ui_could_not_update_permission">Could not update permission</string>
     <string name="ui_search_tabs">Search tabs</string>
     <string name="ui_no_matching_tabs">No matching tabs</string>
+    <string name="ui_all_tabs">All</string>
+    <string name="ui_regular_tabs">Regular</string>
+    <string name="ui_private_tabs">Private</string>
+    <string name="ui_matching_tabs">Matching tabs</string>
 </resources>
