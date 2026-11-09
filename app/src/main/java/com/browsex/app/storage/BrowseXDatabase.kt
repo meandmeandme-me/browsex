@@ -669,7 +669,11 @@ interface BrowseXStorageDao {
             if (bookmarkCount() >= MAX_BOOKMARKS) return@forEach
             if (bookmark(incoming.url) != null) return@forEach
             val folderId = folderMap[incoming.folderId] ?: "unfiled"
-            if (insertBookmark(incoming.copy(folderId = folderId)) != -1L) {
+            // Imported sort orders are global to the backup payload, not local to a
+            // destination folder. Append each accepted item to preserve a stable order
+            // without colliding with bookmarks already present in that folder.
+            val sortOrder = nextBookmarkSortOrder(folderId)
+            if (insertBookmark(incoming.copy(folderId = folderId, sortOrder = sortOrder)) != -1L) {
                 importedBookmarks++
             }
         }
