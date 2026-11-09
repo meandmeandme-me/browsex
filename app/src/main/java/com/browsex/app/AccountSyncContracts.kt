@@ -29,18 +29,21 @@ internal interface DeviceRegistryRepository {
 }
 
 /** SHA-256 digest covers ciphertext only; plaintext hashes must never be exposed as sync metadata. */
-internal data class EncryptedSyncRecord(
+internal class EncryptedSyncRecord(
     val metadata: SyncRecordMetadata,
-    val ciphertext: ByteArray,
+    ciphertext: ByteArray,
     val payloadDigest: String
 ) {
+    private val payloadBytes = ciphertext.copyOf()
+    val ciphertext: ByteArray get() = payloadBytes.copyOf()
+
     init {
-        require(ciphertext.size in 1..MAX_CIPHERTEXT_BYTES)
+        require(payloadBytes.size in 1..MAX_CIPHERTEXT_BYTES)
         require(payloadDigest.matches(SHA256_HEX))
         require(
             java.security.MessageDigest.isEqual(
                 payloadDigest.lowercase().toByteArray(Charsets.US_ASCII),
-                SyncPayloadIntegrity.digest(ciphertext).toByteArray(Charsets.US_ASCII)
+                SyncPayloadIntegrity.digest(payloadBytes).toByteArray(Charsets.US_ASCII)
             )
         ) { "Encrypted sync payload digest does not match ciphertext" }
     }
