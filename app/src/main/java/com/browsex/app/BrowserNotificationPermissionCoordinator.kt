@@ -69,3 +69,9 @@ internal class BrowserNotificationPermissionCoordinator(
         pending.forEach { callback -> runCatching { callback(result) } }
     }
 }
+
+
+/** Website notifications are delivered only after an explicit, persisted user grant. */
+internal object BrowserSiteNotificationPolicy {
+    fun isAllowed(savedDecision: String?): Boolean = savedDecision == "allow"
+}
