@@ -20,9 +20,12 @@ internal object TabSearchPolicy {
         .replace(repeatedWhitespace, " ")
         .trim()
 
-    fun matches(title: String, url: String, query: String): Boolean {
-        val needle = normalize(query)
-        if (needle.isEmpty()) return true
-        return normalize(title).contains(needle) || normalize(url).contains(needle)
+    fun matches(title: String, url: String, query: String): Boolean =
+        matchesNormalized(title, url, normalize(query))
+
+    /** Reuses a normalized query while filtering a complete tab collection. */
+    fun matchesNormalized(title: String, url: String, normalizedQuery: String): Boolean {
+        if (normalizedQuery.isEmpty()) return true
+        return normalize(title).contains(normalizedQuery) || normalize(url).contains(normalizedQuery)
     }
 }
