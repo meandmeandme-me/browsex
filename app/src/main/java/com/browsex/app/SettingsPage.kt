@@ -34,6 +34,7 @@ internal class SettingsPage(
     private val exportBookmarks: () -> Unit,
     private val showHomePreferences: () -> Unit,
     private val openPrivacyCenter: () -> Unit,
+    private val openSitePermissions: () -> Unit,
     private val manageUBlockOrigin: () -> Unit,
     private val openAutofillSettings: () -> Unit
 ) {
@@ -378,6 +379,11 @@ internal class SettingsPage(
         row("Privacy center", "Review and clear cookies, site data and permissions", action = {
             dialog.dismiss()
             openPrivacyCenter()
+        })
+
+        row("Site permissions", "Review and change saved camera, microphone, location and notification choices", action = {
+            dialog.dismiss()
+            openSitePermissions()
         })
 
         row(
