@@ -326,6 +326,19 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM saved_sessions WHERE id = :sessionId")
     suspend fun deleteSavedSession(sessionId: String): Int
 
+    @Query("SELECT COUNT(*) FROM saved_sessions WHERE lower(name) = lower(:name) AND id != :sessionId")
+    suspend fun otherSavedSessionNameCount(sessionId: String, name: String): Int
+
+    @Query("UPDATE saved_sessions SET name = :name WHERE id = :sessionId")
+    suspend fun updateSavedSessionName(sessionId: String, name: String): Int
+
+    @Transaction
+    suspend fun renameSavedSessionIfNameAvailable(sessionId: String, name: String): Boolean {
+        if (name.isBlank() || savedSessions().none { it.id == sessionId }) return false
+        if (otherSavedSessionNameCount(sessionId, name) > 0) return false
+        return updateSavedSessionName(sessionId, name) > 0
+    }
+
     @Transaction
     suspend fun removeSavedSession(sessionId: String): Boolean {
         clearTabsForSession(sessionId)
