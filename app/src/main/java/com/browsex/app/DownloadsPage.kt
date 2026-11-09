@@ -26,11 +26,10 @@ import java.util.Date
 /** Combined library for Android DownloadManager jobs and Gecko response-stream downloads. */
 internal class DownloadsPage(
     private val activity: MainActivity,
-    private val store: BrowserStore,
     private val onCancelStreamDownload: (String) -> Boolean
 ) {
     private val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-    private val colors get() = BrowseXColors.resolve(activity, store)
+    private val colors get() = BrowseXColors.resolve(activity, activity.currentBrowserSettings)
     private val isTvRemote get() = WrenAdaptiveUi.isTelevision(activity)
     private fun t(en: String, ar: String) = BrowseXStrings.text(activity, en, ar)
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
@@ -110,7 +109,7 @@ internal class DownloadsPage(
             orientation = LinearLayout.VERTICAL
             setPadding(WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), WrenAdaptiveUi.verticalSafePadding(activity, if (isTvRemote) 26 else 16), WrenAdaptiveUi.horizontalSafePadding(activity, if (isTvRemote) 30 else 18), dp(if (isTvRemote) 28 else 14))
             setBackgroundColor(colors.canvas)
-            BrowseXColors.applyDirection(this, store)
+            BrowseXColors.applyDirection(this, activity.currentBrowserSettings)
         }
         val header = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
