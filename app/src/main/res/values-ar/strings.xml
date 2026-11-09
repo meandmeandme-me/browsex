@@ -238,6 +238,7 @@
     <string name="ui_allow_device_access">السماح بالوصول إلى الجهاز؟</string>
     <string name="ui_device_permission_request_message">يريد %1$s استخدام %2$s لديك.</string>
     <string name="ui_not_now">ليس الآن</string>
+    <string name="ui_and">و</string>
     <string name="ui_allow">سماح</string>
     <string name="ui_block">حظر</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">لا يدعم GeckoView إلغاء إذن التخزين الدائم بعد منحه.</string>
