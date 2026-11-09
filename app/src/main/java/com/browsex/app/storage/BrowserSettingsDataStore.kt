@@ -10,7 +10,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.browsex.app.BrowserPreferencePolicy
-import com.browsex.app.BrowserStorePolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -61,7 +60,7 @@ internal class BrowserSettingsDataStore(
         reduceTransparency = p[Keys.reduceTransparency] ?: false,
         reduceMotion = p[Keys.reduceMotion] ?: false,
         highContrast = p[Keys.highContrast] ?: false,
-        searchEngine = BrowserStorePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
+        searchEngine = BrowserPreferencePolicy.normalizeSearchEngine(p[Keys.searchEngine]),
         deniedPlatformPermissions = p[Keys.deniedPlatformPermissions] ?: emptySet()
     )
 
