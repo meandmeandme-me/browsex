@@ -1429,8 +1429,10 @@ class MainActivity : AppCompatActivity() {
             }
             setOnFocusChangeListener { _, focused ->
                 if (!focused) {
-                    updateAddress()
-                    addressSuggestionsController?.hide()
+                    if (addressSuggestionsController?.hasFocusInside() != true) {
+                        updateAddress()
+                        addressSuggestionsController?.hide()
+                    }
                 } else {
                     addressSuggestionsController?.onQueryChanged(address.text?.toString().orEmpty())
                 }
