@@ -2,7 +2,7 @@ name: BrowseX CI
 
 on:
   push:
-    branches: [ main, rewrite-v2, wren-design-prep ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
