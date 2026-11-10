@@ -79,6 +79,8 @@ class RoomSitePermissionRepositoryTest {
                 assertTrue(repository.setDecision("https://site-$index.example", "camera", "deny", index.toLong()))
             }
             assertEquals(100, repository.all().size)
+            assertNull(repository.decision("https://site-0.example", "camera"))
+            assertEquals("deny", repository.decision("https://site-109.example", "camera"))
             assertTrue(repository.clearOrigin("https://site-109.example/path"))
             assertNull(repository.decision("https://site-109.example", "camera"))
             repository.clearAll()
