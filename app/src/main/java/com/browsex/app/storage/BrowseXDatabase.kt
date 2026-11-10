@@ -539,8 +539,8 @@ interface BrowseXStorageDao {
         putBrowserState(listOf(state))
     }
 
-    @Query("SELECT * FROM open_tabs ORDER BY position")
-    suspend fun openTabs(): List<OpenTabEntity>
+    @Query("SELECT * FROM open_tabs ORDER BY position LIMIT :limit")
+    suspend fun openTabs(limit: Int): List<OpenTabEntity>
 
     @Query("UPDATE bookmarks SET folder_id = 'unfiled' WHERE folder_id = :folderId")
     suspend fun moveFolderItemsToUnfiled(folderId: String)
