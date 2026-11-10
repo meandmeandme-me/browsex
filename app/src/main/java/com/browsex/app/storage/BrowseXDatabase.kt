@@ -524,8 +524,8 @@ interface BrowseXStorageDao {
     @Query("UPDATE download_records SET uri = '', status = 'failed', error = 'Download interrupted before BrowseX could finish it' WHERE status IN ('queued', 'running')")
     suspend fun failInterruptedDownloads(): Int
 
-    @Query("SELECT * FROM download_records ORDER BY created_at DESC")
-    suspend fun downloads(): List<DownloadRecordEntity>
+    @Query("SELECT * FROM download_records ORDER BY created_at DESC LIMIT :limit")
+    suspend fun downloads(limit: Int): List<DownloadRecordEntity>
 
     @Query("SELECT * FROM browser_state")
     suspend fun browserState(): List<BrowserStateEntity>
