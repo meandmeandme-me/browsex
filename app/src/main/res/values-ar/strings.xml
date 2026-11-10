@@ -477,4 +477,9 @@
     <string name="ui_could_not_import_check_the_name_and_the_10_session_limit">تعذر الاستيراد. تحقق من الاسم وحد 10 جلسات.</string>
     <string name="ui_there_are_no_regular_tabs_to_save">لا توجد تبويبات عادية لحفظها</string>
     <string name="ui_could_not_save_session_use_a_name_up_to_40_characters_up_to_10_sessions_are_supported">تعذر حفظ الجلسة. استخدم اسمًا لا يتجاوز 40 حرفًا؛ الحد الأقصى 10 جلسات.</string>
+    <string name="ui_unknown_download_state_file_unavailable">حالة تنزيل غير معروفة — الملف غير متاح</string>
+    <string name="ui_unknown_download_state">حالة تنزيل غير معروفة</string>
+    <string name="ui_unavailable">غير متاح</string>
+    <string name="ui_download_file_unavailable">ملف التنزيل غير متاح</string>
+    <string name="ui_this_download_has_an_unknown_state_and_cannot_be_opened">حالة هذا التنزيل غير معروفة ولا يمكن فتحه.</string>
 </resources>
