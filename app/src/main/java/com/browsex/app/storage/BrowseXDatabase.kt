@@ -487,8 +487,11 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM platform_download_ids WHERE download_id = :downloadId")
     suspend fun removePlatformDownloadId(downloadId: Long): Int
 
-    @Query("SELECT * FROM platform_download_ids ORDER BY position")
-    suspend fun platformDownloadIds(): List<PlatformDownloadIdEntity>
+    @Query("SELECT EXISTS(SELECT 1 FROM platform_download_ids WHERE download_id = :downloadId)")
+    suspend fun hasPlatformDownloadId(downloadId: Long): Boolean
+
+    @Query("SELECT * FROM platform_download_ids ORDER BY position LIMIT :limit")
+    suspend fun platformDownloadIds(limit: Int): List<PlatformDownloadIdEntity>
 
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM platform_download_ids")
     suspend fun nextPlatformDownloadIdPosition(): Int
@@ -502,7 +505,7 @@ interface BrowseXStorageDao {
     @Transaction
     suspend fun trackPlatformDownloadId(item: PlatformDownloadIdEntity): Boolean {
         if (item.downloadId <= 0L) return false
-        if (platformDownloadIds().any { it.downloadId == item.downloadId }) return true
+        if (hasPlatformDownloadId(item.downloadId)) return true
         val inserted = insertPlatformDownloadId(item.copy(position = nextPlatformDownloadIdPosition()))
         if (inserted == -1L) return false
         prunePlatformDownloadIds(300)
