@@ -645,19 +645,31 @@ interface BrowseXStorageDao {
         incomingFolders: List<BookmarkFolderEntity>,
         incomingBookmarks: List<BookmarkEntity>
     ): Pair<Int, Int> {
+        // Snapshot the bounded destination data once. Re-querying folders and counts for
+        // every imported row creates avoidable quadratic work on large valid backups.
+        val existingFolders = folders()
         val folderMap = mutableMapOf("unfiled" to "unfiled")
+        val existingFolderByName = existingFolders.associateBy { it.name.lowercase(java.util.Locale.ROOT) }
+            .toMutableMap()
+        val existingFolderIds = existingFolders.mapTo(mutableSetOf()) { it.id }
+        var folderCountNow = existingFolders.size
         var importedFolders = 0
+
         incomingFolders.forEach { incoming ->
             if (incoming.id == "unfiled" || incoming.name.isBlank()) return@forEach
-            val existingByName = folders().firstOrNull { it.name.equals(incoming.name, ignoreCase = true) }
+            val normalizedName = incoming.name.lowercase(java.util.Locale.ROOT)
+            val existingByName = existingFolderByName[normalizedName]
             if (existingByName != null) {
                 folderMap[incoming.id] = existingByName.id
-            } else if (folderCount() < MAX_BOOKMARK_FOLDERS) {
-                val id = if (folder(incoming.id) == null) incoming.id
-                    else "imported_${java.util.UUID.randomUUID()}"
-                val safe = incoming.copy(id = id, sortOrder = folderCount())
+            } else if (folderCountNow < MAX_BOOKMARK_FOLDERS) {
+                var id = incoming.id
+                if (id in existingFolderIds) id = "imported_${java.util.UUID.randomUUID()}"
+                val safe = incoming.copy(id = id, sortOrder = folderCountNow)
                 if (insertFolder(safe) != -1L) {
                     folderMap[incoming.id] = id
+                    existingFolderIds.add(id)
+                    existingFolderByName[normalizedName] = safe
+                    folderCountNow++
                     importedFolders++
                 } else {
                     folderMap[incoming.id] = "unfiled"
@@ -668,21 +680,22 @@ interface BrowseXStorageDao {
         }
 
         var importedBookmarks = 0
+        var bookmarkCountNow = bookmarkCount()
+        val existingUrls = bookmarks(MAX_BOOKMARKS).mapTo(mutableSetOf()) { it.url }
         incomingBookmarks.forEach { incoming ->
-            if (bookmarkCount() >= MAX_BOOKMARKS) return@forEach
-            if (bookmark(incoming.url) != null) return@forEach
+            if (bookmarkCountNow >= MAX_BOOKMARKS || !existingUrls.add(incoming.url)) return@forEach
             val folderId = folderMap[incoming.folderId] ?: "unfiled"
-            // Imported sort orders are global to the backup payload, not local to a
-            // destination folder. Append each accepted item to preserve a stable order
-            // without colliding with bookmarks already present in that folder.
+            // Append accepted rows to keep sort order stable within each destination folder.
             val sortOrder = nextBookmarkSortOrder(folderId)
             if (insertBookmark(incoming.copy(folderId = folderId, sortOrder = sortOrder)) != -1L) {
                 importedBookmarks++
+                bookmarkCountNow++
+            } else {
+                existingUrls.remove(incoming.url)
             }
         }
         return importedFolders to importedBookmarks
     }
-
     @Transaction
     suspend fun removeFolder(folderId: String): Boolean {
         if (folderId == "unfiled" || folder(folderId) == null) return false
