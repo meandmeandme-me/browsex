@@ -53,6 +53,23 @@ class BrowserPaletteTest {
     }
 
     @Test
+    fun accentColorSelectionIsAppliedAndHighContrastKeepsItsAccessibleOverride() {
+        val violet = BrowseXColors.resolve(
+            context,
+            BrowserSettings(themeMode = "light", accentColor = "violet")
+        )
+        assertEquals(0xFF6844D6.toInt(), violet.accent)
+        assertEquals(0xFFECE5FF.toInt(), violet.selected)
+
+        val accessible = BrowseXColors.resolve(
+            context,
+            BrowserSettings(themeMode = "light", accentColor = "violet", highContrast = true)
+        )
+        assertEquals(0xFF164FAF.toInt(), accessible.accent)
+        assertEquals(0xFFD3E2FF.toInt(), accessible.selected)
+    }
+
+    @Test
     fun standardGlassPaletteKeepsItsTranslucentLayering() {
         val normal = BrowseXColors.resolve(
             context,
