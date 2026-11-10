@@ -44,7 +44,7 @@ internal class BrowserCredentialPromptDelegate(
                     onRejected = { result.complete(request.dismiss()) }
                 )
             }
-            .setNegativeButton("Not now") { _, _ -> result.complete(request.dismiss()) }
+            .setNegativeButton(translate("Not now")) { _, _ -> result.complete(request.dismiss()) }
             .setOnCancelListener { result.complete(request.dismiss()) }
             .show()
         return result
@@ -86,8 +86,8 @@ internal class BrowserCredentialPromptDelegate(
                 } else {
                     BrowserDeviceAuthenticator.authenticate(
                         activity = activity,
-                        title = "Unlock saved passwords",
-                        subtitle = "Verify your identity to fill this sign-in",
+                        title = translate("Unlock saved passwords"),
+                        subtitle = translate("Verify your identity before filling a saved sign-in"),
                         onAuthenticated = {
                             onDeviceAuthenticated()
                             result.complete(if (!hasPrivateTabsOpen() && isStillValid(session, firstOrigin)) request.confirm(selected) else request.dismiss())
