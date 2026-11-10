@@ -18,14 +18,14 @@ internal data class BrowseXColors(
             val dark = when (settings.themeMode) { "dark" -> true; "light" -> false; else -> night }
             val base = if (dark) BrowseXColors(
                 // Deep navy surfaces with translucent glass layers for the browser dock.
-                0xFF080F1E.toInt(), 0xD91A2940.toInt(), 0xE51E2D46.toInt(), 0xD91B2A41.toInt(),
-                0xFFF4F7FF.toInt(), 0xFF9DAFC8.toInt(), 0xFF78A9FF.toInt(), 0x665F7898.toInt(),
-                0xFFFF929B.toInt(), 0xFF79D7AE.toInt(), 0xFF2D426A.toInt(), true
+                0xFF1C1B22.toInt(), 0xFF292830.toInt(), 0xFF35343D.toInt(), 0xFF202027.toInt(),
+                0xFFFBFBFE.toInt(), 0xFFB8B7C1.toInt(), 0xFF8CB4FF.toInt(), 0xFF484750.toInt(),
+                0xFFFF9AA2.toInt(), 0xFF8BD5A8.toInt(), 0xFF303C54.toInt(), true
             ) else BrowseXColors(
                 // Cool neutral canvas, pearl glass, and a clearer blue accent.
-                0xFFF4F7FC.toInt(), 0xDDFDFFFF.toInt(), 0xF0FFFFFF.toInt(), 0xEFFFFFFF.toInt(),
-                0xFF151B2D.toInt(), 0xFF667085.toInt(), 0xFF4263EB.toInt(), 0x66A8B8D0.toInt(),
-                0xFFBE414B.toInt(), 0xFF1C7D53.toInt(), 0xFFE5EDFF.toInt(), false
+                0xFFF5F5F7.toInt(), 0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt(), 0xFFF1F1F4.toInt(),
+                0xFF202124.toInt(), 0xFF5F6368.toInt(), 0xFF0060DF.toInt(), 0xFFDADCE0.toInt(),
+                0xFFC5221F.toInt(), 0xFF188038.toInt(), 0xFFE8F0FE.toInt(), false
             )
 
             val accentPair = when (settings.accentColor) {
