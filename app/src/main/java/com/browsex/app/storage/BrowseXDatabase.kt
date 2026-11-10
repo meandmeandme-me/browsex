@@ -448,7 +448,7 @@ interface BrowseXStorageDao {
         return true
     }
 
-    @Query("SELECT * FROM download_name_reservations ORDER BY position")
+    @Query("SELECT * FROM download_name_reservations ORDER BY position DESC LIMIT 300")
     suspend fun downloadNameReservations(): List<DownloadNameReservationEntity>
 
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM download_name_reservations")
@@ -530,7 +530,7 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM download_records ORDER BY created_at DESC LIMIT :limit")
     suspend fun downloads(limit: Int): List<DownloadRecordEntity>
 
-    @Query("SELECT * FROM browser_state")
+    @Query("SELECT * FROM browser_state LIMIT 1")
     suspend fun browserState(): List<BrowserStateEntity>
 
     @Transaction
