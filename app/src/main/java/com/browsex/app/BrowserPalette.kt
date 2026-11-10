@@ -41,8 +41,6 @@ internal data class BrowseXColors(
             // borders and selected states. Keep semantic colors and the base Wren identity.
             val opaqueSurfaces = settings.reduceTransparency || settings.highContrast
             return base.copy(
-                accent = accentPair.first,
-                selected = accentPair.second,
                 panel = if (opaqueSurfaces) {
                     if (dark) 0xFF17283E.toInt() else 0xFFFFFFFF.toInt()
                 } else base.panel,
@@ -60,13 +58,13 @@ internal data class BrowseXColors(
                 } else base.muted,
                 accent = if (settings.highContrast) {
                     if (dark) 0xFFB5D4FF.toInt() else 0xFF164FAF.toInt()
-                } else base.accent,
+                } else accentPair.first,
                 line = if (settings.highContrast) {
                     if (dark) 0xFFB2C5DD.toInt() else 0xFF4A5A70.toInt()
                 } else base.line,
                 selected = if (settings.highContrast) {
                     if (dark) 0xFF34547D.toInt() else 0xFFD3E2FF.toInt()
-                } else base.selected
+                } else accentPair.second
             )
         }
 
