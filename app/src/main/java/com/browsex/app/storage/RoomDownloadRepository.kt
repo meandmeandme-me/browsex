@@ -6,7 +6,7 @@ import java.util.UUID
 internal class RoomDownloadRepository(
     private val dao: BrowseXStorageDao
 ) {
-    suspend fun all(): List<DownloadRecordEntity> = dao.downloads()
+    suspend fun all(): List<DownloadRecordEntity> = dao.downloads(MAX_DOWNLOADS)
 
     suspend fun beginStream(
         displayName: String,
