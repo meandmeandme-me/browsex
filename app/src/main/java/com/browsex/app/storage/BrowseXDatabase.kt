@@ -681,15 +681,22 @@ interface BrowseXStorageDao {
 
         var importedBookmarks = 0
         var bookmarkCountNow = bookmarkCount()
-        val existingUrls = bookmarks(MAX_BOOKMARKS).mapTo(mutableSetOf()) { it.url }
+        val existingBookmarks = bookmarks(MAX_BOOKMARKS)
+        val existingUrls = existingBookmarks.mapTo(mutableSetOf()) { it.url }
+        // Keep per-folder append positions in memory instead of issuing MAX(sort_order)
+        // once per imported bookmark. The destination is capped at MAX_BOOKMARKS.
+        val nextOrderByFolder = existingBookmarks
+            .groupBy { it.folderId }
+            .mapValues { (_, items) -> (items.maxOfOrNull { it.sortOrder } ?: -1) + 1 }
+            .toMutableMap()
         incomingBookmarks.forEach { incoming ->
             if (bookmarkCountNow >= MAX_BOOKMARKS || !existingUrls.add(incoming.url)) return@forEach
             val folderId = folderMap[incoming.folderId] ?: "unfiled"
-            // Append accepted rows to keep sort order stable within each destination folder.
-            val sortOrder = nextBookmarkSortOrder(folderId)
+            val sortOrder = nextOrderByFolder[folderId] ?: 0
             if (insertBookmark(incoming.copy(folderId = folderId, sortOrder = sortOrder)) != -1L) {
                 importedBookmarks++
                 bookmarkCountNow++
+                nextOrderByFolder[folderId] = sortOrder + 1
             } else {
                 existingUrls.remove(incoming.url)
             }
