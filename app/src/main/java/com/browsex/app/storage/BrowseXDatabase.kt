@@ -419,8 +419,8 @@ interface BrowseXStorageDao {
         prunePermissionDecisions(keep.coerceAtLeast(0))
     }
 
-    @Query("SELECT * FROM site_permission_decisions ORDER BY origin, feature")
-    suspend fun permissionDecisions(): List<SitePermissionDecisionEntity>
+    @Query("SELECT * FROM site_permission_decisions ORDER BY updated_at DESC, origin, feature LIMIT :limit")
+    suspend fun permissionDecisions(limit: Int): List<SitePermissionDecisionEntity>
 
     @Query("DELETE FROM site_permission_decisions WHERE rowid IN (SELECT rowid FROM site_permission_decisions ORDER BY updated_at DESC, origin, feature LIMIT -1 OFFSET :keep)")
     suspend fun prunePermissionDecisions(keep: Int)
