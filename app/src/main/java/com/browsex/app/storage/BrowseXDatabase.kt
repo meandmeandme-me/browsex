@@ -290,8 +290,8 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM storage_migration_state WHERE id = 'legacy_import' LIMIT 1")
     suspend fun migrationState(): StorageMigrationStateEntity?
 
-    @Query("SELECT * FROM bookmarks ORDER BY sort_order, created_at DESC")
-    suspend fun bookmarks(): List<BookmarkEntity>
+    @Query("SELECT * FROM bookmarks ORDER BY sort_order, created_at DESC LIMIT :limit")
+    suspend fun bookmarks(limit: Int): List<BookmarkEntity>
 
     @Query("SELECT * FROM history_entries WHERE url = :url LIMIT 1")
     suspend fun historyEntryByUrl(url: String): HistoryEntryEntity?
