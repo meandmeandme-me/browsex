@@ -323,7 +323,11 @@ internal class DownloadsPage(
                 val recordIsActive = record.status == "queued" || record.status == "running"
                 val recordIsFailed = record.status == "failed"
                 val recordIsCancelled = record.status == "cancelled"
-                val recordIsCompleted = !recordIsActive && !recordIsFailed && !recordIsCancelled
+                // Only the explicit terminal state represents a saved file. Unknown
+                // future/corrupt states must never expose an unverified URI as a file.
+                val recordIsCompleted = record.status == "completed"
+                val recordIsUnknown = !recordIsActive && !recordIsFailed &&
+                    !recordIsCancelled && !recordIsCompleted
                 val matchesFilter = when (selectedFilter) {
                     "active" -> recordIsActive
                     "completed" -> recordIsCompleted
@@ -352,7 +356,9 @@ internal class DownloadsPage(
                     recordIsActive -> t("Downloading", "جارٍ التنزيل")
                     recordIsCancelled -> t("Cancelled", "تم الإلغاء")
                     recordIsFailed -> t("Failed: ", "فشل: ") + record.error
-                    else -> t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة")
+                    recordIsCompleted -> t("Downloaded directly from the website response", "تم حفظ استجابة الموقع مباشرة")
+                    recordIsUnknown -> t("Unknown download state — file unavailable", "حالة تنزيل غير معروفة — الملف غير متاح")
+                    else -> t("Unknown download state", "حالة تنزيل غير معروفة")
                 }
                 val progressText = if (record.totalBytes > 0L) {
                     val percent = ((record.bytesWritten.coerceAtMost(record.totalBytes).toDouble() / record.totalBytes.toDouble()) * 100.0).toInt().coerceIn(0, 100)
@@ -387,7 +393,8 @@ internal class DownloadsPage(
                     text = when {
                         recordIsActive -> t("Cancel", "إلغاء")
                         recordIsFailed || recordIsCancelled -> t("Remove", "حذف")
-                        else -> t("Open", "فتح")
+                        recordIsCompleted -> t("Open", "فتح")
+                        else -> t("Unavailable", "غير متاح")
                     }
                     textSize = if (isTvRemote) 16f else 13f
                     gravity = Gravity.CENTER
@@ -402,7 +409,8 @@ internal class DownloadsPage(
                     contentDescription = when {
                         recordIsActive -> t("Cancel download", "إلغاء التنزيل")
                         recordIsFailed || recordIsCancelled -> t("Remove download record", "حذف سجل التنزيل")
-                        else -> t("Open downloaded file", "فتح الملف المنزّل")
+                        recordIsCompleted -> t("Open downloaded file", "فتح الملف المنزّل")
+                        else -> t("Download file unavailable", "ملف التنزيل غير متاح")
                     }
                     setOnClickListener {
                         when {
@@ -416,6 +424,13 @@ internal class DownloadsPage(
                                 }.show()
                             recordIsFailed || recordIsCancelled -> {
                                 activity.lifecycleScope.launch { repository.remove(record.id); reloadRoomRecords() }
+                            }
+                            !recordIsCompleted -> {
+                                android.widget.Toast.makeText(
+                                    activity,
+                                    t("This download has an unknown state and cannot be opened.", "حالة هذا التنزيل غير معروفة ولا يمكن فتحه."),
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
                             }
                             else -> {
                                 val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
@@ -432,7 +447,7 @@ internal class DownloadsPage(
                     }
                 }
                 item.addView(action)
-                if (!recordIsActive && !recordIsFailed && !recordIsCancelled) {
+                if (recordIsCompleted) {
                     item.addView(TextView(activity).apply {
                         text = t("Share", "مشاركة")
                         textSize = 12f
