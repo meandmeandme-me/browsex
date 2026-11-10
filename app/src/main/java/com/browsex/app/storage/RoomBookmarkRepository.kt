@@ -11,7 +11,7 @@ import java.util.UUID
 internal class RoomBookmarkRepository(
     private val dao: BrowseXStorageDao
 ) {
-    suspend fun all(): List<BookmarkEntity> = dao.bookmarks()
+    suspend fun all(): List<BookmarkEntity> = dao.bookmarks(BrowseXStorageDao.MAX_BOOKMARKS)
 
     /** Portable bookmark-only backup; excludes history, sessions, cookies and credentials. */
     suspend fun exportBookmarks(): String {
@@ -23,7 +23,7 @@ internal class RoomBookmarkRepository(
             folderArray.put(org.json.JSONObject().put("id", folder.id).put("name", folder.name))
         }
         val bookmarkArray = org.json.JSONArray()
-        dao.bookmarks().forEach { bookmark ->
+        dao.bookmarks(BrowseXStorageDao.MAX_BOOKMARKS).forEach { bookmark ->
             bookmarkArray.put(org.json.JSONObject()
                 .put("id", bookmark.id)
                 .put("url", bookmark.url)
@@ -36,7 +36,7 @@ internal class RoomBookmarkRepository(
 
     /** Standard Netscape bookmark HTML for import into other browsers. */
     suspend fun exportBookmarksHtml(): String =
-        BookmarkHtmlCodec.fromBookmarks(dao.folders(), dao.bookmarks())
+        BookmarkHtmlCodec.fromBookmarks(dao.folders(), dao.bookmarks(BrowseXStorageDao.MAX_BOOKMARKS))
 
     /**
      * Imports a versioned backup as a merge. Existing bookmarks are never overwritten;
@@ -125,7 +125,7 @@ internal class RoomBookmarkRepository(
             incoming.optJSONObject(index)?.optString("url")?.trim()?.takeIf(::isSafeUrl)
         }
         val unique = validUrls.distinct()
-        val existing = dao.bookmarks().map { it.url }.toSet()
+        val existing = dao.bookmarks(BrowseXStorageDao.MAX_BOOKMARKS).map { it.url }.toSet()
         return BookmarkImportPreview(
             totalItems = incoming.length(),
             validItems = unique.size,
