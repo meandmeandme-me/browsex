@@ -18,7 +18,7 @@ internal class RoomTabStateRepository(
     }
 
     suspend fun restore(): TabSessionSnapshot {
-        val tabs = dao.openTabs().sortedBy { it.position }.map { it.url }
+        val tabs = dao.openTabs(MAX_TAB_SCAN).map { it.url }
         val state = dao.browserState().firstOrNull()
         val normalized = TabSessionState.normalize(tabs, state?.activeIndex ?: 0, HOME_URL)
         return TabSessionSnapshot(normalized.urls, normalized.activeIndex, state?.savedAt ?: 0L)
@@ -33,6 +33,7 @@ internal class RoomTabStateRepository(
 
     private companion object {
         const val HOME_URL = "resource://android/assets/home.html"
+        const val MAX_TAB_SCAN = TabSessionState.MAX_TABS * 4
     }
 }
 
