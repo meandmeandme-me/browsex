@@ -67,16 +67,18 @@ internal class StreamDownloadCoordinator(
                     totalBytes = totalBytes
                 ) ?: throw IllegalStateException("BrowseX download history is full")
                 downloadId = createdId
-                pendingDownload = PendingDownload().also { pending[createdId] = it }
+                val entry = PendingDownload()
+                pendingDownload = entry
+                pending[createdId] = entry
                 check(repository.markRunning(createdId)) {
                     "Could not start the persisted download record"
                 }
                 runCatching { response.setReadTimeoutMillis(120_000L) }
                 val lastPersistedProgress = AtomicLong(0L)
-                val transferLock = pendingDownload.lock
+                val transferLock = entry.lock
                 synchronized(transferLock) {
-                    if (pendingDownload.cancelled) throw CancellationException("Download cancelled")
-                    pendingDownload.writerStarted = true
+                    if (entry.cancelled) throw CancellationException("Download cancelled")
+                    entry.writerStarted = true
                     writer.write(
                         id = createdId,
                         body = body,
@@ -144,7 +146,7 @@ internal class StreamDownloadCoordinator(
                                     onFailed(error, cancelled)
                                 }
                             } finally {
-                                pending.remove(createdId, pendingDownload)
+                                pending.remove(createdId, entry)
                             }
                         }
                     }
