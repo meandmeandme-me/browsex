@@ -47,7 +47,7 @@ internal class RoomSitePermissionRepository(
     suspend fun clearAll() = dao.clearAllPermissionDecisions()
 
     suspend fun all(): List<SitePermissionDecisionEntity> =
-        dao.permissionDecisions()
+        dao.permissionDecisions(MAX_DECISIONS)
             .asSequence()
             .filter { item ->
                 BrowserSiteOriginPolicy.canonicalOrigin(item.origin) == item.origin &&
