@@ -207,6 +207,7 @@ internal class DownloadsPage(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
+        lateinit var render: () -> Unit
         val filterLabels = listOf(
             "all" to t("All", "الكل"),
             "active" to t("In progress", "قيد التنزيل"),
@@ -295,7 +296,7 @@ internal class DownloadsPage(
         lateinit var reloadRoomRecords: () -> Unit
         var platformDownloadsActive = false
 
-        fun render() {
+        render = renderBlock@{
             platformDownloadsActive = false
             list.removeAllViews()
             val ownedIds = platformIds
@@ -715,7 +716,7 @@ internal class DownloadsPage(
                     setTextColor(colors.danger)
                     setPadding(dp(14), dp(18), dp(14), dp(18))
                 })
-                return
+                return@renderBlock
             }
             val missing = ownedIds - seenIds
             missing.forEach { id ->
