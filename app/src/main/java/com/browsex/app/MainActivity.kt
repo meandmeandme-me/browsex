@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException
 import java.util.ArrayDeque
 import java.util.WeakHashMap
+import java.lang.ref.WeakReference
 import com.browsex.app.storage.BrowserStorageRuntime
 import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
@@ -293,7 +294,8 @@ class MainActivity : AppCompatActivity() {
             releaseForMemoryPressure = sessionLifecycleCoordinator::releaseForMemoryPressure
         )
     }
-    private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
+    private val streamDownloadCoordinator: StreamDownloadCoordinator
+        get() = (application as BrowseXApplication).streamDownloads
     private lateinit var downloadRequestCoordinator: BrowserDownloadRequestCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var browserRoot: FrameLayout
@@ -410,7 +412,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        streamDownloadCoordinator = StreamDownloadCoordinator(storageRuntime, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri ->
             if (uri != null) lifecycleScope.launch {
                 runCatching {
@@ -951,7 +952,6 @@ class MainActivity : AppCompatActivity() {
             credentialVault.setPrivateTabsOpen(false)
         }
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
-        if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         uBlockOriginManager?.destroy()
         uBlockOriginManager = null
         dataClearDialog?.dismiss()
@@ -2335,19 +2335,33 @@ class MainActivity : AppCompatActivity() {
             toast(BrowseXStrings.text(this@MainActivity, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
             return
         }
+        // Completion notifications must not keep a destroyed Activity alive while the
+        // process-scoped download continues writing its response body.
+        val activityRef = WeakReference(this)
         val started = streamDownloadCoordinator.start(
             response = response,
             onCompleted = { result ->
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed) toast(getString(R.string.ui_downloaded_file, result.displayName))
+                activityRef.get()?.let { activity ->
+                    activity.runOnUiThread {
+                        if (!activity.isFinishing && !activity.isDestroyed) {
+                            activity.toast(activity.getString(R.string.ui_downloaded_file, result.displayName))
+                        }
+                    }
                 }
                 android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
             },
             onFailed = { error, cancelled ->
                 if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
-                runOnUiThread {
-                    if (!cancelled && !isFinishing && !isDestroyed) {
-                        toast(getString(R.string.ui_could_not_save_download, error?.message ?: getString(R.string.ui_unknown_status)))
+                if (!cancelled) {
+                    activityRef.get()?.let { activity ->
+                        activity.runOnUiThread {
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                activity.toast(activity.getString(
+                                    R.string.ui_could_not_save_download,
+                                    error?.message ?: activity.getString(R.string.ui_unknown_status)
+                                ))
+                            }
+                        }
                     }
                 }
             }
