@@ -221,7 +221,7 @@ interface BrowseXStorageDao {
         return true
     }
 
-    @Query("SELECT * FROM bookmarks WHERE folder_id = :folderId ORDER BY sort_order, created_at DESC")
+    @Query("SELECT * FROM bookmarks WHERE folder_id = :folderId ORDER BY sort_order, created_at DESC LIMIT 200")
     suspend fun bookmarksInFolder(folderId: String): List<BookmarkEntity>
 
     @Query("UPDATE bookmarks SET folder_id = :folderId, sort_order = :sortOrder WHERE url = :url")
@@ -317,7 +317,7 @@ interface BrowseXStorageDao {
     @Query("SELECT * FROM history_entries ORDER BY visited_at DESC LIMIT :limit")
     suspend fun history(limit: Int): List<HistoryEntryEntity>
 
-    @Query("SELECT * FROM bookmark_folders ORDER BY sort_order, name")
+    @Query("SELECT * FROM bookmark_folders ORDER BY sort_order, name LIMIT 50")
     suspend fun folders(): List<BookmarkFolderEntity>
 
     @Query("DELETE FROM saved_session_tabs WHERE session_id = :sessionId")
