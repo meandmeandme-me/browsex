@@ -331,7 +331,7 @@ internal class DownloadsPage(
                 val matchesFilter = when (selectedFilter) {
                     "active" -> recordIsActive
                     "completed" -> recordIsCompleted
-                    "issues" -> recordIsFailed || recordIsCancelled
+                    "issues" -> recordIsFailed || recordIsCancelled || recordIsUnknown
                     else -> true
                 }
                 if (!matchesFilter) return@forEach
