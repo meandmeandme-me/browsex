@@ -416,16 +416,14 @@ interface BrowseXStorageDao {
     @Transaction
     suspend fun setPermissionDecision(item: SitePermissionDecisionEntity, keep: Int = 100) {
         putPermissionDecisions(listOf(item))
-        val safeKeep = keep.coerceAtLeast(0)
-        val overflow = permissionDecisionsNewest(safeKeep + 1).drop(safeKeep)
-        overflow.forEach { deletePermissionDecision(it.origin, it.feature) }
+        prunePermissionDecisions(keep.coerceAtLeast(0))
     }
 
     @Query("SELECT * FROM site_permission_decisions ORDER BY origin, feature")
     suspend fun permissionDecisions(): List<SitePermissionDecisionEntity>
 
-    @Query("SELECT * FROM site_permission_decisions ORDER BY updated_at DESC, origin, feature LIMIT :limit")
-    suspend fun permissionDecisionsNewest(limit: Int): List<SitePermissionDecisionEntity>
+    @Query("DELETE FROM site_permission_decisions WHERE rowid IN (SELECT rowid FROM site_permission_decisions ORDER BY updated_at DESC, origin, feature LIMIT -1 OFFSET :keep)")
+    suspend fun prunePermissionDecisions(keep: Int)
 
     @Query("SELECT * FROM download_records WHERE id = :id LIMIT 1")
     suspend fun downloadRecord(id: String): DownloadRecordEntity?
