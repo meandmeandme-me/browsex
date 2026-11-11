@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Wren</string>
+    <string name="app_name">BrowseX</string>
     <string name="website_notification_channel">Website notifications</string>
-    <string name="website_notification_channel_description">Notifications sent by websites you allow in Wren</string>
+    <string name="website_notification_channel_description">Notifications sent by websites you allow in BrowseX</string>
     <string name="ui_home">Home</string>
     <string name="ui_open_tabs">Open tabs</string>
     <string name="ui_search_suggestions">Search suggestions</string>
@@ -45,7 +45,7 @@
     <string name="ui_site_information">Site information</string>
     <string name="ui_search_engine">Search engine</string>
     <string name="ui_clear_browsing_history">Clear browsing history?</string>
-    <string name="ui_browsex">Wren</string>
+    <string name="ui_browsex">BrowseX</string>
     <string name="ui_open_webpage_first">Open webpage first</string>
     <string name="ui_open_a_webpage_first">Open a webpage first</string>
     <string name="ui_preparing_a_clean_reading_view">Preparing a clean reading view…</string>
@@ -95,7 +95,7 @@
     <string name="ui_shortcut_layout">Shortcut layout</string>
     <string name="ui_reset">Reset</string>
     <string name="ui_site_permissions_reset">Site permissions reset</string>
-    <string name="ui_make_browse_x_work_the_way_you_like">Make Wren work the way you like</string>
+    <string name="ui_make_browse_x_work_the_way_you_like">Make BrowseX work the way you like</string>
     <string name="ui_close_settings">Close settings</string>
     <string name="ui_general">General</string>
     <string name="ui_choose_how_you_browse">Choose how you browse</string>
@@ -354,8 +354,8 @@
     <string name="ui_this_bookmark_is_already_at_the_edge_of_its_folder">This bookmark is already at the edge of its folder.</string>
     <string name="ui_settings_are_temporarily_unavailable">Settings are temporarily unavailable</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">Private browsing does not read or save site permission choices.</string>
-    <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">No BrowseX downloads yet. Files you download from websites will appear here.</string>
-    <string name="ui_wren_browser">BrowseX browser</string>
+    <string name="ui_no_BrowseX_downloads_yet_files_you_download_from_websites_will_appear_here">No BrowseX downloads yet. Files you download from websites will appear here.</string>
+    <string name="ui_BrowseX_browser">BrowseX browser</string>
     <string name="ui_reload_page">Reload page</string>
     <string name="ui_address_bar_position">Address bar position</string>
     <string name="ui_choose_top_or_bottom_on_compact_screens">Choose top or bottom on compact screens</string>
