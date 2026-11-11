@@ -25,7 +25,7 @@ class DownloadFileNamePolicyTest {
     }
 
     @Test fun reservesUniqueDestinationWithoutOverwritingExistingFile() {
-        val directory = createTempDir(prefix = "browsex-download-")
+        val directory = java.nio.file.Files.createTempDirectory("browsex-download-").toFile()
         try {
             val original = File(directory, "report.txt")
             original.writeText("keep me")
