@@ -201,7 +201,11 @@ internal fun BrowseXBrowserChrome(
     readerOpen: Boolean,
     readerState: BrowseXReaderState,
     onDismissReader: () -> Unit,
-    onCopyReader: () -> Unit
+    onCopyReader: () -> Unit,
+    recallOpen: Boolean,
+    recallState: BrowseXRecallState,
+    onDismissRecall: () -> Unit,
+    onOpenRecall: (String) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -645,6 +649,13 @@ internal fun BrowseXBrowserChrome(
                 state = readerState,
                 onDismiss = onDismissReader,
                 onCopy = onCopyReader
+            )
+        }
+        if (recallOpen) {
+            BrowseXRecallScreen(
+                state = recallState,
+                onDismiss = onDismissRecall,
+                onOpen = onOpenRecall
             )
         }
     }
