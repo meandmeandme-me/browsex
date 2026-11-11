@@ -317,6 +317,11 @@ class MainActivity : AppCompatActivity() {
     private val composeSitePermissionsState = mutableStateOf<List<com.browsex.app.storage.SitePermissionDecisionEntity>>(emptyList())
     private val composeSavedSessionsOpen = mutableStateOf(false)
     private val composeSavedSessionsState = mutableStateOf<List<com.browsex.app.storage.RoomSavedSession>>(emptyList())
+    private val composeSiteInfoOpen = mutableStateOf(false)
+    private val composeSiteInfoState = mutableStateOf(
+        BrowseXSiteInfoState("", "", false, emptyList(), emptyMap())
+    )
+    private var composeSiteInfoTab: BrowserTab? = null
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1767,7 +1772,17 @@ class MainActivity : AppCompatActivity() {
                     onDeleteSavedSession = ::deleteSavedSession,
                     onSaveCurrentSession = ::saveCurrentSessionNamed,
                     onImportSavedSession = ::importSavedSession,
-                    onDeleteAllSavedSessions = ::deleteAllSavedSessions
+                    onDeleteAllSavedSessions = ::deleteAllSavedSessions,
+                    siteInfoOpen = composeSiteInfoOpen.value,
+                    siteInfoState = composeSiteInfoState.value,
+                    onDismissSiteInfo = {
+                        composeSiteInfoOpen.value = false
+                        composeSiteInfoTab = null
+                    },
+                    onChangeSiteInfoPermission = ::changeSiteInfoPermission,
+                    onResetSiteInfoPermissions = ::resetSiteInfoPermissions,
+                    onClearSiteInfoData = ::clearCurrentSiteInfoData,
+                    onSiteInfoMediaPermissionChange = ::changeSiteInfoMediaPermission
                 )
             }
         }
@@ -2503,92 +2518,151 @@ class MainActivity : AppCompatActivity() {
             toast("Open a website first")
             return
         }
-        fun showPage() {
+        composeSiteInfoTab = tab
+        fun showPage(permissions: List<GeckoSession.PermissionDelegate.ContentPermission>, decisions: Map<String, String>) {
             if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return
-            SiteInfoPage(
-                activity = this,
+            composeSiteInfoState.value = BrowseXSiteInfoState(
                 url = url,
                 title = tab.title,
-                permissions = if (tab.privateMode) emptyList() else tab.sitePermissions,
-                onPermissionChange = { permission, value ->
-                    if (!tab.privateMode) {
-                        val storage = browserRuntime?.storageController
-                        storage?.setPermission(permission, value)
-                        storage?.getPermissions(url, false)?.accept(
-                            { updated -> runOnUiThread {
-                                if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
-                            } },
-                            { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
-                        )
-                    }
-                },
-                onClearSiteData = {
-                    clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
-                },
-                onResetPermissions = {
-                    val storage = browserRuntime?.storageController
-                    tab.sitePermissions.filter {
-                        it.permission != GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE
-                    }.forEach { permission ->
-                        storage?.setPermission(
-                            permission,
-                            GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
-                        )
-                    }
-                    val uri = Uri.parse(url)
-                    val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
-                    lifecycleScope.launch {
-                        val cleared = runCatching {
-                            storageRuntime.awaitReady().sitePermissions.clearOrigin(origin)
-                            true
-                        }.onFailure { error ->
-                            android.util.Log.e("BrowseX", "Could not reset saved site permissions", error)
-                        }.getOrDefault(false)
-                        if (cleared && activeTab === tab && tab.url == url) {
-                            // Clear persisted camera/microphone grants before reloading so
-                            // Gecko cannot immediately reuse a stale allow decision.
-                            tab.session.reload()
-                        } else if (!cleared) {
-                            toast(BrowseXStrings.text(this@MainActivity, "Could not reset saved site permissions", "تعذر إعادة ضبط أذونات الموقع"))
-                        }
-                    }
-                    tab.sitePermissions = emptyList()
-                    storage?.getPermissions(url, false)?.accept(
-                        { updated -> runOnUiThread {
-                            if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
-                        } },
-                        { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
-                    )
-                    toast("Site permissions reset")
-                },
                 privateMode = tab.privateMode,
-                onMediaPermissionChange = { _, decision ->
-                    // Reloading ends any live getUserMedia tracks before the new Ask/Block
-                    // decision is evaluated by Gecko on the next page load.
-                    if (decision != "allow" && activeTab === tab && tab.url == url) {
-                        tab.session.reload()
-                    }
-                }
-            ).show()
+                permissions = if (tab.privateMode) emptyList() else permissions,
+                storedDecisions = if (tab.privateMode) emptyMap() else decisions
+            )
+            composeSiteInfoOpen.value = true
         }
-        val storage = browserRuntime?.storageController
-        // Gecko's non-private permission store is shared across sessions. Never query it
-        // while showing site information for a private tab.
-        if (tab.privateMode || storage == null) {
-            showPage()
+        if (tab.privateMode) {
+            showPage(emptyList(), emptyMap())
             return
         }
-        storage.getPermissions(url, false).accept(
-            { permissions -> runOnUiThread {
-                if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
-                tab.sitePermissions = permissions.orEmpty().toList()
-                showPage()
-            } },
-            { error -> runOnUiThread {
-                android.util.Log.w("BrowseX", "Could not load site permissions", error)
-                showPage()
-            } }
+        val geckoStorage = browserRuntime?.storageController
+        if (geckoStorage == null) {
+            showPage(tab.sitePermissions, emptyMap())
+            return
+        }
+        geckoStorage.getPermissions(url, false).accept(
+            { permissions ->
+                runOnUiThread {
+                    if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
+                    tab.sitePermissions = permissions.orEmpty().toList()
+                    lifecycleScope.launch {
+                        val decisions = runCatching {
+                            storageRuntime.awaitReady().sitePermissions.all()
+                                .filter { it.origin == originForUrl(url) }
+                                .associate { it.feature to it.decision }
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not load saved site permission decisions", it)
+                        }.getOrDefault(emptyMap())
+                        showPage(tab.sitePermissions, decisions)
+                    }
+                }
+            },
+            { error ->
+                runOnUiThread {
+                    android.util.Log.w("BrowseX", "Could not load site permissions", error)
+                    showPage(tab.sitePermissions, emptyMap())
+                }
+            }
         )
+    }
+
+    private fun changeSiteInfoPermission(
+        permission: GeckoSession.PermissionDelegate.ContentPermission,
+        value: Int
+    ) {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        browserRuntime?.storageController?.setPermission(permission, value)
+        browserRuntime?.storageController?.getPermissions(url, false)?.accept(
+            { updated ->
+                runOnUiThread {
+                    if (tabs.any { it === tab } && tab.url == url) {
+                        tab.sitePermissions = updated.orEmpty().toList()
+                        composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                            permissions = tab.sitePermissions
+                        )
+                    }
+                }
+            },
+            { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
+        )
+    }
+
+    private fun resetSiteInfoPermissions() {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        val geckoStorage = browserRuntime?.storageController
+        tab.sitePermissions.filter {
+            it.permission != GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE
+        }.forEach { permission ->
+            geckoStorage?.setPermission(
+                permission,
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+            )
+        }
+        val uri = Uri.parse(url)
+        val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
+        lifecycleScope.launch {
+            val cleared = runCatching {
+                storageRuntime.awaitReady().sitePermissions.clearOrigin(origin)
+                true
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not reset saved site permissions", error)
+            }.getOrDefault(false)
+            if (cleared && activeTab === tab && tab.url == url) {
+                tab.session.reload()
+            } else if (!cleared) {
+                toast(BrowseXStrings.text(this@MainActivity, "Could not reset saved site permissions", "تعذر إعادة ضبط أذونات الموقع"))
+            }
+        }
+        tab.sitePermissions = emptyList()
+        geckoStorage?.getPermissions(url, false)?.accept(
+            { updated ->
+                runOnUiThread {
+                    if (tabs.any { it === tab } && tab.url == url) {
+                        tab.sitePermissions = updated.orEmpty().toList()
+                        composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                            permissions = tab.sitePermissions,
+                            storedDecisions = emptyMap()
+                        )
+                    }
+                }
+            },
+            { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
+        )
+        toast("Site permissions reset")
+    }
+
+    private fun clearCurrentSiteInfoData() {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
+    }
+
+    private fun changeSiteInfoMediaPermission(feature: String, decision: String) {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        lifecycleScope.launch {
+            val saved = runCatching {
+                storageRuntime.awaitReady().sitePermissions.setDecision(originForUrl(url), feature, decision)
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not save site media permission", it)
+            }.getOrDefault(false)
+            if (!saved) {
+                toast("Could not update site permission")
+                return@launch
+            }
+            composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                storedDecisions = composeSiteInfoState.value.storedDecisions + (feature to decision)
+            )
+            if (decision != "allow" && activeTab === tab && tab.url == url) {
+                // Reload ends any live getUserMedia tracks before Ask/Block takes effect.
+                tab.session.reload()
+            }
+        }
     }
 
     private fun showSettings() {
