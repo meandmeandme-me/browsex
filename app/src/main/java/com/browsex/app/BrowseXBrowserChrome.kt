@@ -60,6 +60,8 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 internal data class BrowseXChromeState(
     val url: String = "",
@@ -138,7 +140,6 @@ internal fun BrowseXBrowserChrome(
             val dockModifier = Modifier
                 .widthIn(max = if (wide) 760.dp else maxWidth)
                 .fillMaxWidth()
-                .align(if (state.dockAtTop) Alignment.TopCenter else Alignment.BottomCenter)
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Surface(
@@ -306,7 +307,7 @@ internal fun BrowseXBrowserChrome(
 
                                 IconButton(
                                     onClick = {
-                                        if (state.progress in 1..99) onReload() else onReload()
+                                        onReload()
                                         focusManager.clearFocus()
                                         keyboard?.hide()
                                     },
@@ -386,7 +387,7 @@ private fun ChromeAction(
     androidx.compose.material3.IconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(40.dp)
+        modifier = Modifier.size(40.dp).semantics { contentDescription = label }
     ) {
         Box(contentAlignment = Alignment.Center) {
             androidx.compose.runtime.CompositionLocalProvider(
