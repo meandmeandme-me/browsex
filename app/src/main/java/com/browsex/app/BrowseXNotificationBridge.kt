@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.mozilla.geckoview.WebNotification
 import org.mozilla.geckoview.WebNotificationDelegate
-import java.security.MessageDigest
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.UUID
@@ -210,14 +209,11 @@ internal class BrowseXNotificationBridge(
         notificationTags[notification]?.let { return it }
         // The Web Notifications API replaces notifications only when a non-empty tag
         // is reused by the same origin. Untagged notifications must remain independent.
-        val webTag = notification.tag?.takeIf { it.isNotBlank() }
-        val tag = if (webTag == null) {
-            "browsex-web-${UUID.randomUUID()}"
-        } else {
-            val source = "${notification.origin}|$webTag".toByteArray(Charsets.UTF_8)
-            val digest = MessageDigest.getInstance("SHA-256").digest(source)
-            "browsex-web-" + digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
-        }
+        val tag = BrowserNotificationIdentityPolicy.androidTag(
+            origin = notification.origin,
+            webTag = notification.tag,
+            uniqueId = UUID.randomUUID().toString()
+        )
         notificationTags[notification] = tag
         return tag
     }
