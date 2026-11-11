@@ -169,7 +169,17 @@ internal fun BrowseXBrowserChrome(
     onDeleteBookmarkFolder: (String) -> Unit,
     onClearSavedHistory: () -> Unit,
     onShareSavedPage: (String) -> Unit,
-    onCopySavedPage: (String) -> Unit
+    onCopySavedPage: (String) -> Unit,
+    privacyOpen: Boolean,
+    privacySummary: BrowseXPrivacySummary,
+    onDismissPrivacy: () -> Unit,
+    onManageProtection: () -> Unit,
+    onClearPrivacyData: (Long, Boolean) -> Unit,
+    sitePermissionsOpen: Boolean,
+    sitePermissions: List<com.browsex.app.storage.SitePermissionDecisionEntity>,
+    onDismissSitePermissions: () -> Unit,
+    onSetSitePermission: (String, String, String) -> Unit,
+    onResetSitePermissions: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -567,6 +577,22 @@ internal fun BrowseXBrowserChrome(
                 onClearHistory = onClearSavedHistory,
                 onShare = onShareSavedPage,
                 onCopy = onCopySavedPage
+            )
+        }
+        if (privacyOpen) {
+            BrowseXPrivacySheet(
+                summary = privacySummary,
+                onDismiss = onDismissPrivacy,
+                onManageProtection = onManageProtection,
+                onClearData = onClearPrivacyData
+            )
+        }
+        if (sitePermissionsOpen) {
+            BrowseXSitePermissionsSheet(
+                entries = sitePermissions,
+                onDismiss = onDismissSitePermissions,
+                onSetDecision = onSetSitePermission,
+                onResetAll = onResetSitePermissions
             )
         }
     }
