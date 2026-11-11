@@ -311,6 +311,10 @@ class MainActivity : AppCompatActivity() {
     private val composeSettingsState = mutableStateOf(BrowserSettings())
     private val composeSavedPagesOpen = mutableStateOf(false)
     private val composeSavedPagesState = mutableStateOf(BrowseXSavedPagesState())
+    private val composePrivacyOpen = mutableStateOf(false)
+    private val composePrivacySummary = mutableStateOf(BrowseXPrivacySummary("", true, true))
+    private val composeSitePermissionsOpen = mutableStateOf(false)
+    private val composeSitePermissionsState = mutableStateOf<List<com.browsex.app.storage.SitePermissionDecisionEntity>>(emptyList())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1721,7 +1725,29 @@ class MainActivity : AppCompatActivity() {
                     onDeleteBookmarkFolder = ::deleteSavedBookmarkFolder,
                     onClearSavedHistory = ::clearSavedHistoryFromLibrary,
                     onShareSavedPage = ::shareSavedPage,
-                    onCopySavedPage = ::copySavedPage
+                    onCopySavedPage = ::copySavedPage,
+                    privacyOpen = composePrivacyOpen.value,
+                    privacySummary = composePrivacySummary.value,
+                    onDismissPrivacy = { composePrivacyOpen.value = false },
+                    onManageProtection = {
+                        composePrivacyOpen.value = false
+                        showUBlockOriginSettings()
+                    },
+                    onClearPrivacyData = { flags, clearHistory ->
+                        composePrivacyOpen.value = false
+                        clearBrowsingData(flags, clearHistory)
+                    },
+                    sitePermissionsOpen = composeSitePermissionsOpen.value,
+                    sitePermissions = composeSitePermissionsState.value,
+                    onDismissSitePermissions = { composeSitePermissionsOpen.value = false },
+                    onSetSitePermission = ::updateSitePermissionDecision,
+                    onResetSitePermissions = {
+                        composeSitePermissionsOpen.value = false
+                        clearBrowsingData(
+                            org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS,
+                            clearHistory = false
+                        )
+                    }
                 )
             }
         }
@@ -2483,12 +2509,7 @@ class MainActivity : AppCompatActivity() {
             BrowseXSettingsAction.EXPORT_BOOKMARKS -> bookmarkExportLauncher.launch("browsex-bookmarks.html")
             BrowseXSettingsAction.HOME_PAGE -> showHomePreferences()
             BrowseXSettingsAction.PRIVACY_CENTER -> showPrivacyCenter()
-            BrowseXSettingsAction.SITE_PERMISSIONS -> SitePermissionsPage(this) {
-                clearBrowsingData(
-                    org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS,
-                    clearHistory = false
-                )
-            }.show()
+            BrowseXSettingsAction.SITE_PERMISSIONS -> showSitePermissionsPage()
             BrowseXSettingsAction.UBLOCK -> showUBlockOriginSettings()
             BrowseXSettingsAction.AUTOFILL -> openAutofillServiceSettings()
             BrowseXSettingsAction.CLEAR_HISTORY -> AlertDialog.Builder(this)
@@ -2638,11 +2659,53 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPrivacyCenter() {
-        PrivacyPage(
-            activity = this,
-            clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) },
-            manageProtection = { showUBlockOriginSettings() }
-        ).show()
+        val settings = browserSettingsSnapshot
+        val uBlockStatus = when {
+            !settings.adBlockInstalled -> tr("uBlock Origin: not installed")
+            settings.adBlockEnabled -> tr("uBlock Origin: enabled")
+            else -> tr("uBlock Origin: installed, currently off")
+        }
+        composePrivacySummary.value = BrowseXPrivacySummary(
+            uBlockStatus = uBlockStatus,
+            regularTrackingProtection = BrowserContentProtectionPolicy.useGeckoTrackingProtection(false),
+            privateTrackingProtection = BrowserContentProtectionPolicy.useGeckoTrackingProtection(true)
+        )
+        composePrivacyOpen.value = true
+    }
+
+    private fun showSitePermissionsPage() {
+        lifecycleScope.launch {
+            val entries = runCatching { storageRuntime.awaitReady().sitePermissions.all() }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not load saved site permissions", it)
+                }.getOrElse {
+                    toast("Could not load site permissions")
+                    return@launch
+                }
+            composeSitePermissionsState.value = entries
+            composeSitePermissionsOpen.value = true
+        }
+    }
+
+    private suspend fun refreshComposeSitePermissions() {
+        if (!composeSitePermissionsOpen.value) return
+        composeSitePermissionsState.value = storageRuntime.awaitReady().sitePermissions.all()
+    }
+
+    private fun updateSitePermissionDecision(origin: String, feature: String, decision: String) {
+        lifecycleScope.launch {
+            val updated = runCatching {
+                storageRuntime.awaitReady().sitePermissions.setDecision(origin, feature, decision)
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not update site permission", it)
+            }.getOrDefault(false)
+            if (updated) {
+                toast(tr("Permission updated"))
+                runCatching { refreshComposeSitePermissions() }
+            } else {
+                toast(tr("Could not update permission"))
+            }
+        }
     }
 
     private fun clearBrowsingData(flags: Long, clearHistory: Boolean) =
