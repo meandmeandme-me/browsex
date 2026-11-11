@@ -93,6 +93,12 @@ internal class BrowserDownloadRequestCoordinator(
      * continue processing later items even if one individual download cannot be started.
      */
     private fun startSafely(response: WebResponse) {
+        // The host may be destroyed after permission is granted but before its queued batch
+        // is drained. Never hand a one-shot Gecko body to a coordinator whose Activity is gone.
+        if (!isHostAvailable()) {
+            closeResponseBody(response)
+            return
+        }
         try {
             startDownload(response)
         } catch (_: Exception) {
@@ -116,7 +122,6 @@ internal class BrowserDownloadRequestCoordinator(
         if (isHostAvailable()) showMessage(message)
     }
 }
-
 
 
 /** Closes one-shot Gecko response bodies without allowing cleanup failures to abort a queue. */
