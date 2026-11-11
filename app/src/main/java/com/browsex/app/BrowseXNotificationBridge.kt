@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 import org.mozilla.geckoview.WebNotification
 import org.mozilla.geckoview.WebNotificationDelegate
 import java.security.MessageDigest
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /** Adapts Gecko web notifications to Android's notification tray without leaking private tabs. */
 internal class BrowseXNotificationBridge(
@@ -23,15 +25,21 @@ internal class BrowseXNotificationBridge(
 ) : WebNotificationDelegate {
     private val main = Handler(Looper.getMainLooper())
     private val manager by lazy { NotificationManagerCompat.from(activity) }
+    // Gecko can close a notification while Android permission UI or storage IO is pending.
+    // Identity tracking prevents a late callback from resurrecting a dismissed notification.
+    private val trackedNotifications = Collections.newSetFromMap(
+        IdentityHashMap<WebNotification, Boolean>()
+    )
 
     override fun onShowNotification(notification: WebNotification) {
         main.post {
+            trackedNotifications.add(notification)
             val source = notification.source
             if (notification.privateBrowsing || !activity.websiteNotificationsEnabled() ||
                 !isSafeWebOrigin(notification.origin) ||
                 (source != null && (!isSafeWebOrigin(source) || !isSameWebOrigin(notification.origin, source)))
             ) {
-                notification.dismiss()
+                dismiss(notification)
                 return@post
             }
             activity.lifecycleScope.launch {
@@ -44,16 +52,19 @@ internal class BrowseXNotificationBridge(
                 }.onFailure {
                     android.util.Log.e("BrowseX", "Could not verify website notification permission", it)
                 }.getOrDefault(false)
-                if (!siteAllows || activity.isFinishing || activity.isDestroyed) {
-                    notification.dismiss()
+                if (!trackedNotifications.contains(notification) || !siteAllows ||
+                    activity.isFinishing || activity.isDestroyed
+                ) {
+                    dismiss(notification)
                     return@launch
                 }
                 requestRuntimePermission { granted ->
                     main.post {
-                        if (!granted || activity.isFinishing || activity.isDestroyed ||
+                        if (!trackedNotifications.contains(notification) || !granted ||
+                            activity.isFinishing || activity.isDestroyed ||
                             notification.privateBrowsing || !activity.websiteNotificationsEnabled()
                         ) {
-                            notification.dismiss()
+                            dismiss(notification)
                         } else {
                             activity.lifecycleScope.launch {
                                 val stillAllowed = runCatching {
@@ -63,9 +74,11 @@ internal class BrowseXNotificationBridge(
                                         )
                                     )
                                 }.getOrDefault(false)
-                                if (stillAllowed && !activity.isFinishing && !activity.isDestroyed) {
+                                if (trackedNotifications.contains(notification) && stillAllowed &&
+                                    !activity.isFinishing && !activity.isDestroyed
+                                ) {
                                     showInAndroid(notification)
-                                } else notification.dismiss()
+                                } else dismiss(notification)
                             }
                         }
                     }
@@ -76,12 +89,19 @@ internal class BrowseXNotificationBridge(
 
     override fun onCloseNotification(notification: WebNotification) {
         main.post {
+            trackedNotifications.remove(notification)
             manager.cancel(notificationTag(notification), NOTIFICATION_ID)
             notification.dismiss()
         }
     }
 
+    private fun dismiss(notification: WebNotification) {
+        trackedNotifications.remove(notification)
+        notification.dismiss()
+    }
+
     private fun showInAndroid(notification: WebNotification) {
+        if (!trackedNotifications.contains(notification)) return
         try {
             ensureChannel()
             val tag = notificationTag(notification)
@@ -125,9 +145,9 @@ internal class BrowseXNotificationBridge(
             manager.notify(tag, id, builder.build())
             notification.show()
         } catch (_: SecurityException) {
-            notification.dismiss()
+            dismiss(notification)
         } catch (_: RuntimeException) {
-            notification.dismiss()
+            dismiss(notification)
         }
     }
 
