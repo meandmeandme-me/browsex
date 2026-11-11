@@ -26,6 +26,14 @@ class OAuthPkceTransactionTest {
         assertNull("A callback must not be accepted twice", transaction.validateCallback(callback, 2000L))
     }
 
+    @Test fun invalidCallbackDoesNotConsumeTransactionButValidCallbackDoes() {
+        val transaction = OAuthPkceTransaction.create(IdentityProvider.GOOGLE, redirect, 1000L)
+        assertNull(transaction.validateCallback("$redirect?code=bad&state=wrong", 2000L))
+        val valid = "$redirect?code=good&state=${transaction.state}"
+        assertEquals("good", transaction.validateCallback(valid, 2000L))
+        assertNull(transaction.validateCallback(valid, 2000L))
+    }
+
     @Test fun rejectsWrongStateRedirectAndExpiredTransaction() {
         val transaction = OAuthPkceTransaction.create(IdentityProvider.APPLE, redirect, 1000L)
         assertNull(transaction.validateCallback("$redirect?code=x&state=wrong", 2000L))
