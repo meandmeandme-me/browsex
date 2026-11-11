@@ -13,7 +13,7 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 
-/** Room schema for Wren's clean browser storage graph. */
+/** Room schema for BrowseX's clean browser storage graph. */
 @Entity(tableName = "bookmark_folders")
 data class BookmarkFolderEntity(
     @PrimaryKey val id: String,
@@ -712,7 +712,7 @@ interface BrowseXStorageDao {
     }
 }
 
-/** Room storage schema for Wren browser data. */
+/** Room storage schema for BrowseX browser data. */
 @Database(
     entities = [
         BookmarkFolderEntity::class,

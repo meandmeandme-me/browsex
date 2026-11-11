@@ -58,16 +58,25 @@ Keep read queries bounded in SQL as well as enforcing write-time retention. A wr
 
 ### 4. UI surfaces
 
-Feature pages are separate classes and should remain presentation-focused:
-- `SettingsPage`, `PrivacyPage`, and `SitePermissionsPage`.
-- `SiteInfoPage` for the active site's identity and permission controls.
-- `TabsPage` and `SavedSessionsPage` for tab/session workflows.
-- `RoomSavedPagesPage` and `RecallPage` for bookmarks, history, and quick return.
-- `DownloadsPage` for Gecko stream downloads and Android DownloadManager entries.
-- `ReaderPage` for the accessible reading surface.
-- `AddressSuggestionsController` for address-bar suggestions.
+The visible browser shell is hosted by a `ComposeView` in `MainActivity`. It owns presentation only; navigation, tabs, Gecko sessions, permissions, Room access, and download operations remain behind the existing browser controllers.
 
-The home document lives at `app/src/main/assets/home.html`. Native strings live in Android resource directories; the Arabic resource set is `values-ar`.
+Current BrowseX-branded Compose surfaces:
+- `BrowseXBrowserChrome.kt`: translucent address dock, navigation actions, address suggestions, menu sheet, and tab workspace.
+- `BrowseXSettingsSheet.kt`: theme, language, accessibility, notifications, library, privacy, and app settings.
+- `BrowseXSavedPagesScreen.kt`: bookmarks, history, folders, ordering, edit/move/remove, share, and copy actions.
+- `BrowseXPrivacyAndPermissions.kt`: privacy clearing controls and saved per-site permission management.
+- `BrowseXSavedSessionsScreen.kt`: save/import, search/sort, rename/delete, restore, and open-alongside workflows.
+
+The Compose UI adapts selected address/navigation patterns from the MIT-licensed Kingfisher Browser project. Attribution and the complete license notice are in `THIRD_PARTY_NOTICES.md`. BrowseX uses its own logo, colors, naming, and callbacks; it does not replace GeckoView or the browser domain.
+
+Additional Compose destinations now cover:
+- `BrowseXSiteInfoScreen.kt`: active-site identity, live Gecko permission choices, saved media decisions, and per-origin cleanup.
+- `BrowseXReaderScreen.kt`: selectable article text, adjustable typography, and copy.
+- `BrowseXRecallScreen.kt`: bounded search across regular tabs, bookmarks, and recent history.
+
+The remaining large legacy destination is `DownloadsPage`, which still contains the full Android DownloadManager/Gecko stream lifecycle, safe file-ownership deletion checks, cancellation, share/open, and unsupported-state handling. It will be migrated only when those safeguards are preserved. The old `AddressSuggestionsController` is no longer connected to the visible Compose address field and can be removed after the hidden compatibility views are retired.
+
+The home document still lives at `app/src/main/assets/home.html`; it is the final major UI migration target. Native strings live in Android resource directories; the Arabic resource set is `values-ar`.
 
 ### 5. Security and privacy invariants
 

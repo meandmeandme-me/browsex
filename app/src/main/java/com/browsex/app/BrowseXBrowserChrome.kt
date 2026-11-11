@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import org.mozilla.geckoview.GeckoSession
 import java.util.Locale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -179,7 +180,32 @@ internal fun BrowseXBrowserChrome(
     sitePermissions: List<com.browsex.app.storage.SitePermissionDecisionEntity>,
     onDismissSitePermissions: () -> Unit,
     onSetSitePermission: (String, String, String) -> Unit,
-    onResetSitePermissions: () -> Unit
+    onResetSitePermissions: () -> Unit,
+    savedSessionsOpen: Boolean,
+    savedSessions: List<com.browsex.app.storage.RoomSavedSession>,
+    onDismissSavedSessions: () -> Unit,
+    onRestoreSavedSession: (com.browsex.app.storage.RoomSavedSession) -> Unit,
+    onOpenSavedSessionAlongside: (com.browsex.app.storage.RoomSavedSession) -> Unit,
+    onRenameSavedSession: (String, String) -> Unit,
+    onDeleteSavedSession: (String) -> Unit,
+    onSaveCurrentSession: (String) -> Unit,
+    onImportSavedSession: (String, String) -> Unit,
+    onDeleteAllSavedSessions: () -> Unit,
+    siteInfoOpen: Boolean,
+    siteInfoState: BrowseXSiteInfoState,
+    onDismissSiteInfo: () -> Unit,
+    onChangeSiteInfoPermission: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
+    onResetSiteInfoPermissions: () -> Unit,
+    onClearSiteInfoData: () -> Unit,
+    onSiteInfoMediaPermissionChange: (String, String) -> Unit,
+    readerOpen: Boolean,
+    readerState: BrowseXReaderState,
+    onDismissReader: () -> Unit,
+    onCopyReader: () -> Unit,
+    recallOpen: Boolean,
+    recallState: BrowseXRecallState,
+    onDismissRecall: () -> Unit,
+    onOpenRecall: (String) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -593,6 +619,43 @@ internal fun BrowseXBrowserChrome(
                 onDismiss = onDismissSitePermissions,
                 onSetDecision = onSetSitePermission,
                 onResetAll = onResetSitePermissions
+            )
+        }
+        if (savedSessionsOpen) {
+            BrowseXSavedSessionsScreen(
+                sessions = savedSessions,
+                onDismiss = onDismissSavedSessions,
+                onRestore = onRestoreSavedSession,
+                onOpenAlongside = onOpenSavedSessionAlongside,
+                onRename = onRenameSavedSession,
+                onDelete = onDeleteSavedSession,
+                onSaveCurrent = onSaveCurrentSession,
+                onImport = onImportSavedSession,
+                onDeleteAll = onDeleteAllSavedSessions
+            )
+        }
+        if (siteInfoOpen) {
+            BrowseXSiteInfoScreen(
+                state = siteInfoState,
+                onDismiss = onDismissSiteInfo,
+                onPermissionChange = onChangeSiteInfoPermission,
+                onResetPermissions = onResetSiteInfoPermissions,
+                onClearSiteData = onClearSiteInfoData,
+                onMediaPermissionChange = onSiteInfoMediaPermissionChange
+            )
+        }
+        if (readerOpen) {
+            BrowseXReaderScreen(
+                state = readerState,
+                onDismiss = onDismissReader,
+                onCopy = onCopyReader
+            )
+        }
+        if (recallOpen) {
+            BrowseXRecallScreen(
+                state = recallState,
+                onDismiss = onDismissRecall,
+                onOpen = onOpenRecall
             )
         }
     }

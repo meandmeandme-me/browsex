@@ -315,6 +315,17 @@ class MainActivity : AppCompatActivity() {
     private val composePrivacySummary = mutableStateOf(BrowseXPrivacySummary("", true, true))
     private val composeSitePermissionsOpen = mutableStateOf(false)
     private val composeSitePermissionsState = mutableStateOf<List<com.browsex.app.storage.SitePermissionDecisionEntity>>(emptyList())
+    private val composeSavedSessionsOpen = mutableStateOf(false)
+    private val composeSavedSessionsState = mutableStateOf<List<com.browsex.app.storage.RoomSavedSession>>(emptyList())
+    private val composeSiteInfoOpen = mutableStateOf(false)
+    private val composeSiteInfoState = mutableStateOf(
+        BrowseXSiteInfoState("", "", false, emptyList(), emptyMap())
+    )
+    private var composeSiteInfoTab: BrowserTab? = null
+    private val composeReaderOpen = mutableStateOf(false)
+    private val composeReaderState = mutableStateOf(BrowseXReaderState("", "", ""))
+    private val composeRecallOpen = mutableStateOf(false)
+    private val composeRecallState = mutableStateOf(BrowseXRecallState(emptyList(), emptyList(), emptyList()))
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1339,6 +1350,8 @@ class MainActivity : AppCompatActivity() {
                 if (!isFinishing && !isDestroyed && !address.hasFocus()) address.requestFocus()
             }
         }
+        // The visible Compose dock follows the same adaptive placement policy.
+        renderComposeChrome()
     }
 
     private fun createBrowserUi(): View {
@@ -1377,14 +1390,14 @@ class MainActivity : AppCompatActivity() {
         }
         val brandMark = ImageView(this).apply {
             setImageResource(R.drawable.ic_browsex)
-            contentDescription = tr("Wren browser")
+            contentDescription = tr("BrowseX browser")
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         }
         topBar.addView(brandMark, LinearLayout.LayoutParams(dp(34), dp(34)).apply {
             marginEnd = dp(8)
         })
         pageIdentity = TextView(this).apply {
-            text = "Wren"
+            text = "BrowseX"
             textSize = 17f
             setTextColor(colors.ink)
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
@@ -1747,6 +1760,55 @@ class MainActivity : AppCompatActivity() {
                             org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS,
                             clearHistory = false
                         )
+                    },
+                    savedSessionsOpen = composeSavedSessionsOpen.value,
+                    savedSessions = composeSavedSessionsState.value,
+                    onDismissSavedSessions = { composeSavedSessionsOpen.value = false },
+                    onRestoreSavedSession = { session ->
+                        composeSavedSessionsOpen.value = false
+                        restoreSavedSession(session, replaceRegularTabs = true)
+                    },
+                    onOpenSavedSessionAlongside = { session ->
+                        composeSavedSessionsOpen.value = false
+                        restoreSavedSession(session, replaceRegularTabs = false)
+                    },
+                    onRenameSavedSession = ::renameSavedSession,
+                    onDeleteSavedSession = ::deleteSavedSession,
+                    onSaveCurrentSession = ::saveCurrentSessionNamed,
+                    onImportSavedSession = ::importSavedSession,
+                    onDeleteAllSavedSessions = ::deleteAllSavedSessions,
+                    siteInfoOpen = composeSiteInfoOpen.value,
+                    siteInfoState = composeSiteInfoState.value,
+                    onDismissSiteInfo = {
+                        composeSiteInfoOpen.value = false
+                        composeSiteInfoTab = null
+                    },
+                    onChangeSiteInfoPermission = ::changeSiteInfoPermission,
+                    onResetSiteInfoPermissions = ::resetSiteInfoPermissions,
+                    onClearSiteInfoData = ::clearCurrentSiteInfoData,
+                    onSiteInfoMediaPermissionChange = ::changeSiteInfoMediaPermission,
+                    readerOpen = composeReaderOpen.value,
+                    readerState = composeReaderState.value,
+                    onDismissReader = { composeReaderOpen.value = false },
+                    onCopyReader = {
+                        runCatching {
+                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(
+                                android.content.ClipData.newPlainText(
+                                    composeReaderState.value.title,
+                                    composeReaderState.value.articleText
+                                )
+                            )
+                        }.onSuccess { toast("Article copied") }
+                            .onFailure { toast("Could not copy article") }
+                    },
+                    recallOpen = composeRecallOpen.value,
+                    recallState = composeRecallState.value,
+                    onDismissRecall = { composeRecallOpen.value = false },
+                    onOpenRecall = { url ->
+                        composeRecallOpen.value = false
+                        val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
+                        if (existing != null) activateTab(existing) else createTab(url)
                     }
                 )
             }
@@ -2296,48 +2358,124 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSavedSessions() {
+        lifecycleScope.launch {
+            val sessions = runCatching { storageRuntime.awaitReady().sessions.sessions() }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not load saved sessions", it)
+                }.getOrElse {
+                    toast("Could not load saved sessions")
+                    return@launch
+                }
+            composeSavedSessionsState.value = sessions
+            composeSavedSessionsOpen.value = true
+        }
+    }
+
+    private suspend fun refreshComposeSavedSessions() {
+        if (!composeSavedSessionsOpen.value) return
+        composeSavedSessionsState.value = storageRuntime.awaitReady().sessions.sessions()
+    }
+
+    private fun restoreSavedSession(session: com.browsex.app.storage.RoomSavedSession, replaceRegularTabs: Boolean) {
+        if (replaceRegularTabs) {
+            tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
+        }
+        val opened = mutableListOf<BrowserTab>()
+        session.urls.forEach { url ->
+            val before = tabs.size
+            createTab(url)
+            if (tabs.size > before) tabs.lastOrNull()?.let(opened::add)
+        }
+        opened.getOrNull(session.activeIndex.coerceIn(0, (opened.size - 1).coerceAtLeast(0)))?.let(::activateTab)
+        if (opened.size < session.urls.size) {
+            toast(
+                BrowseXStrings.text(
+                    this,
+                    "Some tabs could not be restored because the tab limit was reached",
+                    "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
+                )
+            )
+        }
+    }
+
+    private fun saveCurrentSessionNamed(rawName: String) {
         val regularTabs = tabs.filterNot { it.privateMode }
-        val urls = regularTabs.map { it.url }
-        val selectedIndex = regularTabs.indexOfFirst { it === activeTab }.coerceAtLeast(0)
-        SavedSessionsPage(
-            activity = this,
-            currentUrls = urls,
-            activeIndex = selectedIndex,
-            onRestore = { savedUrls, savedIndex ->
-                // Keep private tabs isolated; only replace the regular browsing workspace.
-                tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
-                val restored = mutableListOf<BrowserTab>()
-                savedUrls.forEach { savedUrl ->
-                    val before = tabs.size
-                    createTab(savedUrl)
-                    if (tabs.size > before) tabs.lastOrNull()?.let(restored::add)
-                }
-                restored.getOrNull(savedIndex.coerceIn(0, (restored.size - 1).coerceAtLeast(0)))?.let(::activateTab)
-                if (restored.size < savedUrls.size) {
-                    toast(BrowseXStrings.text(
-                        this,
-                        "Some tabs could not be restored because the tab limit was reached",
-                        "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
-                    ))
-                }
-            },
-            onOpenAlongside = { savedUrls, savedIndex ->
-                val opened = mutableListOf<BrowserTab>()
-                savedUrls.forEach { savedUrl ->
-                    val before = tabs.size
-                    createTab(savedUrl)
-                    if (tabs.size > before) tabs.lastOrNull()?.let(opened::add)
-                }
-                opened.getOrNull(savedIndex.coerceIn(0, (opened.size - 1).coerceAtLeast(0)))?.let(::activateTab)
-                if (opened.size < savedUrls.size) {
-                    toast(BrowseXStrings.text(
-                        this,
-                        "Some tabs could not be opened because the tab limit was reached",
-                        "تعذر فتح بعض التبويبات بسبب بلوغ الحد الأقصى"
-                    ))
-                }
-            }
-        ).show()
+        if (regularTabs.isEmpty()) {
+            toast("There are no regular tabs to save")
+            return
+        }
+        lifecycleScope.launch {
+            val saved = runCatching {
+                storageRuntime.awaitReady().sessions.saveSession(
+                    rawName,
+                    regularTabs.map { it.url },
+                    regularTabs.indexOf(activeTab).coerceAtLeast(0)
+                )
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not save named session from Compose", it)
+            }.getOrDefault(false)
+            toast(if (saved) "Session saved" else "Could not save session. Check its name and the 10-session limit.")
+            if (saved) runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun importSavedSession(rawName: String, rawText: String) {
+        val urls = rawText.lineSequence()
+            .map { it.trim().replace(Regex("^\\d+[.)]\\s*"), "") }
+            .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
+            .filter(NavigationInput::isValidWebUrl)
+            .distinct()
+            .take(50)
+            .toList()
+        if (urls.isEmpty()) {
+            toast("No valid website URLs found")
+            return
+        }
+        lifecycleScope.launch {
+            val saved = runCatching {
+                storageRuntime.awaitReady().sessions.saveSession(rawName, urls, 0)
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not import browsing session", it)
+            }.getOrDefault(false)
+            toast(if (saved) "Session imported" else "Could not import session. Check the name and the 10-session limit.")
+            if (saved) runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun deleteAllSavedSessions() {
+        lifecycleScope.launch {
+            val deleted = runCatching {
+                val repository = storageRuntime.awaitReady().sessions
+                repository.sessions().forEach { repository.deleteSession(it.id) }
+                true
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not delete all saved sessions", it)
+            }.getOrDefault(false)
+            if (!deleted) toast("Could not delete saved sessions")
+            runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun renameSavedSession(id: String, name: String) {
+        lifecycleScope.launch {
+            val renamed = runCatching { storageRuntime.awaitReady().sessions.renameSession(id, name) }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not rename saved session", it)
+                }.getOrDefault(false)
+            if (!renamed) toast("Could not rename session")
+            runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun deleteSavedSession(id: String) {
+        lifecycleScope.launch {
+            val deleted = runCatching { storageRuntime.awaitReady().sessions.deleteSession(id) }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not delete saved session", it)
+                }.getOrDefault(false)
+            if (!deleted) toast("Could not delete session")
+            runCatching { refreshComposeSavedSessions() }
+        }
     }
 
     private fun toggleBookmarkInRoom(url: String, title: String) {
@@ -2382,7 +2520,12 @@ class MainActivity : AppCompatActivity() {
                     if (content.isBlank()) {
                         toast(BrowseXStrings.text(this@MainActivity, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
                     } else {
-                        ReaderPage(this, tab.title, sourceUrl, content).show()
+                        composeReaderState.value = BrowseXReaderState(
+                            title = tab.title,
+                            sourceUrl = sourceUrl,
+                            articleText = content
+                        )
+                        composeReaderOpen.value = true
                     }
                 }
             },
@@ -2407,92 +2550,173 @@ class MainActivity : AppCompatActivity() {
             toast("Open a website first")
             return
         }
-        fun showPage() {
+        composeSiteInfoTab = tab
+        fun showPage(permissions: List<GeckoSession.PermissionDelegate.ContentPermission>, decisions: Map<String, String>) {
             if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return
-            SiteInfoPage(
-                activity = this,
+            composeSiteInfoState.value = BrowseXSiteInfoState(
                 url = url,
                 title = tab.title,
-                permissions = if (tab.privateMode) emptyList() else tab.sitePermissions,
-                onPermissionChange = { permission, value ->
-                    if (!tab.privateMode) {
-                        val storage = browserRuntime?.storageController
-                        storage?.setPermission(permission, value)
-                        storage?.getPermissions(url, false)?.accept(
-                            { updated -> runOnUiThread {
-                                if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
-                            } },
-                            { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
-                        )
-                    }
-                },
-                onClearSiteData = {
-                    clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
-                },
-                onResetPermissions = {
-                    val storage = browserRuntime?.storageController
-                    tab.sitePermissions.filter {
-                        it.permission != GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE
-                    }.forEach { permission ->
-                        storage?.setPermission(
-                            permission,
-                            GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
-                        )
-                    }
-                    val uri = Uri.parse(url)
-                    val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
-                    lifecycleScope.launch {
-                        val cleared = runCatching {
-                            storageRuntime.awaitReady().sitePermissions.clearOrigin(origin)
-                            true
-                        }.onFailure { error ->
-                            android.util.Log.e("BrowseX", "Could not reset saved site permissions", error)
-                        }.getOrDefault(false)
-                        if (cleared && activeTab === tab && tab.url == url) {
-                            // Clear persisted camera/microphone grants before reloading so
-                            // Gecko cannot immediately reuse a stale allow decision.
-                            tab.session.reload()
-                        } else if (!cleared) {
-                            toast(BrowseXStrings.text(this@MainActivity, "Could not reset saved site permissions", "تعذر إعادة ضبط أذونات الموقع"))
-                        }
-                    }
-                    tab.sitePermissions = emptyList()
-                    storage?.getPermissions(url, false)?.accept(
-                        { updated -> runOnUiThread {
-                            if (tabs.any { it === tab } && tab.url == url) tab.sitePermissions = updated.orEmpty().toList()
-                        } },
-                        { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
-                    )
-                    toast("Site permissions reset")
-                },
                 privateMode = tab.privateMode,
-                onMediaPermissionChange = { _, decision ->
-                    // Reloading ends any live getUserMedia tracks before the new Ask/Block
-                    // decision is evaluated by Gecko on the next page load.
-                    if (decision != "allow" && activeTab === tab && tab.url == url) {
-                        tab.session.reload()
-                    }
-                }
-            ).show()
+                permissions = if (tab.privateMode) emptyList() else permissions,
+                storedDecisions = if (tab.privateMode) emptyMap() else decisions
+            )
+            composeSiteInfoOpen.value = true
         }
-        val storage = browserRuntime?.storageController
-        // Gecko's non-private permission store is shared across sessions. Never query it
-        // while showing site information for a private tab.
-        if (tab.privateMode || storage == null) {
-            showPage()
+        if (tab.privateMode) {
+            showPage(emptyList(), emptyMap())
             return
         }
-        storage.getPermissions(url, false).accept(
-            { permissions -> runOnUiThread {
-                if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
-                tab.sitePermissions = permissions.orEmpty().toList()
-                showPage()
-            } },
-            { error -> runOnUiThread {
-                android.util.Log.w("BrowseX", "Could not load site permissions", error)
-                showPage()
-            } }
+        val geckoStorage = browserRuntime?.storageController
+        if (geckoStorage == null) {
+            showPage(tab.sitePermissions, emptyMap())
+            return
+        }
+        geckoStorage.getPermissions(url, false).accept(
+            { permissions ->
+                runOnUiThread {
+                    if (activeTab !== tab || tab.url != url || isFinishing || isDestroyed) return@runOnUiThread
+                    tab.sitePermissions = permissions.orEmpty().toList()
+                    lifecycleScope.launch {
+                        val decisions = runCatching {
+                            storageRuntime.awaitReady().sitePermissions.all()
+                                .filter { it.origin == originForUrl(url) }
+                                .associate { it.feature to it.decision }
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not load saved site permission decisions", it)
+                        }.getOrDefault(emptyMap())
+                        showPage(tab.sitePermissions, decisions)
+                    }
+                }
+            },
+            { error ->
+                runOnUiThread {
+                    android.util.Log.w("BrowseX", "Could not load site permissions", error)
+                    showPage(tab.sitePermissions, emptyMap())
+                }
+            }
         )
+    }
+
+    private fun changeSiteInfoPermission(
+        permission: GeckoSession.PermissionDelegate.ContentPermission,
+        value: Int
+    ) {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        browserRuntime?.storageController?.setPermission(permission, value)
+        val storedFeature = when (permission.permission) {
+            GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "geolocation"
+            GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "notifications"
+            else -> null
+        }
+        if (storedFeature != null) {
+            val decision = when (value) {
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW -> "allow"
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY -> "deny"
+                else -> "ask"
+            }
+            lifecycleScope.launch {
+                runCatching {
+                    storageRuntime.awaitReady().sitePermissions.setDecision(originForUrl(url), storedFeature, decision)
+                }.onFailure {
+                    android.util.Log.e("BrowseX", "Could not persist site permission decision", it)
+                }
+                composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                    storedDecisions = composeSiteInfoState.value.storedDecisions + (storedFeature to decision)
+                )
+            }
+        }
+        browserRuntime?.storageController?.getPermissions(url, false)?.accept(
+            { updated ->
+                runOnUiThread {
+                    if (tabs.any { it === tab } && tab.url == url) {
+                        tab.sitePermissions = updated.orEmpty().toList()
+                        composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                            permissions = tab.sitePermissions
+                        )
+                    }
+                }
+            },
+            { error -> android.util.Log.w("BrowseX", "Could not refresh site permissions", error) }
+        )
+    }
+
+    private fun resetSiteInfoPermissions() {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        val geckoStorage = browserRuntime?.storageController
+        tab.sitePermissions.filter {
+            it.permission != GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE
+        }.forEach { permission ->
+            geckoStorage?.setPermission(
+                permission,
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+            )
+        }
+        val uri = Uri.parse(url)
+        val origin = Uri.Builder().scheme(uri.scheme).encodedAuthority(uri.encodedAuthority).build().toString()
+        lifecycleScope.launch {
+            val cleared = runCatching {
+                storageRuntime.awaitReady().sitePermissions.clearOrigin(origin)
+                true
+            }.onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not reset saved site permissions", error)
+            }.getOrDefault(false)
+            if (cleared && activeTab === tab && tab.url == url) {
+                tab.session.reload()
+            } else if (!cleared) {
+                toast(BrowseXStrings.text(this@MainActivity, "Could not reset saved site permissions", "تعذر إعادة ضبط أذونات الموقع"))
+            }
+        }
+        tab.sitePermissions = emptyList()
+        geckoStorage?.getPermissions(url, false)?.accept(
+            { updated ->
+                runOnUiThread {
+                    if (tabs.any { it === tab } && tab.url == url) {
+                        tab.sitePermissions = updated.orEmpty().toList()
+                        composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                            permissions = tab.sitePermissions,
+                            storedDecisions = emptyMap()
+                        )
+                    }
+                }
+            },
+            { error -> android.util.Log.w("BrowseX", "Could not refresh reset permissions", error) }
+        )
+        toast("Site permissions reset")
+    }
+
+    private fun clearCurrentSiteInfoData() {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        clearBrowsingDataForHost(Uri.parse(url).host.orEmpty(), originForUrl(url))
+    }
+
+    private fun changeSiteInfoMediaPermission(feature: String, decision: String) {
+        val tab = composeSiteInfoTab ?: return
+        val url = composeSiteInfoState.value.url
+        if (tab.privateMode || tab.url != url) return
+        lifecycleScope.launch {
+            val saved = runCatching {
+                storageRuntime.awaitReady().sitePermissions.setDecision(originForUrl(url), feature, decision)
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not save site media permission", it)
+            }.getOrDefault(false)
+            if (!saved) {
+                toast("Could not update site permission")
+                return@launch
+            }
+            composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                storedDecisions = composeSiteInfoState.value.storedDecisions + (feature to decision)
+            )
+            if (decision != "allow" && activeTab === tab && tab.url == url) {
+                // Reload ends any live getUserMedia tracks before Ask/Block takes effect.
+                tab.session.reload()
+            }
+        }
     }
 
     private fun showSettings() {
@@ -2744,18 +2968,12 @@ class MainActivity : AppCompatActivity() {
                 toast(BrowseXStrings.text(this@MainActivity, "Could not open search library", "تعذر فتح مكتبة البحث"))
                 return@launch
             }
-            val bookmarkRows = graph.bookmarks.all().take(30).map { it.title to it.url }
-            val historyRows = graph.history.recent(30).map { it.title to it.url }
-            RecallPage(
-                activity = this@MainActivity,
+            composeRecallState.value = BrowseXRecallState(
                 openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
-                bookmarkRows = bookmarkRows,
-                historyRows = historyRows,
-                onOpen = { url ->
-                    val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
-                    if (existing != null) activateTab(existing) else createTab(url)
-                }
-            ).show()
+                bookmarks = graph.bookmarks.all().take(500).map { it.title to it.url },
+                history = graph.history.recent(500).map { it.title to it.url }
+            )
+            composeRecallOpen.value = true
         }
     }
 
