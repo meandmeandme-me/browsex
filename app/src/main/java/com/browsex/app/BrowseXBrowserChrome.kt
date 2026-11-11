@@ -189,7 +189,14 @@ internal fun BrowseXBrowserChrome(
     onDeleteSavedSession: (String) -> Unit,
     onSaveCurrentSession: (String) -> Unit,
     onImportSavedSession: (String, String) -> Unit,
-    onDeleteAllSavedSessions: () -> Unit
+    onDeleteAllSavedSessions: () -> Unit,
+    siteInfoOpen: Boolean,
+    siteInfoState: BrowseXSiteInfoState,
+    onDismissSiteInfo: () -> Unit,
+    onChangeSiteInfoPermission: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
+    onResetSiteInfoPermissions: () -> Unit,
+    onClearSiteInfoData: () -> Unit,
+    onSiteInfoMediaPermissionChange: (String, String) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -616,6 +623,16 @@ internal fun BrowseXBrowserChrome(
                 onSaveCurrent = onSaveCurrentSession,
                 onImport = onImportSavedSession,
                 onDeleteAll = onDeleteAllSavedSessions
+            )
+        }
+        if (siteInfoOpen) {
+            BrowseXSiteInfoScreen(
+                state = siteInfoState,
+                onDismiss = onDismissSiteInfo,
+                onPermissionChange = onChangeSiteInfoPermission,
+                onResetPermissions = onResetSiteInfoPermissions,
+                onClearSiteData = onClearSiteInfoData,
+                onMediaPermissionChange = onSiteInfoMediaPermissionChange
             )
         }
     }
