@@ -51,6 +51,10 @@ android {
         // supported by the device. A forced arm64-only APK rejects 32-bit devices.
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     splits {
         abi {
             isEnable = true
