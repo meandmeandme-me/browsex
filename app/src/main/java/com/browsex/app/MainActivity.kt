@@ -2573,6 +2573,28 @@ class MainActivity : AppCompatActivity() {
         val url = composeSiteInfoState.value.url
         if (tab.privateMode || tab.url != url) return
         browserRuntime?.storageController?.setPermission(permission, value)
+        val storedFeature = when (permission.permission) {
+            GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "geolocation"
+            GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "notifications"
+            else -> null
+        }
+        if (storedFeature != null) {
+            val decision = when (value) {
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW -> "allow"
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY -> "deny"
+                else -> "ask"
+            }
+            lifecycleScope.launch {
+                runCatching {
+                    storageRuntime.awaitReady().sitePermissions.setDecision(originForUrl(url), storedFeature, decision)
+                }.onFailure {
+                    android.util.Log.e("BrowseX", "Could not persist site permission decision", it)
+                }
+                composeSiteInfoState.value = composeSiteInfoState.value.copy(
+                    storedDecisions = composeSiteInfoState.value.storedDecisions + (storedFeature to decision)
+                )
+            }
+        }
         browserRuntime?.storageController?.getPermissions(url, false)?.accept(
             { updated ->
                 runOnUiThread {
