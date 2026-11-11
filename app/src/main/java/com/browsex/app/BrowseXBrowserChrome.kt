@@ -140,10 +140,7 @@ internal fun BrowseXBrowserChrome(
                 .fillMaxWidth()
                 .align(if (state.dockAtTop) Alignment.TopCenter else Alignment.BottomCenter)
 
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = if (state.reduceTransparency) surface.copy(alpha = 1f) else surface.copy(alpha = 0.86f),
@@ -199,8 +196,10 @@ internal fun BrowseXBrowserChrome(
                     }
                 }
 
+                if (!state.dockAtTop) Spacer(Modifier.weight(1f))
+
                 Surface(
-                    modifier = dockModifier,
+                    modifier = dockModifier.align(Alignment.CenterHorizontally),
                     shape = RoundedCornerShape(27.dp),
                     color = if (state.reduceTransparency) surface.copy(alpha = 1f) else surface.copy(alpha = 0.94f),
                     border = BorderStroke(if (state.highContrast) 2.dp else 1.dp, outline),
@@ -370,6 +369,8 @@ internal fun BrowseXBrowserChrome(
                         }
                     }
                 }
+
+                if (state.dockAtTop) Spacer(Modifier.weight(1f))
             }
         }
     }
