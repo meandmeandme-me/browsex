@@ -33,9 +33,14 @@ internal class BrowseXNotificationBridge(
     )
     private val notificationTags = IdentityHashMap<WebNotification, String>()
     private val currentNotificationsByTag = mutableMapOf<String, WebNotification>()
+    private var destroyed = false
 
     override fun onShowNotification(notification: WebNotification) {
         main.post {
+            if (destroyed) {
+                notification.dismiss()
+                return@post
+            }
             val tag = notificationTag(notification)
             val previous = currentNotificationsByTag.put(tag, notification)
             if (previous != null && previous !== notification) {
@@ -96,6 +101,27 @@ internal class BrowseXNotificationBridge(
                 }
             }
         }
+    }
+
+    /** Dismisses pending website notifications and releases all Activity-owned references. */
+    fun destroy() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            main.post { destroy() }
+            return
+        }
+        if (destroyed) return
+        destroyed = true
+        trackedNotifications.toList().forEach { notification ->
+            val tag = notificationTags.remove(notification)
+            if (tag != null && currentNotificationsByTag[tag] === notification) {
+                manager.cancel(tag, NOTIFICATION_ID)
+                currentNotificationsByTag.remove(tag)
+            }
+            runCatching { notification.dismiss() }
+        }
+        trackedNotifications.clear()
+        notificationTags.clear()
+        currentNotificationsByTag.clear()
     }
 
     override fun onCloseNotification(notification: WebNotification) {
