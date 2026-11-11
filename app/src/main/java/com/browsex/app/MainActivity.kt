@@ -324,6 +324,8 @@ class MainActivity : AppCompatActivity() {
     private var composeSiteInfoTab: BrowserTab? = null
     private val composeReaderOpen = mutableStateOf(false)
     private val composeReaderState = mutableStateOf(BrowseXReaderState("", "", ""))
+    private val composeRecallOpen = mutableStateOf(false)
+    private val composeRecallState = mutableStateOf(BrowseXRecallState(emptyList(), emptyList(), emptyList()))
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1799,6 +1801,14 @@ class MainActivity : AppCompatActivity() {
                             )
                         }.onSuccess { toast("Article copied") }
                             .onFailure { toast("Could not copy article") }
+                    },
+                    recallOpen = composeRecallOpen.value,
+                    recallState = composeRecallState.value,
+                    onDismissRecall = { composeRecallOpen.value = false },
+                    onOpenRecall = { url ->
+                        composeRecallOpen.value = false
+                        val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
+                        if (existing != null) activateTab(existing) else createTab(url)
                     }
                 )
             }
@@ -2958,18 +2968,12 @@ class MainActivity : AppCompatActivity() {
                 toast(BrowseXStrings.text(this@MainActivity, "Could not open search library", "تعذر فتح مكتبة البحث"))
                 return@launch
             }
-            val bookmarkRows = graph.bookmarks.all().take(30).map { it.title to it.url }
-            val historyRows = graph.history.recent(30).map { it.title to it.url }
-            RecallPage(
-                activity = this@MainActivity,
+            composeRecallState.value = BrowseXRecallState(
                 openTabs = tabs.filterNot { it.privateMode }.map { it.title to it.url },
-                bookmarkRows = bookmarkRows,
-                historyRows = historyRows,
-                onOpen = { url ->
-                    val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
-                    if (existing != null) activateTab(existing) else createTab(url)
-                }
-            ).show()
+                bookmarks = graph.bookmarks.all().take(500).map { it.title to it.url },
+                history = graph.history.recent(500).map { it.title to it.url }
+            )
+            composeRecallOpen.value = true
         }
     }
 
