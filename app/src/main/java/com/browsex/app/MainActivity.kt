@@ -811,7 +811,7 @@ class MainActivity : AppCompatActivity() {
                 JankStats.OnFrameListener { frameData -> onFramePerformanceSample(frameData.isJank) }
             )
         }.onFailure { error ->
-            android.util.Log.w("Wren", "Frame performance monitoring is unavailable", error)
+            android.util.Log.w("BrowseX", "Frame performance monitoring is unavailable", error)
         }
     }
 
@@ -878,7 +878,7 @@ class MainActivity : AppCompatActivity() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                android.util.Log.w("Wren", "Fold posture observation is unavailable", error)
+                android.util.Log.w("BrowseX", "Fold posture observation is unavailable", error)
             }
         }
     }
@@ -896,7 +896,7 @@ class MainActivity : AppCompatActivity() {
                 )
                 powerSaveReceiverRegistered = true
             }.onFailure {
-                android.util.Log.w("Wren", "Could not observe power-saver changes", it)
+                android.util.Log.w("BrowseX", "Could not observe power-saver changes", it)
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !thermalStatusListenerRegistered) {
@@ -905,7 +905,7 @@ class MainActivity : AppCompatActivity() {
                     .addThermalStatusListener(mainExecutor, thermalStatusListener)
                 thermalStatusListenerRegistered = true
             }.onFailure {
-                android.util.Log.w("Wren", "Could not observe thermal-state changes", it)
+                android.util.Log.w("BrowseX", "Could not observe thermal-state changes", it)
             }
         }
         hostLifecycleCoordinator.onStart()
@@ -1108,7 +1108,7 @@ class MainActivity : AppCompatActivity() {
         val targetUrl = homePageUrl()
         if (tab.url == targetUrl) return
         runCatching { tab.session.loadUri(targetUrl) }.onFailure {
-            android.util.Log.w("Wren", "Could not refresh home-page performance presentation", it)
+            android.util.Log.w("BrowseX", "Could not refresh home-page performance presentation", it)
         }
     }
 
@@ -1918,7 +1918,7 @@ class MainActivity : AppCompatActivity() {
             val currentUrl = tab?.url.orEmpty()
             val host = runCatching { Uri.parse(currentUrl).host?.removePrefix("www.") }
                 .getOrNull()?.takeIf { it.isNotBlank() }
-            val identity = host ?: "Wren"
+            val identity = host ?: "BrowseX"
             pageIdentity.text = if (tab?.privateMode == true) "${tr("Private")} · $identity" else identity
         }
         if (::siteInfoButton.isInitialized) {
