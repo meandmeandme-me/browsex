@@ -2,7 +2,6 @@ package com.browsex.app
 
 import java.io.File
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,15 +28,17 @@ class DownloadFileNamePolicyTest {
         val directory = createTempDir(prefix = "browsex-download-")
         try {
             val original = File(directory, "report.txt")
-            assertTrue(original.writeText("keep me").let { original.exists() })
+            original.writeText("keep me")
 
-            val reserved = reserveUniqueDownloadFile(directory, "report.txt")
+            val firstReserved = reserveUniqueDownloadFile(directory, "report.txt")
+            val secondReserved = reserveUniqueDownloadFile(directory, "report.txt")
 
-            assertEquals("report (1).txt", reserved.name)
-            assertTrue(reserved.exists())
-            assertEquals(0L, reserved.length())
+            assertEquals("report (1).txt", firstReserved.name)
+            assertEquals("report (2).txt", secondReserved.name)
+            assertTrue(firstReserved.exists())
+            assertTrue(secondReserved.exists())
+            assertEquals(0L, firstReserved.length())
             assertEquals("keep me", original.readText())
-            assertFalse(reserveUniqueDownloadFile(directory, "report.txt") == reserved)
         } finally {
             directory.deleteRecursively()
         }
