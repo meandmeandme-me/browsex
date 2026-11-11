@@ -35,5 +35,4 @@ internal object BrowseXStrings {
     /** Missing resource keys fall back to Arabic only in Arabic; all other locales use English. */
     internal fun fallbackForLanguage(languageTag: String?, english: String, arabic: String): String =
         if (Locale.forLanguageTag(languageTag.orEmpty()).language == "ar") arabic else english
-    }
 }
