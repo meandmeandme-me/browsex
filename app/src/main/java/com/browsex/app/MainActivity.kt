@@ -1661,7 +1661,9 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             showPrivacyCenter()
                         }
-                    }
+                    },
+                    loadSuggestions = ::loadAddressSuggestions,
+                    onSelectSuggestion = ::selectComposeSuggestion
                 )
             }
         }
@@ -1890,6 +1892,25 @@ class MainActivity : AppCompatActivity() {
         return (openTabs + bookmarks + history)
             .distinctBy { it.value }
             .take(5)
+    }
+
+    private fun selectComposeSuggestion(suggestion: AddressSuggestion) {
+        when (suggestion.kind) {
+            AddressSuggestionKind.OPEN_TAB -> {
+                val privateMode = activeTab?.privateMode == true
+                val match = tabs.firstOrNull {
+                    it.privateMode == privateMode && it.url == suggestion.value
+                }
+                if (match != null) {
+                    activateTab(match)
+                } else {
+                    navigate(suggestion.value)
+                }
+            }
+            AddressSuggestionKind.BOOKMARK,
+            AddressSuggestionKind.HISTORY,
+            AddressSuggestionKind.SEARCH -> navigate(suggestion.value)
+        }
     }
 
     private fun navigate(raw: String) {
