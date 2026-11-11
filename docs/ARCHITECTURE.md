@@ -69,14 +69,14 @@ Current BrowseX-branded Compose surfaces:
 
 The Compose UI adapts selected address/navigation patterns from the MIT-licensed Kingfisher Browser project. Attribution and the complete license notice are in `THIRD_PARTY_NOTICES.md`. BrowseX uses its own logo, colors, naming, and callbacks; it does not replace GeckoView or the browser domain.
 
-The remaining destinations are still being migrated and currently retain their established native presentation:
-- `SiteInfoPage` for the active site's identity and live Gecko permission controls.
-- `DownloadsPage` for Gecko stream downloads and Android DownloadManager entries.
-- `ReaderPage` for the accessible reading surface.
-- `RecallPage` for quick return across open tabs, bookmarks, and history.
-- `AddressSuggestionsController` remains as a legacy controller while its replacement is fully wired.
+Additional Compose destinations now cover:
+- `BrowseXSiteInfoScreen.kt`: active-site identity, live Gecko permission choices, saved media decisions, and per-origin cleanup.
+- `BrowseXReaderScreen.kt`: selectable article text, adjustable typography, and copy.
+- `BrowseXRecallScreen.kt`: bounded search across regular tabs, bookmarks, and recent history.
 
-The home document still lives at `app/src/main/assets/home.html`; it is a separate UI migration target. Native strings live in Android resource directories; the Arabic resource set is `values-ar`.
+The remaining large legacy destination is `DownloadsPage`, which still contains the full Android DownloadManager/Gecko stream lifecycle, safe file-ownership deletion checks, cancellation, share/open, and unsupported-state handling. It will be migrated only when those safeguards are preserved. The old `AddressSuggestionsController` is no longer connected to the visible Compose address field and can be removed after the hidden compatibility views are retired.
+
+The home document still lives at `app/src/main/assets/home.html`; it is the final major UI migration target. Native strings live in Android resource directories; the Arabic resource set is `values-ar`.
 
 ### 5. Security and privacy invariants
 
