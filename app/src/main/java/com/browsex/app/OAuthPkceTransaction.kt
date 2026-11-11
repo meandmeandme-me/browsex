@@ -6,7 +6,7 @@ import java.security.SecureRandom
 import java.util.Base64
 
 /** One-use OAuth 2.0 Authorization Code + PKCE transaction. */
-internal data class OAuthPkceTransaction private constructor(
+internal class OAuthPkceTransaction private constructor(
     val provider: IdentityProvider,
     val redirectUri: String,
     val state: String,
