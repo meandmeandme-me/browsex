@@ -95,6 +95,7 @@ internal fun BrowseXHomeScreen(
         modifier = modifier
             .fillMaxWidth()
             .background(background)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
         Row(
