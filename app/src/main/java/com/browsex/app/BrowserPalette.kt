@@ -19,7 +19,7 @@ internal data class BrowseXColors(
             val base = if (dark) BrowseXColors(
                 // Deep navy surfaces with translucent glass layers for the browser dock.
                 0xFF080F1E.toInt(), 0xD91A2940.toInt(), 0xE51E2D46.toInt(), 0xD91B2A41.toInt(),
-                0xFFF4F7FF.toInt(), 0xFF9DAFC8.toInt(), 0xFF78A9FF.toInt(), 0x665F7898.toInt(),
+                0xFFF4F7FF.toInt(), 0xFF9DAFC8.toInt(), 0xFF79D8FF.toInt(), 0x665F7898.toInt(),
                 0xFFFF929B.toInt(), 0xFF79D7AE.toInt(), 0xFF2D426A.toInt(), true
             ) else BrowseXColors(
                 // Cool neutral canvas, pearl glass, and a clearer blue accent.
