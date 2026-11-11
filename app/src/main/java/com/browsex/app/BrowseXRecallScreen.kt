@@ -121,7 +121,7 @@ internal fun BrowseXRecallScreen(
                                     modifier = Modifier.padding(top = 10.dp, start = 3.dp, bottom = 3.dp)
                                 )
                             }
-                            items(filtered, key = { "${label}:${it.second}" }) { (title, url) ->
+                            items(filtered) { (title, url) ->
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
