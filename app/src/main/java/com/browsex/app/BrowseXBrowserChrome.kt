@@ -105,6 +105,8 @@ internal enum class BrowseXMenuAction(val label: String) {
 internal data class BrowseXChromeState(
     val url: String = "",
     val title: String = "BrowseX",
+    val isHome: Boolean = false,
+    val homeState: BrowseXHomeState = BrowseXHomeState(),
     val progress: Int = 0,
     val tabCount: Int = 0,
     val canGoBack: Boolean = false,
@@ -205,7 +207,29 @@ internal fun BrowseXBrowserChrome(
     recallOpen: Boolean,
     recallState: BrowseXRecallState,
     onDismissRecall: () -> Unit,
-    onOpenRecall: (String) -> Unit
+    onOpenRecall: (String) -> Unit,
+    downloadsOpen: Boolean,
+    downloadsState: BrowseXDownloadsState,
+    onDismissDownloads: () -> Unit,
+    onRefreshDownloads: () -> Unit,
+    onPrimaryDownloadAction: (BrowseXDownloadItem) -> Unit,
+    onShareDownload: (BrowseXDownloadItem) -> Unit,
+    onDeleteDownloadFile: (BrowseXDownloadItem) -> Unit,
+    onHomeSearch: (String) -> Unit,
+    onHomeOpen: (String) -> Unit,
+    onHomeBookmarks: () -> Unit,
+    onHomeHistory: () -> Unit,
+    onHomeDownloads: () -> Unit,
+    onHomeSettings: () -> Unit,
+    onHomePrivateTab: () -> Unit,
+    onHomeCustomize: () -> Unit,
+    uBlockSettingsOpen: Boolean,
+    uBlockState: BrowseXUBlockState,
+    onDismissUBlockSettings: () -> Unit,
+    onInstallUBlock: (Boolean) -> Unit,
+    onToggleUBlock: (Boolean) -> Unit,
+    onUninstallUBlock: () -> Unit,
+    onOpenUBlockSiteControls: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -239,7 +263,7 @@ internal fun BrowseXBrowserChrome(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Transparent)
+                .background(if (state.isHome) Color(state.canvasColor) else Color.Transparent)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             val wide = maxWidth >= 600.dp
@@ -295,7 +319,25 @@ internal fun BrowseXBrowserChrome(
                     }
                 }
 
-                if (!state.dockAtTop) Spacer(Modifier.weight(1f))
+                if (!state.dockAtTop) {
+                    if (state.isHome) {
+                        BrowseXHomeScreen(
+                            state = state.homeState,
+                            isDark = state.isDark,
+                            onSearch = onHomeSearch,
+                            onOpen = onHomeOpen,
+                            onBookmarks = onHomeBookmarks,
+                            onHistory = onHomeHistory,
+                            onDownloads = onHomeDownloads,
+                            onSettings = onHomeSettings,
+                            onPrivateTab = onHomePrivateTab,
+                            onCustomize = onHomeCustomize,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
 
                 Surface(
                     modifier = dockModifier.align(Alignment.CenterHorizontally),
@@ -559,7 +601,25 @@ internal fun BrowseXBrowserChrome(
                     }
                 }
 
-                if (state.dockAtTop) Spacer(Modifier.weight(1f))
+                if (state.dockAtTop) {
+                    if (state.isHome) {
+                        BrowseXHomeScreen(
+                            state = state.homeState,
+                            isDark = state.isDark,
+                            onSearch = onHomeSearch,
+                            onOpen = onHomeOpen,
+                            onBookmarks = onHomeBookmarks,
+                            onHistory = onHomeHistory,
+                            onDownloads = onHomeDownloads,
+                            onSettings = onHomeSettings,
+                            onPrivateTab = onHomePrivateTab,
+                            onCustomize = onHomeCustomize,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
 
@@ -656,6 +716,26 @@ internal fun BrowseXBrowserChrome(
                 state = recallState,
                 onDismiss = onDismissRecall,
                 onOpen = onOpenRecall
+            )
+        }
+        if (downloadsOpen) {
+            BrowseXDownloadsScreen(
+                state = downloadsState,
+                onDismiss = onDismissDownloads,
+                onRefresh = onRefreshDownloads,
+                onPrimaryAction = onPrimaryDownloadAction,
+                onShare = onShareDownload,
+                onDeleteFile = onDeleteDownloadFile
+            )
+        }
+        if (uBlockSettingsOpen) {
+            BrowseXUBlockSettingsScreen(
+                state = uBlockState,
+                onDismiss = onDismissUBlockSettings,
+                onInstall = onInstallUBlock,
+                onToggleEnabled = onToggleUBlock,
+                onUninstall = onUninstallUBlock,
+                onSiteControls = onOpenUBlockSiteControls
             )
         }
     }

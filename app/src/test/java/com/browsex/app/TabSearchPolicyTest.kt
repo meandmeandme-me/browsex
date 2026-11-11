@@ -11,7 +11,7 @@ class TabSearchPolicyTest {
     }
 
     @Test fun ignoresTatweelAndRepeatedWhitespace() {
-        assertTrue(TabSearchPolicy.matches("Wren ـ Browser", "", "wren browser"))
+        assertTrue(TabSearchPolicy.matches("BrowseX ـ Browser", "", "browsex browser"))
     }
 
     @Test fun searchesBothTitleAndUrl() {

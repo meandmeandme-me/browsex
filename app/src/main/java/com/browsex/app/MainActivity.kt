@@ -51,10 +51,13 @@ import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.metrics.performance.JankStats
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException
 import java.util.ArrayDeque
+import java.text.DateFormat
+import java.util.Date
 import java.util.WeakHashMap
 import com.browsex.app.storage.BrowserStorageRuntime
 import com.browsex.app.storage.BrowserSettings
@@ -326,6 +329,13 @@ class MainActivity : AppCompatActivity() {
     private val composeReaderState = mutableStateOf(BrowseXReaderState("", "", ""))
     private val composeRecallOpen = mutableStateOf(false)
     private val composeRecallState = mutableStateOf(BrowseXRecallState(emptyList(), emptyList(), emptyList()))
+    private val composeDownloadsOpen = mutableStateOf(false)
+    private val composeDownloadsState = mutableStateOf(BrowseXDownloadsState())
+    private val composeHomeState = mutableStateOf(BrowseXHomeState())
+    private var lastHomeRefreshKey: String? = null
+    private var downloadsRefreshJob: Job? = null
+    private val composeUBlockSettingsOpen = mutableStateOf(false)
+    private val composeUBlockState = mutableStateOf(BrowseXUBlockState())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -630,7 +640,10 @@ class MainActivity : AppCompatActivity() {
                 },
                 onActionChanged = {
                     if (!isFinishing && !isDestroyed) {
-                        runOnUiThread { syncUBlockButton() }
+                        runOnUiThread {
+                            syncUBlockButton()
+                            refreshComposeUBlockState()
+                        }
                     }
                 },
                 onExtensionStateChanged = { updated ->
@@ -639,6 +652,7 @@ class MainActivity : AppCompatActivity() {
                         val enabled = updated?.metaData?.enabled == true
                         val privateAllowed = enabled && updated?.metaData?.allowedInPrivateBrowsing == true
                         BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                        refreshComposeUBlockState()
                         updateBrowserSettings({
                             it.copy(
                                 adBlockInstalled = updated != null,
@@ -656,6 +670,7 @@ class MainActivity : AppCompatActivity() {
                             val enabled = installed?.metaData?.enabled == true
                             val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
                             BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                            refreshComposeUBlockState()
                             // Reconcile persisted preferences with Gecko's actual extension state.
                             updateBrowserSettings({
                                 it.copy(
@@ -1044,20 +1059,6 @@ class MainActivity : AppCompatActivity() {
             isHostUnavailable = { isFinishing || isDestroyed },
             showMessage = ::toast,
             translate = ::tr
-        )
-    }
-
-    private val uBlockSettings by lazy {
-        BrowserUBlockSettingsCoordinator(
-            activity = this,
-            manager = { uBlockOriginManager },
-            activeSession = { activeTab?.session },
-            isHostUnavailable = { isFinishing || isDestroyed },
-            showMessage = ::toast,
-            translate = ::tr,
-            dp = ::dp,
-            textColor = colors.ink,
-            onSettingsChanged = ::recreate
         )
     }
 
@@ -1809,6 +1810,40 @@ class MainActivity : AppCompatActivity() {
                         composeRecallOpen.value = false
                         val existing = tabs.firstOrNull { !it.privateMode && it.url == url }
                         if (existing != null) activateTab(existing) else createTab(url)
+                    },
+                    downloadsOpen = composeDownloadsOpen.value,
+                    downloadsState = composeDownloadsState.value,
+                    onDismissDownloads = {
+                        composeDownloadsOpen.value = false
+                        downloadsRefreshJob?.cancel()
+                        downloadsRefreshJob = null
+                    },
+                    onRefreshDownloads = ::refreshDownloads,
+                    onPrimaryDownloadAction = ::performDownloadPrimaryAction,
+                    onShareDownload = ::shareDownloadItem,
+                    onDeleteDownloadFile = ::deleteDownloadItem,
+                    onHomeSearch = ::navigate,
+                    onHomeOpen = ::navigate,
+                    onHomeBookmarks = { showSavedPages("Bookmarks", emptyList()) },
+                    onHomeHistory = { showSavedPages("History", emptyList()) },
+                    onHomeDownloads = ::openDownloads,
+                    onHomeSettings = ::showSettings,
+                    onHomePrivateTab = { createTab(homePageUrl(), privateMode = true) },
+                    onHomeCustomize = { showSavedPages("Bookmarks", emptyList()) },
+                    uBlockSettingsOpen = composeUBlockSettingsOpen.value,
+                    uBlockState = composeUBlockState.value,
+                    onDismissUBlockSettings = { composeUBlockSettingsOpen.value = false },
+                    onInstallUBlock = ::installUBlockOrigin,
+                    onToggleUBlock = ::setUBlockOriginEnabled,
+                    onUninstallUBlock = ::uninstallUBlockOrigin,
+                    onOpenUBlockSiteControls = {
+                        composeUBlockSettingsOpen.value = false
+                        val manager = uBlockOriginManager
+                        if (manager != null && manager.hasBrowserAction(activeTab?.session)) {
+                            manager.clickBrowserAction(activeTab?.session)
+                        } else {
+                            toast("uBlock Origin controls are unavailable for this site")
+                        }
                     }
                 )
             }
@@ -1944,9 +1979,28 @@ class MainActivity : AppCompatActivity() {
         composeTabsState.value = tabs.toList()
         composeActiveTabState.value = tab
         composeSettingsState.value = browserSettingsSnapshot
+        val isHome = tab == null || pageUrl.startsWith(HOME_URL)
+        if (::browserView.isInitialized) {
+            browserView.visibility = if (isHome) View.INVISIBLE else View.VISIBLE
+        }
+        val homeRefreshKey = listOf(
+            pageUrl,
+            browserSettingsSnapshot.homeShowQuickLinks,
+            browserSettingsSnapshot.homeShowDiscovery,
+            browserSettingsSnapshot.homeLayout,
+            browserSettingsSnapshot.searchEngine
+        ).joinToString("|")
+        if (isHome && lastHomeRefreshKey != homeRefreshKey) {
+            lastHomeRefreshKey = homeRefreshKey
+            refreshComposeHomeState()
+        } else if (!isHome) {
+            lastHomeRefreshKey = null
+        }
         composeChromeState.value = BrowseXChromeState(
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
-            title = host ?: if (tab == null || pageUrl.startsWith(HOME_URL)) "New tab" else tab.title,
+            title = host ?: tab?.title?.takeIf { it.isNotBlank() } ?: "New tab",
+            isHome = isHome,
+            homeState = if (tab?.privateMode == true) composeHomeState.value.copy(recentPages = emptyList(), showDiscovery = false) else composeHomeState.value,
             progress = tab?.progress?.coerceIn(0, 100) ?: 0,
             tabCount = tabs.size,
             canGoBack = tab?.canGoBack == true,
@@ -1967,6 +2021,33 @@ class MainActivity : AppCompatActivity() {
             accentColor = palette.accent,
             lineColor = palette.line
         )
+    }
+
+    private fun refreshComposeHomeState() {
+        lifecycleScope.launch {
+            val graph = runCatching { storageRuntime.awaitReady() }.getOrNull()
+            val savedShortcuts = graph?.bookmarks?.all()?.take(12).orEmpty()
+            val recentPages = graph?.history?.recent(12).orEmpty()
+            val defaults = listOf(
+                BrowseXHomeLink("Google", "https://www.google.com/"),
+                BrowseXHomeLink("YouTube", "https://www.youtube.com/"),
+                BrowseXHomeLink("Wikipedia", "https://www.wikipedia.org/"),
+                BrowseXHomeLink("GitHub", "https://github.com/"),
+                BrowseXHomeLink("DuckDuckGo", "https://duckduckgo.com/"),
+                BrowseXHomeLink("Reddit", "https://www.reddit.com/"),
+                BrowseXHomeLink("Instagram", "https://www.instagram.com/"),
+                BrowseXHomeLink("Amazon", "https://www.amazon.com/")
+            )
+            composeHomeState.value = BrowseXHomeState(
+                shortcuts = if (savedShortcuts.isNotEmpty()) {
+                    savedShortcuts.map { BrowseXHomeLink(it.title, it.url) }
+                } else defaults,
+                recentPages = recentPages.map { BrowseXHomeLink(it.title, it.url) },
+                showQuickLinks = browserSettingsSnapshot.homeShowQuickLinks,
+                showDiscovery = browserSettingsSnapshot.homeShowDiscovery,
+                layout = browserSettingsSnapshot.homeLayout
+            )
+        }
     }
 
     private fun syncUBlockButton() {
@@ -2490,6 +2571,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }.onSuccess { added ->
                 toast(if (added) "Bookmark saved" else "Bookmark removed")
+                refreshComposeHomeState()
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not update bookmark", error)
                 toast(BrowseXStrings.text(this@MainActivity, "Could not update bookmark", "تعذر تحديث المفضلة"))
@@ -2731,7 +2813,6 @@ class MainActivity : AppCompatActivity() {
             BrowseXSettingsAction.IMPORT_BOOKMARKS ->
                 bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain"))
             BrowseXSettingsAction.EXPORT_BOOKMARKS -> bookmarkExportLauncher.launch("browsex-bookmarks.html")
-            BrowseXSettingsAction.HOME_PAGE -> showHomePreferences()
             BrowseXSettingsAction.PRIVACY_CENTER -> showPrivacyCenter()
             BrowseXSettingsAction.SITE_PERMISSIONS -> showSitePermissionsPage()
             BrowseXSettingsAction.UBLOCK -> showUBlockOriginSettings()
@@ -2822,63 +2903,98 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun showUBlockOriginSettings() = uBlockSettings.show()
+    private fun showUBlockOriginSettings() {
+        refreshComposeUBlockState()
+        composeUBlockSettingsOpen.value = true
+    }
 
-    private fun showHomePreferences() {
-        lifecycleScope.launch {
-            val settings = runCatching { storageRuntime.settings.snapshot() }.getOrElse {
-                android.util.Log.e("BrowseX", "Could not load homepage preferences", it)
-                toast(BrowseXStrings.text(this@MainActivity, "Could not load homepage settings", "تعذر تحميل إعدادات الصفحة الرئيسية"))
-                return@launch
-            }
-            val labels = arrayOf(
-                tr("Show favorite shortcuts"),
-                tr("Show discovery card")
+    private fun refreshComposeUBlockState() {
+        val manager = uBlockOriginManager
+        composeUBlockState.value = BrowseXUBlockState(
+            installed = manager?.isInstalled == true,
+            enabled = manager?.isEnabled == true,
+            allowedInPrivateBrowsing = manager?.isAllowedInPrivateBrowsing == true,
+            siteControlsAvailable = manager?.hasBrowserAction(activeTab?.session) == true
+        )
+    }
+
+    private fun updateUBlockSettings(installed: Boolean, enabled: Boolean, privateAllowed: Boolean) {
+        updateBrowserSettings({
+            it.copy(
+                adBlockInstalled = installed,
+                adBlockEnabled = enabled,
+                adBlockPrivateEnabled = privateAllowed
             )
-            val checked = booleanArrayOf(settings.homeShowQuickLinks, settings.homeShowDiscovery)
-            AlertDialog.Builder(this@MainActivity)
-                .setTitle(tr("Home page"))
-                .setMessage(tr("Choose which sections appear and how shortcuts are arranged."))
-                .setMultiChoiceItems(labels, checked) { _, which, enabled ->
-                    checked[which] = enabled
+        }) {
+            BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+            refreshComposeUBlockState()
+        }
+    }
+
+    private fun installUBlockOrigin(allowPrivate: Boolean) {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+        manager.install(allowPrivate) { installed, error ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (error != null || installed == null) {
+                    android.util.Log.w("BrowseX", "uBlock Origin installation failed", error)
+                    toast("Could not install uBlock Origin")
+                    refreshComposeUBlockState()
+                    return@runOnUiThread
                 }
-                .setPositiveButton(tr("Continue")) { _, _ ->
-                    var selectedLayout = if (settings.homeLayout == "list") 1 else 0
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(tr("Shortcut layout"))
-                        .setSingleChoiceItems(
-                            arrayOf(tr("Grid layout"), tr("List layout")),
-                            selectedLayout
-                        ) { _, index -> selectedLayout = index }
-                        .setPositiveButton(tr("Apply")) { _, _ ->
-                            updateBrowserSettings({
-                                it.copy(
-                                    homeShowQuickLinks = checked[0],
-                                    homeShowDiscovery = checked[1],
-                                    homeLayout = if (selectedLayout == 1) "list" else "grid"
-                                )
-                            }) {
-                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }
-                                    ?.session?.loadUri(homePageUrl())
-                            }
-                        }
-                        .setNeutralButton(tr("Reset")) { _, _ ->
-                            updateBrowserSettings({
-                                it.copy(
-                                    homeShowQuickLinks = true,
-                                    homeShowDiscovery = true,
-                                    homeLayout = "grid"
-                                )
-                            }) {
-                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }
-                                    ?.session?.loadUri(homePageUrl())
-                            }
-                        }
-                        .setNegativeButton(tr("Cancel"), null)
-                        .show()
+                val enabled = installed.metaData?.enabled == true
+                val privateAllowed = enabled && installed.metaData?.allowedInPrivateBrowsing == true
+                updateUBlockSettings(true, enabled, privateAllowed)
+                toast("uBlock Origin installed")
+            }
+        }
+    }
+
+    private fun setUBlockOriginEnabled(enabled: Boolean) {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+        manager.setEnabled(enabled) { updated, error ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (error != null || updated == null) {
+                    android.util.Log.w("BrowseX", "Could not update uBlock Origin", error)
+                    toast("Could not update uBlock Origin")
+                    refreshComposeUBlockState()
+                    return@runOnUiThread
                 }
-                .setNegativeButton(tr("Cancel"), null)
-                .show()
+                val nowEnabled = updated.metaData?.enabled == true
+                val privateAllowed = nowEnabled && updated.metaData?.allowedInPrivateBrowsing == true
+                updateUBlockSettings(true, nowEnabled, privateAllowed)
+                toast(if (nowEnabled) "uBlock Origin enabled" else "uBlock Origin disabled")
+            }
+        }
+    }
+
+    private fun uninstallUBlockOrigin() {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+        manager.uninstall { error ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (error != null) {
+                    android.util.Log.w("BrowseX", "Could not uninstall uBlock Origin", error)
+                    toast("Could not uninstall uBlock Origin")
+                    refreshComposeUBlockState()
+                    return@runOnUiThread
+                }
+                updateUBlockSettings(false, false, false)
+                toast("uBlock Origin removed")
+            }
         }
     }
 
@@ -3014,6 +3130,7 @@ class MainActivity : AppCompatActivity() {
                 if (composeSavedPagesState.value.isHistory) storage.history.remove(url)
                 else storage.bookmarks.remove(url)
                 refreshComposeSavedPages()
+                if (!composeSavedPagesState.value.isHistory) refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not remove saved page", it)
                 toast("Could not remove item")
@@ -3026,6 +3143,7 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 storageRuntime.awaitReady().bookmarks.rename(url, title)
                 refreshComposeSavedPages()
+                refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not rename bookmark", it)
                 toast("Could not rename bookmark")
@@ -3038,6 +3156,7 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 storageRuntime.awaitReady().bookmarks.move(url, folderId)
                 refreshComposeSavedPages()
+                refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not move bookmark", it)
                 toast("Could not move bookmark")
@@ -3101,6 +3220,7 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 storageRuntime.awaitReady().history.clear()
                 refreshComposeSavedPages()
+                refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not clear browsing history", it)
                 toast("Could not clear history")
@@ -3127,9 +3247,345 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
     private fun openDownloads() {
-        DownloadsPage(this) { downloadId ->
-            streamDownloadCoordinator.cancel(downloadId)
-        }.show()
+        lifecycleScope.launch {
+            composeDownloadsState.value = loadDownloadsSnapshot()
+            composeDownloadsOpen.value = true
+            startDownloadsRefreshLoop()
+        }
+    }
+
+    private suspend fun loadDownloadsSnapshot(): BrowseXDownloadsState {
+        val repository = runCatching { storageRuntime.awaitReady().downloads }.getOrElse { error ->
+            android.util.Log.e("BrowseX", "Could not open Room downloads", error)
+            return BrowseXDownloadsState(querySucceeded = false)
+        }
+        val recordsAndIds = runCatching {
+            repository.all() to repository.trackedPlatformDownloadIds()
+        }.onFailure { error ->
+            android.util.Log.e("BrowseX", "Could not load download history", error)
+        }.getOrElse {
+            return BrowseXDownloadsState(querySucceeded = false)
+        }
+        val records = recordsAndIds.first
+        val platformIds = recordsAndIds.second
+        val items = mutableListOf<BrowseXDownloadItem>()
+        fun t(en: String, ar: String = en) = BrowseXStrings.text(this, en, ar)
+        fun dateLabel(timestamp: Long): String =
+            if (timestamp > 0L) DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp)) else ""
+        fun bytesLabel(value: Long): String =
+            if (value >= 0L) "${value / 1024} KB" else t("Size unavailable", "الحجم غير متاح")
+
+        records.forEach { record ->
+            val active = record.status == "queued" || record.status == "running"
+            val failed = record.status == "failed"
+            val cancelled = record.status == "cancelled"
+            val completed = !active && !failed && !cancelled
+            val statusLabel = when {
+                active && record.status == "queued" -> t("Waiting in queue", "بانتظار دوره")
+                active -> t("Downloading", "جارٍ التنزيل")
+                cancelled -> t("Cancelled", "تم الإلغاء")
+                failed -> t("Failed", "فشل")
+                else -> t("Downloaded", "تم التنزيل")
+            }
+            val percent = if (record.totalBytes > 0L) {
+                ((record.bytesWritten.coerceAtMost(record.totalBytes).toDouble() /
+                    record.totalBytes.toDouble()) * 100.0).toInt().coerceIn(0, 100)
+            } else null
+            val progressDetail = if (record.totalBytes > 0L) {
+                "${bytesLabel(record.bytesWritten)} / ${bytesLabel(record.totalBytes)} · ${percent ?: 0}%"
+            } else bytesLabel(record.bytesWritten)
+            val detail = buildList {
+                if (failed && record.error.isNotBlank()) add(record.error)
+                if (active || !failed) add(progressDetail)
+                dateLabel(record.createdAt).takeIf { it.isNotBlank() }?.let(::add)
+            }.joinToString(" · ")
+            val parsed = runCatching { Uri.parse(record.uri) }.getOrNull()
+            val usableUri = parsed?.scheme in setOf("content", "file")
+            items += BrowseXDownloadItem(
+                key = "stream:${record.id}",
+                recordId = record.id,
+                displayName = record.displayName,
+                mimeType = record.mimeType.ifBlank { "*/*" },
+                uri = record.uri,
+                sourceLabel = t("Website response", "استجابة موقع"),
+                statusLabel = if (failed && record.error.isNotBlank()) "${statusLabel}: ${record.error}" else statusLabel,
+                detail = detail,
+                progressPercent = percent,
+                indeterminate = active && record.totalBytes <= 0L,
+                isActive = active,
+                isCompleted = completed,
+                canShare = completed && usableUri,
+                canDeleteFile = completed && usableUri,
+                primaryAction = when {
+                    active -> BrowseXDownloadPrimaryAction.CANCEL_STREAM
+                    failed || cancelled -> BrowseXDownloadPrimaryAction.REMOVE_STREAM_RECORD
+                    else -> BrowseXDownloadPrimaryAction.OPEN_STREAM
+                },
+                primaryLabel = when {
+                    active -> t("Cancel", "إلغاء")
+                    failed || cancelled -> t("Remove", "حذف")
+                    else -> t("Open", "فتح")
+                }
+            )
+        }
+
+        val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        val seenIds = mutableSetOf<Long>()
+        var querySucceeded = platformIds.isEmpty()
+        val cursor = try {
+            if (platformIds.isEmpty()) null else manager.query(
+                DownloadManager.Query().setFilterById(*platformIds.toLongArray())
+            ).also { querySucceeded = it != null }
+        } catch (error: SecurityException) {
+            android.util.Log.w("BrowseX", "Downloads query permission failure", error)
+            null
+        } catch (error: RuntimeException) {
+            android.util.Log.w("BrowseX", "Downloads query failed", error)
+            null
+        }
+        cursor?.use { c ->
+            val idColumn = c.getColumnIndex(DownloadManager.COLUMN_ID)
+            val titleColumn = c.getColumnIndex(DownloadManager.COLUMN_TITLE)
+            val statusColumn = c.getColumnIndex(DownloadManager.COLUMN_STATUS)
+            val totalColumn = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+            val downloadedColumn = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+            val dateColumn = c.getColumnIndex(DownloadManager.COLUMN_LAST_MODIFIED_TIMESTAMP)
+            val reasonColumn = c.getColumnIndex(DownloadManager.COLUMN_REASON)
+            while (c.moveToNext()) {
+                if (idColumn < 0) continue
+                val id = c.getLong(idColumn)
+                seenIds += id
+                val title = (if (titleColumn >= 0) c.getString(titleColumn) ?: t("Downloaded file") else t("Downloaded file"))
+                    .filterNot(Char::isISOControl)
+                    .take(240)
+                val status = if (statusColumn >= 0) c.getInt(statusColumn) else -1
+                val reason = if (reasonColumn >= 0) c.getInt(reasonColumn) else 0
+                val total = if (totalColumn >= 0) c.getLong(totalColumn) else -1L
+                val downloaded = if (downloadedColumn >= 0) c.getLong(downloadedColumn) else 0L
+                val timestamp = if (dateColumn >= 0) c.getLong(dateColumn) else 0L
+                val active = status == DownloadManager.STATUS_PENDING ||
+                    status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PAUSED
+                val completed = status == DownloadManager.STATUS_SUCCESSFUL
+                val failed = status == DownloadManager.STATUS_FAILED
+                val statusLabel = when (status) {
+                    DownloadManager.STATUS_PENDING -> t("Waiting", "في الانتظار")
+                    DownloadManager.STATUS_RUNNING -> t("Downloading", "جارٍ التنزيل")
+                    DownloadManager.STATUS_PAUSED -> t("Paused", "متوقف مؤقتًا")
+                    DownloadManager.STATUS_SUCCESSFUL -> t("Downloaded", "تم التنزيل")
+                    DownloadManager.STATUS_FAILED -> t("Failed", "فشل")
+                    else -> t("Unknown status", "حالة غير معروفة")
+                }
+                val reasonLabel = when {
+                    status == DownloadManager.STATUS_PAUSED -> when (reason) {
+                        DownloadManager.PAUSED_QUEUED_FOR_WIFI -> t("Waiting for Wi-Fi", "بانتظار Wi-Fi")
+                        DownloadManager.PAUSED_WAITING_FOR_NETWORK -> t("Waiting for network", "بانتظار الشبكة")
+                        DownloadManager.PAUSED_WAITING_TO_RETRY -> t("Waiting to retry", "بانتظار إعادة المحاولة")
+                        else -> t("Paused by Android", "أوقفه أندرويد مؤقتًا")
+                    }
+                    status == DownloadManager.STATUS_FAILED -> when (reason) {
+                        DownloadManager.ERROR_INSUFFICIENT_SPACE -> t("Not enough storage", "المساحة غير كافية")
+                        DownloadManager.ERROR_DEVICE_NOT_FOUND -> t("Storage unavailable", "وحدة التخزين غير متاحة")
+                        DownloadManager.ERROR_FILE_ALREADY_EXISTS -> t("File already exists", "الملف موجود بالفعل")
+                        DownloadManager.ERROR_FILE_ERROR -> t("File write error", "خطأ في كتابة الملف")
+                        DownloadManager.ERROR_HTTP_DATA_ERROR -> t("Network data error", "خطأ في بيانات الشبكة")
+                        DownloadManager.ERROR_TOO_MANY_REDIRECTS -> t("Too many redirects", "عمليات إعادة توجيه كثيرة")
+                        DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> t("Unsupported server response", "استجابة الخادم غير مدعومة")
+                        DownloadManager.ERROR_CANNOT_RESUME -> t("Cannot resume this download", "لا يمكن استكمال هذا التنزيل")
+                        else -> t("Android could not finish this download", "تعذّر على أندرويد إكمال التنزيل")
+                    }
+                    else -> ""
+                }
+                val percent = if (total > 0L) ((downloaded * 100L / total).coerceIn(0L, 100L)).toInt() else null
+                val detail = listOf(
+                    reasonLabel,
+                    if (total > 0L) "${bytesLabel(downloaded)} / ${bytesLabel(total)}" else bytesLabel(downloaded),
+                    percent?.let { "$it%" }.orEmpty(),
+                    dateLabel(timestamp)
+                ).filter { it.isNotBlank() }.joinToString(" · ")
+                items += BrowseXDownloadItem(
+                    key = "platform:$id",
+                    platformId = id,
+                    displayName = title,
+                    sourceLabel = t("Android DownloadManager", "مدير تنزيلات أندرويد"),
+                    statusLabel = statusLabel,
+                    detail = detail,
+                    progressPercent = percent,
+                    indeterminate = active && total <= 0L,
+                    isActive = active,
+                    isCompleted = completed,
+                    canShare = completed,
+                    canDeleteFile = completed,
+                    primaryAction = when {
+                        active -> BrowseXDownloadPrimaryAction.CANCEL_PLATFORM
+                        completed -> BrowseXDownloadPrimaryAction.OPEN_PLATFORM
+                        else -> BrowseXDownloadPrimaryAction.REMOVE_PLATFORM
+                    },
+                    primaryLabel = when {
+                        active -> t("Cancel", "إلغاء")
+                        completed -> t("Open", "فتح")
+                        else -> t("Remove", "حذف")
+                    }
+                )
+            }
+        }
+        if (querySucceeded) {
+            (platformIds - seenIds).forEach { id ->
+                items += BrowseXDownloadItem(
+                    key = "missing:$id",
+                    platformId = id,
+                    displayName = t("Download no longer exists in Android DownloadManager", "التنزيل لم يعد موجودًا في مدير تنزيلات أندرويد"),
+                    sourceLabel = t("Android DownloadManager", "مدير تنزيلات أندرويد"),
+                    statusLabel = t("Unavailable", "غير متاح"),
+                    detail = t("Remove this stale tracking entry.", "احذف سجل التتبع القديم هذا."),
+                    primaryAction = BrowseXDownloadPrimaryAction.REMOVE_STALE_PLATFORM,
+                    primaryLabel = t("Remove", "حذف")
+                )
+            }
+        }
+        items.sortByDescending { item ->
+            when {
+                item.isActive -> 3
+                item.isCompleted -> 1
+                else -> 2
+            }
+        }
+        return BrowseXDownloadsState(
+            items = items,
+            querySucceeded = querySucceeded,
+            hasActiveDownloads = items.any { it.isActive }
+        )
+    }
+
+    private fun refreshDownloads() {
+        lifecycleScope.launch {
+            composeDownloadsState.value = loadDownloadsSnapshot()
+            startDownloadsRefreshLoop()
+        }
+    }
+
+    private fun startDownloadsRefreshLoop() {
+        downloadsRefreshJob?.cancel()
+        if (!composeDownloadsOpen.value || !composeDownloadsState.value.hasActiveDownloads) return
+        downloadsRefreshJob = lifecycleScope.launch {
+            while (composeDownloadsOpen.value && composeDownloadsState.value.hasActiveDownloads) {
+                delay(900L)
+                if (composeDownloadsOpen.value) {
+                    composeDownloadsState.value = loadDownloadsSnapshot()
+                }
+            }
+        }
+    }
+
+    private fun performDownloadPrimaryAction(item: BrowseXDownloadItem) {
+        when (item.primaryAction) {
+            BrowseXDownloadPrimaryAction.CANCEL_STREAM -> {
+                if (!streamDownloadCoordinator.cancel(item.recordId)) {
+                    toast("This download can no longer be cancelled")
+                }
+                refreshDownloads()
+            }
+            BrowseXDownloadPrimaryAction.REMOVE_STREAM_RECORD -> lifecycleScope.launch {
+                runCatching { storageRuntime.awaitReady().downloads.remove(item.recordId) }
+                    .onFailure { android.util.Log.e("BrowseX", "Could not remove stream download record", it) }
+                refreshDownloads()
+            }
+            BrowseXDownloadPrimaryAction.OPEN_STREAM -> {
+                val uri = runCatching { Uri.parse(item.uri) }.getOrNull()
+                if (uri == null || uri.scheme !in setOf("content", "file")) {
+                    toast("File location is unavailable")
+                } else {
+                    openDownloadedFile(uri, item.mimeType)
+                }
+            }
+            BrowseXDownloadPrimaryAction.CANCEL_PLATFORM,
+            BrowseXDownloadPrimaryAction.REMOVE_PLATFORM -> {
+                val removed = runCatching {
+                    (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).remove(item.platformId)
+                }.getOrDefault(0)
+                if (removed > 0) {
+                    lifecycleScope.launch {
+                        runCatching { storageRuntime.awaitReady().downloads.removeTrackedPlatformDownload(item.platformId) }
+                        refreshDownloads()
+                    }
+                } else {
+                    toast("Android could not remove this download. It is still listed.")
+                }
+            }
+            BrowseXDownloadPrimaryAction.OPEN_PLATFORM -> {
+                val uri = runCatching {
+                    (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).getUriForDownloadedFile(item.platformId)
+                }.getOrNull()
+                if (uri == null) toast("File location is unavailable")
+                else {
+                    val mime = contentResolver.getType(uri) ?: "*/*"
+                    openDownloadedFile(uri, mime)
+                }
+            }
+            BrowseXDownloadPrimaryAction.REMOVE_STALE_PLATFORM -> lifecycleScope.launch {
+                runCatching { storageRuntime.awaitReady().downloads.removeTrackedPlatformDownload(item.platformId) }
+                    .onFailure { android.util.Log.e("BrowseX", "Could not remove stale download tracking entry", it) }
+                refreshDownloads()
+            }
+        }
+    }
+
+    private fun openDownloadedFile(uri: Uri, mimeType: String) {
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, mimeType.ifBlank { "*/*" })
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching { startActivity(intent) }
+            .onFailure { toast("No app can open this file") }
+    }
+
+    private fun shareDownloadItem(item: BrowseXDownloadItem) {
+        val uri = if (item.platformId > 0L) {
+            runCatching {
+                (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).getUriForDownloadedFile(item.platformId)
+            }.getOrNull()
+        } else {
+            runCatching { Uri.parse(item.uri) }.getOrNull()
+        }
+        if (uri == null || uri.scheme !in setOf("content", "file")) {
+            toast("File location is unavailable")
+            return
+        }
+        val mime = if (item.platformId > 0L) contentResolver.getType(uri) ?: item.mimeType else item.mimeType
+        val share = Intent(Intent.ACTION_SEND).apply {
+            type = mime.ifBlank { "*/*" }
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = android.content.ClipData.newUri(contentResolver, item.displayName, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching { startActivity(Intent.createChooser(share, tr("Share download"))) }
+            .onFailure { toast("No app can share this file") }
+    }
+
+    private fun deleteDownloadItem(item: BrowseXDownloadItem) {
+        if (item.platformId > 0L) {
+            val removed = runCatching {
+                (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).remove(item.platformId)
+            }.getOrDefault(0)
+            if (removed > 0) {
+                lifecycleScope.launch {
+                    runCatching { storageRuntime.awaitReady().downloads.removeTrackedPlatformDownload(item.platformId) }
+                    refreshDownloads()
+                }
+            } else {
+                toast("Android could not delete this download")
+            }
+            return
+        }
+        val uri = runCatching { Uri.parse(item.uri) }.getOrNull()
+        val deleted = uri != null && BrowseXDownloadFileOwnership.delete(this, uri)
+        if (!deleted) {
+            toast(BrowseXStrings.text(this, "BrowseX could not verify ownership or delete this file. The record was kept.", "تعذّر على BrowseX التحقق من ملكية الملف أو حذفه. تم الاحتفاظ بالسجل."))
+            return
+        }
+        lifecycleScope.launch {
+            runCatching { storageRuntime.awaitReady().downloads.remove(item.recordId) }
+                .onFailure { android.util.Log.e("BrowseX", "Could not remove deleted stream download record", it) }
+            refreshDownloads()
+        }
     }
 
     /** Routes GeckoView responses into the dedicated download request coordinator. */
