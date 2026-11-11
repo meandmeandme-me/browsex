@@ -2159,19 +2159,29 @@ class MainActivity : AppCompatActivity() {
         if (initialBrowserTabsRestoreStarted || isFinishing || isDestroyed) return
         initialBrowserTabsRestoreStarted = true
         lifecycleScope.launch {
-            val snapshot = runCatching { storageRuntime.restoreOpenTabs() }
+            val restoreResult = runCatching { storageRuntime.restoreOpenTabs() }
                 .onFailure { error ->
-                    android.util.Log.e("BrowseX", "Room tab restore failed; starting with a clean tab snapshot", error)
+                    android.util.Log.e("BrowseX", "Room tab restore failed; saved browser data was not modified", error)
                 }
-                .getOrElse {
-                    // BrowseX has no pre-existing user tab data to migrate. Room is the
-                    // sole source of truth; never resurrect stale SharedPreferences tabs.
-                    com.browsex.app.storage.TabSessionSnapshot(emptyList(), 0, 0L)
-                }
+            val storageRestored = restoreResult.isSuccess
+            val snapshot = restoreResult.getOrElse {
+                // Never resurrect stale SharedPreferences tabs or persist a clean snapshot
+                // over data that could not be read. A later app launch can retry after repair.
+                com.browsex.app.storage.TabSessionSnapshot(emptyList(), 0, 0L)
+            }
             if (isFinishing || isDestroyed) return@launch
             val externalUrl = startupIntent?.data?.let(::safeExternalUrl)
             tabController.restoreInitialTabs(snapshot.urls, snapshot.activeIndex, externalUrl)
-            initialBrowserTabsRestored = true
+            // Keep persistence disabled when opening the database failed. Otherwise the
+            // fallback home tab could overwrite a valid snapshot after a transient read error.
+            initialBrowserTabsRestored = storageRestored
+            if (!storageRestored) {
+                toast(BrowseXStrings.text(
+                    this@MainActivity,
+                    "Saved browser data could not be opened. Your data has not been deleted.",
+                    "تعذر فتح بيانات التصفح المحفوظة. لم يتم حذف بياناتك."
+                ))
+            }
             handleSiteNotificationIntent(startupIntent)
             syncUBlockButton()
         }
