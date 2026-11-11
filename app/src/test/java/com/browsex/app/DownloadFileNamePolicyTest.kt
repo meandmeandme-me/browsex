@@ -1,6 +1,9 @@
 package com.browsex.app
 
+import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DownloadFileNamePolicyTest {
@@ -20,5 +23,23 @@ class DownloadFileNamePolicyTest {
         assertEquals(140, DownloadFileNamePolicy.sanitize("a".repeat(200)).length)
         assertEquals("download", DownloadFileNamePolicy.sanitize("..."))
         assertEquals("download", DownloadFileNamePolicy.sanitize(null))
+    }
+
+    @Test fun reservesUniqueDestinationWithoutOverwritingExistingFile() {
+        val directory = createTempDir(prefix = "browsex-download-")
+        try {
+            val original = File(directory, "report.txt")
+            assertTrue(original.writeText("keep me").let { original.exists() })
+
+            val reserved = reserveUniqueDownloadFile(directory, "report.txt")
+
+            assertEquals("report (1).txt", reserved.name)
+            assertTrue(reserved.exists())
+            assertEquals(0L, reserved.length())
+            assertEquals("keep me", original.readText())
+            assertFalse(reserveUniqueDownloadFile(directory, "report.txt") == reserved)
+        } finally {
+            directory.deleteRecursively()
+        }
     }
 }
