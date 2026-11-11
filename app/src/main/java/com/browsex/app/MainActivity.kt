@@ -1762,7 +1762,10 @@ class MainActivity : AppCompatActivity() {
                         restoreSavedSession(session, replaceRegularTabs = false)
                     },
                     onRenameSavedSession = ::renameSavedSession,
-                    onDeleteSavedSession = ::deleteSavedSession
+                    onDeleteSavedSession = ::deleteSavedSession,
+                    onSaveCurrentSession = ::saveCurrentSessionNamed,
+                    onImportSavedSession = ::importSavedSession,
+                    onDeleteAllSavedSessions = ::deleteAllSavedSessions
                 )
             }
         }
@@ -2348,6 +2351,64 @@ class MainActivity : AppCompatActivity() {
                     "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
                 )
             )
+        }
+    }
+
+    private fun saveCurrentSessionNamed(rawName: String) {
+        val regularTabs = tabs.filterNot { it.privateMode }
+        if (regularTabs.isEmpty()) {
+            toast("There are no regular tabs to save")
+            return
+        }
+        lifecycleScope.launch {
+            val saved = runCatching {
+                storageRuntime.awaitReady().sessions.saveSession(
+                    rawName,
+                    regularTabs.map { it.url },
+                    regularTabs.indexOf(activeTab).coerceAtLeast(0)
+                )
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not save named session from Compose", it)
+            }.getOrDefault(false)
+            toast(if (saved) "Session saved" else "Could not save session. Check its name and the 10-session limit.")
+            if (saved) runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun importSavedSession(rawName: String, rawText: String) {
+        val urls = rawText.lineSequence()
+            .map { it.trim().replace(Regex("^\\\\d+[.)]\\\\s*"), "") }
+            .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
+            .filter(NavigationInput::isValidWebUrl)
+            .distinct()
+            .take(50)
+            .toList()
+        if (urls.isEmpty()) {
+            toast("No valid website URLs found")
+            return
+        }
+        lifecycleScope.launch {
+            val saved = runCatching {
+                storageRuntime.awaitReady().sessions.saveSession(rawName, urls, 0)
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not import browsing session", it)
+            }.getOrDefault(false)
+            toast(if (saved) "Session imported" else "Could not import session. Check the name and the 10-session limit.")
+            if (saved) runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun deleteAllSavedSessions() {
+        lifecycleScope.launch {
+            val deleted = runCatching {
+                val repository = storageRuntime.awaitReady().sessions
+                repository.sessions().forEach { repository.deleteSession(it.id) }
+                true
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not delete all saved sessions", it)
+            }.getOrDefault(false)
+            if (!deleted) toast("Could not delete saved sessions")
+            runCatching { refreshComposeSavedSessions() }
         }
     }
 
