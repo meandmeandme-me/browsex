@@ -1836,7 +1836,7 @@ class MainActivity : AppCompatActivity() {
                     onHomeDownloads = ::openDownloads,
                     onHomeSettings = ::showSettings,
                     onHomePrivateTab = { createTab(homePageUrl(), privateMode = true) },
-                    onHomeCustomize = ::showHomePreferences
+                    onHomeCustomize = { showSavedPages("Bookmarks", emptyList()) }
                 )
             }
         }
@@ -1990,7 +1990,7 @@ class MainActivity : AppCompatActivity() {
         }
         composeChromeState.value = BrowseXChromeState(
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
-            title = host ?: if (isHome) "New tab" else tab.title,
+            title = host ?: tab?.title?.takeIf { it.isNotBlank() } ?: "New tab",
             isHome = isHome,
             homeState = composeHomeState.value,
             progress = tab?.progress?.coerceIn(0, 100) ?: 0,
