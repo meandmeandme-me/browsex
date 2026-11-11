@@ -214,7 +214,7 @@ internal class DownloadsPage(
             "issues" to t("Issues", "تحتاج انتباهًا")
         )
         val filterButtons = mutableMapOf<String, TextView>()
-        lateinit var render: () -> Unit
+        var render: () -> Unit = {}
         fun renderFilterSelection() {
             filterButtons.forEach { (key, button) ->
                 val selected = key == selectedFilter
