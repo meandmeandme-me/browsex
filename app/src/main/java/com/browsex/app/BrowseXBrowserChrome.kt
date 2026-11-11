@@ -144,7 +144,13 @@ internal fun BrowseXBrowserChrome(
     onDismissTabs: () -> Unit,
     onSelectTab: (BrowserTab) -> Unit,
     onCloseTab: (BrowserTab) -> Unit,
-    onCreateTab: () -> Unit
+    onCreateTab: () -> Unit,
+    settingsOpen: Boolean,
+    settings: com.browsex.app.storage.BrowserSettings,
+    androidNotificationsEnabled: Boolean,
+    onDismissSettings: () -> Unit,
+    onUpdateSettings: ((com.browsex.app.storage.BrowserSettings) -> com.browsex.app.storage.BrowserSettings) -> Unit,
+    onSettingsAction: (BrowseXSettingsAction) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -517,6 +523,15 @@ internal fun BrowseXBrowserChrome(
                 onSelect = onSelectTab,
                 onClose = onCloseTab,
                 onCreateTab = onCreateTab
+            )
+        }
+        if (settingsOpen) {
+            BrowseXSettingsSheet(
+                settings = settings,
+                androidNotificationsEnabled = androidNotificationsEnabled,
+                onDismiss = onDismissSettings,
+                onUpdateSettings = onUpdateSettings,
+                onAction = onSettingsAction
             )
         }
     }
