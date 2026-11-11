@@ -42,13 +42,13 @@ internal data class BrowseXColors(
             val opaqueSurfaces = settings.reduceTransparency || settings.highContrast
             return base.copy(
                 panel = if (opaqueSurfaces) {
-                    if (dark) 0xFF17283E.toInt() else 0xFFFFFFFF.toInt()
+                    if (dark) 0xFF292830.toInt() else 0xFFFFFFFF.toInt()
                 } else base.panel,
                 card = if (opaqueSurfaces) {
-                    if (dark) 0xFF1E324B.toInt() else 0xFFFFFFFF.toInt()
+                    if (dark) 0xFF35343D.toInt() else 0xFFFFFFFF.toInt()
                 } else base.card,
                 field = if (opaqueSurfaces) {
-                    if (dark) 0xFF101F32.toInt() else 0xFFF0F4FA.toInt()
+                    if (dark) 0xFF202027.toInt() else 0xFFF1F1F4.toInt()
                 } else base.field,
                 ink = if (settings.highContrast) {
                     if (dark) 0xFFFFFFFF.toInt() else 0xFF080D18.toInt()
