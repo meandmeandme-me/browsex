@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
@@ -32,6 +33,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.History
@@ -872,22 +879,108 @@ private fun BrowseXMenuSheet(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
-                items(BrowseXMenuAction.values().toList(), key = { it.name }) { action ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 3.dp)
-                            .clickable { onAction(action) },
-                        shape = RoundedCornerShape(15.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                    ) {
+            val menuGroups = listOf(
+                "This page" to listOf(
+                    BrowseXMenuAction.BOOKMARK_TOGGLE,
+                    BrowseXMenuAction.SHARE,
+                    BrowseXMenuAction.COPY_ADDRESS,
+                    BrowseXMenuAction.FIND_IN_PAGE,
+                    BrowseXMenuAction.READER,
+                    BrowseXMenuAction.SITE_INFO
+                ),
+                "Library" to listOf(
+                    BrowseXMenuAction.BOOKMARKS,
+                    BrowseXMenuAction.HISTORY,
+                    BrowseXMenuAction.DOWNLOADS,
+                    BrowseXMenuAction.RECALL,
+                    BrowseXMenuAction.SAVED_SESSIONS,
+                    BrowseXMenuAction.SAVE_SESSION,
+                    BrowseXMenuAction.RECENTLY_CLOSED
+                ),
+                "Privacy & security" to listOf(
+                    BrowseXMenuAction.PRIVACY_CENTER,
+                    BrowseXMenuAction.PRIVATE_TAB,
+                    BrowseXMenuAction.CLOSE_PRIVATE_TABS,
+                    BrowseXMenuAction.PASSWORDS
+                ),
+                "Browser" to listOf(
+                    BrowseXMenuAction.SEARCH_ENGINE,
+                    BrowseXMenuAction.SETTINGS,
+                    BrowseXMenuAction.CLEAR_HISTORY,
+                    BrowseXMenuAction.CLOSE_ALL_TABS
+                )
+            )
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 148.dp),
+                modifier = Modifier.heightIn(max = 560.dp),
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                menuGroups.forEach { (groupTitle, actions) ->
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(
-                            text = action.label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp)
+                            text = groupTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
                         )
+                    }
+                    itemsIndexed(actions, key = { _, action -> action.name }) { _, action ->
+                        val actionIcon = when (action) {
+                            BrowseXMenuAction.BOOKMARK_TOGGLE,
+                            BrowseXMenuAction.BOOKMARKS -> Icons.Default.BookmarkBorder
+                            BrowseXMenuAction.HISTORY,
+                            BrowseXMenuAction.CLEAR_HISTORY,
+                            BrowseXMenuAction.RECENTLY_CLOSED,
+                            BrowseXMenuAction.SAVED_SESSIONS,
+                            BrowseXMenuAction.SAVE_SESSION -> Icons.Default.History
+                            BrowseXMenuAction.DOWNLOADS -> Icons.Default.Download
+                            BrowseXMenuAction.SHARE -> Icons.Default.Share
+                            BrowseXMenuAction.COPY_ADDRESS -> Icons.Default.ContentCopy
+                            BrowseXMenuAction.FIND_IN_PAGE,
+                            BrowseXMenuAction.SEARCH_ENGINE,
+                            BrowseXMenuAction.RECALL -> Icons.Default.Search
+                            BrowseXMenuAction.READER -> Icons.Default.MenuBook
+                            BrowseXMenuAction.SITE_INFO -> Icons.Default.Info
+                            BrowseXMenuAction.PRIVACY_CENTER -> Icons.Default.Security
+                            BrowseXMenuAction.SETTINGS -> Icons.Default.Settings
+                            BrowseXMenuAction.PRIVATE_TAB,
+                            BrowseXMenuAction.CLOSE_PRIVATE_TABS -> Icons.Default.Security
+                            BrowseXMenuAction.PASSWORDS -> Icons.Default.Key
+                            BrowseXMenuAction.CLOSE_ALL_TABS -> Icons.Default.Tab
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 68.dp)
+                                .clickable { onAction(action) },
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = actionIcon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(21.dp)
+                                )
+                                Text(
+                                    text = action.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 10.dp),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
             }
