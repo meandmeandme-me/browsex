@@ -308,6 +308,8 @@ class MainActivity : AppCompatActivity() {
     private val composeTabsOpen = mutableStateOf(false)
     private val composeTabsState = mutableStateOf<List<BrowserTab>>(emptyList())
     private val composeActiveTabState = mutableStateOf<BrowserTab?>(null)
+    private val composeSettingsOpen = mutableStateOf(false)
+    private val composeSettingsState = mutableStateOf(BrowserSettings())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1686,6 +1688,15 @@ class MainActivity : AppCompatActivity() {
                     onCreateTab = {
                         composeTabsOpen.value = false
                         createTab(homePageUrl())
+                    },
+                    settingsOpen = composeSettingsOpen.value,
+                    settings = composeSettingsState.value,
+                    androidNotificationsEnabled = NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled(),
+                    onDismissSettings = { composeSettingsOpen.value = false },
+                    onUpdateSettings = { transform -> updateBrowserSettings(transform) },
+                    onSettingsAction = { action ->
+                        composeSettingsOpen.value = false
+                        performSettingsAction(action)
                     }
                 )
             }
@@ -1820,6 +1831,7 @@ class MainActivity : AppCompatActivity() {
             .getOrNull()?.takeIf { it.isNotBlank() }
         composeTabsState.value = tabs.toList()
         composeActiveTabState.value = tab
+        composeSettingsState.value = browserSettingsSnapshot
         composeChromeState.value = BrowseXChromeState(
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
             title = host ?: if (tab == null || pageUrl.startsWith(HOME_URL)) "New tab" else tab.title,
@@ -2261,30 +2273,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
-        SettingsPage(
-            activity = this,
-            openBookmarks = { showSavedPages("Bookmarks", emptyList()) },
-            openHistory = { showSavedPages("History", emptyList()) },
-            openDownloads = { openDownloads() },
-            clearHistory = {
-                lifecycleScope.launch {
-                    runCatching { clearStoredHistory() }
-                        .onSuccess { toast("History cleared") }
-                        .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
-                }
-            },
-            setWebsiteNotifications = { enabled ->
-                updateBrowserSettings(transform = { it.copy(siteNotificationsEnabled = enabled) })
-                if (!enabled) NotificationManagerCompat.from(this).cancelAll()
-            },
-            importBookmarks = { bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain")) },
-            exportBookmarks = { bookmarkExportLauncher.launch("wren-bookmarks.html") },
-            showHomePreferences = { showHomePreferences() },
-            openPrivacyCenter = { showPrivacyCenter() },
-            openSitePermissions = { SitePermissionsPage(this) { clearBrowsingData(org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS, clearHistory = false) }.show() },
-            manageUBlockOrigin = { showUBlockOriginSettings() },
-            openAutofillSettings = { openAutofillServiceSettings() }
-        ).show()
+        composeSettingsOpen.value = true
+    }
+
+    private fun performSettingsAction(action: BrowseXSettingsAction) {
+        when (action) {
+            BrowseXSettingsAction.BOOKMARKS -> showSavedPages("Bookmarks", emptyList())
+            BrowseXSettingsAction.HISTORY -> showSavedPages("History", emptyList())
+            BrowseXSettingsAction.DOWNLOADS -> openDownloads()
+            BrowseXSettingsAction.IMPORT_BOOKMARKS ->
+                bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain"))
+            BrowseXSettingsAction.EXPORT_BOOKMARKS -> bookmarkExportLauncher.launch("browsex-bookmarks.html")
+            BrowseXSettingsAction.HOME_PAGE -> showHomePreferences()
+            BrowseXSettingsAction.PRIVACY_CENTER -> showPrivacyCenter()
+            BrowseXSettingsAction.SITE_PERMISSIONS -> SitePermissionsPage(this) {
+                clearBrowsingData(
+                    org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS,
+                    clearHistory = false
+                )
+            }.show()
+            BrowseXSettingsAction.UBLOCK -> showUBlockOriginSettings()
+            BrowseXSettingsAction.AUTOFILL -> openAutofillServiceSettings()
+            BrowseXSettingsAction.CLEAR_HISTORY -> AlertDialog.Builder(this)
+                .setTitle(tr("Clear browsing history?"))
+                .setMessage(tr("This removes the history list saved by BrowseX. It does not delete downloaded files or bookmarks."))
+                .setNegativeButton(tr("Cancel"), null)
+                .setPositiveButton(tr("Clear")) { _, _ ->
+                    lifecycleScope.launch {
+                        runCatching { clearStoredHistory() }
+                            .onSuccess { toast("History cleared") }
+                            .onFailure {
+                                android.util.Log.e("BrowseX", "Could not clear history from settings", it)
+                                toast("Could not clear history")
+                            }
+                    }
+                }.show()
+            BrowseXSettingsAction.ANDROID_NOTIFICATION_SETTINGS -> runCatching {
+                startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                )
+            }.onFailure {
+                startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                )
+            }
+            BrowseXSettingsAction.ANDROID_APP_PERMISSIONS -> startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+            )
+            BrowseXSettingsAction.ABOUT -> AlertDialog.Builder(this)
+                .setTitle("BrowseX")
+                .setMessage(
+                    tr("BrowseX is powered by Mozilla GeckoView. The interface is being rebuilt around an open-source Compose UI foundation.")
+                )
+                .setPositiveButton(tr("Done"), null)
+                .show()
+        }
     }
 
 
