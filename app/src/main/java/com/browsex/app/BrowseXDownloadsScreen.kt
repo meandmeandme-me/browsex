@@ -45,7 +45,7 @@ import java.util.Locale
 
 internal enum class BrowseXDownloadPrimaryAction {
     CANCEL_STREAM, REMOVE_STREAM_RECORD, OPEN_STREAM,
-    CANCEL_PLATFORM, OPEN_PLATFORM, REMOVE_STALE_PLATFORM
+    CANCEL_PLATFORM, OPEN_PLATFORM, REMOVE_PLATFORM, REMOVE_STALE_PLATFORM
 }
 
 internal data class BrowseXDownloadItem(
@@ -185,6 +185,7 @@ internal fun BrowseXDownloadsScreen(
                                     if (item.primaryAction == BrowseXDownloadPrimaryAction.CANCEL_STREAM ||
                                         item.primaryAction == BrowseXDownloadPrimaryAction.CANCEL_PLATFORM ||
                                         item.primaryAction == BrowseXDownloadPrimaryAction.REMOVE_STREAM_RECORD ||
+                                        item.primaryAction == BrowseXDownloadPrimaryAction.REMOVE_PLATFORM ||
                                         item.primaryAction == BrowseXDownloadPrimaryAction.REMOVE_STALE_PLATFORM
                                     ) confirmPrimary = item else onPrimaryAction(item)
                                 },
