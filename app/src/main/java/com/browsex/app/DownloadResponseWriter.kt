@@ -19,6 +19,24 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
+ * Atomically reserves a free destination before a writer opens it.
+ * File.exists() followed by FileOutputStream() is racy and can truncate a file
+ * created by another process between those two operations.
+ */
+internal fun reserveUniqueDownloadFile(directory: File, requestedName: String): File {
+    val dot = requestedName.lastIndexOf('.').takeIf { it > 0 } ?: requestedName.length
+    val stem = requestedName.substring(0, dot)
+    val extension = requestedName.substring(dot)
+    var suffix = 0
+    while (true) {
+        val name = if (suffix == 0) requestedName else "$stem ($suffix)$extension"
+        val candidate = File(directory, name)
+        if (candidate.createNewFile()) return candidate
+        suffix++
+    }
+}
+
+/**
  * Persists the exact response body GeckoView already received.
  *
  * The writer never re-fetches the URL. Cancellation closes the original stream,
@@ -95,7 +113,7 @@ internal class DownloadResponseWriter(context: Context) {
                     } else {
                         val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                         if (!directory.exists() && !directory.mkdirs()) error("Downloads folder is unavailable")
-                        val file = uniqueFile(directory, safeName)
+                        val file = reserveUniqueDownloadFile(directory, safeName)
                         pendingFile = file
                         val bytes = FileOutputStream(file).use { output -> copyBody(job, output) }
                         val contentUri = FileProvider.getUriForFile(
@@ -160,19 +178,6 @@ internal class DownloadResponseWriter(context: Context) {
 
     private fun checkNotCancelled(job: Job) {
         if (job.cancelled.get()) throw CancellationException("Download cancelled")
-    }
-
-    private fun uniqueFile(directory: File, requestedName: String): File {
-        val dot = requestedName.lastIndexOf('.').takeIf { it > 0 } ?: requestedName.length
-        val stem = requestedName.substring(0, dot)
-        val extension = requestedName.substring(dot)
-        var candidate = File(directory, requestedName)
-        var suffix = 1
-        while (candidate.exists()) {
-            candidate = File(directory, "$stem ($suffix)$extension")
-            suffix++
-        }
-        return candidate
     }
 
     fun shutdown() {
