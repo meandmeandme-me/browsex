@@ -78,6 +78,9 @@ The home document lives at `app/src/main/assets/home.html`. Native strings live 
 - Do not weaken Gecko safe browsing or tracking protection as a side effect of adding an extension. When uBlock Origin is unavailable, disabled, or not permitted in private browsing, Gecko tracking protection remains enabled.
 - Website notifications require both a persisted per-origin `allow` decision and Android notification permission; private-browsing notifications are never forwarded to the Android tray.
 - Notification callbacks are asynchronous. Closing a Gecko notification while permission UI or storage IO is pending must prevent a late callback from posting it again.
+- Tagged website notifications replace only the matching origin/tag pair; untagged notifications receive unique Android identities. Closing an older replaced notification must not cancel its replacement.
+- The notification bridge releases pending Gecko notification references and cancels its own Android tray entries when the Activity is destroyed.
+- Clearing browsing data is a multi-store operation: do not report success until Gecko storage plus selected Room history/site-permission cleanup have completed. Attempt independent cleanup steps even if another selected store fails.
 - Treat permission prompts as asynchronous, session-scoped operations. Re-check that the requesting tab/session is still active before granting.
 
 When adding a new persistent feature, explicitly define its private-browsing behavior, retention limit, export behavior, and clear-data behavior before wiring its UI.
@@ -92,6 +95,7 @@ Add an account domain separate from browser tabs and settings:
 - Provider-neutral account state and session lifecycle.
 - Dedicated Google/Microsoft OAuth/OIDC adapters.
 - Encrypted token storage backed by Android Keystore.
+- OAuth PKCE transactions are one-use objects and must not be cloneable; callback state, redirect target, age, provider errors, and duplicate parameters are validated before accepting an authorization code.
 - Explicit consent, disconnect, token revocation, and account deletion flows.
 - Sync conflict resolution and per-data-type opt-in.
 
