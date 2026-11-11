@@ -2178,8 +2178,8 @@ class MainActivity : AppCompatActivity() {
             if (!storageRestored) {
                 toast(BrowseXStrings.text(
                     this@MainActivity,
-                    "Saved browser data could not be opened. Your data has not been deleted.",
-                    "تعذر فتح بيانات التصفح المحفوظة. لم يتم حذف بياناتك."
+                    "Saved browser data could not be opened. Your data has not been deleted. Do not clear app data.",
+                    "تعذر فتح بيانات التصفح المحفوظة. لم يتم حذف بياناتك. لا تمسح بيانات التطبيق."
                 ))
             }
             handleSiteNotificationIntent(startupIntent)
