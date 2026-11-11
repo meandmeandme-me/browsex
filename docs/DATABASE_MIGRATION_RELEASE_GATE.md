@@ -6,6 +6,8 @@
 - The committed Room export currently contains `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json`.
 - There is no committed version-1 schema fixture in this repository. Do not invent a version-1 migration from guessed columns or indexes.
 - BrowseX is still pre-release and has no production user database population. This is the correct time to establish a fail-closed policy before persistent user data exists.
+- Treat schema version **2** as the first supported database baseline for the first public release. Do not publish an upgrade path from an older development schema unless its exact exported schema is recovered and a fixture-based migration is added.
+- Before the first public release, developers using older local test databases must reset only those development installs; this is not a user-data recovery procedure.
 - The database builder intentionally has **no destructive migration fallback**. A schema mismatch must fail visibly rather than silently erase bookmarks, history, sessions, permissions, or download records.
 
 ## Rules for every future schema change
