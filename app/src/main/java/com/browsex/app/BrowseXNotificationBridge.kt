@@ -17,6 +17,7 @@ import org.mozilla.geckoview.WebNotificationDelegate
 import java.security.MessageDigest
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.UUID
 
 /** Adapts Gecko web notifications to Android's notification tray without leaking private tabs. */
 internal class BrowseXNotificationBridge(
@@ -30,9 +31,19 @@ internal class BrowseXNotificationBridge(
     private val trackedNotifications = Collections.newSetFromMap(
         IdentityHashMap<WebNotification, Boolean>()
     )
+    private val notificationTags = IdentityHashMap<WebNotification, String>()
+    private val currentNotificationsByTag = mutableMapOf<String, WebNotification>()
 
     override fun onShowNotification(notification: WebNotification) {
         main.post {
+            val tag = notificationTag(notification)
+            val previous = currentNotificationsByTag.put(tag, notification)
+            if (previous != null && previous !== notification) {
+                trackedNotifications.remove(previous)
+                notificationTags.remove(previous)
+                manager.cancel(tag, NOTIFICATION_ID)
+                previous.dismiss()
+            }
             trackedNotifications.add(notification)
             val source = notification.source
             if (notification.privateBrowsing || !activity.websiteNotificationsEnabled() ||
@@ -90,13 +101,22 @@ internal class BrowseXNotificationBridge(
     override fun onCloseNotification(notification: WebNotification) {
         main.post {
             trackedNotifications.remove(notification)
-            manager.cancel(notificationTag(notification), NOTIFICATION_ID)
+            val tag = notificationTags.remove(notification)
+            if (tag != null && currentNotificationsByTag[tag] === notification) {
+                currentNotificationsByTag.remove(tag)
+                manager.cancel(tag, NOTIFICATION_ID)
+            }
             notification.dismiss()
         }
     }
 
     private fun dismiss(notification: WebNotification) {
         trackedNotifications.remove(notification)
+        val tag = notificationTags.remove(notification)
+        if (tag != null && currentNotificationsByTag[tag] === notification) {
+            currentNotificationsByTag.remove(tag)
+            manager.cancel(tag, NOTIFICATION_ID)
+        }
         notification.dismiss()
     }
 
@@ -161,9 +181,19 @@ internal class BrowseXNotificationBridge(
 
     /** Stable collision-resistant Android notification tag, scoped to origin and web tag. */
     private fun notificationTag(notification: WebNotification): String {
-        val source = "${notification.origin}|${notification.tag}".toByteArray(Charsets.UTF_8)
-        val digest = MessageDigest.getInstance("SHA-256").digest(source)
-        return "browsex-web-" + digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+        notificationTags[notification]?.let { return it }
+        // The Web Notifications API replaces notifications only when a non-empty tag
+        // is reused by the same origin. Untagged notifications must remain independent.
+        val webTag = notification.tag?.takeIf { it.isNotBlank() }
+        val tag = if (webTag == null) {
+            "browsex-web-${UUID.randomUUID()}"
+        } else {
+            val source = "${notification.origin}|$webTag".toByteArray(Charsets.UTF_8)
+            val digest = MessageDigest.getInstance("SHA-256").digest(source)
+            "browsex-web-" + digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+        }
+        notificationTags[notification] = tag
+        return tag
     }
 
     private fun isSafeWebOrigin(raw: String): Boolean = try {
