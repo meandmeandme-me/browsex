@@ -78,7 +78,6 @@ private data class DownloadConfirmation(
 @Composable
 internal fun BrowseXDownloadsScreen(
     initialSnapshot: BrowseXDownloadsSnapshot,
-    colors: BrowseXColors,
     onRefresh: suspend () -> BrowseXDownloadsSnapshot,
     onOpenStream: (DownloadRecordEntity) -> Unit,
     onShareStream: (DownloadRecordEntity) -> Unit,
@@ -91,13 +90,13 @@ internal fun BrowseXDownloadsScreen(
     onDeletePlatform: (BrowseXPlatformDownload) -> Unit,
     onRemoveMissingPlatform: (Long) -> Unit,
     text: (String, String) -> String,
-    onManualRefresh: () -> Unit
+    onManualRefresh: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     var snapshot by remember { mutableStateOf(initialSnapshot) }
     var search by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(DownloadFilter.ALL) }
     var confirmation by remember { mutableStateOf<DownloadConfirmation?>(null) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -156,10 +155,11 @@ internal fun BrowseXDownloadsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Button(
-                onClick = onManualRefresh
-            ) {
+            Button(onClick = onManualRefresh) {
                 Text(text("Refresh", "تحديث"))
+            }
+            TextButton(onClick = onDismiss) {
+                Text(text("Close", "إغلاق"))
             }
         }
         Text(
