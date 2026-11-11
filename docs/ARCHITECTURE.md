@@ -73,10 +73,12 @@ Additional Compose destinations now cover:
 - `BrowseXSiteInfoScreen.kt`: active-site identity, live Gecko permission choices, saved media decisions, and per-origin cleanup.
 - `BrowseXReaderScreen.kt`: selectable article text, adjustable typography, and copy.
 - `BrowseXRecallScreen.kt`: bounded search across regular tabs, bookmarks, and recent history.
+- `BrowseXDownloadsScreen.kt`: Room stream downloads plus Android DownloadManager state, progress, error reasons, cancellation, open/share, stale-record cleanup, and ownership-checked file deletion.
+- `BrowseXHomeScreen.kt`: branded shortcuts, recent pages, web search, quick actions, and adaptive grid/list layout.
 
-The remaining large legacy destination is `DownloadsPage`, which still contains the full Android DownloadManager/Gecko stream lifecycle, safe file-ownership deletion checks, cancellation, share/open, and unsupported-state handling. It will be migrated only when those safeguards are preserved. The old `AddressSuggestionsController` is no longer connected to the visible Compose address field and can be removed after the hidden compatibility views are retired.
+The visible home page no longer depends on the legacy HTML presentation: `MainActivity` hides the GeckoView surface for the internal home URL and renders the Compose home screen instead. `app/src/main/assets/home.html` remains as a compatibility fallback while the final cleanup of hidden legacy views is reviewed. The old `AddressSuggestionsController` is no longer connected to the visible Compose address field and can be removed after the hidden compatibility views are retired.
 
-The home document still lives at `app/src/main/assets/home.html`; it is the final major UI migration target. Native strings live in Android resource directories; the Arabic resource set is `values-ar`.
+Native strings live in Android resource directories; the Arabic resource set is `values-ar`.
 
 ### 5. Security and privacy invariants
 
