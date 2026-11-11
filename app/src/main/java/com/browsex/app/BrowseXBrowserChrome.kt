@@ -179,7 +179,14 @@ internal fun BrowseXBrowserChrome(
     sitePermissions: List<com.browsex.app.storage.SitePermissionDecisionEntity>,
     onDismissSitePermissions: () -> Unit,
     onSetSitePermission: (String, String, String) -> Unit,
-    onResetSitePermissions: () -> Unit
+    onResetSitePermissions: () -> Unit,
+    savedSessionsOpen: Boolean,
+    savedSessions: List<com.browsex.app.storage.RoomSavedSession>,
+    onDismissSavedSessions: () -> Unit,
+    onRestoreSavedSession: (com.browsex.app.storage.RoomSavedSession) -> Unit,
+    onOpenSavedSessionAlongside: (com.browsex.app.storage.RoomSavedSession) -> Unit,
+    onRenameSavedSession: (String, String) -> Unit,
+    onDeleteSavedSession: (String) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -593,6 +600,16 @@ internal fun BrowseXBrowserChrome(
                 onDismiss = onDismissSitePermissions,
                 onSetDecision = onSetSitePermission,
                 onResetAll = onResetSitePermissions
+            )
+        }
+        if (savedSessionsOpen) {
+            BrowseXSavedSessionsScreen(
+                sessions = savedSessions,
+                onDismiss = onDismissSavedSessions,
+                onRestore = onRestoreSavedSession,
+                onOpenAlongside = onOpenSavedSessionAlongside,
+                onRename = onRenameSavedSession,
+                onDelete = onDeleteSavedSession
             )
         }
     }
