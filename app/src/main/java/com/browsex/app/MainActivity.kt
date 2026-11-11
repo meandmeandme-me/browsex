@@ -2377,7 +2377,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun importSavedSession(rawName: String, rawText: String) {
         val urls = rawText.lineSequence()
-            .map { it.trim().replace(Regex("^\\\\d+[.)]\\\\s*"), "") }
+            .map { it.trim().replace(Regex("^\\d+[.)]\\s*"), "") }
             .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
             .filter(NavigationInput::isValidWebUrl)
             .distinct()
