@@ -304,6 +304,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var browserRoot: FrameLayout
     private lateinit var composeChromeView: ComposeView
     private val composeChromeState = mutableStateOf(BrowseXChromeState())
+    private val composeMenuOpen = mutableStateOf(false)
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1653,7 +1654,7 @@ class MainActivity : AppCompatActivity() {
                     },
                     onNewTab = { createTab(homePageUrl()) },
                     onOpenTabs = ::showTabs,
-                    onMenu = ::showBrowserMenu,
+                    onMenu = { composeMenuOpen.value = true },
                     onProtection = {
                         val session = activeTab?.session
                         if (uBlockOriginManager?.hasBrowserAction(session) == true) {
@@ -1663,7 +1664,13 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                     loadSuggestions = ::loadAddressSuggestions,
-                    onSelectSuggestion = ::selectComposeSuggestion
+                    onSelectSuggestion = ::selectComposeSuggestion,
+                    menuOpen = composeMenuOpen.value,
+                    onDismissMenu = { composeMenuOpen.value = false },
+                    onMenuAction = { action ->
+                        composeMenuOpen.value = false
+                        performBrowserMenuAction(action)
+                    }
                 )
             }
         }
@@ -1995,55 +2002,52 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showBrowserMenu() {
-        lifecycleScope.launch {
-            val url = activeTab?.url.orEmpty()
-            val bookmarked = url.startsWith("http") && runCatching {
-                storageRuntime.awaitReady().bookmarks.find(url) != null
-            }.getOrDefault(false)
-            val actions = arrayOf(
-                if (bookmarked) "Remove bookmark" else "Add bookmark",
-                "Bookmarks", "History", "Downloads", "Share page", "Copy page address", "Find in page", "Reader mode",
-                "Site information", "Search engine", "Clear browsing history", "Settings",
-                "New private tab", "Close private tabs", "Find anything", "Passwords", "Saved sessions"
-            ).map(::tr).toTypedArray()
-            AlertDialog.Builder(this@MainActivity).setTitle("Wren").setItems(actions) { _, index ->
-                when (index) {
-                    0 -> activeTab?.url?.takeIf { it.startsWith("http") }?.let { pageUrl ->
-                        toggleBookmarkInRoom(pageUrl, activeTab?.title.orEmpty().takeUnless { title -> title == "New tab" }.orEmpty())
-                    }
-                    1 -> showSavedPages("Bookmarks", emptyList())
-                    2 -> showSavedPages("History", emptyList())
-                    3 -> openDownloads()
-                    4 -> pageActions.shareCurrentPage()
-                    5 -> pageActions.copyCurrentAddress()
-                    6 -> pageActions.findInPage()
-                    7 -> openReaderMode()
-                    8 -> showSiteInformation()
-                    9 -> pageActions.chooseSearchEngine()
-                    10 -> AlertDialog.Builder(this@MainActivity).setMessage(tr("Delete all browsing history?"))
-                        .setNegativeButton(tr("Cancel"), null)
-                        .setPositiveButton(tr("Clear")) { _, _ ->
-                            lifecycleScope.launch {
-                                runCatching { clearStoredHistory() }.onSuccess { toast("History cleared") }
-                                    .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
+        composeMenuOpen.value = true
+    }
+
+    private fun performBrowserMenuAction(action: BrowseXMenuAction) {
+        when (action) {
+            BrowseXMenuAction.BOOKMARK_TOGGLE -> activeTab?.url?.takeIf { it.startsWith("http") }?.let { url ->
+                toggleBookmarkInRoom(
+                    url,
+                    activeTab?.title.orEmpty().takeUnless { it == "New tab" }.orEmpty()
+                )
+            }
+            BrowseXMenuAction.BOOKMARKS -> showSavedPages("Bookmarks", emptyList())
+            BrowseXMenuAction.HISTORY -> showSavedPages("History", emptyList())
+            BrowseXMenuAction.DOWNLOADS -> openDownloads()
+            BrowseXMenuAction.SHARE -> pageActions.shareCurrentPage()
+            BrowseXMenuAction.COPY_ADDRESS -> pageActions.copyCurrentAddress()
+            BrowseXMenuAction.FIND_IN_PAGE -> pageActions.findInPage()
+            BrowseXMenuAction.READER -> openReaderMode()
+            BrowseXMenuAction.SITE_INFO -> showSiteInformation()
+            BrowseXMenuAction.SEARCH_ENGINE -> pageActions.chooseSearchEngine()
+            BrowseXMenuAction.CLEAR_HISTORY -> AlertDialog.Builder(this)
+                .setMessage(tr("Delete all browsing history?"))
+                .setNegativeButton(tr("Cancel"), null)
+                .setPositiveButton(tr("Clear")) { _, _ ->
+                    lifecycleScope.launch {
+                        runCatching { clearStoredHistory() }.onSuccess { toast("History cleared") }
+                            .onFailure {
+                                toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل"))
                             }
-                        }.show()
-                    11 -> showSettings()
-                    12 -> createTab(homePageUrl(), privateMode = true)
-                    13 -> {
-                        val privateTabs = tabs.filter { it.privateMode }
-                        if (privateTabs.isEmpty()) toast("No private tabs are open")
-                        else AlertDialog.Builder(this@MainActivity)
-                            .setMessage(tr("Close all private tabs? Their browsing data will be discarded."))
-                            .setNegativeButton(tr("Cancel"), null)
-                            .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
-                            .show()
                     }
-                    14 -> showRecall()
-                    15 -> passwordManager.show()
-                    16 -> showSavedSessions()
-                }
-            }.show()
+                }.show()
+            BrowseXMenuAction.PRIVACY_CENTER -> showPrivacyCenter()
+            BrowseXMenuAction.SETTINGS -> showSettings()
+            BrowseXMenuAction.PRIVATE_TAB -> createTab(homePageUrl(), privateMode = true)
+            BrowseXMenuAction.CLOSE_PRIVATE_TABS -> {
+                val privateTabs = tabs.filter { it.privateMode }
+                if (privateTabs.isEmpty()) toast("No private tabs are open")
+                else AlertDialog.Builder(this)
+                    .setMessage(tr("Close all private tabs? Their browsing data will be discarded."))
+                    .setNegativeButton(tr("Cancel"), null)
+                    .setPositiveButton(tr("Close")) { _, _ -> privateTabs.forEach(::closeTab) }
+                    .show()
+            }
+            BrowseXMenuAction.RECALL -> showRecall()
+            BrowseXMenuAction.PASSWORDS -> passwordManager.show()
+            BrowseXMenuAction.SAVED_SESSIONS -> showSavedSessions()
         }
     }
 
