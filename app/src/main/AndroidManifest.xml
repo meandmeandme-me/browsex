@@ -24,7 +24,7 @@
     <application
         android:name=".BrowseXApplication"
         android:allowBackup="false"
-        android:banner="@drawable/wren_tv_banner"
+        android:banner="@drawable/browsex_tv_banner"
         android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
