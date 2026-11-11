@@ -11,10 +11,13 @@ internal object BrowseXStrings {
             .replace(Regex("[^a-z0-9]+"), "_")
             .trim('_')
         val id = context.resources.getIdentifier(key, "string", context.packageName)
-        if (id == 0) return fallback
-
         val languageMode = (context as? MainActivity)?.currentBrowserSettings?.languageMode
             ?.takeIf { it.isNotBlank() && it != "system" }
+        val requestedLanguage = languageMode?.let { Locale.forLanguageTag(it).language }
+            ?: context.resources.configuration.locales[0]?.language.orEmpty()
+        val safeFallback = fallbackForLanguage(requestedLanguage, english, fallback)
+        if (id == 0) return safeFallback
+
         val localizedContext = if (languageMode == null) {
             context
         } else {
@@ -26,6 +29,11 @@ internal object BrowseXStrings {
                 context.createConfigurationContext(configuration)
             }
         }
-        return runCatching { localizedContext.getString(id) }.getOrDefault(fallback)
+        return runCatching { localizedContext.getString(id) }.getOrDefault(safeFallback)
+    }
+
+    /** Missing resource keys fall back to Arabic only in Arabic; all other locales use English. */
+    internal fun fallbackForLanguage(languageTag: String?, english: String, arabic: String): String =
+        if (Locale.forLanguageTag(languageTag.orEmpty()).language == "ar") arabic else english
     }
 }
