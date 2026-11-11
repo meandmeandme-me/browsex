@@ -83,7 +83,7 @@ internal class DownloadsPage(
                 )
             }
 
-            lateinit var dialog: Dialog
+            lateinit var dialog: ComponentDialog
             val composeView = ComposeView(activity).apply {
                 setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
                 setContent {
