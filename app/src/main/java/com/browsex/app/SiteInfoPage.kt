@@ -245,7 +245,7 @@ class SiteInfoPage(
                         onResetPermissions()
                         activePageDialog?.dismiss()
                     }
-                    .show()
+                    .showWren(activity)
             }
         }
         root.addView(reset, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
@@ -271,7 +271,7 @@ class SiteInfoPage(
                         onClearSiteData()
                         activePageDialog?.dismiss()
                     }
-                    .show()
+                    .showWren(activity)
             }
         }
         root.addView(clearSiteData, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
@@ -323,7 +323,7 @@ class SiteInfoPage(
                     "لا يدعم GeckoView إلغاء إذن التخزين الدائم بعد منحه."
                 ))
                 .setPositiveButton(t("OK", "حسنًا"), null)
-                .show()
+                .showWren(activity)
             return
         }
         AlertDialog.Builder(activity)
@@ -350,7 +350,7 @@ class SiteInfoPage(
                 }
             }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
-            .show()
+            .showWren(activity)
     }
 
     private fun addStoredPermissionRow(
@@ -429,7 +429,7 @@ class SiteInfoPage(
                 }
             }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
-            .show()
+            .showWren(activity)
     }
 
     private fun originForStore(): String {
@@ -442,4 +442,10 @@ class SiteInfoPage(
         cornerRadius = dp(15).toFloat()
         setStroke(dp(1), this@SiteInfoPage.colors.line)
     }
+}
+
+
+private fun AlertDialog.Builder.showWren(activity: MainActivity): AlertDialog = create().also { dialog ->
+    dialog.show()
+    WrenDialogStyle.apply(dialog, activity)
 }
