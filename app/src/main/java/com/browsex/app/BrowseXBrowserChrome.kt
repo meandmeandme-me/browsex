@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -72,6 +74,27 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+
+internal enum class BrowseXMenuAction(val label: String) {
+    BOOKMARK_TOGGLE("Save / remove bookmark"),
+    BOOKMARKS("Bookmarks"),
+    HISTORY("History"),
+    DOWNLOADS("Downloads"),
+    SHARE("Share page"),
+    COPY_ADDRESS("Copy page address"),
+    FIND_IN_PAGE("Find in page"),
+    READER("Reader mode"),
+    SITE_INFO("Site information"),
+    SEARCH_ENGINE("Search engine"),
+    CLEAR_HISTORY("Clear browsing history"),
+    PRIVACY_CENTER("Privacy center"),
+    SETTINGS("Settings"),
+    PRIVATE_TAB("New private tab"),
+    CLOSE_PRIVATE_TABS("Close private tabs"),
+    RECALL("Find anything"),
+    PASSWORDS("Password manager"),
+    SAVED_SESSIONS("Saved sessions")
+}
 
 internal data class BrowseXChromeState(
     val url: String = "",
@@ -111,7 +134,10 @@ internal fun BrowseXBrowserChrome(
     onMenu: () -> Unit,
     onProtection: () -> Unit,
     loadSuggestions: suspend (String) -> List<AddressSuggestion>,
-    onSelectSuggestion: (AddressSuggestion) -> Unit
+    onSelectSuggestion: (AddressSuggestion) -> Unit,
+    menuOpen: Boolean,
+    onDismissMenu: () -> Unit,
+    onMenuAction: (BrowseXMenuAction) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -467,6 +493,55 @@ internal fun BrowseXBrowserChrome(
                 }
 
                 if (state.dockAtTop) Spacer(Modifier.weight(1f))
+            }
+        }
+
+        if (menuOpen) {
+            BrowseXMenuSheet(
+                onDismiss = onDismissMenu,
+                onAction = onMenuAction
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BrowseXMenuSheet(
+    onDismiss: () -> Unit,
+    onAction: (BrowseXMenuAction) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 22.dp)
+        ) {
+            Text(
+                text = "BrowseX tools",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
+                items(BrowseXMenuAction.values().toList(), key = { it.name }) { action ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 3.dp)
+                            .clickable { onAction(action) },
+                        shape = RoundedCornerShape(15.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    ) {
+                        Text(
+                            text = action.label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp)
+                        )
+                    }
+                }
             }
         }
     }
