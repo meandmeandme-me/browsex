@@ -3,6 +3,7 @@ package com.browsex.app
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -199,6 +200,7 @@ internal fun BrowseXSitePermissionsSheet(
 ) {
     val context = LocalContext.current
     fun t(en: String, ar: String = en) = BrowseXStrings.text(context, en, ar)
+    var confirmReset by remember { mutableStateOf(false) }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -250,12 +252,28 @@ internal fun BrowseXSitePermissionsSheet(
                         }
                     }
                     TextButton(
-                        onClick = onResetAll,
+                        onClick = { confirmReset = true },
                         modifier = Modifier.align(Alignment.End)
                     ) { Text(t("Reset all", "إعادة ضبط الكل")) }
                 }
             }
         }
+    }
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text(t("Reset all site permissions?", "إعادة ضبط جميع أذونات المواقع؟")) },
+            text = { Text(t("Every saved choice will return to Ask. Websites may request permission again.", "ستعود جميع القرارات المحفوظة إلى خيار اسأل. قد تطلب المواقع الإذن من جديد.")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReset = false
+                    onResetAll()
+                }) { Text(t("Reset", "إعادة ضبط")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReset = false }) { Text(t("Cancel", "إلغاء")) }
+            }
+        )
     }
 }
 
