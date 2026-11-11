@@ -246,6 +246,7 @@ class MainActivity : AppCompatActivity() {
         } else if (adaptiveAppearanceChanged && !::browserRoot.isInitialized) {
             reloadActiveHomeForPresentation()
         }
+        renderComposeChrome()
     }
 
     internal fun websiteNotificationsEnabled(): Boolean = browserSettingsSnapshot.siteNotificationsEnabled
@@ -1941,10 +1942,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun setFullscreen(enabled: Boolean) {
         fullscreen = enabled
-        topBar.visibility = if (enabled) View.GONE else View.VISIBLE
-        bottomBar.visibility = if (enabled) View.GONE else View.VISIBLE
         if (::composeChromeView.isInitialized) {
+            // The imported Compose chrome owns the visible controls; legacy views
+            // stay detached from presentation even when fullscreen is exited.
+            topBar.visibility = View.GONE
+            bottomBar.visibility = View.GONE
+            progress.visibility = View.GONE
             composeChromeView.visibility = if (enabled) View.GONE else View.VISIBLE
+        } else {
+            topBar.visibility = if (enabled) View.GONE else View.VISIBLE
+            bottomBar.visibility = if (enabled) View.GONE else View.VISIBLE
         }
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         if (enabled) {
