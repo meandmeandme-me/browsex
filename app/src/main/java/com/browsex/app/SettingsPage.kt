@@ -188,7 +188,7 @@ internal class SettingsPage(
                     }
                 }
                 .setNegativeButton(t("Cancel"), null)
-                .show()
+                .showWren(activity)
         }
 
         row(
@@ -215,7 +215,7 @@ internal class SettingsPage(
                     }
                 }
                 .setNegativeButton(t("Cancel"), null)
-                .show()
+                .showWren(activity)
         }
 
         row("Theme", "Choose the browser appearance", t(when (settings.themeMode) {
@@ -238,7 +238,7 @@ internal class SettingsPage(
                     }
                 }
                 .setNegativeButton(t("Cancel"), null)
-                .show()
+                .showWren(activity)
         }
         row(
             "Accent color",
@@ -265,7 +265,7 @@ internal class SettingsPage(
                     }
                 }
                 .setNegativeButton(t("Cancel"), null)
-                .show()
+                .showWren(activity)
         }
 
         // Offer only languages that currently have complete app string resources.
@@ -307,7 +307,7 @@ internal class SettingsPage(
                     }
                 }
                 .setNegativeButton(t("Cancel"), null)
-                .show()
+                .showWren(activity)
         }
         row("Website notifications", "Allow websites to send Android notifications", t(if (settings.siteNotificationsEnabled) "On" else "Off")) {
             activity.updateBrowserSettings({ it.copy(siteNotificationsEnabled = !settings.siteNotificationsEnabled) }) { updated ->
@@ -444,7 +444,7 @@ internal class SettingsPage(
                     dialog.dismiss()
                     show()
                 }
-                .show()
+                .showWren(activity)
         }
 
         section("About")
@@ -453,7 +453,7 @@ internal class SettingsPage(
                 .setTitle("Browse X")
                 .setMessage(t("Wren Browser is powered by Mozilla GeckoView. Some browser features are still being built."))
                 .setPositiveButton(t("Done"), null)
-                .show()
+                .showWren(activity)
         }
 
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -475,4 +475,10 @@ internal class SettingsPage(
         dialog.show()
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
+}
+
+
+private fun AlertDialog.Builder.showWren(activity: MainActivity): AlertDialog = create().also { dialog ->
+    dialog.show()
+    WrenDialogStyle.apply(dialog, activity)
 }
