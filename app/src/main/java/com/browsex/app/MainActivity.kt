@@ -947,8 +947,9 @@ class MainActivity : AppCompatActivity() {
         if (::platformPermissionCoordinator.isInitialized) platformPermissionCoordinator.rejectAll()
         if (::notificationPermissionCoordinator.isInitialized) notificationPermissionCoordinator.rejectAll()
         if (::credentialVault.isInitialized) {
+            // Lock immediately, but keep the process-wide private marker set until every
+            // private GeckoSession has been closed and removed from the tab registry.
             credentialVault.lock()
-            credentialVault.setPrivateTabsOpen(false)
         }
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
@@ -960,6 +961,8 @@ class MainActivity : AppCompatActivity() {
         if (::browserView.isInitialized) browserView.releaseSession()
         sessionLifecycleCoordinator.closeAllSessions()
         tabController.clear()
+        // External Autofill runs in a separate Activity and must remain blocked throughout teardown.
+        if (::credentialVault.isInitialized) credentialVault.setPrivateTabsOpen(false)
         super.onDestroy()
     }
 
