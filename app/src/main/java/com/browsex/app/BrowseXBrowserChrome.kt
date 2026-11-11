@@ -254,7 +254,13 @@ internal fun BrowseXBrowserChrome(
         ) {
             val wide = maxWidth >= 600.dp
             val dockModifier = Modifier
-                .widthIn(max = if (wide) 760.dp else maxWidth)
+                .widthIn(
+                    max = (if (wide) {
+                        BrowseXDesignSystem.TABLET_CONTENT_MAX_WIDTH_DP
+                    } else {
+                        BrowseXDesignSystem.PHONE_CONTENT_MAX_WIDTH_DP
+                    }).dp
+                )
                 .fillMaxWidth()
 
             Column(modifier = Modifier.fillMaxSize()) {
