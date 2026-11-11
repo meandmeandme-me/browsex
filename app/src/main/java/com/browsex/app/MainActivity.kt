@@ -1992,7 +1992,7 @@ class MainActivity : AppCompatActivity() {
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
             title = host ?: tab?.title?.takeIf { it.isNotBlank() } ?: "New tab",
             isHome = isHome,
-            homeState = composeHomeState.value,
+            homeState = if (tab?.privateMode == true) composeHomeState.value.copy(recentPages = emptyList(), showDiscovery = false) else composeHomeState.value,
             progress = tab?.progress?.coerceIn(0, 100) ?: 0,
             tabCount = tabs.size,
             canGoBack = tab?.canGoBack == true,
