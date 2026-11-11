@@ -21,7 +21,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -79,6 +78,7 @@ private data class DownloadConfirmation(
 @Composable
 internal fun BrowseXDownloadsScreen(
     initialSnapshot: BrowseXDownloadsSnapshot,
+    colors: BrowseXColors,
     onRefresh: suspend () -> BrowseXDownloadsSnapshot,
     onOpenStream: (DownloadRecordEntity) -> Unit,
     onShareStream: (DownloadRecordEntity) -> Unit,
@@ -90,12 +90,14 @@ internal fun BrowseXDownloadsScreen(
     onManagePlatform: (BrowseXPlatformDownload) -> Unit,
     onDeletePlatform: (BrowseXPlatformDownload) -> Unit,
     onRemoveMissingPlatform: (Long) -> Unit,
-    text: (String, String) -> String
+    text: (String, String) -> String,
+    onManualRefresh: () -> Unit
 ) {
     var snapshot by remember { mutableStateOf(initialSnapshot) }
     var search by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(DownloadFilter.ALL) }
     var confirmation by remember { mutableStateOf<DownloadConfirmation?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -154,15 +156,8 @@ internal fun BrowseXDownloadsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            OutlinedButton(
-                onClick = { },
-                enabled = false,
-                modifier = Modifier.size(1.dp)
-            ) { }
             Button(
-                onClick = {
-                    // The refresh coroutine is also used by the active-download poller.
-                }
+                onClick = onManualRefresh
             ) {
                 Text(text("Refresh", "تحديث"))
             }
@@ -432,7 +427,7 @@ private fun DownloadCard(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
             } else if (progress != null) {
                 LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
+                    progress = progress.coerceIn(0f, 1f),
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                 )
             }
