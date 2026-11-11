@@ -331,6 +331,8 @@ class MainActivity : AppCompatActivity() {
     private val composeRecallState = mutableStateOf(BrowseXRecallState(emptyList(), emptyList(), emptyList()))
     private val composeDownloadsOpen = mutableStateOf(false)
     private val composeDownloadsState = mutableStateOf(BrowseXDownloadsState())
+    private val composeHomeState = mutableStateOf(BrowseXHomeState())
+    private var lastHomeRefreshKey: String? = null
     private var downloadsRefreshJob: Job? = null
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
@@ -1826,7 +1828,15 @@ class MainActivity : AppCompatActivity() {
                     onRefreshDownloads = ::refreshDownloads,
                     onPrimaryDownloadAction = ::performDownloadPrimaryAction,
                     onShareDownload = ::shareDownloadItem,
-                    onDeleteDownloadFile = ::deleteDownloadItem
+                    onDeleteDownloadFile = ::deleteDownloadItem,
+                    onHomeSearch = ::navigate,
+                    onHomeOpen = ::navigate,
+                    onHomeBookmarks = { showSavedPages("Bookmarks", emptyList()) },
+                    onHomeHistory = { showSavedPages("History", emptyList()) },
+                    onHomeDownloads = ::openDownloads,
+                    onHomeSettings = ::showSettings,
+                    onHomePrivateTab = { createTab(homePageUrl(), privateMode = true) },
+                    onHomeCustomize = ::showHomePreferences
                 )
             }
         }
@@ -1961,9 +1971,28 @@ class MainActivity : AppCompatActivity() {
         composeTabsState.value = tabs.toList()
         composeActiveTabState.value = tab
         composeSettingsState.value = browserSettingsSnapshot
+        val isHome = tab == null || pageUrl.startsWith(HOME_URL)
+        if (::browserView.isInitialized) {
+            browserView.visibility = if (isHome) View.INVISIBLE else View.VISIBLE
+        }
+        val homeRefreshKey = listOf(
+            pageUrl,
+            browserSettingsSnapshot.homeShowQuickLinks,
+            browserSettingsSnapshot.homeShowDiscovery,
+            browserSettingsSnapshot.homeLayout,
+            browserSettingsSnapshot.searchEngine
+        ).joinToString("|")
+        if (isHome && lastHomeRefreshKey != homeRefreshKey) {
+            lastHomeRefreshKey = homeRefreshKey
+            refreshComposeHomeState()
+        } else if (!isHome) {
+            lastHomeRefreshKey = null
+        }
         composeChromeState.value = BrowseXChromeState(
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
-            title = host ?: if (tab == null || pageUrl.startsWith(HOME_URL)) "New tab" else tab.title,
+            title = host ?: if (isHome) "New tab" else tab.title,
+            isHome = isHome,
+            homeState = composeHomeState.value,
             progress = tab?.progress?.coerceIn(0, 100) ?: 0,
             tabCount = tabs.size,
             canGoBack = tab?.canGoBack == true,
@@ -1984,6 +2013,33 @@ class MainActivity : AppCompatActivity() {
             accentColor = palette.accent,
             lineColor = palette.line
         )
+    }
+
+    private fun refreshComposeHomeState() {
+        lifecycleScope.launch {
+            val graph = runCatching { storageRuntime.awaitReady() }.getOrNull()
+            val savedShortcuts = graph?.bookmarks?.all()?.take(12).orEmpty()
+            val recentPages = graph?.history?.recent(12).orEmpty()
+            val defaults = listOf(
+                BrowseXHomeLink("Google", "https://www.google.com/"),
+                BrowseXHomeLink("YouTube", "https://www.youtube.com/"),
+                BrowseXHomeLink("Wikipedia", "https://www.wikipedia.org/"),
+                BrowseXHomeLink("GitHub", "https://github.com/"),
+                BrowseXHomeLink("DuckDuckGo", "https://duckduckgo.com/"),
+                BrowseXHomeLink("Reddit", "https://www.reddit.com/"),
+                BrowseXHomeLink("Instagram", "https://www.instagram.com/"),
+                BrowseXHomeLink("Amazon", "https://www.amazon.com/")
+            )
+            composeHomeState.value = BrowseXHomeState(
+                shortcuts = if (savedShortcuts.isNotEmpty()) {
+                    savedShortcuts.map { BrowseXHomeLink(it.title, it.url) }
+                } else defaults,
+                recentPages = recentPages.map { BrowseXHomeLink(it.title, it.url) },
+                showQuickLinks = browserSettingsSnapshot.homeShowQuickLinks,
+                showDiscovery = browserSettingsSnapshot.homeShowDiscovery,
+                layout = browserSettingsSnapshot.homeLayout
+            )
+        }
     }
 
     private fun syncUBlockButton() {
