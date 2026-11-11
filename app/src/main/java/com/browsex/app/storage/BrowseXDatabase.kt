@@ -744,7 +744,7 @@ abstract class BrowseXDatabase : RoomDatabase() {
                     context.applicationContext,
                     BrowseXDatabase::class.java,
                     "wren-browser.db"
-                ).fallbackToDestructiveMigration().build().also { instance = it }
+                ).build().also { instance = it }
             }
     }
 }
