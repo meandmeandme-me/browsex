@@ -85,6 +85,11 @@ internal class DownloadsPage(
 
             lateinit var dialog: Dialog
             val composeView = ComposeView(activity).apply {
+                // A Dialog owns a separate view tree; explicitly attach the Activity owners
+                // so Compose lifecycle and rememberSaveable work just like the main window.
+                androidx.lifecycle.ViewTreeLifecycleOwner.set(this, activity)
+                androidx.lifecycle.ViewTreeViewModelStoreOwner.set(this, activity)
+                androidx.savedstate.ViewTreeSavedStateRegistryOwner.set(this, activity)
                 setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
                 setContent {
                     MaterialTheme(
