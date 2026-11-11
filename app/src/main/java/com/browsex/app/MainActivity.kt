@@ -305,6 +305,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var composeChromeView: ComposeView
     private val composeChromeState = mutableStateOf(BrowseXChromeState())
     private val composeMenuOpen = mutableStateOf(false)
+    private val composeTabsOpen = mutableStateOf(false)
+    private val composeTabsState = mutableStateOf<List<BrowserTab>>(emptyList())
+    private val composeActiveTabState = mutableStateOf<BrowserTab?>(null)
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1653,7 +1656,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                     onNewTab = { createTab(homePageUrl()) },
-                    onOpenTabs = ::showTabs,
+                    onOpenTabs = { composeTabsOpen.value = true },
                     onMenu = { composeMenuOpen.value = true },
                     onProtection = {
                         val session = activeTab?.session
@@ -1670,6 +1673,19 @@ class MainActivity : AppCompatActivity() {
                     onMenuAction = { action ->
                         composeMenuOpen.value = false
                         performBrowserMenuAction(action)
+                    },
+                    tabs = composeTabsState.value,
+                    activeTab = composeActiveTabState.value,
+                    tabsOpen = composeTabsOpen.value,
+                    onDismissTabs = { composeTabsOpen.value = false },
+                    onSelectTab = { selected ->
+                        composeTabsOpen.value = false
+                        activateTab(selected)
+                    },
+                    onCloseTab = ::closeTab,
+                    onCreateTab = {
+                        composeTabsOpen.value = false
+                        createTab(homePageUrl())
                     }
                 )
             }
@@ -1802,6 +1818,8 @@ class MainActivity : AppCompatActivity() {
         val pageUrl = tab?.url.orEmpty()
         val host = runCatching { Uri.parse(pageUrl).host?.removePrefix("www.") }
             .getOrNull()?.takeIf { it.isNotBlank() }
+        composeTabsState.value = tabs.toList()
+        composeActiveTabState.value = tab
         composeChromeState.value = BrowseXChromeState(
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
             title = host ?: if (tab == null || pageUrl.startsWith(HOME_URL)) "New tab" else tab.title,
@@ -1989,16 +2007,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTabs() {
-        TabsPage(
-            activity = this,
-            tabsProvider = { tabs },
-            activeTabProvider = { activeTab },
-            onCreateTab = { url -> createTab(url) },
-            onActivateTab = ::activateTab,
-            onCloseTab = ::closeTab,
-            homePageUrlProvider = ::homePageUrl,
-            onToast = ::toast
-        ).show()
+        composeTabsOpen.value = true
     }
 
     private fun showBrowserMenu() {
