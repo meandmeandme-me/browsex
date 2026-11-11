@@ -2,6 +2,7 @@ package com.browsex.app
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,11 +12,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -26,6 +30,8 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -47,6 +53,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -99,7 +106,9 @@ internal fun BrowseXBrowserChrome(
     onNewTab: () -> Unit,
     onOpenTabs: () -> Unit,
     onMenu: () -> Unit,
-    onProtection: () -> Unit
+    onProtection: () -> Unit,
+    loadSuggestions: suspend (String) -> List<AddressSuggestion>,
+    onSelectSuggestion: (AddressSuggestion) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -223,11 +232,102 @@ internal fun BrowseXBrowserChrome(
 
                         var input by rememberSaveable { mutableStateOf(state.url) }
                         var editing by remember { mutableStateOf(false) }
+                        var suggestions by remember { mutableStateOf(emptyList<AddressSuggestion>()) }
                         val focusManager = LocalFocusManager.current
                         val keyboard = LocalSoftwareKeyboardController.current
 
                         LaunchedEffect(state.url) {
                             if (!editing) input = state.url
+                        }
+                        LaunchedEffect(input, editing, state.isPrivate) {
+                            if (!editing) {
+                                suggestions = emptyList()
+                            } else {
+                                delay(110)
+                                suggestions = runCatching {
+                                    loadSuggestions(input.filterNot(Char::isISOControl).trim().take(256))
+                                }.getOrDefault(emptyList()).take(6)
+                            }
+                        }
+
+                        if (editing) {
+                            val visibleSuggestions = buildList {
+                                addAll(suggestions)
+                                if (input.isNotBlank()) {
+                                    add(
+                                        AddressSuggestion(
+                                            kind = AddressSuggestionKind.SEARCH,
+                                            title = "Search the web",
+                                            subtitle = input.trim().take(256),
+                                            value = input.trim().take(256)
+                                        )
+                                    )
+                                }
+                            }.distinctBy { it.value }.take(7)
+                            if (visibleSuggestions.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(19.dp),
+                                    color = surface,
+                                    border = BorderStroke(1.dp, outline),
+                                    shadowElevation = 6.dp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 7.dp)
+                                ) {
+                                    LazyColumn(
+                                        modifier = Modifier.heightIn(max = 260.dp)
+                                    ) {
+                                        items(visibleSuggestions, key = { "${it.kind.name}:${it.value}" }) { suggestion ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        onSelectSuggestion(suggestion)
+                                                        input = suggestion.value
+                                                        suggestions = emptyList()
+                                                        focusManager.clearFocus()
+                                                        keyboard?.hide()
+                                                    }
+                                                    .padding(horizontal = 13.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val icon = when (suggestion.kind) {
+                                                    AddressSuggestionKind.OPEN_TAB -> Icons.Default.Tab
+                                                    AddressSuggestionKind.BOOKMARK -> Icons.Default.BookmarkBorder
+                                                    AddressSuggestionKind.HISTORY -> Icons.Default.History
+                                                    AddressSuggestionKind.SEARCH -> Icons.Default.Search
+                                                }
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = null,
+                                                    tint = primary,
+                                                    modifier = Modifier.size(21.dp)
+                                                )
+                                                Column(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .padding(start = 11.dp)
+                                                ) {
+                                                    Text(
+                                                        text = suggestion.title,
+                                                        color = ink,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = suggestion.subtitle,
+                                                        color = muted,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Surface(
