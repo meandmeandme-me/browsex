@@ -214,6 +214,7 @@ internal class DownloadsPage(
             "issues" to t("Issues", "تحتاج انتباهًا")
         )
         val filterButtons = mutableMapOf<String, TextView>()
+        lateinit var render: () -> Unit
         fun renderFilterSelection() {
             filterButtons.forEach { (key, button) ->
                 val selected = key == selectedFilter
@@ -295,7 +296,7 @@ internal class DownloadsPage(
         lateinit var reloadRoomRecords: () -> Unit
         var platformDownloadsActive = false
 
-        fun render() {
+        render = fun() {
             platformDownloadsActive = false
             list.removeAllViews()
             val ownedIds = platformIds
