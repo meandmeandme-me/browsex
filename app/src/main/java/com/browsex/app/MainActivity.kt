@@ -640,7 +640,10 @@ class MainActivity : AppCompatActivity() {
                 },
                 onActionChanged = {
                     if (!isFinishing && !isDestroyed) {
-                        runOnUiThread { syncUBlockButton() }
+                        runOnUiThread {
+                            syncUBlockButton()
+                            refreshComposeUBlockState()
+                        }
                     }
                 },
                 onExtensionStateChanged = { updated ->
@@ -649,6 +652,7 @@ class MainActivity : AppCompatActivity() {
                         val enabled = updated?.metaData?.enabled == true
                         val privateAllowed = enabled && updated?.metaData?.allowedInPrivateBrowsing == true
                         BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                        refreshComposeUBlockState()
                         updateBrowserSettings({
                             it.copy(
                                 adBlockInstalled = updated != null,
@@ -666,6 +670,7 @@ class MainActivity : AppCompatActivity() {
                             val enabled = installed?.metaData?.enabled == true
                             val privateAllowed = enabled && installed?.metaData?.allowedInPrivateBrowsing == true
                             BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+                            refreshComposeUBlockState()
                             // Reconcile persisted preferences with Gecko's actual extension state.
                             updateBrowserSettings({
                                 it.copy(
