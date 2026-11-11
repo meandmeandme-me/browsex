@@ -38,7 +38,7 @@ internal data class BrowseXColors(
 
             // Accessibility preferences apply to every native page, not just the main dock.
             // Reduced transparency removes alpha layers; high contrast also strengthens text,
-            // borders and selected states. Keep semantic colors and the base Wren identity.
+            // borders and selected states. Keep semantic colors and the base BrowseX identity.
             val opaqueSurfaces = settings.reduceTransparency || settings.highContrast
             return base.copy(
                 panel = if (opaqueSurfaces) {
