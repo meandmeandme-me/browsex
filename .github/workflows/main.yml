@@ -90,6 +90,9 @@ jobs:
       - name: Validate Android locale resources
         run: python3 scripts/check_locales.py
 
+      - name: Validate BrowseX brand identity
+        run: python3 scripts/check_brand_identity.py
+
       - name: Run tests, lint and build APKs
         run: gradle testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
 
