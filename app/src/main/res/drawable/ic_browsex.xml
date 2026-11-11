@@ -4,23 +4,8 @@
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <!-- Wren mark: lifted tail, rounded body, violet wing, and orange beak. -->
-    <path
-        android:fillColor="#376CF5"
-        android:pathData="M10,32 C7,24 3,12 7,5 C15,10 21,18 24,25 Z" />
-    <path
-        android:fillColor="#2C83F4"
-        android:pathData="M7,33 C10,22 17,13 27,10 C36,7 44,12 44,22 C44,33 35,42 23,43 C16,43 10,39 7,33 Z" />
-    <path
-        android:fillColor="#6546E8"
-        android:pathData="M8,34 C16,29 21,25 28,25 C34,25 36,30 32,35 C27,42 16,43 8,34 Z" />
-    <path
-        android:fillColor="#F39A32"
-        android:pathData="M42,18 L48,20.5 L42,23 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M36.5,13.5 m-4.2,0 a4.2,4.2 0,1 0,8.4 0 a4.2,4.2 0,1 0,-8.4 0" />
-    <path
-        android:fillColor="#15213B"
-        android:pathData="M36.7,13.5 m-2.1,0 a2.1,2.1 0,1 0,4.2 0 a2.1,2.1 0,1 0,-4.2 0" />
+    <path android:fillColor="#14243C" android:pathData="M2,2h44v44h-44z" />
+    <path android:fillColor="#00000000" android:strokeColor="#71D6FF" android:strokeWidth="5.5" android:strokeLineCap="round" android:pathData="M14,13 L34,35 M34,13 L14,35" />
+    <path android:fillColor="#B69CFF" android:pathData="M34,9 m-4,0 a4,4 0,1 0,8 0 a4,4 0,1 0,-8 0" />
+    <path android:fillColor="#8BE2FF" android:pathData="M14,38 m-2.5,0 a2.5,2.5 0,1 0,5 0 a2.5,2.5 0,1 0,-5 0" />
 </vector>
