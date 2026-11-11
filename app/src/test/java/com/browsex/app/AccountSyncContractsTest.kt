@@ -62,6 +62,21 @@ class AccountSyncContractsTest {
         assertFalse(SyncConsentPolicy.isEnabled(SyncCategory.BOOKMARKS, oldPolicy))
     }
 
+    @Test
+    fun syncBatchSnapshotsCallerOwnedRecordList() {
+        val record = EncryptedSyncRecord(
+            metadata(),
+            byteArrayOf(7),
+            SyncPayloadIntegrity.digest(byteArrayOf(7))
+        )
+        val source = mutableListOf(record)
+        val batch = SyncBatch(source, SyncCursor("next"))
+        source.clear()
+
+        assertEquals(1, batch.records.size)
+        assertEquals("bookmark-1", batch.records.single().metadata.recordId)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun syncBatchRejectsDuplicateRecordIds() {
         SyncBatch(
