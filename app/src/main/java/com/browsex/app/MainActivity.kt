@@ -2563,6 +2563,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }.onSuccess { added ->
                 toast(if (added) "Bookmark saved" else "Bookmark removed")
+                refreshComposeHomeState()
             }.onFailure { error ->
                 android.util.Log.e("BrowseX", "Could not update bookmark", error)
                 toast(BrowseXStrings.text(this@MainActivity, "Could not update bookmark", "تعذر تحديث المفضلة"))
@@ -3087,6 +3088,7 @@ class MainActivity : AppCompatActivity() {
                 if (composeSavedPagesState.value.isHistory) storage.history.remove(url)
                 else storage.bookmarks.remove(url)
                 refreshComposeSavedPages()
+                if (!composeSavedPagesState.value.isHistory) refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not remove saved page", it)
                 toast("Could not remove item")
@@ -3099,6 +3101,7 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 storageRuntime.awaitReady().bookmarks.rename(url, title)
                 refreshComposeSavedPages()
+                refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not rename bookmark", it)
                 toast("Could not rename bookmark")
@@ -3111,6 +3114,7 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 storageRuntime.awaitReady().bookmarks.move(url, folderId)
                 refreshComposeSavedPages()
+                refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not move bookmark", it)
                 toast("Could not move bookmark")
@@ -3174,6 +3178,7 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 storageRuntime.awaitReady().history.clear()
                 refreshComposeSavedPages()
+                refreshComposeHomeState()
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not clear browsing history", it)
                 toast("Could not clear history")
