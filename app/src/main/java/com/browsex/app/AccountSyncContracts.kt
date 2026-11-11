@@ -74,13 +74,16 @@ internal data class SyncCursor(val value: String?) {
     init { require(value == null || value.length <= 4096) }
 }
 
-internal data class SyncBatch(
-    val records: List<EncryptedSyncRecord>,
+internal class SyncBatch(
+    records: List<EncryptedSyncRecord>,
     val nextCursor: SyncCursor
 ) {
+    // Snapshot the transport-owned collection so it cannot change after validation.
+    val records: List<EncryptedSyncRecord> = records.toList()
+
     init {
-        require(records.size <= MAX_RECORDS_PER_BATCH)
-        require(records.map { it.metadata.recordId }.toSet().size == records.size)
+        require(this.records.size <= MAX_RECORDS_PER_BATCH)
+        require(this.records.map { it.metadata.recordId }.toSet().size == this.records.size)
     }
 
     private companion object {
