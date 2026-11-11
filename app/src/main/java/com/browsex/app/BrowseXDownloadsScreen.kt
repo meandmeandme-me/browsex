@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -98,15 +99,17 @@ internal fun BrowseXDownloadsScreen(
     var filter by rememberSaveable { mutableStateOf(DownloadFilter.ALL) }
     var confirmation by remember { mutableStateOf<DownloadConfirmation?>(null) }
     val scope = rememberCoroutineScope()
+    fun refreshAfterAction() {
+        scope.launch {
+            delay(350L)
+            runCatching { onRefresh() }.onSuccess { snapshot = it }
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
-            if (snapshot.hasActiveDownloads) {
-                delay(1400L)
-                runCatching { onRefresh() }.onSuccess { snapshot = it }
-            } else {
-                delay(5000L)
-            }
+            delay(if (snapshot.hasActiveDownloads) 1400L else 5000L)
+            runCatching { onRefresh() }.onSuccess { snapshot = it }
         }
     }
 
@@ -141,7 +144,9 @@ internal fun BrowseXDownloadsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 18.dp, vertical = 14.dp)
+            .widthIn(max = BrowseXDesignSystem.TABLET_CONTENT_MAX_WIDTH_DP.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -266,7 +271,10 @@ internal fun BrowseXDownloadsScreen(
                                     text("Cancel download", "إلغاء التنزيل"),
                                     text("Cancel this download? Its incomplete file will be discarded.", "إلغاء هذا التنزيل؟ سيتم التخلص من الملف غير المكتمل."),
                                     text("Cancel", "إلغاء")
-                                ) { onCancelStream(record) }
+                                ) {
+                                    onCancelStream(record)
+                                    refreshAfterAction()
+                                }
                             }) { Text(text("Cancel", "إلغاء")) }
                         } else if (completed) {
                             TextButton(onClick = { onOpenStream(record) }) { Text(text("Open", "فتح")) }
@@ -276,10 +284,13 @@ internal fun BrowseXDownloadsScreen(
                                     text("Delete downloaded file", "حذف الملف المنزّل"),
                                     text("Delete this file from your device and remove its record?", "حذف الملف من جهازك وإزالة سجله؟"),
                                     text("Delete", "حذف")
-                                ) { onDeleteStreamFile(record) }
+                                ) {
+                                    onDeleteStreamFile(record)
+                                    refreshAfterAction()
+                                }
                             }) { Text(text("Delete", "حذف")) }
                         } else {
-                            TextButton(onClick = { onRemoveStreamRecord(record) }) { Text(text("Remove", "إزالة")) }
+                            TextButton(onClick = { onRemoveStreamRecord(record); refreshAfterAction() }) { Text(text("Remove", "إزالة")) }
                         }
                     }
                 )
@@ -326,7 +337,10 @@ internal fun BrowseXDownloadsScreen(
                                     text("Delete downloaded file", "حذف الملف المنزّل"),
                                     text("Delete this downloaded file from your device?", "حذف هذا الملف المنزّل من جهازك؟"),
                                     text("Delete", "حذف")
-                                ) { onDeletePlatform(item) }
+                                ) {
+                                    onDeletePlatform(item)
+                                    refreshAfterAction()
+                                }
                             }) { Text(text("Delete", "حذف")) }
                         } else {
                             TextButton(onClick = {
@@ -334,7 +348,10 @@ internal fun BrowseXDownloadsScreen(
                                     text("Manage download", "إدارة التنزيل"),
                                     text("Cancel or remove this Android-managed download?", "إلغاء أو إزالة هذا التنزيل الذي يديره أندرويد؟"),
                                     text("Remove", "إزالة")
-                                ) { onManagePlatform(item) }
+                                ) {
+                                    onManagePlatform(item)
+                                    refreshAfterAction()
+                                }
                             }) { Text(text("Cancel", "إلغاء")) }
                         }
                     }
@@ -347,7 +364,7 @@ internal fun BrowseXDownloadsScreen(
                     subtitle = text("This unavailable entry can be removed from BrowseX.", "يمكن إزالة هذا السجل غير المتاح من BrowseX."),
                     stateColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     actions = {
-                        TextButton(onClick = { onRemoveMissingPlatform(id) }) { Text(text("Remove", "إزالة")) }
+                        TextButton(onClick = { onRemoveMissingPlatform(id); refreshAfterAction() }) { Text(text("Remove", "إزالة")) }
                     }
                 )
             }
