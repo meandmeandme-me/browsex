@@ -105,6 +105,8 @@ internal enum class BrowseXMenuAction(val label: String) {
 internal data class BrowseXChromeState(
     val url: String = "",
     val title: String = "BrowseX",
+    val isHome: Boolean = false,
+    val homeState: BrowseXHomeState = BrowseXHomeState(),
     val progress: Int = 0,
     val tabCount: Int = 0,
     val canGoBack: Boolean = false,
@@ -212,7 +214,15 @@ internal fun BrowseXBrowserChrome(
     onRefreshDownloads: () -> Unit,
     onPrimaryDownloadAction: (BrowseXDownloadItem) -> Unit,
     onShareDownload: (BrowseXDownloadItem) -> Unit,
-    onDeleteDownloadFile: (BrowseXDownloadItem) -> Unit
+    onDeleteDownloadFile: (BrowseXDownloadItem) -> Unit,
+    onHomeSearch: (String) -> Unit,
+    onHomeOpen: (String) -> Unit,
+    onHomeBookmarks: () -> Unit,
+    onHomeHistory: () -> Unit,
+    onHomeDownloads: () -> Unit,
+    onHomeSettings: () -> Unit,
+    onHomePrivateTab: () -> Unit,
+    onHomeCustomize: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -302,7 +312,25 @@ internal fun BrowseXBrowserChrome(
                     }
                 }
 
-                if (!state.dockAtTop) Spacer(Modifier.weight(1f))
+                if (!state.dockAtTop) {
+                    if (state.isHome) {
+                        BrowseXHomeScreen(
+                            state = state.homeState,
+                            isDark = state.isDark,
+                            onSearch = onHomeSearch,
+                            onOpen = onHomeOpen,
+                            onBookmarks = onHomeBookmarks,
+                            onHistory = onHomeHistory,
+                            onDownloads = onHomeDownloads,
+                            onSettings = onHomeSettings,
+                            onPrivateTab = onHomePrivateTab,
+                            onCustomize = onHomeCustomize,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
 
                 Surface(
                     modifier = dockModifier.align(Alignment.CenterHorizontally),
@@ -566,7 +594,25 @@ internal fun BrowseXBrowserChrome(
                     }
                 }
 
-                if (state.dockAtTop) Spacer(Modifier.weight(1f))
+                if (state.dockAtTop) {
+                    if (state.isHome) {
+                        BrowseXHomeScreen(
+                            state = state.homeState,
+                            isDark = state.isDark,
+                            onSearch = onHomeSearch,
+                            onOpen = onHomeOpen,
+                            onBookmarks = onHomeBookmarks,
+                            onHistory = onHomeHistory,
+                            onDownloads = onHomeDownloads,
+                            onSettings = onHomeSettings,
+                            onPrivateTab = onHomePrivateTab,
+                            onCustomize = onHomeCustomize,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
 
