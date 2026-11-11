@@ -75,7 +75,9 @@ The home document lives at `app/src/main/assets/home.html`. Native strings live 
 - Private browsing must not reuse saved website permission decisions.
 - Validate URLs and canonical origins at repository/policy boundaries; never trust UI-provided strings.
 - Keep credentials, cookies, and browsing history out of bookmark backup exports.
-- Do not weaken Gecko safe browsing or tracking protection as a side effect of adding an extension.
+- Do not weaken Gecko safe browsing or tracking protection as a side effect of adding an extension. When uBlock Origin is unavailable, disabled, or not permitted in private browsing, Gecko tracking protection remains enabled.
+- Website notifications require both a persisted per-origin `allow` decision and Android notification permission; private-browsing notifications are never forwarded to the Android tray.
+- Notification callbacks are asynchronous. Closing a Gecko notification while permission UI or storage IO is pending must prevent a late callback from posting it again.
 - Treat permission prompts as asynchronous, session-scoped operations. Re-check that the requesting tab/session is still active before granting.
 
 When adding a new persistent feature, explicitly define its private-browsing behavior, retention limit, export behavior, and clear-data behavior before wiring its UI.
