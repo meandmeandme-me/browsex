@@ -235,7 +235,7 @@ internal fun BrowseXBrowserChrome(
         )
     }
 
-    MaterialTheme(colorScheme = colorScheme) {
+    MaterialTheme(colorScheme = colorScheme, shapes = BrowseXDesignSystem.shapes) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
