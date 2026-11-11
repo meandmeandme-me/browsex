@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.browsex.app.storage.DownloadRecordEntity
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.util.Date
@@ -90,13 +91,13 @@ internal fun BrowseXDownloadsScreen(
     onDeletePlatform: (BrowseXPlatformDownload) -> Unit,
     onRemoveMissingPlatform: (Long) -> Unit,
     text: (String, String) -> String,
-    onManualRefresh: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var snapshot by remember { mutableStateOf(initialSnapshot) }
     var search by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(DownloadFilter.ALL) }
     var confirmation by remember { mutableStateOf<DownloadConfirmation?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -155,7 +156,11 @@ internal fun BrowseXDownloadsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Button(onClick = onManualRefresh) {
+            Button(onClick = {
+                scope.launch {
+                    runCatching { onRefresh() }.onSuccess { snapshot = it }
+                }
+            }) {
                 Text(text("Refresh", "تحديث"))
             }
             TextButton(onClick = onDismiss) {
