@@ -74,6 +74,37 @@ class BrowserNotificationPermissionCoordinatorTest {
         assertFalse(coordinator.isInFlight)
     }
 
+    @Test fun pendingNotificationPermissionCallbacksAreBounded() {
+        var launches = 0
+        var rejected = 0
+        val coordinator = coordinator(launch = { launches++ })
+        repeat(65) {
+            coordinator.request { granted -> if (!granted) rejected++ }
+        }
+        assertEquals(1, launches)
+        assertEquals(1, rejected)
+        coordinator.onResult(true)
+        assertEquals(64, rejected)
+    }
+
+    @Test fun systemNotificationToggleCanRejectGrantedRuntimePermission() {
+        val results = mutableListOf<Boolean>()
+        val coordinator = coordinator(systemEnabled = { false })
+        coordinator.request { granted -> results.add(granted) }
+        coordinator.onResult(true)
+        assertEquals(listOf(false), results)
+    }
+
+    @Test fun callbackFailureDoesNotPreventOtherCallbacksFromResolving() {
+        val results = mutableListOf<Boolean>()
+        val coordinator = coordinator()
+        coordinator.request { throw IllegalStateException("consumer callback failed") }
+        coordinator.request { granted -> results.add(granted) }
+        coordinator.onResult(true)
+        assertEquals(listOf(true), results)
+        assertFalse(coordinator.isInFlight)
+    }
+
     @Test fun unavailableHostRejectsWithoutLaunching() {
         var launches = 0
         val results = mutableListOf<Boolean>()
