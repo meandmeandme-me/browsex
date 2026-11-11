@@ -315,6 +315,8 @@ class MainActivity : AppCompatActivity() {
     private val composePrivacySummary = mutableStateOf(BrowseXPrivacySummary("", true, true))
     private val composeSitePermissionsOpen = mutableStateOf(false)
     private val composeSitePermissionsState = mutableStateOf<List<com.browsex.app.storage.SitePermissionDecisionEntity>>(emptyList())
+    private val composeSavedSessionsOpen = mutableStateOf(false)
+    private val composeSavedSessionsState = mutableStateOf<List<com.browsex.app.storage.RoomSavedSession>>(emptyList())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1747,7 +1749,20 @@ class MainActivity : AppCompatActivity() {
                             org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS,
                             clearHistory = false
                         )
-                    }
+                    },
+                    savedSessionsOpen = composeSavedSessionsOpen.value,
+                    savedSessions = composeSavedSessionsState.value,
+                    onDismissSavedSessions = { composeSavedSessionsOpen.value = false },
+                    onRestoreSavedSession = { session ->
+                        composeSavedSessionsOpen.value = false
+                        restoreSavedSession(session, replaceRegularTabs = true)
+                    },
+                    onOpenSavedSessionAlongside = { session ->
+                        composeSavedSessionsOpen.value = false
+                        restoreSavedSession(session, replaceRegularTabs = false)
+                    },
+                    onRenameSavedSession = ::renameSavedSession,
+                    onDeleteSavedSession = ::deleteSavedSession
                 )
             }
         }
@@ -2296,48 +2311,66 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSavedSessions() {
-        val regularTabs = tabs.filterNot { it.privateMode }
-        val urls = regularTabs.map { it.url }
-        val selectedIndex = regularTabs.indexOfFirst { it === activeTab }.coerceAtLeast(0)
-        SavedSessionsPage(
-            activity = this,
-            currentUrls = urls,
-            activeIndex = selectedIndex,
-            onRestore = { savedUrls, savedIndex ->
-                // Keep private tabs isolated; only replace the regular browsing workspace.
-                tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
-                val restored = mutableListOf<BrowserTab>()
-                savedUrls.forEach { savedUrl ->
-                    val before = tabs.size
-                    createTab(savedUrl)
-                    if (tabs.size > before) tabs.lastOrNull()?.let(restored::add)
+        lifecycleScope.launch {
+            val sessions = runCatching { storageRuntime.awaitReady().sessions.sessions() }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not load saved sessions", it)
+                }.getOrElse {
+                    toast("Could not load saved sessions")
+                    return@launch
                 }
-                restored.getOrNull(savedIndex.coerceIn(0, (restored.size - 1).coerceAtLeast(0)))?.let(::activateTab)
-                if (restored.size < savedUrls.size) {
-                    toast(BrowseXStrings.text(
-                        this,
-                        "Some tabs could not be restored because the tab limit was reached",
-                        "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
-                    ))
-                }
-            },
-            onOpenAlongside = { savedUrls, savedIndex ->
-                val opened = mutableListOf<BrowserTab>()
-                savedUrls.forEach { savedUrl ->
-                    val before = tabs.size
-                    createTab(savedUrl)
-                    if (tabs.size > before) tabs.lastOrNull()?.let(opened::add)
-                }
-                opened.getOrNull(savedIndex.coerceIn(0, (opened.size - 1).coerceAtLeast(0)))?.let(::activateTab)
-                if (opened.size < savedUrls.size) {
-                    toast(BrowseXStrings.text(
-                        this,
-                        "Some tabs could not be opened because the tab limit was reached",
-                        "تعذر فتح بعض التبويبات بسبب بلوغ الحد الأقصى"
-                    ))
-                }
-            }
-        ).show()
+            composeSavedSessionsState.value = sessions
+            composeSavedSessionsOpen.value = true
+        }
+    }
+
+    private suspend fun refreshComposeSavedSessions() {
+        if (!composeSavedSessionsOpen.value) return
+        composeSavedSessionsState.value = storageRuntime.awaitReady().sessions.sessions()
+    }
+
+    private fun restoreSavedSession(session: com.browsex.app.storage.RoomSavedSession, replaceRegularTabs: Boolean) {
+        if (replaceRegularTabs) {
+            tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
+        }
+        val opened = mutableListOf<BrowserTab>()
+        session.urls.forEach { url ->
+            val before = tabs.size
+            createTab(url)
+            if (tabs.size > before) tabs.lastOrNull()?.let(opened::add)
+        }
+        opened.getOrNull(session.activeIndex.coerceIn(0, (opened.size - 1).coerceAtLeast(0)))?.let(::activateTab)
+        if (opened.size < session.urls.size) {
+            toast(
+                BrowseXStrings.text(
+                    this,
+                    "Some tabs could not be restored because the tab limit was reached",
+                    "تعذرت استعادة بعض التبويبات بسبب بلوغ الحد الأقصى"
+                )
+            )
+        }
+    }
+
+    private fun renameSavedSession(id: String, name: String) {
+        lifecycleScope.launch {
+            val renamed = runCatching { storageRuntime.awaitReady().sessions.renameSession(id, name) }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not rename saved session", it)
+                }.getOrDefault(false)
+            if (!renamed) toast("Could not rename session")
+            runCatching { refreshComposeSavedSessions() }
+        }
+    }
+
+    private fun deleteSavedSession(id: String) {
+        lifecycleScope.launch {
+            val deleted = runCatching { storageRuntime.awaitReady().sessions.deleteSession(id) }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not delete saved session", it)
+                }.getOrDefault(false)
+            if (!deleted) toast("Could not delete session")
+            runCatching { refreshComposeSavedSessions() }
+        }
     }
 
     private fun toggleBookmarkInRoom(url: String, title: String) {
