@@ -186,7 +186,10 @@ internal fun BrowseXBrowserChrome(
     onRestoreSavedSession: (com.browsex.app.storage.RoomSavedSession) -> Unit,
     onOpenSavedSessionAlongside: (com.browsex.app.storage.RoomSavedSession) -> Unit,
     onRenameSavedSession: (String, String) -> Unit,
-    onDeleteSavedSession: (String) -> Unit
+    onDeleteSavedSession: (String) -> Unit,
+    onSaveCurrentSession: (String) -> Unit,
+    onImportSavedSession: (String, String) -> Unit,
+    onDeleteAllSavedSessions: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -609,7 +612,10 @@ internal fun BrowseXBrowserChrome(
                 onRestore = onRestoreSavedSession,
                 onOpenAlongside = onOpenSavedSessionAlongside,
                 onRename = onRenameSavedSession,
-                onDelete = onDeleteSavedSession
+                onDelete = onDeleteSavedSession,
+                onSaveCurrent = onSaveCurrentSession,
+                onImport = onImportSavedSession,
+                onDeleteAll = onDeleteAllSavedSessions
             )
         }
     }
