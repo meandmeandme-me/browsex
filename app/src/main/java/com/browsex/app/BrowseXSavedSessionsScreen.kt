@@ -51,7 +51,10 @@ internal fun BrowseXSavedSessionsScreen(
     onRestore: (RoomSavedSession) -> Unit,
     onOpenAlongside: (RoomSavedSession) -> Unit,
     onRename: (String, String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onSaveCurrent: (String) -> Unit,
+    onImport: (String, String) -> Unit,
+    onDeleteAll: () -> Unit
 ) {
     val context = LocalContext.current
     fun t(en: String, ar: String = en) = BrowseXStrings.text(context, en, ar)
@@ -59,8 +62,21 @@ internal fun BrowseXSavedSessionsScreen(
     var renameTarget by remember { mutableStateOf<RoomSavedSession?>(null) }
     var renameValue by remember(renameTarget?.id) { mutableStateOf(renameTarget?.name.orEmpty()) }
     var deleteTarget by remember { mutableStateOf<RoomSavedSession?>(null) }
+    var saveDialogOpen by remember { mutableStateOf(false) }
+    var saveName by remember { mutableStateOf("") }
+    var importDialogOpen by remember { mutableStateOf(false) }
+    var importName by remember { mutableStateOf("") }
+    var importText by remember { mutableStateOf("") }
+    var deleteAllOpen by remember { mutableStateOf(false) }
+    var sortMode by rememberSaveable { mutableStateOf(0) }
     val needle = query.trim().lowercase(Locale.ROOT)
     val filtered = sessions.filter { needle.isBlank() || it.name.lowercase(Locale.ROOT).contains(needle) }
+        .let { rows ->
+            when (sortMode) {
+                1 -> rows.sortedBy { it.name.lowercase(Locale.ROOT) }
+                else -> rows.sortedByDescending { it.savedAt }
+            }
+        }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -92,6 +108,20 @@ internal fun BrowseXSavedSessionsScreen(
                     }
                     TextButton(onClick = onDismiss) { Text(t("Done", "تم")) }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    TextButton(onClick = { saveDialogOpen = true }, modifier = Modifier.weight(1f)) {
+                        Text(t("Save current tabs", "حفظ التبويبات الحالية"))
+                    }
+                    TextButton(onClick = { importDialogOpen = true }, modifier = Modifier.weight(1f)) {
+                        Text(t("Import from text", "استيراد من نص"))
+                    }
+                    TextButton(onClick = { deleteAllOpen = true }) {
+                        Text(t("Delete all", "حذف الكل"))
+                    }
+                }
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it.take(80) },
@@ -99,6 +129,14 @@ internal fun BrowseXSavedSessionsScreen(
                     singleLine = true,
                     label = { Text(t("Search sessions", "البحث في الجلسات")) }
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { sortMode = 1 - sortMode }) {
+                        Text(if (sortMode == 0) t("Sort: newest", "الأحدث أولاً") else t("Sort: A–Z", "الترتيب: أ–ي"))
+                    }
+                }
                 if (filtered.isEmpty()) {
                     Text(
                         t("No saved sessions found.", "لم يتم العثور على جلسات محفوظة."),
@@ -172,6 +210,84 @@ internal fun BrowseXSavedSessionsScreen(
                 }
             }
         }
+    }
+
+    if (saveDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { saveDialogOpen = false },
+            title = { Text(t("Save current tabs", "حفظ التبويبات الحالية")) },
+            text = {
+                OutlinedTextField(
+                    value = saveName,
+                    onValueChange = { saveName = it.take(40) },
+                    singleLine = true,
+                    label = { Text(t("Session name", "اسم الجلسة")) }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onSaveCurrent(saveName)
+                    saveName = ""
+                    saveDialogOpen = false
+                }) { Text(t("Save", "حفظ")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { saveDialogOpen = false }) { Text(t("Cancel", "إلغاء")) }
+            }
+        )
+    }
+
+    if (importDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { importDialogOpen = false },
+            title = { Text(t("Import browsing session", "استيراد جلسة تصفح")) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = importName,
+                        onValueChange = { importName = it.take(40) },
+                        singleLine = true,
+                        label = { Text(t("Session name", "اسم الجلسة")) }
+                    )
+                    OutlinedTextField(
+                        value = importText,
+                        onValueChange = { importText = it.take(20000) },
+                        modifier = Modifier.padding(top = 8.dp),
+                        minLines = 5,
+                        maxLines = 8,
+                        label = { Text(t("Paste a shared session or one website URL per line", "الصق جلسة مشتركة أو رابط موقع في كل سطر")) }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onImport(importName, importText)
+                    importName = ""
+                    importText = ""
+                    importDialogOpen = false
+                }) { Text(t("Import", "استيراد")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { importDialogOpen = false }) { Text(t("Cancel", "إلغاء")) }
+            }
+        )
+    }
+
+    if (deleteAllOpen) {
+        AlertDialog(
+            onDismissRequest = { deleteAllOpen = false },
+            title = { Text(t("Delete all saved sessions?", "حذف جميع الجلسات المحفوظة؟")) },
+            text = { Text(t("This does not close your current tabs.", "لن يؤدي ذلك إلى إغلاق التبويبات الحالية.")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteAll()
+                    deleteAllOpen = false
+                }) { Text(t("Delete all", "حذف الكل")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteAllOpen = false }) { Text(t("Cancel", "إلغاء")) }
+            }
+        )
     }
 
     if (renameTarget != null) {
