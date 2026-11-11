@@ -43,6 +43,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.platform.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
@@ -297,6 +301,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var downloadRequestCoordinator: BrowserDownloadRequestCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var browserRoot: FrameLayout
+    private lateinit var composeChromeView: ComposeView
+    private val composeChromeState = mutableStateOf(BrowseXChromeState())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1621,6 +1627,52 @@ class MainActivity : AppCompatActivity() {
                 refreshAdaptivePresentation(width, height, view.isHardwareAccelerated)
             }
         }
+
+        // New browser chrome is a Compose adaptation of the MIT-licensed
+        // Kingfisher Browser address/navigation components. GeckoView and all
+        // BrowseX controllers remain owned by this Activity.
+        composeChromeView = ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                BrowseXBrowserChrome(
+                    state = composeChromeState.value,
+                    onNavigate = ::navigate,
+                    onBack = { activeTab?.takeIf { it.canGoBack }?.session?.goBack() },
+                    onForward = { activeTab?.takeIf { it.canGoForward }?.session?.goForward() },
+                    onReload = { activeTab?.session?.reload() },
+                    onHome = { activeTab?.session?.loadUri(homePageUrl()) },
+                    onSiteInfo = ::showSiteInformation,
+                    onBookmark = {
+                        activeTab?.url?.takeIf { it.startsWith("http") }?.let { url ->
+                            toggleBookmarkInRoom(
+                                url,
+                                activeTab?.title.orEmpty().takeUnless { it == "New tab" }.orEmpty()
+                            )
+                        }
+                    },
+                    onNewTab = { createTab(homePageUrl()) },
+                    onOpenTabs = ::showTabs,
+                    onMenu = ::showBrowserMenu,
+                    onProtection = {
+                        val session = activeTab?.session
+                        if (uBlockOriginManager?.hasBrowserAction(session) == true) {
+                            uBlockOriginManager?.clickBrowserAction(session)
+                        } else {
+                            showPrivacyCenter()
+                        }
+                    }
+                )
+            }
+        }
+        root.addView(composeChromeView, FrameLayout.LayoutParams(-1, -1))
+
+        // Keep the legacy view objects alive temporarily because the existing
+        // adaptive/focus and suggestion controllers still reference them. They
+        // are no longer part of the visible browser interface.
+        topBar.visibility = View.GONE
+        bottomBar.visibility = View.GONE
+        progress.visibility = View.GONE
+        renderComposeChrome()
         return root
     }
 
@@ -1730,6 +1782,39 @@ class MainActivity : AppCompatActivity() {
         }
         if (::reloadButton.isInitialized) reloadButton.isEnabled = tab != null
         syncUBlockButton()
+        renderComposeChrome(tab)
+    }
+
+    private fun renderComposeChrome(tab: BrowserTab? = activeTab) {
+        if (!::composeChromeView.isInitialized) return
+        val palette = colors
+        val presentation = adaptivePresentationConfig
+        val pageUrl = tab?.url.orEmpty()
+        val host = runCatching { Uri.parse(pageUrl).host?.removePrefix("www.") }
+            .getOrNull()?.takeIf { it.isNotBlank() }
+        composeChromeState.value = BrowseXChromeState(
+            url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
+            title = host ?: if (tab == null || pageUrl.startsWith(HOME_URL)) "New tab" else tab.title,
+            progress = tab?.progress?.coerceIn(0, 100) ?: 0,
+            tabCount = tabs.size,
+            canGoBack = tab?.canGoBack == true,
+            canGoForward = tab?.canGoForward == true,
+            isPrivate = tab?.privateMode == true,
+            isDark = palette.isDark,
+            uBlockAvailable = uBlockOriginManager?.hasBrowserAction(tab?.session) == true,
+            showNavigationActions = presentation?.showNavigationActions ?: true,
+            dockAtTop = presentation?.addressPlacement == WrenAddressPlacement.TOP ||
+                presentation?.addressPlacement == WrenAddressPlacement.TV_REMOTE,
+            reduceTransparency = browserSettingsSnapshot.reduceTransparency,
+            highContrast = browserSettingsSnapshot.highContrast,
+            canvasColor = palette.canvas,
+            panelColor = palette.panel,
+            fieldColor = palette.field,
+            inkColor = palette.ink,
+            mutedColor = palette.muted,
+            accentColor = palette.accent,
+            lineColor = palette.line
+        )
     }
 
     private fun syncUBlockButton() {
@@ -1858,6 +1943,9 @@ class MainActivity : AppCompatActivity() {
         fullscreen = enabled
         topBar.visibility = if (enabled) View.GONE else View.VISIBLE
         bottomBar.visibility = if (enabled) View.GONE else View.VISIBLE
+        if (::composeChromeView.isInitialized) {
+            composeChromeView.visibility = if (enabled) View.GONE else View.VISIBLE
+        }
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         if (enabled) {
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
