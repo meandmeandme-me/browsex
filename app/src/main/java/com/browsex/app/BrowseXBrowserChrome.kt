@@ -222,7 +222,14 @@ internal fun BrowseXBrowserChrome(
     onHomeDownloads: () -> Unit,
     onHomeSettings: () -> Unit,
     onHomePrivateTab: () -> Unit,
-    onHomeCustomize: () -> Unit
+    onHomeCustomize: () -> Unit,
+    uBlockSettingsOpen: Boolean,
+    uBlockState: BrowseXUBlockState,
+    onDismissUBlockSettings: () -> Unit,
+    onInstallUBlock: (Boolean) -> Unit,
+    onToggleUBlock: (Boolean) -> Unit,
+    onUninstallUBlock: () -> Unit,
+    onOpenUBlockSiteControls: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -719,6 +726,16 @@ internal fun BrowseXBrowserChrome(
                 onPrimaryAction = onPrimaryDownloadAction,
                 onShare = onShareDownload,
                 onDeleteFile = onDeleteDownloadFile
+            )
+        }
+        if (uBlockSettingsOpen) {
+            BrowseXUBlockSettingsScreen(
+                state = uBlockState,
+                onDismiss = onDismissUBlockSettings,
+                onInstall = onInstallUBlock,
+                onToggleEnabled = onToggleUBlock,
+                onUninstall = onUninstallUBlock,
+                onSiteControls = onOpenUBlockSiteControls
             )
         }
     }
