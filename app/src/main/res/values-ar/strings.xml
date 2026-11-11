@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Wren</string>
+    <string name="app_name">BrowseX</string>
     <string name="website_notification_channel">إشعارات المواقع</string>
-    <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل Wren</string>
+    <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل BrowseX</string>
     <string name="ui_home">الرئيسية</string>
     <string name="ui_open_tabs">فتح علامات التبويب</string>
     <string name="ui_search_suggestions">اقتراحات البحث</string>
@@ -45,7 +45,7 @@
     <string name="ui_site_information">معلومات الموقع</string>
     <string name="ui_search_engine">محرك البحث</string>
     <string name="ui_clear_browsing_history">مسح سجل التصفح؟</string>
-    <string name="ui_browsex">Wren</string>
+    <string name="ui_browsex">BrowseX</string>
     <string name="ui_open_webpage_first">افتح صفحة ويب أولًا</string>
     <string name="ui_open_a_webpage_first">افتح صفحة ويب أولًا</string>
     <string name="ui_preparing_a_clean_reading_view">جارٍ تجهيز وضع القراءة…</string>
@@ -95,7 +95,7 @@
     <string name="ui_shortcut_layout">تخطيط الاختصارات</string>
     <string name="ui_reset">إعادة ضبط</string>
     <string name="ui_site_permissions_reset">تمت إعادة ضبط أذونات الموقع</string>
-    <string name="ui_make_browse_x_work_the_way_you_like">خصّص تجربة Wren كما تحب</string>
+    <string name="ui_make_browse_x_work_the_way_you_like">خصّص تجربة BrowseX كما تحب</string>
     <string name="ui_close_settings">إغلاق الإعدادات</string>
     <string name="ui_general">عام</string>
     <string name="ui_choose_how_you_browse">اختر طريقة التصفح</string>
@@ -354,8 +354,8 @@
     <string name="ui_this_bookmark_is_already_at_the_edge_of_its_folder">هذه المفضلة في آخر موضع متاح داخل المجلد.</string>
     <string name="ui_settings_are_temporarily_unavailable">الإعدادات غير متاحة مؤقتًا</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">التصفح الخاص لا يقرأ اختيارات أذونات المواقع ولا يحفظها.</string>
-    <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">لا توجد تنزيلات في Wren بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.</string>
-    <string name="ui_wren_browser">متصفح Wren</string>
+    <string name="ui_no_BrowseX_downloads_yet_files_you_download_from_websites_will_appear_here">لا توجد تنزيلات في BrowseX بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.</string>
+    <string name="ui_BrowseX_browser">متصفح BrowseX</string>
     <string name="ui_reload_page">إعادة تحميل الصفحة</string>
     <string name="ui_address_bar_position">موضع شريط العنوان</string>
     <string name="ui_choose_top_or_bottom_on_compact_screens">اختر موضع الشريط أعلى أو أسفل الشاشة الصغيرة</string>
