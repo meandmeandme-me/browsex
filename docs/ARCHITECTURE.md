@@ -75,6 +75,7 @@ Additional Compose destinations now cover:
 - `BrowseXRecallScreen.kt`: bounded search across regular tabs, bookmarks, and recent history.
 - `BrowseXDownloadsScreen.kt`: Room stream downloads plus Android DownloadManager state, progress, error reasons, cancellation, open/share, stale-record cleanup, and ownership-checked file deletion.
 - `BrowseXHomeScreen.kt`: branded shortcuts, recent pages, web search, quick actions, and adaptive grid/list layout.
+- `BrowseXUBlockSettingsScreen.kt`: install consent, private-browsing consent, enable/disable, site controls, and uninstall for Mozilla's signed uBlock Origin extension.
 
 The visible home page no longer depends on the legacy HTML presentation: `MainActivity` hides the GeckoView surface for the internal home URL and renders the Compose home screen instead. `app/src/main/assets/home.html` remains as a compatibility fallback while the final cleanup of hidden legacy views is reviewed. The old `AddressSuggestionsController` is no longer connected to the visible Compose address field and can be removed after the hidden compatibility views are retired.
 
