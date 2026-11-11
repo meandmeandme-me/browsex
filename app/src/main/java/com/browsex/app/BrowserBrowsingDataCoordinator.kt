@@ -95,19 +95,19 @@ internal class BrowserBrowsingDataCoordinator(
             onFinished(result)
         }
 
-        fun runAppOwnedCleanup() {
+        fun runAppOwnedCleanup(initialSuccess: Boolean = true) {
             val shouldClearPermissions = mediaOrigin != null ||
                 (flags and StorageController.ClearFlags.PERMISSIONS) != 0L ||
                 (flags and StorageController.ClearFlags.SITE_DATA) != 0L
             if (!shouldClearPermissions) {
-                finalize(true)
+                finalize(initialSuccess)
                 return
             }
             val completed = AtomicBoolean(false)
             runCatching {
                 clearSiteMediaDecisions(mediaOrigin) { success ->
                     if (completed.compareAndSet(false, true)) {
-                        dispatchToMain { finalize(success) }
+                        dispatchToMain { finalize(initialSuccess && success) }
                     }
                 }
             }.onFailure {
@@ -135,7 +135,7 @@ internal class BrowserBrowsingDataCoordinator(
                     this.clearHistory { historyCleared ->
                         if (completed.compareAndSet(false, true)) {
                             dispatchToMain {
-                                if (historyCleared) runAppOwnedCleanup() else finalize(false)
+                                runAppOwnedCleanup(historyCleared)
                             }
                         }
                     }
