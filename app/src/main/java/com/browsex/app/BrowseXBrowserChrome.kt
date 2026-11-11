@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -53,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -71,6 +73,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 
@@ -576,8 +579,39 @@ private fun BrowseXTabsSheet(
                     Text("New tab", modifier = Modifier.padding(start = 6.dp))
                 }
             }
+            var search by rememberSaveable { mutableStateOf("") }
+            var filter by remember { mutableIntStateOf(0) }
+            TextField(
+                value = search,
+                onValueChange = { search = it.take(128) },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search tabs") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(selected = filter == 0, onClick = { filter = 0 }, label = { Text("All") })
+                FilterChip(selected = filter == 1, onClick = { filter = 1 }, label = { Text("Regular") })
+                FilterChip(selected = filter == 2, onClick = { filter = 2 }, label = { Text("Private") })
+            }
+            val needle = search.trim().lowercase(Locale.ROOT)
+            val visibleTabs = tabs.filter { tab ->
+                (filter == 0 || (filter == 1 && !tab.privateMode) || (filter == 2 && tab.privateMode)) &&
+                    (needle.isBlank() || tab.title.lowercase(Locale.ROOT).contains(needle) ||
+                        tab.url.lowercase(Locale.ROOT).contains(needle))
+            }
             Spacer(Modifier.height(12.dp))
-            if (tabs.isEmpty()) {
+            if (visibleTabs.isEmpty()) {
                 Text(
                     text = "No open tabs",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -585,7 +619,7 @@ private fun BrowseXTabsSheet(
                 )
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
-                    items(tabs, key = { System.identityHashCode(it.session) }) { tab ->
+                    items(visibleTabs, key = { System.identityHashCode(it.session) }) { tab ->
                         val selected = tab === activeTab
                         val host = runCatching {
                             android.net.Uri.parse(tab.url).host?.removePrefix("www.")
