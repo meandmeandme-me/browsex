@@ -34,6 +34,11 @@ internal class TabsPage(
 
     private fun tr(value: String): String = BrowseXStrings.text(activity, value)
     private fun dp(value: Int): Int = (value * activity.resources.displayMetrics.density).toInt()
+
+    private fun AlertDialog.Builder.showWren(): AlertDialog = create().also { styled ->
+        styled.show()
+        WrenDialogStyle.apply(styled, activity)
+    }
     private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radius).toFloat()
@@ -175,11 +180,11 @@ internal class TabsPage(
                                     .setMessage(tr("A session with this name already exists. Replace it?"))
                                     .setNegativeButton(tr("Cancel"), null)
                                     .setPositiveButton(tr("Replace")) { _, _ -> save() }
-                                    .show()
+                                    .showWren()
                             } else save()
                         }
                     }
-                    .show()
+                    .showWren()
             }
         }
         sessionAction("Saved sessions") {
@@ -220,10 +225,10 @@ internal class TabsPage(
                                     }
                                 }
                                 .setNegativeButton(tr("Cancel"), null)
-                                .show()
+                                .showWren()
                         }
                         .setNegativeButton(tr("Close"), null)
-                        .show()
+                        .showWren()
                 }
             }
         }
@@ -349,10 +354,10 @@ internal class TabsPage(
                                         onToast(if (cleared) "Recently closed list cleared" else "Could not clear recently closed tabs")
                                     }
                                 }
-                                .show()
+                                .showWren()
                         }
                         .setNegativeButton(tr("Close"), null)
-                        .show()
+                        .showWren()
                 }
             }
         }
@@ -371,7 +376,7 @@ internal class TabsPage(
                         dialog.dismiss()
                         show()
                     }
-                    .show()
+                    .showWren()
             }
         }
         page.addView(sessionActions)
@@ -573,7 +578,7 @@ internal class TabsPage(
                                 }
                             }
                         }
-                        .show()
+                        .showWren()
                 }
                 card.setOnContextClickListener {
                     showTabActions()
