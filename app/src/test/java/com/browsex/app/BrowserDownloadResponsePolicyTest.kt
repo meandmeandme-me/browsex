@@ -25,6 +25,18 @@ class BrowserDownloadResponsePolicyTest {
         assertFalse(BrowserDownloadResponsePolicy.isSupported("https://example.com/file.zip", 200, false))
     }
 
+    @Test fun acceptsHttpSchemesWithoutCaseSensitivity() {
+        assertTrue(BrowserDownloadResponsePolicy.isSupported("HTTPS://example.com/file.zip", 200, true))
+        assertTrue(BrowserDownloadResponsePolicy.isSupported("HtTp://example.com/file.zip", 200, true))
+    }
+
+    @Test fun rejectsUrisWithoutAnAuthorityHost() {
+        assertFalse(BrowserDownloadResponsePolicy.isSupported("https:/example.com/file.zip", 200, true))
+        assertFalse(BrowserDownloadResponsePolicy.isSupported("https:///example.com/file.zip", 200, true))
+        assertFalse(BrowserDownloadResponsePolicy.isSupported("https://?download", 200, true))
+        assertFalse(BrowserDownloadResponsePolicy.isSupported("//example.com/file.zip", 200, true))
+    }
+
     @Test fun rejectsUnsafeOrMalformedUris() {
         assertFalse(BrowserDownloadResponsePolicy.isSupported("file:///sdcard/file.zip", 200, true))
         assertFalse(BrowserDownloadResponsePolicy.isSupported("javascript:/download", 200, true))
