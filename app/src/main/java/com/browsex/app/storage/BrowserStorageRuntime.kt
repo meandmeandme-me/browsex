@@ -14,9 +14,9 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Application-scoped entry point for Room storage.
  *
- * Wren starts with a separate clean Room database. Legacy SharedPreferences browsing
- * data is intentionally not imported. Until explicit migrations are added, schema
- * changes use Room's destructive fallback while the product is in active development.
+ * BrowseX starts with a clean Room database baseline before its first public release.
+ * Legacy SharedPreferences browsing data is intentionally not imported. Schema changes
+ * must use explicit, fixture-tested Room migrations; destructive fallback is disabled.
  */
 internal class BrowserStorageRuntime(context: Context) {
     private val appContext = context.applicationContext
