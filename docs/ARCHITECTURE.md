@@ -105,13 +105,15 @@ Keep protection policy separate from UI:
 
 ### Data and schema evolution
 
-The current Room database is version 2 and still configures destructive migration fallback. Before shipping persistent user data:
-1. Commit the generated Room schema JSON for every released database version.
-2. Add and test explicit migrations from each supported prior version.
-3. Remove destructive fallback only after migration coverage is complete.
-4. Test upgrade paths with real previous-version database fixtures.
+The current Room database is version 2. The repository currently contains the version-2 schema export but no version-1 schema fixture, and the database builder now deliberately has no destructive migration fallback. This is a pre-release fail-closed policy: an unsupported schema mismatch must not silently erase browsing data.
 
-The CI workflow expects the generated schema at `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json`; keep that artifact committed and in sync with the entity definitions.
+Before shipping persistent user data:
+1. Commit the generated Room schema JSON for every released database version.
+2. Add and test explicit migrations from each supported prior version using fixtures from the actual exported schemas.
+3. Verify migration rollback/failure behavior, row preservation, indexes, foreign keys, and backup/restore across upgrades.
+4. Block release if any previously shipped version lacks a tested migration path.
+
+See `docs/DATABASE_MIGRATION_RELEASE_GATE.md` for the required migration and release checklist. The CI workflow expects the generated schema at `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json`; keep that artifact committed and in sync with the entity definitions.
 
 ## Build and verification
 
