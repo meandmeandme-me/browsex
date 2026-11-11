@@ -1692,7 +1692,13 @@ class MainActivity : AppCompatActivity() {
                     settings = composeSettingsState.value,
                     androidNotificationsEnabled = NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled(),
                     onDismissSettings = { composeSettingsOpen.value = false },
-                    onUpdateSettings = { transform -> updateBrowserSettings(transform) },
+                    onUpdateSettings = { transform ->
+                        updateBrowserSettings(transform) { updated ->
+                            if (!updated.siteNotificationsEnabled) {
+                                NotificationManagerCompat.from(this@MainActivity).cancelAll()
+                            }
+                        }
+                    },
                     onSettingsAction = { action ->
                         composeSettingsOpen.value = false
                         performSettingsAction(action)
