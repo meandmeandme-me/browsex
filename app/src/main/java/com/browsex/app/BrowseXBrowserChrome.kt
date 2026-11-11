@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -53,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -61,7 +63,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -72,6 +73,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 
@@ -93,7 +95,10 @@ internal enum class BrowseXMenuAction(val label: String) {
     CLOSE_PRIVATE_TABS("Close private tabs"),
     RECALL("Find anything"),
     PASSWORDS("Password manager"),
-    SAVED_SESSIONS("Saved sessions")
+    SAVED_SESSIONS("Saved sessions"),
+    SAVE_SESSION("Save current session"),
+    RECENTLY_CLOSED("Recently closed tabs"),
+    CLOSE_ALL_TABS("Close all tabs")
 }
 
 internal data class BrowseXChromeState(
@@ -137,7 +142,44 @@ internal fun BrowseXBrowserChrome(
     onSelectSuggestion: (AddressSuggestion) -> Unit,
     menuOpen: Boolean,
     onDismissMenu: () -> Unit,
-    onMenuAction: (BrowseXMenuAction) -> Unit
+    onMenuAction: (BrowseXMenuAction) -> Unit,
+    tabs: List<BrowserTab>,
+    activeTab: BrowserTab?,
+    tabsOpen: Boolean,
+    onDismissTabs: () -> Unit,
+    onSelectTab: (BrowserTab) -> Unit,
+    onCloseTab: (BrowserTab) -> Unit,
+    onCreateTab: () -> Unit,
+    settingsOpen: Boolean,
+    settings: com.browsex.app.storage.BrowserSettings,
+    androidNotificationsEnabled: Boolean,
+    onDismissSettings: () -> Unit,
+    onUpdateSettings: ((com.browsex.app.storage.BrowserSettings) -> com.browsex.app.storage.BrowserSettings) -> Unit,
+    onSettingsAction: (BrowseXSettingsAction) -> Unit,
+    savedPagesOpen: Boolean,
+    savedPagesState: BrowseXSavedPagesState,
+    onDismissSavedPages: () -> Unit,
+    onOpenSavedPage: (String) -> Unit,
+    onRemoveSavedPage: (String) -> Unit,
+    onRenameBookmark: (String, String) -> Unit,
+    onMoveBookmark: (String, String) -> Unit,
+    onMoveBookmarkWithinFolder: (String, String, Int) -> Unit,
+    onCreateBookmarkFolder: (String) -> Unit,
+    onRenameBookmarkFolder: (String, String) -> Unit,
+    onDeleteBookmarkFolder: (String) -> Unit,
+    onClearSavedHistory: () -> Unit,
+    onShareSavedPage: (String) -> Unit,
+    onCopySavedPage: (String) -> Unit,
+    privacyOpen: Boolean,
+    privacySummary: BrowseXPrivacySummary,
+    onDismissPrivacy: () -> Unit,
+    onManageProtection: () -> Unit,
+    onClearPrivacyData: (Long, Boolean) -> Unit,
+    sitePermissionsOpen: Boolean,
+    sitePermissions: List<com.browsex.app.storage.SitePermissionDecisionEntity>,
+    onDismissSitePermissions: () -> Unit,
+    onSetSitePermission: (String, String, String) -> Unit,
+    onResetSitePermissions: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -410,7 +452,6 @@ internal fun BrowseXBrowserChrome(
                                             keyboard?.hide()
                                         }
                                     ),
-                                    cursorBrush = SolidColor(primary),
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Color.Transparent,
                                         unfocusedContainerColor = Color.Transparent,
@@ -501,6 +542,219 @@ internal fun BrowseXBrowserChrome(
                 onDismiss = onDismissMenu,
                 onAction = onMenuAction
             )
+        }
+        if (tabsOpen) {
+            BrowseXTabsSheet(
+                tabs = tabs,
+                activeTab = activeTab,
+                onDismiss = onDismissTabs,
+                onSelect = onSelectTab,
+                onClose = onCloseTab,
+                onCreateTab = onCreateTab
+            )
+        }
+        if (settingsOpen) {
+            BrowseXSettingsSheet(
+                settings = settings,
+                androidNotificationsEnabled = androidNotificationsEnabled,
+                onDismiss = onDismissSettings,
+                onUpdateSettings = onUpdateSettings,
+                onAction = onSettingsAction
+            )
+        }
+        if (savedPagesOpen) {
+            BrowseXSavedPagesScreen(
+                state = savedPagesState,
+                onDismiss = onDismissSavedPages,
+                onOpen = onOpenSavedPage,
+                onRemove = onRemoveSavedPage,
+                onRenameBookmark = onRenameBookmark,
+                onMoveBookmark = onMoveBookmark,
+                onMoveWithinFolder = onMoveBookmarkWithinFolder,
+                onCreateFolder = onCreateBookmarkFolder,
+                onRenameFolder = onRenameBookmarkFolder,
+                onDeleteFolder = onDeleteBookmarkFolder,
+                onClearHistory = onClearSavedHistory,
+                onShare = onShareSavedPage,
+                onCopy = onCopySavedPage
+            )
+        }
+        if (privacyOpen) {
+            BrowseXPrivacySheet(
+                summary = privacySummary,
+                onDismiss = onDismissPrivacy,
+                onManageProtection = onManageProtection,
+                onClearData = onClearPrivacyData
+            )
+        }
+        if (sitePermissionsOpen) {
+            BrowseXSitePermissionsSheet(
+                entries = sitePermissions,
+                onDismiss = onDismissSitePermissions,
+                onSetDecision = onSetSitePermission,
+                onResetAll = onResetSitePermissions
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BrowseXTabsSheet(
+    tabs: List<BrowserTab>,
+    activeTab: BrowserTab?,
+    onDismiss: () -> Unit,
+    onSelect: (BrowserTab) -> Unit,
+    onClose: (BrowserTab) -> Unit,
+    onCreateTab: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 22.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Your tabs",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${tabs.size} open",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                androidx.compose.material3.FilledTonalButton(onClick = onCreateTab) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text("New tab", modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            var search by rememberSaveable { mutableStateOf("") }
+            var filter by remember { mutableIntStateOf(0) }
+            TextField(
+                value = search,
+                onValueChange = { search = it.take(128) },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search tabs") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(selected = filter == 0, onClick = { filter = 0 }, label = { Text("All") })
+                FilterChip(selected = filter == 1, onClick = { filter = 1 }, label = { Text("Regular") })
+                FilterChip(selected = filter == 2, onClick = { filter = 2 }, label = { Text("Private") })
+            }
+            val needle = search.trim().lowercase(Locale.ROOT)
+            val visibleTabs = tabs.filter { tab ->
+                (filter == 0 || (filter == 1 && !tab.privateMode) || (filter == 2 && tab.privateMode)) &&
+                    (needle.isBlank() || tab.title.lowercase(Locale.ROOT).contains(needle) ||
+                        tab.url.lowercase(Locale.ROOT).contains(needle))
+            }
+            Spacer(Modifier.height(12.dp))
+            if (visibleTabs.isEmpty()) {
+                Text(
+                    text = "No open tabs",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
+                    items(visibleTabs, key = { System.identityHashCode(it.session) }) { tab ->
+                        val selected = tab === activeTab
+                        val host = runCatching {
+                            android.net.Uri.parse(tab.url).host?.removePrefix("www.")
+                        }.getOrNull().orEmpty()
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onSelect(tab) },
+                            shape = RoundedCornerShape(18.dp),
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                            },
+                            border = BorderStroke(
+                                if (selected) 2.dp else 1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 14.dp, end = 5.dp, top = 10.dp, bottom = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = tab.title.ifBlank { "New tab" },
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        if (tab.privateMode) {
+                                            Text(
+                                                text = "PRIVATE",
+                                                color = MaterialTheme.colorScheme.primary,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier.padding(start = 7.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = host.ifBlank { "New tab" },
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (tab.progress in 1..99) {
+                                        LinearProgressIndicator(
+                                            progress = tab.progress / 100f,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 7.dp)
+                                                .height(2.dp)
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = { onClose(tab) },
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Close tab",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

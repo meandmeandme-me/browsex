@@ -46,7 +46,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.platform.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
@@ -305,6 +304,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var composeChromeView: ComposeView
     private val composeChromeState = mutableStateOf(BrowseXChromeState())
     private val composeMenuOpen = mutableStateOf(false)
+    private val composeTabsOpen = mutableStateOf(false)
+    private val composeTabsState = mutableStateOf<List<BrowserTab>>(emptyList())
+    private val composeActiveTabState = mutableStateOf<BrowserTab?>(null)
+    private val composeSettingsOpen = mutableStateOf(false)
+    private val composeSettingsState = mutableStateOf(BrowserSettings())
+    private val composeSavedPagesOpen = mutableStateOf(false)
+    private val composeSavedPagesState = mutableStateOf(BrowseXSavedPagesState())
+    private val composePrivacyOpen = mutableStateOf(false)
+    private val composePrivacySummary = mutableStateOf(BrowseXPrivacySummary("", true, true))
+    private val composeSitePermissionsOpen = mutableStateOf(false)
+    private val composeSitePermissionsState = mutableStateOf<List<com.browsex.app.storage.SitePermissionDecisionEntity>>(emptyList())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1653,7 +1663,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                     onNewTab = { createTab(homePageUrl()) },
-                    onOpenTabs = ::showTabs,
+                    onOpenTabs = { composeTabsOpen.value = true },
                     onMenu = { composeMenuOpen.value = true },
                     onProtection = {
                         val session = activeTab?.session
@@ -1670,6 +1680,73 @@ class MainActivity : AppCompatActivity() {
                     onMenuAction = { action ->
                         composeMenuOpen.value = false
                         performBrowserMenuAction(action)
+                    },
+                    tabs = composeTabsState.value,
+                    activeTab = composeActiveTabState.value,
+                    tabsOpen = composeTabsOpen.value,
+                    onDismissTabs = { composeTabsOpen.value = false },
+                    onSelectTab = { selected ->
+                        composeTabsOpen.value = false
+                        activateTab(selected)
+                    },
+                    onCloseTab = ::closeTab,
+                    onCreateTab = {
+                        composeTabsOpen.value = false
+                        createTab(homePageUrl())
+                    },
+                    settingsOpen = composeSettingsOpen.value,
+                    settings = composeSettingsState.value,
+                    androidNotificationsEnabled = NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled(),
+                    onDismissSettings = { composeSettingsOpen.value = false },
+                    onUpdateSettings = { transform ->
+                        updateBrowserSettings(transform) { updated ->
+                            if (!updated.siteNotificationsEnabled) {
+                                NotificationManagerCompat.from(this@MainActivity).cancelAll()
+                            }
+                        }
+                    },
+                    onSettingsAction = { action ->
+                        composeSettingsOpen.value = false
+                        performSettingsAction(action)
+                    },
+                    savedPagesOpen = composeSavedPagesOpen.value,
+                    savedPagesState = composeSavedPagesState.value,
+                    onDismissSavedPages = { composeSavedPagesOpen.value = false },
+                    onOpenSavedPage = { url ->
+                        composeSavedPagesOpen.value = false
+                        createTab(url)
+                    },
+                    onRemoveSavedPage = ::removeSavedPage,
+                    onRenameBookmark = ::renameSavedBookmark,
+                    onMoveBookmark = ::moveSavedBookmark,
+                    onMoveBookmarkWithinFolder = ::moveSavedBookmarkWithinFolder,
+                    onCreateBookmarkFolder = ::createSavedBookmarkFolder,
+                    onRenameBookmarkFolder = ::renameSavedBookmarkFolder,
+                    onDeleteBookmarkFolder = ::deleteSavedBookmarkFolder,
+                    onClearSavedHistory = ::clearSavedHistoryFromLibrary,
+                    onShareSavedPage = ::shareSavedPage,
+                    onCopySavedPage = ::copySavedPage,
+                    privacyOpen = composePrivacyOpen.value,
+                    privacySummary = composePrivacySummary.value,
+                    onDismissPrivacy = { composePrivacyOpen.value = false },
+                    onManageProtection = {
+                        composePrivacyOpen.value = false
+                        showUBlockOriginSettings()
+                    },
+                    onClearPrivacyData = { flags, clearHistory ->
+                        composePrivacyOpen.value = false
+                        clearBrowsingData(flags, clearHistory)
+                    },
+                    sitePermissionsOpen = composeSitePermissionsOpen.value,
+                    sitePermissions = composeSitePermissionsState.value,
+                    onDismissSitePermissions = { composeSitePermissionsOpen.value = false },
+                    onSetSitePermission = ::updateSitePermissionDecision,
+                    onResetSitePermissions = {
+                        composeSitePermissionsOpen.value = false
+                        clearBrowsingData(
+                            org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS,
+                            clearHistory = false
+                        )
                     }
                 )
             }
@@ -1802,6 +1879,9 @@ class MainActivity : AppCompatActivity() {
         val pageUrl = tab?.url.orEmpty()
         val host = runCatching { Uri.parse(pageUrl).host?.removePrefix("www.") }
             .getOrNull()?.takeIf { it.isNotBlank() }
+        composeTabsState.value = tabs.toList()
+        composeActiveTabState.value = tab
+        composeSettingsState.value = browserSettingsSnapshot
         composeChromeState.value = BrowseXChromeState(
             url = pageUrl.takeUnless { it.startsWith(HOME_URL) }.orEmpty(),
             title = host ?: if (tab == null || pageUrl.startsWith(HOME_URL)) "New tab" else tab.title,
@@ -1989,16 +2069,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTabs() {
-        TabsPage(
-            activity = this,
-            tabsProvider = { tabs },
-            activeTabProvider = { activeTab },
-            onCreateTab = { url -> createTab(url) },
-            onActivateTab = ::activateTab,
-            onCloseTab = ::closeTab,
-            homePageUrlProvider = ::homePageUrl,
-            onToast = ::toast
-        ).show()
+        composeTabsOpen.value = true
     }
 
     private fun showBrowserMenu() {
@@ -2048,7 +2119,180 @@ class MainActivity : AppCompatActivity() {
             BrowseXMenuAction.RECALL -> showRecall()
             BrowseXMenuAction.PASSWORDS -> passwordManager.show()
             BrowseXMenuAction.SAVED_SESSIONS -> showSavedSessions()
+            BrowseXMenuAction.SAVE_SESSION -> saveCurrentSession()
+            BrowseXMenuAction.RECENTLY_CLOSED -> showRecentlyClosedTabs()
+            BrowseXMenuAction.CLOSE_ALL_TABS -> closeAllTabs()
         }
+    }
+
+    private fun saveCurrentSession() {
+        val regularTabs = tabs.filterNot { it.privateMode }
+        if (regularTabs.isEmpty()) {
+            toast("No regular tabs to save")
+            return
+        }
+        val field = EditText(this).apply {
+            hint = tr("Session name")
+            maxLines = 1
+        }
+        AlertDialog.Builder(this)
+            .setTitle(tr("Save browsing session"))
+            .setView(field)
+            .setNegativeButton(tr("Cancel"), null)
+            .setPositiveButton(tr("Save")) { _, _ ->
+                val name = field.text?.toString().orEmpty().trim()
+                lifecycleScope.launch {
+                    val storage = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                        android.util.Log.e("BrowseX", "Could not load saved sessions", it)
+                        toast("Could not save session")
+                        return@launch
+                    }
+                    val existing = runCatching { storage.sessions.sessions() }.getOrElse {
+                        android.util.Log.e("BrowseX", "Could not inspect saved sessions", it)
+                        toast("Could not save session")
+                        return@launch
+                    }
+                    val save = {
+                        lifecycleScope.launch {
+                            val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+                            val saved = runCatching {
+                                storage.sessions.saveSession(name, regularTabs.map { it.url }, activeIndex)
+                            }.getOrDefault(false)
+                            toast(if (saved) "Session saved" else "Session name is invalid or the session limit was reached")
+                        }
+                    }
+                    if (existing.any { it.name.equals(name, ignoreCase = true) }) {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setMessage(tr("A session with this name already exists. Replace it?"))
+                            .setNegativeButton(tr("Cancel"), null)
+                            .setPositiveButton(tr("Replace")) { _, _ -> save() }
+                            .show()
+                    } else {
+                        save()
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun showRecentlyClosedTabs() {
+        lifecycleScope.launch {
+            val storage = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load recently closed tabs", it)
+                toast("Could not load recently closed tabs")
+                return@launch
+            }
+            val recentlyClosed = runCatching { storage.sessions.recentlyClosed() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load recently closed tabs", it)
+                toast("Could not load recently closed tabs")
+                return@launch
+            }
+            if (recentlyClosed.isEmpty()) {
+                toast("No recently closed tabs")
+                return@launch
+            }
+
+            fun restoreOne(index: Int) {
+                if (tabs.size >= TabSessionState.MAX_TABS) {
+                    toast("Tab limit reached")
+                    return
+                }
+                lifecycleScope.launch {
+                    if (tabs.size >= TabSessionState.MAX_TABS) {
+                        toast("Tab limit reached")
+                        return@launch
+                    }
+                    val restored = runCatching {
+                        storage.sessions.consumeRecentlyClosed(recentlyClosed[index].id)
+                    }.onFailure {
+                        android.util.Log.e("BrowseX", "Could not consume recently closed tab", it)
+                    }.getOrNull() ?: return@launch
+                    if (tabs.size < TabSessionState.MAX_TABS) {
+                        createTab(restored.url)
+                    } else {
+                        runCatching {
+                            storage.sessions.recordRecentlyClosed(restored.url, restored.title, restored.closedAt)
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not return recently closed tab", it)
+                        }
+                        toast("Tab limit reached")
+                    }
+                }
+            }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(tr("Recently closed"))
+                .setItems(recentlyClosed.map { "${it.title} · ${Uri.parse(it.url).host.orEmpty()}" }.toTypedArray()) { _, index ->
+                    restoreOne(index)
+                }
+                .setPositiveButton(tr("Restore all")) { parent, _ ->
+                    lifecycleScope.launch {
+                        val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                        if (available == 0) {
+                            toast("Tab limit reached")
+                            return@launch
+                        }
+                        val selected = recentlyClosed.take(available)
+                        val restored = runCatching {
+                            storage.sessions.consumeRecentlyClosed(selected.map { it.id })
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not consume recently closed tabs", it)
+                        }.getOrElse {
+                            toast("Could not restore tabs")
+                            return@launch
+                        }
+                        val capacityNow = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                        val toOpen = restored.take(capacityNow)
+                        val toReturn = restored.drop(capacityNow)
+                        toReturn.forEach { item ->
+                            runCatching {
+                                storage.sessions.recordRecentlyClosed(item.url, item.title, item.closedAt)
+                            }.onFailure {
+                                android.util.Log.e("BrowseX", "Could not return un-restored tab", it)
+                            }
+                        }
+                        toOpen.forEach { createTab(it.url) }
+                        if (toOpen.isNotEmpty()) parent.dismiss()
+                        when {
+                            toOpen.isEmpty() -> toast("Tab limit reached")
+                            toOpen.size < recentlyClosed.size -> toast("Some tabs restored; tab limit reached")
+                            else -> toast("Tabs restored")
+                        }
+                    }
+                }
+                .setNeutralButton(tr("Clear list")) { parent, _ ->
+                    AlertDialog.Builder(this@MainActivity)
+                        .setMessage(tr("Clear all recently closed tabs?"))
+                        .setNegativeButton(tr("Cancel"), null)
+                        .setPositiveButton(tr("Clear")) { _, _ ->
+                            lifecycleScope.launch {
+                                val cleared = runCatching {
+                                    storage.sessions.clearRecentlyClosed()
+                                }.isSuccess
+                                if (cleared) parent.dismiss()
+                                toast(if (cleared) "Recently closed list cleared" else "Could not clear recently closed tabs")
+                            }
+                        }
+                        .show()
+                }
+                .setNegativeButton(tr("Close"), null)
+                .show()
+        }
+    }
+
+    private fun closeAllTabs() {
+        if (tabs.isEmpty()) {
+            toast("No open tabs")
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(tr("Close all tabs"))
+            .setMessage(tr("Close every open tab?"))
+            .setNegativeButton(tr("Cancel"), null)
+            .setPositiveButton(tr("Close all")) { _, _ ->
+                tabs.toList().forEach(::closeTab)
+            }
+            .show()
     }
 
     private fun showSavedSessions() {
@@ -2252,30 +2496,57 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
-        SettingsPage(
-            activity = this,
-            openBookmarks = { showSavedPages("Bookmarks", emptyList()) },
-            openHistory = { showSavedPages("History", emptyList()) },
-            openDownloads = { openDownloads() },
-            clearHistory = {
-                lifecycleScope.launch {
-                    runCatching { clearStoredHistory() }
-                        .onSuccess { toast("History cleared") }
-                        .onFailure { toast(BrowseXStrings.text(this@MainActivity, "Could not clear history", "تعذر مسح السجل")) }
-                }
-            },
-            setWebsiteNotifications = { enabled ->
-                updateBrowserSettings(transform = { it.copy(siteNotificationsEnabled = enabled) })
-                if (!enabled) NotificationManagerCompat.from(this).cancelAll()
-            },
-            importBookmarks = { bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain")) },
-            exportBookmarks = { bookmarkExportLauncher.launch("wren-bookmarks.html") },
-            showHomePreferences = { showHomePreferences() },
-            openPrivacyCenter = { showPrivacyCenter() },
-            openSitePermissions = { SitePermissionsPage(this) { clearBrowsingData(org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS, clearHistory = false) }.show() },
-            manageUBlockOrigin = { showUBlockOriginSettings() },
-            openAutofillSettings = { openAutofillServiceSettings() }
-        ).show()
+        composeSettingsOpen.value = true
+    }
+
+    private fun performSettingsAction(action: BrowseXSettingsAction) {
+        when (action) {
+            BrowseXSettingsAction.BOOKMARKS -> showSavedPages("Bookmarks", emptyList())
+            BrowseXSettingsAction.HISTORY -> showSavedPages("History", emptyList())
+            BrowseXSettingsAction.DOWNLOADS -> openDownloads()
+            BrowseXSettingsAction.IMPORT_BOOKMARKS ->
+                bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain"))
+            BrowseXSettingsAction.EXPORT_BOOKMARKS -> bookmarkExportLauncher.launch("browsex-bookmarks.html")
+            BrowseXSettingsAction.HOME_PAGE -> showHomePreferences()
+            BrowseXSettingsAction.PRIVACY_CENTER -> showPrivacyCenter()
+            BrowseXSettingsAction.SITE_PERMISSIONS -> showSitePermissionsPage()
+            BrowseXSettingsAction.UBLOCK -> showUBlockOriginSettings()
+            BrowseXSettingsAction.AUTOFILL -> openAutofillServiceSettings()
+            BrowseXSettingsAction.CLEAR_HISTORY -> AlertDialog.Builder(this)
+                .setTitle(tr("Clear browsing history?"))
+                .setMessage(tr("This removes the history list saved by BrowseX. It does not delete downloaded files or bookmarks."))
+                .setNegativeButton(tr("Cancel"), null)
+                .setPositiveButton(tr("Clear")) { _, _ ->
+                    lifecycleScope.launch {
+                        runCatching { clearStoredHistory() }
+                            .onSuccess { toast("History cleared") }
+                            .onFailure {
+                                android.util.Log.e("BrowseX", "Could not clear history from settings", it)
+                                toast("Could not clear history")
+                            }
+                    }
+                }.show()
+            BrowseXSettingsAction.ANDROID_NOTIFICATION_SETTINGS -> runCatching {
+                startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                )
+            }.onFailure {
+                startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                )
+            }
+            BrowseXSettingsAction.ANDROID_APP_PERMISSIONS -> startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+            )
+            BrowseXSettingsAction.ABOUT -> AlertDialog.Builder(this)
+                .setTitle("BrowseX")
+                .setMessage(
+                    tr("BrowseX is powered by Mozilla GeckoView. The interface is being rebuilt around an open-source Compose UI foundation.")
+                )
+                .setPositiveButton(tr("Done"), null)
+                .show()
+        }
     }
 
 
@@ -2388,11 +2659,53 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPrivacyCenter() {
-        PrivacyPage(
-            activity = this,
-            clearData = { flags, clearHistory -> clearBrowsingData(flags, clearHistory) },
-            manageProtection = { showUBlockOriginSettings() }
-        ).show()
+        val settings = browserSettingsSnapshot
+        val uBlockStatus = when {
+            !settings.adBlockInstalled -> tr("uBlock Origin: not installed")
+            settings.adBlockEnabled -> tr("uBlock Origin: enabled")
+            else -> tr("uBlock Origin: installed, currently off")
+        }
+        composePrivacySummary.value = BrowseXPrivacySummary(
+            uBlockStatus = uBlockStatus,
+            regularTrackingProtection = BrowserContentProtectionPolicy.useGeckoTrackingProtection(false),
+            privateTrackingProtection = BrowserContentProtectionPolicy.useGeckoTrackingProtection(true)
+        )
+        composePrivacyOpen.value = true
+    }
+
+    private fun showSitePermissionsPage() {
+        lifecycleScope.launch {
+            val entries = runCatching { storageRuntime.awaitReady().sitePermissions.all() }
+                .onFailure {
+                    android.util.Log.e("BrowseX", "Could not load saved site permissions", it)
+                }.getOrElse {
+                    toast("Could not load site permissions")
+                    return@launch
+                }
+            composeSitePermissionsState.value = entries
+            composeSitePermissionsOpen.value = true
+        }
+    }
+
+    private suspend fun refreshComposeSitePermissions() {
+        if (!composeSitePermissionsOpen.value) return
+        composeSitePermissionsState.value = storageRuntime.awaitReady().sitePermissions.all()
+    }
+
+    private fun updateSitePermissionDecision(origin: String, feature: String, decision: String) {
+        lifecycleScope.launch {
+            val updated = runCatching {
+                storageRuntime.awaitReady().sitePermissions.setDecision(origin, feature, decision)
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not update site permission", it)
+            }.getOrDefault(false)
+            if (updated) {
+                toast(tr("Permission updated"))
+                runCatching { refreshComposeSitePermissions() }
+            } else {
+                toast(tr("Could not update permission"))
+            }
+        }
     }
 
     private fun clearBrowsingData(flags: Long, clearHistory: Boolean) =
@@ -2447,11 +2760,151 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
-        RoomSavedPagesPage(
-            activity = this,
-            title = title,
-            onOpen = { url -> createTab(url) }
-        ).show()
+        val isHistory = title.contains("History", ignoreCase = true)
+        lifecycleScope.launch {
+            val storage = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not open saved pages", it)
+                toast("Library is temporarily unavailable")
+                return@launch
+            }
+            composeSavedPagesState.value = BrowseXSavedPagesState(
+                isHistory = isHistory,
+                bookmarks = if (isHistory) emptyList() else storage.bookmarks.all(),
+                folders = if (isHistory) emptyList() else storage.bookmarks.folders(),
+                history = if (isHistory) storage.history.recent() else emptyList()
+            )
+            composeSavedPagesOpen.value = true
+        }
+    }
+
+    private suspend fun refreshComposeSavedPages() {
+        if (!composeSavedPagesOpen.value) return
+        val storage = storageRuntime.awaitReady()
+        val isHistory = composeSavedPagesState.value.isHistory
+        composeSavedPagesState.value = BrowseXSavedPagesState(
+            isHistory = isHistory,
+            bookmarks = if (isHistory) emptyList() else storage.bookmarks.all(),
+            folders = if (isHistory) emptyList() else storage.bookmarks.folders(),
+            history = if (isHistory) storage.history.recent() else emptyList()
+        )
+    }
+
+    private fun removeSavedPage(url: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val storage = storageRuntime.awaitReady()
+                if (composeSavedPagesState.value.isHistory) storage.history.remove(url)
+                else storage.bookmarks.remove(url)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not remove saved page", it)
+                toast("Could not remove item")
+            }
+        }
+    }
+
+    private fun renameSavedBookmark(url: String, title: String) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().bookmarks.rename(url, title)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not rename bookmark", it)
+                toast("Could not rename bookmark")
+            }
+        }
+    }
+
+    private fun moveSavedBookmark(url: String, folderId: String) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().bookmarks.move(url, folderId)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not move bookmark", it)
+                toast("Could not move bookmark")
+            }
+        }
+    }
+
+    private fun moveSavedBookmarkWithinFolder(url: String, folderId: String, direction: Int) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().bookmarks.moveWithinFolder(url, folderId, direction)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not reorder bookmark", it)
+                toast("Could not reorder bookmark")
+            }
+        }
+    }
+
+    private fun createSavedBookmarkFolder(name: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val id = storageRuntime.awaitReady().bookmarks.createFolder(name)
+                if (id == null) toast("Folder name is invalid or the folder limit was reached")
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not create bookmark folder", it)
+                toast("Could not create folder")
+            }
+        }
+    }
+
+    private fun renameSavedBookmarkFolder(folderId: String, name: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val renamed = storageRuntime.awaitReady().bookmarks.renameFolder(folderId, name)
+                if (!renamed) toast("Could not rename folder")
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not rename bookmark folder", it)
+                toast("Could not rename folder")
+            }
+        }
+    }
+
+    private fun deleteSavedBookmarkFolder(folderId: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val deleted = storageRuntime.awaitReady().bookmarks.deleteFolder(folderId)
+                if (!deleted) toast("Could not delete folder")
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not delete bookmark folder", it)
+                toast("Could not delete folder")
+            }
+        }
+    }
+
+    private fun clearSavedHistoryFromLibrary() {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().history.clear()
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not clear browsing history", it)
+                toast("Could not clear history")
+            }
+        }
+    }
+
+    private fun shareSavedPage(url: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+        }
+        runCatching { startActivity(Intent.createChooser(intent, tr("Share page"))) }
+            .onFailure { toast("Could not share page") }
+    }
+
+    private fun copySavedPage(url: String) {
+        runCatching {
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("BrowseX page", url))
+        }.onSuccess { toast("Address copied") }
+            .onFailure { toast("Could not copy address") }
     }
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
