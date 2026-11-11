@@ -67,6 +67,7 @@ internal class RoomSessionRepository(
             .filter { it.closedAt >= 0L && isSafeRestorableUrl(it.url) && it.url != HOME_URL }
             .take(MAX_RECENTLY_CLOSED)
             .map { it.copy(title = normalizeDisplayText(it.title, MAX_RECENT_TITLE)) }
+            .toList()
     }
 
     suspend fun recordRecentlyClosed(
