@@ -77,14 +77,18 @@ class BrowserNotificationPermissionCoordinatorTest {
     @Test fun pendingNotificationPermissionCallbacksAreBounded() {
         var launches = 0
         var rejected = 0
+        var grantedCount = 0
         val coordinator = coordinator(launch = { launches++ })
         repeat(65) {
-            coordinator.request { granted -> if (!granted) rejected++ }
+            coordinator.request { granted ->
+                if (granted) grantedCount++ else rejected++
+            }
         }
         assertEquals(1, launches)
         assertEquals(1, rejected)
         coordinator.onResult(true)
-        assertEquals(64, rejected)
+        assertEquals(1, rejected)
+        assertEquals(64, grantedCount)
     }
 
     @Test fun systemNotificationToggleCanRejectGrantedRuntimePermission() {
