@@ -256,7 +256,7 @@ internal fun BrowseXBrowserChrome(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Transparent)
+                .background(if (state.isHome) Color(state.canvasColor) else Color.Transparent)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             val wide = maxWidth >= 600.dp
