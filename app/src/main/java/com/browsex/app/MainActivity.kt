@@ -334,6 +334,8 @@ class MainActivity : AppCompatActivity() {
     private val composeHomeState = mutableStateOf(BrowseXHomeState())
     private var lastHomeRefreshKey: String? = null
     private var downloadsRefreshJob: Job? = null
+    private val composeUBlockSettingsOpen = mutableStateOf(false)
+    private val composeUBlockState = mutableStateOf(BrowseXUBlockState())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1052,20 +1054,6 @@ class MainActivity : AppCompatActivity() {
             isHostUnavailable = { isFinishing || isDestroyed },
             showMessage = ::toast,
             translate = ::tr
-        )
-    }
-
-    private val uBlockSettings by lazy {
-        BrowserUBlockSettingsCoordinator(
-            activity = this,
-            manager = { uBlockOriginManager },
-            activeSession = { activeTab?.session },
-            isHostUnavailable = { isFinishing || isDestroyed },
-            showMessage = ::toast,
-            translate = ::tr,
-            dp = ::dp,
-            textColor = colors.ink,
-            onSettingsChanged = ::recreate
         )
     }
 
@@ -1836,7 +1824,22 @@ class MainActivity : AppCompatActivity() {
                     onHomeDownloads = ::openDownloads,
                     onHomeSettings = ::showSettings,
                     onHomePrivateTab = { createTab(homePageUrl(), privateMode = true) },
-                    onHomeCustomize = { showSavedPages("Bookmarks", emptyList()) }
+                    onHomeCustomize = { showSavedPages("Bookmarks", emptyList()) },
+                    uBlockSettingsOpen = composeUBlockSettingsOpen.value,
+                    uBlockState = composeUBlockState.value,
+                    onDismissUBlockSettings = { composeUBlockSettingsOpen.value = false },
+                    onInstallUBlock = ::installUBlockOrigin,
+                    onToggleUBlock = ::setUBlockOriginEnabled,
+                    onUninstallUBlock = ::uninstallUBlockOrigin,
+                    onOpenUBlockSiteControls = {
+                        composeUBlockSettingsOpen.value = false
+                        val manager = uBlockOriginManager
+                        if (manager != null && manager.hasBrowserAction(activeTab?.session)) {
+                            manager.clickBrowserAction(activeTab?.session)
+                        } else {
+                            toast("uBlock Origin controls are unavailable for this site")
+                        }
+                    }
                 )
             }
         }
@@ -2895,7 +2898,100 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun showUBlockOriginSettings() = uBlockSettings.show()
+    private fun showUBlockOriginSettings() {
+        refreshComposeUBlockState()
+        composeUBlockSettingsOpen.value = true
+    }
+
+    private fun refreshComposeUBlockState() {
+        val manager = uBlockOriginManager
+        composeUBlockState.value = BrowseXUBlockState(
+            installed = manager?.isInstalled == true,
+            enabled = manager?.isEnabled == true,
+            allowedInPrivateBrowsing = manager?.isAllowedInPrivateBrowsing == true,
+            siteControlsAvailable = manager?.hasBrowserAction(activeTab?.session) == true
+        )
+    }
+
+    private fun updateUBlockSettings(installed: Boolean, enabled: Boolean, privateAllowed: Boolean) {
+        updateBrowserSettings({
+            it.copy(
+                adBlockInstalled = installed,
+                adBlockEnabled = enabled,
+                adBlockPrivateEnabled = privateAllowed
+            )
+        }) {
+            BrowserContentProtectionPolicy.configure(enabled, privateAllowed)
+            refreshComposeUBlockState()
+        }
+    }
+
+    private fun installUBlockOrigin(allowPrivate: Boolean) {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+        manager.install(allowPrivate) { installed, error ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (error != null || installed == null) {
+                    android.util.Log.w("BrowseX", "uBlock Origin installation failed", error)
+                    toast("Could not install uBlock Origin")
+                    refreshComposeUBlockState()
+                    return@runOnUiThread
+                }
+                val enabled = installed.metaData?.enabled == true
+                val privateAllowed = enabled && installed.metaData?.allowedInPrivateBrowsing == true
+                updateUBlockSettings(true, enabled, privateAllowed)
+                toast("uBlock Origin installed")
+            }
+        }
+    }
+
+    private fun setUBlockOriginEnabled(enabled: Boolean) {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+        manager.setEnabled(enabled) { updated, error ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (error != null || updated == null) {
+                    android.util.Log.w("BrowseX", "Could not update uBlock Origin", error)
+                    toast("Could not update uBlock Origin")
+                    refreshComposeUBlockState()
+                    return@runOnUiThread
+                }
+                val nowEnabled = updated.metaData?.enabled == true
+                val privateAllowed = nowEnabled && updated.metaData?.allowedInPrivateBrowsing == true
+                updateUBlockSettings(true, nowEnabled, privateAllowed)
+                toast(if (nowEnabled) "uBlock Origin enabled" else "uBlock Origin disabled")
+            }
+        }
+    }
+
+    private fun uninstallUBlockOrigin() {
+        val manager = uBlockOriginManager
+        if (manager == null) {
+            toast("uBlock Origin controls are unavailable")
+            return
+        }
+        manager.uninstall { error ->
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (error != null) {
+                    android.util.Log.w("BrowseX", "Could not uninstall uBlock Origin", error)
+                    toast("Could not uninstall uBlock Origin")
+                    refreshComposeUBlockState()
+                    return@runOnUiThread
+                }
+                updateUBlockSettings(false, false, false)
+                toast("uBlock Origin removed")
+            }
+        }
+    }
 
     private fun showPrivacyCenter() {
         val settings = browserSettingsSnapshot
