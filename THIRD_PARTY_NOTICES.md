@@ -2,16 +2,14 @@
 
 ## Kingfisher Browser UI components
 
-BrowseX adapts selected browser-chrome UI patterns and Compose component code from
+BrowseX's browser chrome and navigation shell adapt selected UI patterns and Compose component code from
 [Kingfisher Browser](https://github.com/nazmul-1117/kingfisher-browser), including
-the address-bar and bottom-navigation component approach.
+the address-bar, floating navigation dock, and modular Compose component approach. The upstream UI is MIT-licensed; BrowseX keeps its own GeckoView session controllers, data, permissions, settings, downloads, and feature screens.
 
 - Upstream project: https://github.com/nazmul-1117/kingfisher-browser
 - Upstream license: MIT
 - Upstream copyright: Copyright (c) 2024 Md. Nazmul Hossain
-- BrowseX changes: the Kingfisher identity, logo, colors, labels, layout, and placeholder
-  actions have been replaced with BrowseX branding, BrowseX styling, and callbacks into
-  BrowseX's existing GeckoView/browser controllers.
+- BrowseX changes: the Kingfisher identity, logo, colors, labels, and placeholder actions are not used. The UI patterns are adapted to BrowseX's brand and connected to BrowseX's existing GeckoView/browser controllers.
 
 The MIT license notice is reproduced below.
 
