@@ -1377,7 +1377,7 @@ class MainActivity : AppCompatActivity() {
         }
         val brandMark = ImageView(this).apply {
             setImageResource(R.drawable.ic_browsex)
-            contentDescription = tr("Wren browser")
+            contentDescription = tr("BrowseX browser")
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
         }
         topBar.addView(brandMark, LinearLayout.LayoutParams(dp(34), dp(34)).apply {
