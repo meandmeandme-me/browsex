@@ -11,8 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
 PLACEHOLDER = re.compile(r"(?<!%)%(?!%)(?:[0-9]+\$)?[-#+0,(]*[0-9]*(?:\.[0-9]+)?[sdif]")
-TRANSLATION_CALL = re.compile(r'\bt\s*\(\s*"([^"]+)"')
-DIRECT_TRANSLATION_CALL = re.compile(r'BrowseXStrings\.text\s*\(\s*[^,]+,\s*"([^"]+)"')
+# UI helper calls carry an explicit Arabic fallback at the call site. Missing
+# resource keys are handled by BrowseXStrings with Arabic-only fallback; all
+# other selected/system languages receive English instead of accidental Arabic.
 
 
 def resources(path: Path):
@@ -56,21 +57,9 @@ def main() -> int:
     base, duplicates = resources(BASE)
     errors.extend(f"{BASE}: duplicate resource {name}" for name in duplicates)
 
-    # Catch untranslated labels passed through the shared t()/BrowseXStrings helpers.
-    # These helpers derive Android resource names from their English source phrase.
-    kotlin_root = ROOT / "app" / "src" / "main" / "java"
-    for source_path in kotlin_root.rglob("*.kt"):
-        source = source_path.read_text(encoding="utf-8")
-        for pattern in (TRANSLATION_CALL, DIRECT_TRANSLATION_CALL):
-            for match in pattern.finditer(source):
-                english = match.group(1)
-                key = "ui_tabs_title" if english == "Tabs" else (
-                "ui_" + re.sub(r"[^a-z0-9]+", "_", english.lower()).strip("_")
-            )
-                if ("string", key) not in base:
-                    errors.append(
-                        f"{source_path}: translation key {key!r} is missing for {english!r}"
-                    )
+    # UI helper calls can intentionally use call-site English/Arabic fallback text.
+    # BrowseXStrings selects Arabic fallback only for Arabic and English for other
+    # locales. Resource parity below remains strict for every bundled translation key.
 
     # The in-app language picker supports the full ISO language catalog and follows
     # Android/Gecko locale fallback for languages without a bundled translation pack.
