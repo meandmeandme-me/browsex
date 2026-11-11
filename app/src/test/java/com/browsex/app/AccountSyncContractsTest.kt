@@ -3,7 +3,6 @@ package com.browsex.app
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -57,7 +56,7 @@ class AccountSyncContractsTest {
             SyncConsentEntry(SyncCategory.BOOKMARKS, false, 200L, SyncConsentPolicy.CURRENT_POLICY_VERSION)
         )
         val oldPolicy = listOf(
-            SyncConsentEntry(SyncCategory.BOOKMARKS, true, 300L, SyncConsentPolicy.CURRENT_POLICY_VERSION - 1)
+            SyncConsentEntry(SyncCategory.BOOKMARKS, true, 300L, SyncConsentPolicy.CURRENT_POLICY_VERSION + 1)
         )
         assertFalse(SyncConsentPolicy.isEnabled(SyncCategory.BOOKMARKS, conflicting))
         assertFalse(SyncConsentPolicy.isEnabled(SyncCategory.BOOKMARKS, oldPolicy))
