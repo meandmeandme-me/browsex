@@ -234,7 +234,7 @@ internal fun BrowseXDownloadsScreen(
                 val cancelled = record.status == "cancelled"
                 val completed = !active && !failed && !cancelled
                 val percent = if (record.totalBytes > 0L) {
-                    ((record.bytesWritten.coerceAtMost(record.totalBytes) * 100L) / record.totalBytes).toInt().coerceIn(0, 100)
+                    ((record.bytesWritten.coerceAtMost(record.totalBytes).toDouble() / record.totalBytes.toDouble()) * 100.0).toInt().coerceIn(0, 100)
                 } else null
                 val date = if (record.createdAt > 0L) {
                     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(record.createdAt))
@@ -311,7 +311,7 @@ internal fun BrowseXDownloadsScreen(
                     else -> text("Unknown status", "حالة غير معروفة")
                 }
                 val percent = if (item.totalBytes > 0L) {
-                    ((item.bytesDownloaded.coerceAtMost(item.totalBytes) * 100L) / item.totalBytes).toInt().coerceIn(0, 100)
+                    ((item.bytesDownloaded.coerceAtMost(item.totalBytes).toDouble() / item.totalBytes.toDouble()) * 100.0).toInt().coerceIn(0, 100)
                 } else null
                 val date = if (item.modifiedAt > 0L) {
                     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(item.modifiedAt))
