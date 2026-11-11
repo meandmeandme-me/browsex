@@ -143,7 +143,12 @@ jobs:
         run: |
           set -euo pipefail
           SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json"
+          DATABASE_SOURCE="app/src/main/java/com/browsex/app/storage/BrowseXDatabase.kt"
           test -s "$SCHEMA"
+          if grep -Fq 'fallbackToDestructiveMigration' "$DATABASE_SOURCE"; then
+            echo "::error::Destructive Room migration fallback is forbidden; add an explicit, tested migration."
+            exit 1
+          fi
           if ! git diff --quiet -- "$SCHEMA"; then
             echo "::error::Room schema changed. Commit the generated schema JSON and its migration with this change."
             git diff -- "$SCHEMA"
