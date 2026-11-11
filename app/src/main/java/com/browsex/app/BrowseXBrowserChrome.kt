@@ -1,6 +1,7 @@
 package com.browsex.app
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +60,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -164,20 +167,12 @@ internal fun BrowseXBrowserChrome(
                             .padding(horizontal = 11.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = primary.copy(alpha = 0.16f),
-                            border = BorderStroke(1.dp, primary.copy(alpha = 0.35f)),
-                            modifier = Modifier.size(29.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = "B",
-                                    color = primary,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            }
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_browsex),
+                            contentDescription = "BrowseX logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(30.dp)
+                        )
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -414,8 +409,8 @@ internal fun BrowseXBrowserChrome(
                                     modifier = Modifier.size(42.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (state.progress in 1..99) Icons.Default.Close else Icons.Default.Refresh,
-                                        contentDescription = if (state.progress in 1..99) "Stop loading" else "Reload page",
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Reload page",
                                         tint = ink
                                     )
                                 }
