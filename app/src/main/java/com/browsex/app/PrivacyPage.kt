@@ -103,5 +103,6 @@ internal class PrivacyPage(
             }
         }
         dialog.show()
+        WrenDialogStyle.apply(dialog, activity, settings)
     }
 }

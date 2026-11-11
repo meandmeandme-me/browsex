@@ -23,11 +23,12 @@ internal class SitePermissionsPage(
                 return@launch
             }
             if (entries.isEmpty()) {
-                AlertDialog.Builder(activity)
-                    .setTitle(t("Site permissions", "أذونات المواقع"))
-                    .setMessage(t("No saved website permission decisions yet.", "لا توجد قرارات أذونات محفوظة للمواقع حتى الآن."))
-                    .setPositiveButton(t("Done", "تم"), null)
-                    .show()
+                showStyled(
+                    AlertDialog.Builder(activity)
+                        .setTitle(t("Site permissions", "أذونات المواقع"))
+                        .setMessage(t("No saved website permission decisions yet.", "لا توجد قرارات أذونات محفوظة للمواقع حتى الآن."))
+                        .setPositiveButton(t("Done", "تم"), null)
+                )
                 return@launch
             }
             val featureLabels = entries.map { it.feature }.distinct().associateWith(::featureLabel)
@@ -40,20 +41,23 @@ internal class SitePermissionsPage(
                 }
                 "${entry.origin}  ·  $feature  ·  $decision"
             }.toTypedArray()
-            AlertDialog.Builder(activity)
+            showStyled(
+                AlertDialog.Builder(activity)
                 .setTitle(t("Saved site permissions", "أذونات المواقع المحفوظة"))
                 .setItems(status) { _, index -> showDecision(entries[index].origin, entries[index].feature) }
                 .setNeutralButton(t("Reset all", "إعادة ضبط الكل")) { _, _ ->
+                    showStyled(
                     AlertDialog.Builder(activity)
                         .setTitle(t("Reset all site permissions?", "إعادة ضبط جميع أذونات المواقع؟"))
                         .setMessage(t("Every saved choice will return to Ask. Websites may request permission again.", "ستعود جميع القرارات المحفوظة إلى خيار اسأل. قد تطلب المواقع الإذن من جديد."))
                         .setNegativeButton(t("Cancel", "إلغاء"), null)
                         .setPositiveButton(t("Reset", "إعادة ضبط")) { _, _ ->
                             clearAllPermissions()
-                        }.show()
+                        }
+                )
                 }
                 .setPositiveButton(t("Done", "تم"), null)
-                .show()
+            )
         }
     }
 
@@ -67,7 +71,8 @@ internal class SitePermissionsPage(
 
     private fun showDecision(origin: String, feature: String) {
         val choices = arrayOf(t("Ask every time", "اسأل في كل مرة"), t("Allow", "سماح"), t("Block", "حظر"))
-        AlertDialog.Builder(activity)
+        showStyled(
+            AlertDialog.Builder(activity)
             .setTitle("${origin}\n${featureLabel(feature)}")
             .setItems(choices) { _, which ->
                 val decision = when (which) { 1 -> "allow"; 2 -> "deny"; else -> "ask" }
@@ -84,6 +89,12 @@ internal class SitePermissionsPage(
                 }
             }
             .setNegativeButton(t("Cancel", "إلغاء"), null)
-            .show()
+        )
     }
+
+    private fun showStyled(builder: AlertDialog.Builder): AlertDialog =
+        builder.create().also { dialog ->
+            dialog.show()
+            WrenDialogStyle.apply(dialog, activity)
+        }
 }

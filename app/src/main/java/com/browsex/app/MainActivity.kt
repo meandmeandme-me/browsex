@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException
 import java.util.ArrayDeque
 import java.util.WeakHashMap
+import java.lang.ref.WeakReference
 import com.browsex.app.storage.BrowserStorageRuntime
 import com.browsex.app.storage.BrowserSettings
 import androidx.core.view.ViewCompat
@@ -293,7 +294,8 @@ class MainActivity : AppCompatActivity() {
             releaseForMemoryPressure = sessionLifecycleCoordinator::releaseForMemoryPressure
         )
     }
-    private lateinit var streamDownloadCoordinator: StreamDownloadCoordinator
+    private val streamDownloadCoordinator: StreamDownloadCoordinator
+        get() = (application as BrowseXApplication).streamDownloads
     private lateinit var downloadRequestCoordinator: BrowserDownloadRequestCoordinator
     private lateinit var browserView: GeckoView
     private lateinit var browserRoot: FrameLayout
@@ -410,7 +412,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        streamDownloadCoordinator = StreamDownloadCoordinator(storageRuntime, DownloadResponseWriter(applicationContext))
         bookmarkExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri ->
             if (uri != null) lifecycleScope.launch {
                 runCatching {
@@ -951,7 +952,6 @@ class MainActivity : AppCompatActivity() {
             credentialVault.setPrivateTabsOpen(false)
         }
         if (::downloadRequestCoordinator.isInitialized) downloadRequestCoordinator.cancelPending()
-        if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         uBlockOriginManager?.destroy()
         uBlockOriginManager = null
         dataClearDialog?.dismiss()
@@ -1144,18 +1144,16 @@ class MainActivity : AppCompatActivity() {
         val opaque = config.materialMode == WrenMaterialMode.MATTE ||
             config.materialMode == WrenMaterialMode.HIGH_CONTRAST ||
             config.materialMode == WrenMaterialMode.PERFORMANCE_MINIMAL
-        // BrowseXColors.card has a slight alpha for glass layering; Matte and performance
-        // modes must be truly opaque rather than merely less translucent.
-        val opaqueSurface = if (colors.isDark) Color.rgb(30, 45, 70) else Color.WHITE
-        val opaqueField = if (colors.isDark) Color.rgb(13, 25, 41) else Color.rgb(244, 247, 252)
-        val fill = if (opaque) opaqueSurface else colors.panel
-        val fieldFill = if (opaque) opaqueField else colors.field
+        // Every material mode uses the same Firefox-inspired neutral surface tokens.
+        // Glass modes may add elevation, but never substitute a different blue-tinted palette.
+        val fill = colors.panel
+        val fieldFill = colors.field
         val stroke = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) colors.ink else colors.line
 
         val borderWidth = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) 2 else 1
-        topBar.background = glassSurface(20, fill, stroke, borderWidth)
-        bottomBar.background = glassSurface(28, fill, stroke, borderWidth)
-        addressRow.background = glassSurface(22, fieldFill, stroke, borderWidth)
+        topBar.background = surfaceDrawable(20, fill, stroke, borderWidth)
+        bottomBar.background = surfaceDrawable(28, fill, stroke, borderWidth)
+        addressRow.background = surfaceDrawable(22, fieldFill, stroke, borderWidth)
         bottomBar.elevation = when (config.materialMode) {
             WrenMaterialMode.GLASS_BLUR, WrenMaterialMode.GLASS_TINTED -> dp(8).toFloat()
             WrenMaterialMode.MATTE -> dp(3).toFloat()
@@ -1347,7 +1345,7 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(5), dp(2), dp(5), dp(2))
-            background = glassSurface(20, colors.panel, colors.line)
+            background = surfaceDrawable(20, colors.panel, colors.line)
             isClickable = true
         }
         val brandMark = ImageView(this).apply {
@@ -1377,12 +1375,12 @@ class MainActivity : AppCompatActivity() {
         }
         browserView = GeckoView(this).apply { setBackgroundColor(colors.canvas) }
 
-        // A compact two-row glass dock: address/search first, navigation second.
+        // A compact two-row browser toolbar: address/search first, navigation second.
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(8), dp(8), dp(8), dp(7))
-            background = glassSurface(28, colors.panel, colors.line)
+            background = surfaceDrawable(28, colors.panel, colors.line)
             elevation = dp(8).toFloat()
             isClickable = true
         }
@@ -1390,7 +1388,7 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(3), dp(2), dp(3), dp(2))
-            background = glassSurface(22, colors.field, colors.line)
+            background = surfaceDrawable(22, colors.field, colors.line)
         }
         siteInfoButton = actionButton("ⓘ", "Site information") {
             if (::address.isInitialized && address.hasFocus()) {
@@ -1622,7 +1620,7 @@ class MainActivity : AppCompatActivity() {
         cornerRadius = dp(radius).toFloat()
     }
 
-    private fun glassSurface(radius: Int, fill: Int, stroke: Int, strokeWidthDp: Int = 1) = GradientDrawable().apply {
+    private fun surfaceDrawable(radius: Int, fill: Int, stroke: Int, strokeWidthDp: Int = 1) = GradientDrawable().apply {
         setColor(fill)
         cornerRadius = dp(radius).toFloat()
         setStroke(dp(strokeWidthDp), stroke)
@@ -2335,19 +2333,33 @@ class MainActivity : AppCompatActivity() {
             toast(BrowseXStrings.text(this@MainActivity, "This download response is not supported", "استجابة التنزيل هذه غير مدعومة"))
             return
         }
+        // Completion notifications must not keep a destroyed Activity alive while the
+        // process-scoped download continues writing its response body.
+        val activityRef = WeakReference(this)
         val started = streamDownloadCoordinator.start(
             response = response,
             onCompleted = { result ->
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed) toast(getString(R.string.ui_downloaded_file, result.displayName))
+                activityRef.get()?.let { activity ->
+                    activity.runOnUiThread {
+                        if (!activity.isFinishing && !activity.isDestroyed) {
+                            activity.toast(activity.getString(R.string.ui_downloaded_file, result.displayName))
+                        }
+                    }
                 }
                 android.util.Log.i("BrowseX", "Response stream saved: ${result.displayName}, bytes=${result.bytesWritten}")
             },
             onFailed = { error, cancelled ->
                 if (!cancelled) android.util.Log.e("BrowseX", "Response stream download failed", error)
-                runOnUiThread {
-                    if (!cancelled && !isFinishing && !isDestroyed) {
-                        toast(getString(R.string.ui_could_not_save_download, error?.message ?: getString(R.string.ui_unknown_status)))
+                if (!cancelled) {
+                    activityRef.get()?.let { activity ->
+                        activity.runOnUiThread {
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                activity.toast(activity.getString(
+                                    R.string.ui_could_not_save_download,
+                                    error?.message ?: activity.getString(R.string.ui_unknown_status)
+                                ))
+                            }
+                        }
                     }
                 }
             }

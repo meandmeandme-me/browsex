@@ -165,7 +165,7 @@ internal class SavedSessionsPage(
                                             render()
                                         }
                                     }
-                                    .show()
+                                    .showWren(activity)
                             }
                         }
                     }
@@ -189,7 +189,7 @@ internal class SavedSessionsPage(
                                     }
                                 }
                             }
-                            .show()
+                            .showWren(activity)
                     }
                     list.setOnItemLongClickListener { _, _, position, _ ->
                         val selected = visibleSessions.getOrNull(position) ?: return@setOnItemLongClickListener true
@@ -226,7 +226,7 @@ internal class SavedSessionsPage(
                                                 }
                                             }
                                         }
-                                        .show()
+                                        .showWren(activity)
                                 } else if (action == 1) {
                                     val input = EditText(activity).apply {
                                         setText("${selected.name} (copy)")
@@ -256,7 +256,7 @@ internal class SavedSessionsPage(
                                                 }
                                             }
                                         }
-                                        .show()
+                                        .showWren(activity)
                                 } else if (action == 2) {
                                     val shareText = buildString {
                                         append(selected.name)
@@ -290,11 +290,11 @@ internal class SavedSessionsPage(
                                                 render()
                                             }
                                         }
-                                        .show()
+                                        .showWren(activity)
                                 }
                             }
                             .setNegativeButton(t("Cancel", "إلغاء"), null)
-                            .show()
+                            .showWren(activity)
                         true
                     }
                     dialog.show()
@@ -355,7 +355,7 @@ internal class SavedSessionsPage(
                     if (saved) refresh()
                 }
             }
-            .show()
+            .showWren(activity)
     }
 
     private fun dp(value: Int): Int = WrenAdaptiveUi.dp(activity, value)
@@ -388,6 +388,12 @@ internal class SavedSessionsPage(
                     if (saved) refresh()
                 }
             }
-            .show()
+            .showWren(activity)
     }
+}
+
+
+private fun AlertDialog.Builder.showWren(activity: MainActivity): AlertDialog = create().also { dialog ->
+    dialog.show()
+    WrenDialogStyle.apply(dialog, activity)
 }

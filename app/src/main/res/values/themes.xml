@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.BrowseX" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="colorAccent">@color/wren_accent</item>
+        <item name="android:colorAccent">@color/wren_accent</item>
+        <item name="android:windowBackground">@color/wren_canvas</item>
     </style>
 </resources>

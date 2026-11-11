@@ -55,11 +55,15 @@ internal class BrowserAndroidPermissionQueue {
 
         val granted = request.permissions.all { grants[it] == true } &&
             request.session === activeSession && containsSession(request.session)
-        request.permissions.forEach { permission ->
-            if (grants[permission] == true) clearDenial(permission)
-            else markDenied(permission)
-        }
+        // Persisting a remembered decision is best-effort. A storage/settings failure
+        // must never strand Gecko's callback after Android has already returned a result.
         request.completed = true
+        request.permissions.forEach { permission ->
+            runCatching {
+                if (grants[permission] == true) clearDenial(permission)
+                else markDenied(permission)
+            }
+        }
         if (granted) request.callback.grant() else request.callback.reject()
     }
 
