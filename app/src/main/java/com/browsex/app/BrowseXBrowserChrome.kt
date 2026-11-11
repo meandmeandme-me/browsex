@@ -137,7 +137,14 @@ internal fun BrowseXBrowserChrome(
     onSelectSuggestion: (AddressSuggestion) -> Unit,
     menuOpen: Boolean,
     onDismissMenu: () -> Unit,
-    onMenuAction: (BrowseXMenuAction) -> Unit
+    onMenuAction: (BrowseXMenuAction) -> Unit,
+    tabs: List<BrowserTab>,
+    activeTab: BrowserTab?,
+    tabsOpen: Boolean,
+    onDismissTabs: () -> Unit,
+    onSelectTab: (BrowserTab) -> Unit,
+    onCloseTab: (BrowserTab) -> Unit,
+    onCreateTab: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -501,6 +508,146 @@ internal fun BrowseXBrowserChrome(
                 onDismiss = onDismissMenu,
                 onAction = onMenuAction
             )
+        }
+        if (tabsOpen) {
+            BrowseXTabsSheet(
+                tabs = tabs,
+                activeTab = activeTab,
+                onDismiss = onDismissTabs,
+                onSelect = onSelectTab,
+                onClose = onCloseTab,
+                onCreateTab = onCreateTab
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BrowseXTabsSheet(
+    tabs: List<BrowserTab>,
+    activeTab: BrowserTab?,
+    onDismiss: () -> Unit,
+    onSelect: (BrowserTab) -> Unit,
+    onClose: (BrowserTab) -> Unit,
+    onCreateTab: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 22.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Your tabs",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${tabs.size} open",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                androidx.compose.material3.FilledTonalButton(onClick = onCreateTab) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text("New tab", modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            if (tabs.isEmpty()) {
+                Text(
+                    text = "No open tabs",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
+                    items(tabs, key = { System.identityHashCode(it.session) }) { tab ->
+                        val selected = tab === activeTab
+                        val host = runCatching {
+                            android.net.Uri.parse(tab.url).host?.removePrefix("www.")
+                        }.getOrNull().orEmpty()
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onSelect(tab) },
+                            shape = RoundedCornerShape(18.dp),
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                            },
+                            border = BorderStroke(
+                                if (selected) 2.dp else 1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 14.dp, end = 5.dp, top = 10.dp, bottom = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = tab.title.ifBlank { "New tab" },
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        if (tab.privateMode) {
+                                            Text(
+                                                text = "PRIVATE",
+                                                color = MaterialTheme.colorScheme.primary,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier.padding(start = 7.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = host.ifBlank { "New tab" },
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (tab.progress in 1..99) {
+                                        LinearProgressIndicator(
+                                            progress = tab.progress / 100f,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 7.dp)
+                                                .height(2.dp)
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = { onClose(tab) },
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Close tab",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
