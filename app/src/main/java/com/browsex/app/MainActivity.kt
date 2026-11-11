@@ -1151,9 +1151,9 @@ class MainActivity : AppCompatActivity() {
         val stroke = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) colors.ink else colors.line
 
         val borderWidth = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) 2 else 1
-        topBar.background = glassSurface(20, fill, stroke, borderWidth)
-        bottomBar.background = glassSurface(28, fill, stroke, borderWidth)
-        addressRow.background = glassSurface(22, fieldFill, stroke, borderWidth)
+        topBar.background = surfaceDrawable(20, fill, stroke, borderWidth)
+        bottomBar.background = surfaceDrawable(28, fill, stroke, borderWidth)
+        addressRow.background = surfaceDrawable(22, fieldFill, stroke, borderWidth)
         bottomBar.elevation = when (config.materialMode) {
             WrenMaterialMode.GLASS_BLUR, WrenMaterialMode.GLASS_TINTED -> dp(8).toFloat()
             WrenMaterialMode.MATTE -> dp(3).toFloat()
@@ -1345,7 +1345,7 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(5), dp(2), dp(5), dp(2))
-            background = glassSurface(20, colors.panel, colors.line)
+            background = surfaceDrawable(20, colors.panel, colors.line)
             isClickable = true
         }
         val brandMark = ImageView(this).apply {
@@ -1375,12 +1375,12 @@ class MainActivity : AppCompatActivity() {
         }
         browserView = GeckoView(this).apply { setBackgroundColor(colors.canvas) }
 
-        // A compact two-row glass dock: address/search first, navigation second.
+        // A compact two-row browser toolbar: address/search first, navigation second.
         bottomBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(8), dp(8), dp(8), dp(7))
-            background = glassSurface(28, colors.panel, colors.line)
+            background = surfaceDrawable(28, colors.panel, colors.line)
             elevation = dp(8).toFloat()
             isClickable = true
         }
@@ -1388,7 +1388,7 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(3), dp(2), dp(3), dp(2))
-            background = glassSurface(22, colors.field, colors.line)
+            background = surfaceDrawable(22, colors.field, colors.line)
         }
         siteInfoButton = actionButton("ⓘ", "Site information") {
             if (::address.isInitialized && address.hasFocus()) {
@@ -1620,7 +1620,7 @@ class MainActivity : AppCompatActivity() {
         cornerRadius = dp(radius).toFloat()
     }
 
-    private fun glassSurface(radius: Int, fill: Int, stroke: Int, strokeWidthDp: Int = 1) = GradientDrawable().apply {
+    private fun surfaceDrawable(radius: Int, fill: Int, stroke: Int, strokeWidthDp: Int = 1) = GradientDrawable().apply {
         setColor(fill)
         cornerRadius = dp(radius).toFloat()
         setStroke(dp(strokeWidthDp), stroke)
