@@ -322,6 +322,8 @@ class MainActivity : AppCompatActivity() {
         BrowseXSiteInfoState("", "", false, emptyList(), emptyMap())
     )
     private var composeSiteInfoTab: BrowserTab? = null
+    private val composeReaderOpen = mutableStateOf(false)
+    private val composeReaderState = mutableStateOf(BrowseXReaderState("", "", ""))
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1782,7 +1784,22 @@ class MainActivity : AppCompatActivity() {
                     onChangeSiteInfoPermission = ::changeSiteInfoPermission,
                     onResetSiteInfoPermissions = ::resetSiteInfoPermissions,
                     onClearSiteInfoData = ::clearCurrentSiteInfoData,
-                    onSiteInfoMediaPermissionChange = ::changeSiteInfoMediaPermission
+                    onSiteInfoMediaPermissionChange = ::changeSiteInfoMediaPermission,
+                    readerOpen = composeReaderOpen.value,
+                    readerState = composeReaderState.value,
+                    onDismissReader = { composeReaderOpen.value = false },
+                    onCopyReader = {
+                        runCatching {
+                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(
+                                android.content.ClipData.newPlainText(
+                                    composeReaderState.value.title,
+                                    composeReaderState.value.articleText
+                                )
+                            )
+                        }.onSuccess { toast("Article copied") }
+                            .onFailure { toast("Could not copy article") }
+                    }
                 )
             }
         }
@@ -2493,7 +2510,12 @@ class MainActivity : AppCompatActivity() {
                     if (content.isBlank()) {
                         toast(BrowseXStrings.text(this@MainActivity, "This page does not contain readable text", "هذه الصفحة لا تحتوي على نص قابل للقراءة"))
                     } else {
-                        ReaderPage(this, tab.title, sourceUrl, content).show()
+                        composeReaderState.value = BrowseXReaderState(
+                            title = tab.title,
+                            sourceUrl = sourceUrl,
+                            articleText = content
+                        )
+                        composeReaderOpen.value = true
                     }
                 }
             },
