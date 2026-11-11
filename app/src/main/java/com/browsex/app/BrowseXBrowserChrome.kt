@@ -205,7 +205,14 @@ internal fun BrowseXBrowserChrome(
     recallOpen: Boolean,
     recallState: BrowseXRecallState,
     onDismissRecall: () -> Unit,
-    onOpenRecall: (String) -> Unit
+    onOpenRecall: (String) -> Unit,
+    downloadsOpen: Boolean,
+    downloadsState: BrowseXDownloadsState,
+    onDismissDownloads: () -> Unit,
+    onRefreshDownloads: () -> Unit,
+    onPrimaryDownloadAction: (BrowseXDownloadItem) -> Unit,
+    onShareDownload: (BrowseXDownloadItem) -> Unit,
+    onDeleteDownloadFile: (BrowseXDownloadItem) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -656,6 +663,16 @@ internal fun BrowseXBrowserChrome(
                 state = recallState,
                 onDismiss = onDismissRecall,
                 onOpen = onOpenRecall
+            )
+        }
+        if (downloadsOpen) {
+            BrowseXDownloadsScreen(
+                state = downloadsState,
+                onDismiss = onDismissDownloads,
+                onRefresh = onRefreshDownloads,
+                onPrimaryAction = onPrimaryDownloadAction,
+                onShare = onShareDownload,
+                onDeleteFile = onDeleteDownloadFile
             )
         }
     }
