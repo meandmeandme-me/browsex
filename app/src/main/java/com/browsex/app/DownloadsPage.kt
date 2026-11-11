@@ -10,7 +10,6 @@ import android.net.Uri
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -140,16 +139,6 @@ internal class DownloadsPage(
                                     activity.lifecycleScope.launch { repository.removeTrackedPlatformDownload(id) }
                                 },
                                 text = ::t,
-                                onManualRefresh = {
-                                    activity.lifecycleScope.launch {
-                                        runCatching { loadSnapshot(repository) }
-                                            .onFailure { android.util.Log.e("BrowseX", "Could not refresh downloads", it) }
-                                            .onSuccess { latest ->
-                                                // The screen's polling state is updated by its suspend refresh callback.
-                                                // Triggering this callback is sufficient for the same durable snapshot.
-                                            }
-                                    }
-                                },
                                 onDismiss = { dialog.dismiss() }
                             )
                         }
