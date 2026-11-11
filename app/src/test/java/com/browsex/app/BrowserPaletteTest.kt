@@ -70,14 +70,23 @@ class BrowserPaletteTest {
     }
 
     @Test
-    fun standardGlassPaletteKeepsItsTranslucentLayering() {
-        val normal = BrowseXColors.resolve(
-            context,
-            BrowserSettings(themeMode = "light")
-        )
+    fun standardPaletteUsesTheNewNeutralOpaqueSurfaceHierarchy() {
+        val light = BrowseXColors.resolve(context, BrowserSettings(themeMode = "light"))
+        val dark = BrowseXColors.resolve(context, BrowserSettings(themeMode = "dark"))
 
-        assertTrue(Color.alpha(normal.panel) < 255)
-        assertTrue(Color.alpha(normal.card) < 255)
-        assertTrue(Color.alpha(normal.field) < 255)
+        assertEquals(0xFFF5F5F7.toInt(), light.canvas)
+        assertEquals(0xFFFFFFFF.toInt(), light.panel)
+        assertEquals(0xFFFFFFFF.toInt(), light.card)
+        assertEquals(0xFFF1F1F4.toInt(), light.field)
+        assertEquals(0xFF1C1B22.toInt(), dark.canvas)
+        assertEquals(0xFF292830.toInt(), dark.panel)
+        assertEquals(0xFF35343D.toInt(), dark.card)
+        assertEquals(0xFF202027.toInt(), dark.field)
+
+        listOf(light, dark).forEach { palette ->
+            assertEquals(255, Color.alpha(palette.panel))
+            assertEquals(255, Color.alpha(palette.card))
+            assertEquals(255, Color.alpha(palette.field))
+        }
     }
 }
