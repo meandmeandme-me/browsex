@@ -1144,12 +1144,10 @@ class MainActivity : AppCompatActivity() {
         val opaque = config.materialMode == WrenMaterialMode.MATTE ||
             config.materialMode == WrenMaterialMode.HIGH_CONTRAST ||
             config.materialMode == WrenMaterialMode.PERFORMANCE_MINIMAL
-        // BrowseXColors.card has a slight alpha for glass layering; Matte and performance
-        // modes must be truly opaque rather than merely less translucent.
-        val opaqueSurface = if (colors.isDark) Color.rgb(30, 45, 70) else Color.WHITE
-        val opaqueField = if (colors.isDark) Color.rgb(13, 25, 41) else Color.rgb(244, 247, 252)
-        val fill = if (opaque) opaqueSurface else colors.panel
-        val fieldFill = if (opaque) opaqueField else colors.field
+        // Every material mode uses the same Firefox-inspired neutral surface tokens.
+        // Glass modes may add elevation, but never substitute a different blue-tinted palette.
+        val fill = colors.panel
+        val fieldFill = colors.field
         val stroke = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) colors.ink else colors.line
 
         val borderWidth = if (config.materialMode == WrenMaterialMode.HIGH_CONTRAST) 2 else 1
