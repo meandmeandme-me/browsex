@@ -2074,7 +2074,180 @@ class MainActivity : AppCompatActivity() {
             BrowseXMenuAction.RECALL -> showRecall()
             BrowseXMenuAction.PASSWORDS -> passwordManager.show()
             BrowseXMenuAction.SAVED_SESSIONS -> showSavedSessions()
+            BrowseXMenuAction.SAVE_SESSION -> saveCurrentSession()
+            BrowseXMenuAction.RECENTLY_CLOSED -> showRecentlyClosedTabs()
+            BrowseXMenuAction.CLOSE_ALL_TABS -> closeAllTabs()
         }
+    }
+
+    private fun saveCurrentSession() {
+        val regularTabs = tabs.filterNot { it.privateMode }
+        if (regularTabs.isEmpty()) {
+            toast("No regular tabs to save")
+            return
+        }
+        val field = EditText(this).apply {
+            hint = tr("Session name")
+            maxLines = 1
+        }
+        AlertDialog.Builder(this)
+            .setTitle(tr("Save browsing session"))
+            .setView(field)
+            .setNegativeButton(tr("Cancel"), null)
+            .setPositiveButton(tr("Save")) { _, _ ->
+                val name = field.text?.toString().orEmpty().trim()
+                lifecycleScope.launch {
+                    val storage = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                        android.util.Log.e("BrowseX", "Could not load saved sessions", it)
+                        toast("Could not save session")
+                        return@launch
+                    }
+                    val existing = runCatching { storage.sessions.sessions() }.getOrElse {
+                        android.util.Log.e("BrowseX", "Could not inspect saved sessions", it)
+                        toast("Could not save session")
+                        return@launch
+                    }
+                    val save = {
+                        lifecycleScope.launch {
+                            val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
+                            val saved = runCatching {
+                                storage.sessions.saveSession(name, regularTabs.map { it.url }, activeIndex)
+                            }.getOrDefault(false)
+                            toast(if (saved) "Session saved" else "Session name is invalid or the session limit was reached")
+                        }
+                    }
+                    if (existing.any { it.name.equals(name, ignoreCase = true) }) {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setMessage(tr("A session with this name already exists. Replace it?"))
+                            .setNegativeButton(tr("Cancel"), null)
+                            .setPositiveButton(tr("Replace")) { _, _ -> save() }
+                            .show()
+                    } else {
+                        save()
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun showRecentlyClosedTabs() {
+        lifecycleScope.launch {
+            val storage = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load recently closed tabs", it)
+                toast("Could not load recently closed tabs")
+                return@launch
+            }
+            val recentlyClosed = runCatching { storage.sessions.recentlyClosed() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not load recently closed tabs", it)
+                toast("Could not load recently closed tabs")
+                return@launch
+            }
+            if (recentlyClosed.isEmpty()) {
+                toast("No recently closed tabs")
+                return@launch
+            }
+
+            fun restoreOne(index: Int) {
+                if (tabs.size >= TabSessionState.MAX_TABS) {
+                    toast("Tab limit reached")
+                    return
+                }
+                lifecycleScope.launch {
+                    if (tabs.size >= TabSessionState.MAX_TABS) {
+                        toast("Tab limit reached")
+                        return@launch
+                    }
+                    val restored = runCatching {
+                        storage.sessions.consumeRecentlyClosed(recentlyClosed[index].id)
+                    }.onFailure {
+                        android.util.Log.e("BrowseX", "Could not consume recently closed tab", it)
+                    }.getOrNull() ?: return@launch
+                    if (tabs.size < TabSessionState.MAX_TABS) {
+                        createTab(restored.url)
+                    } else {
+                        runCatching {
+                            storage.sessions.recordRecentlyClosed(restored.url, restored.title, restored.closedAt)
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not return recently closed tab", it)
+                        }
+                        toast("Tab limit reached")
+                    }
+                }
+            }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(tr("Recently closed"))
+                .setItems(recentlyClosed.map { "${it.title} · ${Uri.parse(it.url).host.orEmpty()}" }.toTypedArray()) { _, index ->
+                    restoreOne(index)
+                }
+                .setPositiveButton(tr("Restore all")) { parent, _ ->
+                    lifecycleScope.launch {
+                        val available = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                        if (available == 0) {
+                            toast("Tab limit reached")
+                            return@launch
+                        }
+                        val selected = recentlyClosed.take(available)
+                        val restored = runCatching {
+                            storage.sessions.consumeRecentlyClosed(selected.map { it.id })
+                        }.onFailure {
+                            android.util.Log.e("BrowseX", "Could not consume recently closed tabs", it)
+                        }.getOrElse {
+                            toast("Could not restore tabs")
+                            return@launch
+                        }
+                        val capacityNow = (TabSessionState.MAX_TABS - tabs.size).coerceAtLeast(0)
+                        val toOpen = restored.take(capacityNow)
+                        val toReturn = restored.drop(capacityNow)
+                        toReturn.forEach { item ->
+                            runCatching {
+                                storage.sessions.recordRecentlyClosed(item.url, item.title, item.closedAt)
+                            }.onFailure {
+                                android.util.Log.e("BrowseX", "Could not return un-restored tab", it)
+                            }
+                        }
+                        toOpen.forEach { createTab(it.url) }
+                        if (toOpen.isNotEmpty()) parent.dismiss()
+                        when {
+                            toOpen.isEmpty() -> toast("Tab limit reached")
+                            toOpen.size < recentlyClosed.size -> toast("Some tabs restored; tab limit reached")
+                            else -> toast("Tabs restored")
+                        }
+                    }
+                }
+                .setNeutralButton(tr("Clear list")) { parent, _ ->
+                    AlertDialog.Builder(this@MainActivity)
+                        .setMessage(tr("Clear all recently closed tabs?"))
+                        .setNegativeButton(tr("Cancel"), null)
+                        .setPositiveButton(tr("Clear")) { _, _ ->
+                            lifecycleScope.launch {
+                                val cleared = runCatching {
+                                    storage.sessions.clearRecentlyClosed()
+                                }.isSuccess
+                                if (cleared) parent.dismiss()
+                                toast(if (cleared) "Recently closed list cleared" else "Could not clear recently closed tabs")
+                            }
+                        }
+                        .show()
+                }
+                .setNegativeButton(tr("Close"), null)
+                .show()
+        }
+    }
+
+    private fun closeAllTabs() {
+        if (tabs.isEmpty()) {
+            toast("No open tabs")
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(tr("Close all tabs"))
+            .setMessage(tr("Close every open tab?"))
+            .setNegativeButton(tr("Cancel"), null)
+            .setPositiveButton(tr("Close all")) { _, _ ->
+                tabs.toList().forEach(::closeTab)
+            }
+            .show()
     }
 
     private fun showSavedSessions() {
