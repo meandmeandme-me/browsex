@@ -352,22 +352,24 @@ class MainActivity : AppCompatActivity() {
             activateRestoredSelection = tabController::activateRestoredSelection,
             persistTabs = ::persistTabs,
             storageController = { browserRuntime?.storageController },
-            clearHistory = {
+            clearHistory = { onComplete ->
                 lifecycleScope.launch {
-                    runCatching { clearStoredHistory() }
+                    val success = runCatching { clearStoredHistory() }
                         .onFailure { error ->
                             android.util.Log.e("BrowseX", "Could not clear browsing history", error)
-                        }
+                        }.isSuccess
+                    onComplete(success)
                 }
             },
-            clearSiteMediaDecisions = { origin ->
+            clearSiteMediaDecisions = { origin, onComplete ->
                 lifecycleScope.launch {
-                    runCatching {
+                    val success = runCatching {
                         val permissions = storageRuntime.awaitReady().sitePermissions
                         if (origin == null) permissions.clearAll() else permissions.clearOrigin(origin)
                     }.onFailure { error ->
                         android.util.Log.e("BrowseX", "Could not clear site permission decisions", error)
-                    }
+                    }.isSuccess
+                    onComplete(success)
                 }
             },
             dispatchToMain = { action -> runOnUiThread(action) },
