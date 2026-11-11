@@ -197,7 +197,11 @@ internal fun BrowseXBrowserChrome(
     onChangeSiteInfoPermission: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
     onResetSiteInfoPermissions: () -> Unit,
     onClearSiteInfoData: () -> Unit,
-    onSiteInfoMediaPermissionChange: (String, String) -> Unit
+    onSiteInfoMediaPermissionChange: (String, String) -> Unit,
+    readerOpen: Boolean,
+    readerState: BrowseXReaderState,
+    onDismissReader: () -> Unit,
+    onCopyReader: () -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -634,6 +638,13 @@ internal fun BrowseXBrowserChrome(
                 onResetPermissions = onResetSiteInfoPermissions,
                 onClearSiteData = onClearSiteInfoData,
                 onMediaPermissionChange = onSiteInfoMediaPermissionChange
+            )
+        }
+        if (readerOpen) {
+            BrowseXReaderScreen(
+                state = readerState,
+                onDismiss = onDismissReader,
+                onCopy = onCopyReader
             )
         }
     }
