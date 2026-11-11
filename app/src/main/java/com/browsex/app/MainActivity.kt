@@ -1341,6 +1341,8 @@ class MainActivity : AppCompatActivity() {
                 if (!isFinishing && !isDestroyed && !address.hasFocus()) address.requestFocus()
             }
         }
+        // The visible Compose dock follows the same adaptive placement policy.
+        renderComposeChrome()
     }
 
     private fun createBrowserUi(): View {
@@ -1386,7 +1388,7 @@ class MainActivity : AppCompatActivity() {
             marginEnd = dp(8)
         })
         pageIdentity = TextView(this).apply {
-            text = "Wren"
+            text = "BrowseX"
             textSize = 17f
             setTextColor(colors.ink)
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
