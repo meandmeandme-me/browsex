@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -738,85 +741,113 @@ private fun BrowseXTabsSheet(
                     modifier = Modifier.padding(vertical = 24.dp)
                 )
             } else {
-                LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
-                    items(visibleTabs, key = { System.identityHashCode(it.session) }) { tab ->
-                        val selected = tab === activeTab
-                        val host = runCatching {
-                            android.net.Uri.parse(tab.url).host?.removePrefix("www.")
-                        }.getOrNull().orEmpty()
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { onSelect(tab) },
-                            shape = RoundedCornerShape(18.dp),
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                            },
-                            border = BorderStroke(
-                                if (selected) 2.dp else 1.dp,
-                                if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 14.dp, end = 5.dp, top = 10.dp, bottom = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = tab.title.ifBlank { "New tab" },
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f, fill = false)
-                                        )
-                                        if (tab.privateMode) {
-                                            Text(
-                                                text = "PRIVATE",
-                                                color = MaterialTheme.colorScheme.primary,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                modifier = Modifier.padding(start = 7.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = host.ifBlank { "New tab" },
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (tab.progress in 1..99) {
-                                        LinearProgressIndicator(
-                                            progress = tab.progress / 100f,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 7.dp)
-                                                .height(2.dp)
-                                        )
-                                    }
-                                }
-                                IconButton(
-                                    onClick = { onClose(tab) },
-                                    modifier = Modifier.size(42.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Close tab",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 240.dp),
+                    modifier = Modifier.heightIn(max = 560.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(visibleTabs, key = { _, tab -> System.identityHashCode(tab.session) }) { _, tab ->
+                        BrowseXTabCard(
+                            tab = tab,
+                            selected = tab === activeTab,
+                            onSelect = { onSelect(tab) },
+                            onClose = { onClose(tab) }
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrowseXTabCard(
+    tab: BrowserTab,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onClose: () -> Unit
+) {
+    val host = runCatching {
+        android.net.Uri.parse(tab.url).host?.removePrefix("www.")
+    }.getOrNull().orEmpty().ifBlank { "New tab" }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 148.dp)
+            .clickable(onClick = onSelect),
+        shape = RoundedCornerShape(22.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.66f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)
+        },
+        border = BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+        ),
+        shadowElevation = if (selected) 3.dp else 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(13.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tab,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(9.dp).size(19.dp)
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                if (tab.privateMode) {
+                    Text(
+                        text = "PRIVATE",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+                IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close tab",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = tab.title.ifBlank { "New tab" },
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = host,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            if (tab.progress in 1..99) {
+                LinearProgressIndicator(
+                    progress = tab.progress / 100f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp)
+                        .height(3.dp)
+                )
             }
         }
     }
