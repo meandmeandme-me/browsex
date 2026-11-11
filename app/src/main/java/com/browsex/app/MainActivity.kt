@@ -957,6 +957,8 @@ class MainActivity : AppCompatActivity() {
         if (::streamDownloadCoordinator.isInitialized) streamDownloadCoordinator.shutdown()
         uBlockOriginManager?.destroy()
         uBlockOriginManager = null
+        notificationBridge?.destroy()
+        notificationBridge = null
         dataClearDialog?.dismiss()
         dataClearDialog = null
         browserRuntime?.setWebNotificationDelegate(null)
