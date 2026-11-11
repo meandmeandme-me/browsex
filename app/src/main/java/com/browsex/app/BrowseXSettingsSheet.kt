@@ -43,7 +43,7 @@ internal enum class BrowseXSettingsAction {
 }
 
 private enum class BrowseXSettingChoice {
-    SEARCH_ENGINE, ADDRESS_BAR_POSITION, THEME, ACCENT, LANGUAGE
+    SEARCH_ENGINE, ADDRESS_BAR_POSITION, THEME, ACCENT, LANGUAGE, HOME_LAYOUT
 }
 
 @Composable
@@ -226,7 +226,30 @@ internal fun BrowseXSettingsSheet(
                     }
 
                     item { SettingsSection(t("Home page", "الصفحة الرئيسية")) }
-                    item { SettingsRow(t("Customize home page", "تخصيص الصفحة الرئيسية"), t("Choose shortcuts and home sections", "اختر الاختصارات وأقسام الصفحة الرئيسية"), onClick = { onAction(BrowseXSettingsAction.HOME_PAGE) }) }
+                    item {
+                        SettingsToggleRow(
+                            t("Show shortcuts", "إظهار الاختصارات"),
+                            t("Show your saved websites on the home page", "إظهار المواقع المحفوظة في الصفحة الرئيسية"),
+                            settings.homeShowQuickLinks,
+                            onCheckedChange = { enabled -> onUpdateSettings { it.copy(homeShowQuickLinks = enabled) } }
+                        )
+                    }
+                    item {
+                        SettingsToggleRow(
+                            t("Show recent pages", "إظهار الصفحات الأخيرة"),
+                            t("Continue browsing from your recent history", "متابعة التصفح من سجلّك الحديث"),
+                            settings.homeShowDiscovery,
+                            onCheckedChange = { enabled -> onUpdateSettings { it.copy(homeShowDiscovery = enabled) } }
+                        )
+                    }
+                    item {
+                        SettingsRow(
+                            t("Shortcut layout", "تخطيط الاختصارات"),
+                            t("Choose a grid or compact list", "اختر شبكة أو قائمة مختصرة"),
+                            t(if (settings.homeLayout == "list") "List" else "Grid", if (settings.homeLayout == "list") "قائمة" else "شبكة"),
+                            onClick = { choice = BrowseXSettingChoice.HOME_LAYOUT }
+                        )
+                    }
 
                     item { SettingsSection(t("Privacy & data", "الخصوصية والبيانات")) }
                     item { SettingsRow(t("Privacy center", "مركز الخصوصية"), t("Review and clear cookies and site data", "مراجعة ملفات الارتباط وبيانات المواقع ومسحها"), onClick = { onAction(BrowseXSettingsAction.PRIVACY_CENTER) }) }
@@ -261,6 +284,7 @@ internal fun BrowseXSettingsSheet(
         BrowseXSettingChoice.THEME -> listOf("system" to t("System default", "حسب النظام"), "light" to t("Light", "فاتح"), "dark" to t("Dark", "داكن"))
         BrowseXSettingChoice.ACCENT -> listOf("ocean" to t("Ocean", "محيطي"), "violet" to t("Violet", "بنفسجي"), "emerald" to t("Emerald", "زمردي"), "rose" to t("Rose", "وردي"), "amber" to t("Amber", "كهرماني"))
         BrowseXSettingChoice.LANGUAGE -> listOf("system" to t("System language", "لغة النظام"), "en" to "English", "ar" to "العربية")
+        BrowseXSettingChoice.HOME_LAYOUT -> listOf("grid" to t("Grid", "شبكة"), "list" to t("List", "قائمة"))
         null -> emptyList()
     }
     if (choice != null) {
@@ -270,6 +294,7 @@ internal fun BrowseXSettingsSheet(
             BrowseXSettingChoice.THEME -> settings.themeMode
             BrowseXSettingChoice.ACCENT -> settings.accentColor
             BrowseXSettingChoice.LANGUAGE -> settings.languageMode
+            BrowseXSettingChoice.HOME_LAYOUT -> settings.homeLayout
             null -> ""
         }
         AlertDialog(
@@ -280,6 +305,7 @@ internal fun BrowseXSettingsSheet(
                 BrowseXSettingChoice.THEME -> "Theme"
                 BrowseXSettingChoice.ACCENT -> "Accent color"
                 BrowseXSettingChoice.LANGUAGE -> "Language"
+                BrowseXSettingChoice.HOME_LAYOUT -> "Shortcut layout"
                 null -> "Settings"
             })) },
             text = {
@@ -295,6 +321,7 @@ internal fun BrowseXSettingsSheet(
                                         BrowseXSettingChoice.THEME -> onUpdateSettings { it.copy(themeMode = value) }
                                         BrowseXSettingChoice.ACCENT -> onUpdateSettings { it.copy(accentColor = value) }
                                         BrowseXSettingChoice.LANGUAGE -> onUpdateSettings { it.copy(languageMode = value) }
+                                        BrowseXSettingChoice.HOME_LAYOUT -> onUpdateSettings { it.copy(homeLayout = value) }
                                         null -> Unit
                                     }
                                     choice = null
@@ -309,6 +336,7 @@ internal fun BrowseXSettingsSheet(
                                     BrowseXSettingChoice.THEME -> onUpdateSettings { it.copy(themeMode = value) }
                                     BrowseXSettingChoice.ACCENT -> onUpdateSettings { it.copy(accentColor = value) }
                                     BrowseXSettingChoice.LANGUAGE -> onUpdateSettings { it.copy(languageMode = value) }
+                                    BrowseXSettingChoice.HOME_LAYOUT -> onUpdateSettings { it.copy(homeLayout = value) }
                                     null -> Unit
                                 }
                                 choice = null
