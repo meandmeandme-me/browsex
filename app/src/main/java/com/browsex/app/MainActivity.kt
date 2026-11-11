@@ -309,6 +309,8 @@ class MainActivity : AppCompatActivity() {
     private val composeActiveTabState = mutableStateOf<BrowserTab?>(null)
     private val composeSettingsOpen = mutableStateOf(false)
     private val composeSettingsState = mutableStateOf(BrowserSettings())
+    private val composeSavedPagesOpen = mutableStateOf(false)
+    private val composeSavedPagesState = mutableStateOf(BrowseXSavedPagesState())
     private var adaptivePresentationConfig: AdaptivePresentationConfig? = null
     private var lastPresentationWidthPx = 0
     private var lastPresentationHeightPx = 0
@@ -1702,7 +1704,24 @@ class MainActivity : AppCompatActivity() {
                     onSettingsAction = { action ->
                         composeSettingsOpen.value = false
                         performSettingsAction(action)
-                    }
+                    },
+                    savedPagesOpen = composeSavedPagesOpen.value,
+                    savedPagesState = composeSavedPagesState.value,
+                    onDismissSavedPages = { composeSavedPagesOpen.value = false },
+                    onOpenSavedPage = { url ->
+                        composeSavedPagesOpen.value = false
+                        createTab(url)
+                    },
+                    onRemoveSavedPage = ::removeSavedPage,
+                    onRenameBookmark = ::renameSavedBookmark,
+                    onMoveBookmark = ::moveSavedBookmark,
+                    onMoveBookmarkWithinFolder = ::moveSavedBookmarkWithinFolder,
+                    onCreateBookmarkFolder = ::createSavedBookmarkFolder,
+                    onRenameBookmarkFolder = ::renameSavedBookmarkFolder,
+                    onDeleteBookmarkFolder = ::deleteSavedBookmarkFolder,
+                    onClearSavedHistory = ::clearSavedHistoryFromLibrary,
+                    onShareSavedPage = ::shareSavedPage,
+                    onCopySavedPage = ::copySavedPage
                 )
             }
         }
@@ -2678,11 +2697,151 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSavedPages(title: String, pages: List<String>) {
-        RoomSavedPagesPage(
-            activity = this,
-            title = title,
-            onOpen = { url -> createTab(url) }
-        ).show()
+        val isHistory = title.contains("History", ignoreCase = true)
+        lifecycleScope.launch {
+            val storage = runCatching { storageRuntime.awaitReady() }.getOrElse {
+                android.util.Log.e("BrowseX", "Could not open saved pages", it)
+                toast("Library is temporarily unavailable")
+                return@launch
+            }
+            composeSavedPagesState.value = BrowseXSavedPagesState(
+                isHistory = isHistory,
+                bookmarks = if (isHistory) emptyList() else storage.bookmarks.all(),
+                folders = if (isHistory) emptyList() else storage.bookmarks.folders(),
+                history = if (isHistory) storage.history.recent() else emptyList()
+            )
+            composeSavedPagesOpen.value = true
+        }
+    }
+
+    private suspend fun refreshComposeSavedPages() {
+        if (!composeSavedPagesOpen.value) return
+        val storage = storageRuntime.awaitReady()
+        val isHistory = composeSavedPagesState.value.isHistory
+        composeSavedPagesState.value = BrowseXSavedPagesState(
+            isHistory = isHistory,
+            bookmarks = if (isHistory) emptyList() else storage.bookmarks.all(),
+            folders = if (isHistory) emptyList() else storage.bookmarks.folders(),
+            history = if (isHistory) storage.history.recent() else emptyList()
+        )
+    }
+
+    private fun removeSavedPage(url: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val storage = storageRuntime.awaitReady()
+                if (composeSavedPagesState.value.isHistory) storage.history.remove(url)
+                else storage.bookmarks.remove(url)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not remove saved page", it)
+                toast("Could not remove item")
+            }
+        }
+    }
+
+    private fun renameSavedBookmark(url: String, title: String) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().bookmarks.rename(url, title)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not rename bookmark", it)
+                toast("Could not rename bookmark")
+            }
+        }
+    }
+
+    private fun moveSavedBookmark(url: String, folderId: String) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().bookmarks.move(url, folderId)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not move bookmark", it)
+                toast("Could not move bookmark")
+            }
+        }
+    }
+
+    private fun moveSavedBookmarkWithinFolder(url: String, folderId: String, direction: Int) {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().bookmarks.moveWithinFolder(url, folderId, direction)
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not reorder bookmark", it)
+                toast("Could not reorder bookmark")
+            }
+        }
+    }
+
+    private fun createSavedBookmarkFolder(name: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val id = storageRuntime.awaitReady().bookmarks.createFolder(name)
+                if (id == null) toast("Folder name is invalid or the folder limit was reached")
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not create bookmark folder", it)
+                toast("Could not create folder")
+            }
+        }
+    }
+
+    private fun renameSavedBookmarkFolder(folderId: String, name: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val renamed = storageRuntime.awaitReady().bookmarks.renameFolder(folderId, name)
+                if (!renamed) toast("Could not rename folder")
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not rename bookmark folder", it)
+                toast("Could not rename folder")
+            }
+        }
+    }
+
+    private fun deleteSavedBookmarkFolder(folderId: String) {
+        lifecycleScope.launch {
+            runCatching {
+                val deleted = storageRuntime.awaitReady().bookmarks.deleteFolder(folderId)
+                if (!deleted) toast("Could not delete folder")
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not delete bookmark folder", it)
+                toast("Could not delete folder")
+            }
+        }
+    }
+
+    private fun clearSavedHistoryFromLibrary() {
+        lifecycleScope.launch {
+            runCatching {
+                storageRuntime.awaitReady().history.clear()
+                refreshComposeSavedPages()
+            }.onFailure {
+                android.util.Log.e("BrowseX", "Could not clear browsing history", it)
+                toast("Could not clear history")
+            }
+        }
+    }
+
+    private fun shareSavedPage(url: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+        }
+        runCatching { startActivity(Intent.createChooser(intent, tr("Share page"))) }
+            .onFailure { toast("Could not share page") }
+    }
+
+    private fun copySavedPage(url: String) {
+        runCatching {
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("BrowseX page", url))
+        }.onSuccess { toast("Address copied") }
+            .onFailure { toast("Could not copy address") }
     }
 
     /** Shows the in-app view over Android's durable DownloadManager queue. */
