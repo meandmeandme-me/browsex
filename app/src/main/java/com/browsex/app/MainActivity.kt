@@ -2805,7 +2805,6 @@ class MainActivity : AppCompatActivity() {
             BrowseXSettingsAction.IMPORT_BOOKMARKS ->
                 bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain"))
             BrowseXSettingsAction.EXPORT_BOOKMARKS -> bookmarkExportLauncher.launch("browsex-bookmarks.html")
-            BrowseXSettingsAction.HOME_PAGE -> showHomePreferences()
             BrowseXSettingsAction.PRIVACY_CENTER -> showPrivacyCenter()
             BrowseXSettingsAction.SITE_PERMISSIONS -> showSitePermissionsPage()
             BrowseXSettingsAction.UBLOCK -> showUBlockOriginSettings()
@@ -2897,64 +2896,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showUBlockOriginSettings() = uBlockSettings.show()
-
-    private fun showHomePreferences() {
-        lifecycleScope.launch {
-            val settings = runCatching { storageRuntime.settings.snapshot() }.getOrElse {
-                android.util.Log.e("BrowseX", "Could not load homepage preferences", it)
-                toast(BrowseXStrings.text(this@MainActivity, "Could not load homepage settings", "تعذر تحميل إعدادات الصفحة الرئيسية"))
-                return@launch
-            }
-            val labels = arrayOf(
-                tr("Show favorite shortcuts"),
-                tr("Show discovery card")
-            )
-            val checked = booleanArrayOf(settings.homeShowQuickLinks, settings.homeShowDiscovery)
-            AlertDialog.Builder(this@MainActivity)
-                .setTitle(tr("Home page"))
-                .setMessage(tr("Choose which sections appear and how shortcuts are arranged."))
-                .setMultiChoiceItems(labels, checked) { _, which, enabled ->
-                    checked[which] = enabled
-                }
-                .setPositiveButton(tr("Continue")) { _, _ ->
-                    var selectedLayout = if (settings.homeLayout == "list") 1 else 0
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(tr("Shortcut layout"))
-                        .setSingleChoiceItems(
-                            arrayOf(tr("Grid layout"), tr("List layout")),
-                            selectedLayout
-                        ) { _, index -> selectedLayout = index }
-                        .setPositiveButton(tr("Apply")) { _, _ ->
-                            updateBrowserSettings({
-                                it.copy(
-                                    homeShowQuickLinks = checked[0],
-                                    homeShowDiscovery = checked[1],
-                                    homeLayout = if (selectedLayout == 1) "list" else "grid"
-                                )
-                            }) {
-                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }
-                                    ?.session?.loadUri(homePageUrl())
-                            }
-                        }
-                        .setNeutralButton(tr("Reset")) { _, _ ->
-                            updateBrowserSettings({
-                                it.copy(
-                                    homeShowQuickLinks = true,
-                                    homeShowDiscovery = true,
-                                    homeLayout = "grid"
-                                )
-                            }) {
-                                activeTab?.takeIf { tab -> tab.url.startsWith(HOME_URL) }
-                                    ?.session?.loadUri(homePageUrl())
-                            }
-                        }
-                        .setNegativeButton(tr("Cancel"), null)
-                        .show()
-                }
-                .setNegativeButton(tr("Cancel"), null)
-                .show()
-        }
-    }
 
     private fun showPrivacyCenter() {
         val settings = browserSettingsSnapshot
