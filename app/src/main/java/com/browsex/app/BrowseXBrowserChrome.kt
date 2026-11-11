@@ -155,7 +155,21 @@ internal fun BrowseXBrowserChrome(
     androidNotificationsEnabled: Boolean,
     onDismissSettings: () -> Unit,
     onUpdateSettings: ((com.browsex.app.storage.BrowserSettings) -> com.browsex.app.storage.BrowserSettings) -> Unit,
-    onSettingsAction: (BrowseXSettingsAction) -> Unit
+    onSettingsAction: (BrowseXSettingsAction) -> Unit,
+    savedPagesOpen: Boolean,
+    savedPagesState: BrowseXSavedPagesState,
+    onDismissSavedPages: () -> Unit,
+    onOpenSavedPage: (String) -> Unit,
+    onRemoveSavedPage: (String) -> Unit,
+    onRenameBookmark: (String, String) -> Unit,
+    onMoveBookmark: (String, String) -> Unit,
+    onMoveBookmarkWithinFolder: (String, String, Int) -> Unit,
+    onCreateBookmarkFolder: (String) -> Unit,
+    onRenameBookmarkFolder: (String, String) -> Unit,
+    onDeleteBookmarkFolder: (String) -> Unit,
+    onClearSavedHistory: () -> Unit,
+    onShareSavedPage: (String) -> Unit,
+    onCopySavedPage: (String) -> Unit
 ) {
     val primary = Color(state.accentColor)
     val surface = Color(state.panelColor)
@@ -536,6 +550,23 @@ internal fun BrowseXBrowserChrome(
                 onDismiss = onDismissSettings,
                 onUpdateSettings = onUpdateSettings,
                 onAction = onSettingsAction
+            )
+        }
+        if (savedPagesOpen) {
+            BrowseXSavedPagesScreen(
+                state = savedPagesState,
+                onDismiss = onDismissSavedPages,
+                onOpen = onOpenSavedPage,
+                onRemove = onRemoveSavedPage,
+                onRenameBookmark = onRenameBookmark,
+                onMoveBookmark = onMoveBookmark,
+                onMoveWithinFolder = onMoveBookmarkWithinFolder,
+                onCreateFolder = onCreateBookmarkFolder,
+                onRenameFolder = onRenameBookmarkFolder,
+                onDeleteFolder = onDeleteBookmarkFolder,
+                onClearHistory = onClearSavedHistory,
+                onShare = onShareSavedPage,
+                onCopy = onCopySavedPage
             )
         }
     }
