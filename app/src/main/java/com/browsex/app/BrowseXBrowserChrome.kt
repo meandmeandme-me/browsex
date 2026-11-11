@@ -92,7 +92,10 @@ internal enum class BrowseXMenuAction(val label: String) {
     CLOSE_PRIVATE_TABS("Close private tabs"),
     RECALL("Find anything"),
     PASSWORDS("Password manager"),
-    SAVED_SESSIONS("Saved sessions")
+    SAVED_SESSIONS("Saved sessions"),
+    SAVE_SESSION("Save current session"),
+    RECENTLY_CLOSED("Recently closed tabs"),
+    CLOSE_ALL_TABS("Close all tabs")
 }
 
 internal data class BrowseXChromeState(
