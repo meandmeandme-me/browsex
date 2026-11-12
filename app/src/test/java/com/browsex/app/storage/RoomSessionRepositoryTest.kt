@@ -71,6 +71,53 @@ class RoomSessionRepositoryTest {
     }
 
     @Test
+    fun importingSameNamedSessionPreservesOriginalAndAddsUniqueName() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSessionRepository(database.storageDao())
+            assertTrue(repository.saveSession(
+                "Research", listOf("https://original.example"), 0, 1L
+            ))
+
+            val importedName = repository.importSession(
+                "research", listOf("https://backup.example"), 0, 2L
+            )
+
+            assertEquals("research (2)", importedName)
+            val sessions = repository.sessions().associateBy { it.name }
+            assertEquals(setOf("Research", "research (2)"), sessions.keys)
+            assertEquals(listOf("https://original.example"), sessions["Research"]?.urls)
+            assertEquals(listOf("https://backup.example"), sessions["research (2)"]?.urls)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun importingSessionRespectsTenSessionLimitWithoutReplacingAnySession() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSessionRepository(database.storageDao())
+            repeat(10) { index ->
+                assertTrue(repository.saveSession("Session $index", listOf("https://$index.example"), 0, index.toLong()))
+            }
+
+            assertNull(repository.importSession("Session 0", listOf("https://replacement.example"), 0))
+            assertEquals(10, repository.sessions().size)
+            assertEquals(
+                listOf("https://0.example"),
+                repository.sessions().single { it.name == "Session 0" }.urls
+            )
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun namedSessionsRespectTenSessionLimit() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
