@@ -48,6 +48,28 @@ internal class RoomSessionRepository(
         return dao.saveNamedSession(session, tabs)
     }
 
+    /** Imports without overwriting a same-named saved session; returns the final unique name. */
+    suspend fun importSession(
+        rawName: String,
+        urls: List<String>,
+        activeIndex: Int,
+        savedAt: Long = System.currentTimeMillis()
+    ): String? {
+        val name = normalizeDisplayText(rawName, MAX_SESSION_NAME)
+        if (name.isBlank() || urls.isEmpty() || savedAt < 0L) return null
+        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL)
+        val session = SavedSessionEntity(
+            id = "session_${UUID.randomUUID()}",
+            name = name,
+            activeIndex = snapshot.activeIndex,
+            savedAt = savedAt
+        )
+        val tabs = snapshot.urls.mapIndexed { index, url ->
+            SavedSessionTabEntity(session.id, index, url)
+        }
+        return dao.insertImportedSession(session, tabs, MAX_SESSION_NAME)
+    }
+
     suspend fun deleteSession(id: String): Boolean {
         if (id.isBlank()) return false
         return dao.removeSavedSession(id)
