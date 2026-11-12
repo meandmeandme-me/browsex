@@ -16,6 +16,24 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class RoomBookmarkRepositoryTest {
     @Test
+    fun freshDatabaseInitializesDefaultFolderBeforeBookmarkCreation() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(),
+            BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomBookmarkRepository(database.storageDao())
+            assertTrue(repository.ensureDefaultFolder())
+            assertTrue(repository.ensureDefaultFolder())
+            assertEquals("unfiled", repository.folders().single().id)
+            assertTrue(repository.add("https://fresh-install.example", "Fresh install"))
+            assertEquals("unfiled", repository.find("https://fresh-install.example")?.folderId)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun bookmarkBackupRoundTripsAndMergesWithoutOverwritingExistingUrls() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
