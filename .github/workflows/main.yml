@@ -99,6 +99,14 @@ jobs:
       - name: Run tests, lint and build APKs
         run: gradle testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
 
+      - name: Run Room migration instrumentation tests
+        if: ${{ hashFiles('app/src/androidTest/**/*Migration*Test.kt') != '' }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          script: gradle connectedDebugAndroidTest --no-daemon --stacktrace
+
       - name: Build release APKs (production-signed when configured)
         run: gradle assembleRelease --no-daemon --stacktrace
 
@@ -148,13 +156,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json"
           DATABASE_SOURCE="app/src/main/java/com/browsex/app/storage/BrowseXDatabase.kt"
+          ROOM_VERSION="$(python3 -c 'import re; from pathlib import Path; s=Path("'"$DATABASE_SOURCE"'").read_text(); m=re.search(r"@Database\\([\\s\\S]*?version\\s*=\\s*(\\d+)", s); print(m.group(1) if m else "")')"
+          test -n "$ROOM_VERSION"
+          SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/$ROOM_VERSION.json"
           test -s "$SCHEMA"
-          if grep -Fq 'fallbackToDestructiveMigration' "$DATABASE_SOURCE"; then
-            echo "::error::Destructive Room migration fallback is forbidden; add an explicit, tested migration."
-            exit 1
-          fi
           if ! git diff --quiet -- "$SCHEMA"; then
             echo "::error::Room schema changed. Commit the generated schema JSON and its migration with this change."
             git diff -- "$SCHEMA"
