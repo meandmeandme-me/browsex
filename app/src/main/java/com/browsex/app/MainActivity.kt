@@ -961,13 +961,12 @@ class MainActivity : AppCompatActivity() {
         if (!initialBrowserTabsRestored) return
         val currentTabs = tabs
         val selectedIndex = currentTabs.indexOfFirst { it === activeTab }
-        val snapshot = BrowserTabPersistencePolicy.snapshot(
+        storageRuntime.persistOpenTabs(
             urls = currentTabs.map { it.url },
             privateFlags = currentTabs.map { it.privateMode },
             activeIndex = selectedIndex,
             homeUrl = homePageUrl()
         )
-        storageRuntime.persistOpenTabs(snapshot.urls, snapshot.activeIndex)
     }
 
     override fun onDestroy() {

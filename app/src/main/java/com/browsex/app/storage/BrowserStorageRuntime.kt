@@ -48,9 +48,17 @@ internal class BrowserStorageRuntime(context: Context) {
     /**
      * Tab state is captured by the Activity, then persisted on the application scope so
      * onStop/onDestroy cannot cancel the final snapshot with the Activity lifecycle.
+     * Privacy flags travel with the snapshot so Room excludes private URLs at the storage boundary.
      */
-    fun persistOpenTabs(urls: List<String>, activeIndex: Int, onFailure: () -> Unit = {}) {
+    fun persistOpenTabs(
+        urls: List<String>,
+        privateFlags: List<Boolean>,
+        activeIndex: Int,
+        homeUrl: String,
+        onFailure: () -> Unit = {}
+    ) {
         val safeUrls = urls.toList()
+        val safePrivateFlags = privateFlags.toList()
         val generation = tabSnapshotGeneration.incrementAndGet()
         scope.launch {
             runCatching {
@@ -59,7 +67,7 @@ internal class BrowserStorageRuntime(context: Context) {
                     // Activity lifecycle callbacks can enqueue snapshots close together. Only
                     // the newest requested snapshot may commit, even if older IO starts late.
                     if (generation == tabSnapshotGeneration.get()) {
-                        storage.tabs.save(safeUrls, activeIndex)
+                        storage.tabs.save(safeUrls, safePrivateFlags, activeIndex, homeUrl)
                     }
                 }
             }.onFailure { error ->

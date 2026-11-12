@@ -1,14 +1,21 @@
 package com.browsex.app.storage
 
+import com.browsex.app.BrowserTabPersistencePolicy
 import com.browsex.app.TabSessionState
 
-/** Persists only the regular browsing window; private tabs must be filtered by the caller. */
+/** Persists a regular-tab snapshot and enforces private-tab exclusion at the storage boundary. */
 internal class RoomTabStateRepository(
     private val dao: BrowseXStorageDao
 ) {
-    suspend fun save(urls: List<String>, activeIndex: Int, savedAt: Long = System.currentTimeMillis()): Boolean {
+    suspend fun save(
+        urls: List<String>,
+        privateFlags: List<Boolean>,
+        activeIndex: Int,
+        homeUrl: String = HOME_URL,
+        savedAt: Long = System.currentTimeMillis()
+    ): Boolean {
         if (savedAt < 0L) return false
-        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL)
+        val snapshot = BrowserTabPersistencePolicy.snapshot(urls, privateFlags, activeIndex, homeUrl)
         val tabs = snapshot.urls.mapIndexed { index, url -> OpenTabEntity(index, url) }
         dao.saveOpenTabSnapshot(
             BrowserStateEntity(activeIndex = snapshot.activeIndex, savedAt = savedAt),
