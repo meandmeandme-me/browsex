@@ -10,6 +10,7 @@ import org.json.JSONObject
 internal object SessionBackupCodec {
     private const val FORMAT = "wren-session"
     private const val VERSION = 1
+    private const val MAX_BACKUP_CHARS = 100_000
 
     data class Snapshot(
         val name: String,
@@ -34,6 +35,7 @@ internal object SessionBackupCodec {
 
     /** Reads Wren JSON backups or the legacy newline-separated URL format. */
     fun decode(rawText: String, fallbackName: String = ""): Snapshot {
+        require(rawText.length <= MAX_BACKUP_CHARS) { "Session backup file is too large" }
         val trimmed = rawText.trim()
         require(trimmed.isNotEmpty()) { "Session backup is empty" }
         return if (trimmed.startsWith("{")) {
