@@ -46,6 +46,31 @@ class RoomSessionRepositoryTest {
     }
 
     @Test
+    fun clearingAllSavedSessionsRemovesSessionsAndChildTabsAtomically() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSessionRepository(database.storageDao())
+            assertTrue(repository.saveSession(
+                "First", listOf("https://one.example", "https://two.example"), 1, 1L
+            ))
+            assertTrue(repository.saveSession(
+                "Second", listOf("https://three.example"), 0, 2L
+            ))
+            assertEquals(2, repository.sessions().size)
+            assertEquals(3, database.storageDao().sessionTabCount())
+
+            repository.clearAllSessions()
+
+            assertTrue(repository.sessions().isEmpty())
+            assertEquals(0, database.storageDao().sessionTabCount())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun namedSessionsRespectTenSessionLimit() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
