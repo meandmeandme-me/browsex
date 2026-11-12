@@ -104,11 +104,8 @@ internal class BrowserCredentialVault(
                     val id = row.optString("id")
                     val origin = row.optString("origin")
                     val username = row.optString("username")
-                    val canonicalOrigin = CredentialOriginPolicy.canonicalHttpsOrigin(origin)
-                    if (id.isBlank() || id.length > MAX_CREDENTIAL_ID_LENGTH ||
-                        canonicalOrigin != origin || username.isBlank() ||
-                        username.length > MAX_USERNAME_LENGTH
-                    ) null else StoredCredentialSummary(id, origin, username)
+                    if (!isValidStoredRow(row)) null
+                    else StoredCredentialSummary(id, origin, username)
                 }
                 .take(MAX_CREDENTIALS)
                 .toList()
@@ -121,8 +118,8 @@ internal class BrowserCredentialVault(
             !accessPolicy.canFetchCredentials(privateBrowsingActive)
         ) return null
         return runCatching {
-            read().firstOrNull { it.optString("id") == id }
-                ?.optString("secret")?.takeIf { it.isNotEmpty() && it.length <= MAX_PASSWORD_LENGTH }
+            read().firstOrNull { it.optString("id") == id && isValidStoredRow(it) }
+                ?.optString("secret")
         }.getOrElse { android.util.Log.e("BrowseX", "Saved credential unavailable", it); null }
     }
 
@@ -176,7 +173,10 @@ internal class BrowserCredentialVault(
         val rows = runCatching { read() }.getOrElse {
             android.util.Log.e("BrowseX", "Credential lookup unavailable", it)
             emptyList()
-        }.filter { CredentialOriginPolicy.matchesExactOrigin(it.optString("origin"), domain) }
+        }.filter {
+            isValidStoredRow(it) &&
+                CredentialOriginPolicy.matchesExactOrigin(it.optString("origin"), domain)
+        }
         return rows.map { row ->
             Autocomplete.LoginEntry.Builder().guid(row.optString("id")).origin(row.optString("origin"))
                 .formActionOrigin(row.optString("action").takeIf { it.isNotBlank() })
@@ -208,6 +208,16 @@ internal class BrowserCredentialVault(
             .put("username", login.username.take(512)).put("secret", login.password))
         write(JSONArray().also { array -> rows.take(500).forEach(array::put) })
     }
+
+    private fun isValidStoredRow(row: JSONObject): Boolean =
+        CredentialOriginPolicy.isValidStoredCredential(
+            id = row.optString("id"),
+            origin = row.optString("origin"),
+            action = row.optString("action"),
+            username = row.optString("username"),
+            password = row.optString("secret"),
+            realm = row.optString("realm")
+        )
 
     private fun read(): List<JSONObject> {
         val ivText = prefs.getString("iv", null)
