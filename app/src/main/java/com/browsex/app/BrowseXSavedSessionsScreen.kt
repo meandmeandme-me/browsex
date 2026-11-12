@@ -120,10 +120,15 @@ internal fun BrowseXSavedSessionsScreen(
                     TextButton(onClick = { importDialogOpen = true }, modifier = Modifier.weight(1f)) {
                         Text(t("Import from text", "استيراد من نص"))
                     }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
                     TextButton(onClick = onImportFile, modifier = Modifier.weight(1f)) {
                         Text(t("Import backup", "استيراد نسخة"))
                     }
-                    TextButton(onClick = { deleteAllOpen = true }) {
+                    TextButton(onClick = { deleteAllOpen = true }, modifier = Modifier.weight(1f)) {
                         Text(t("Delete all", "حذف الكل"))
                     }
                 }
