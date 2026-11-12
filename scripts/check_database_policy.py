@@ -28,8 +28,13 @@ else:
 
 if '"wren-browser.db"' not in source:
     errors.append("The persistent database filename must remain wren-browser.db.")
-if "fallbackToDestructiveMigration" in source or "fallbackToDestructiveMigration" in runtime:
-    errors.append("Destructive Room migration fallback is forbidden.")
+
+# Search all production Kotlin sources. All destructive fallback variants are forbidden.
+for path in (ROOT / "app/src/main/java").rglob("*.kt"):
+    code = path.read_text(encoding="utf-8")
+    if re.search(r"fallbackToDestructiveMigration(?:OnDowngrade|From)?\s*\(", code):
+        errors.append(f"Destructive Room migration fallback is forbidden: {path.relative_to(ROOT)}")
+
 if "room.schemaLocation" not in gradle or "exportSchema = true" not in source:
     errors.append("Room schema export must remain enabled.")
 if "No SharedPreferences browsing data is imported" not in graph:
@@ -55,18 +60,43 @@ if version is not None:
     versions = sorted(
         int(path.stem) for path in SCHEMA_DIR.glob("*.json") if path.stem.isdigit()
     )
-    if versions and versions[-1] != version:
+    if not versions:
+        errors.append("No committed Room schema snapshots were found.")
+    elif versions[-1] != version:
         errors.append(f"Latest committed schema is v{versions[-1]}, but @Database is v{version}.")
+    if versions and versions[0] != 2:
+        errors.append(f"Expected the clean pre-release baseline to start at Room v2, found v{versions[0]}.")
+
     if version > 2:
-        migration_source = source + "\n" + "\n".join(
-            p.read_text(encoding="utf-8")
-            for p in (ROOT / "app/src/main/java/com/browsex/app/storage").glob("*.kt")
-        )
-        if not re.search(r"Migration\(\s*2\s*,\s*" + str(version) + r"\s*\)", migration_source):
-            errors.append("A database version above the clean v2 baseline requires an explicit migration path.")
+        storage_sources = list((ROOT / "app/src/main/java/com/browsex/app/storage").rglob("*.kt"))
+        migration_source = "\n".join(path.read_text(encoding="utf-8") for path in storage_sources)
+        edges = {
+            (int(start), int(end))
+            for start, end in re.findall(r"Migration\(\s*(\d+)\s*,\s*(\d+)\s*\)", migration_source)
+        }
+
+        # Require a continuous explicit path from every committed schema to current.
+        for start_version in versions:
+            reachable = {start_version}
+            changed = True
+            while changed:
+                changed = False
+                for edge_start, edge_end in edges:
+                    if edge_start in reachable and edge_end > edge_start and edge_end not in reachable:
+                        reachable.add(edge_end)
+                        changed = True
+            if version not in reachable:
+                errors.append(f"No continuous explicit migration path from schema v{start_version} to v{version}.")
+
         migration_tests = list((ROOT / "app/src/androidTest").rglob("*Migration*Test.kt")) if (ROOT / "app/src/androidTest").exists() else []
         if not migration_tests:
             errors.append("A database version change requires instrumented migration fixture tests.")
+        elif not any(
+            "MigrationTestHelper" in path.read_text(encoding="utf-8")
+            and "runMigrationsAndValidate" in path.read_text(encoding="utf-8")
+            for path in migration_tests
+        ):
+            errors.append("Migration instrumentation tests must use Room MigrationTestHelper and runMigrationsAndValidate.")
 
 if errors:
     for error in errors:
