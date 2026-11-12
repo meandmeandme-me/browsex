@@ -70,8 +70,8 @@ class RoomSessionRepositoryTest {
         try {
             val repository = RoomSessionRepository(database.storageDao())
             val now = System.currentTimeMillis()
-            assertTrue(repository.recordRecentlyClosed("https://one.example", "One", now))
-            assertTrue(repository.recordRecentlyClosed("https://two.example", "Two", now + 1))
+            assertTrue(repository.recordRecentlyClosed("https://one.example", "One", privateMode = false, closedAt = now))
+            assertTrue(repository.recordRecentlyClosed("https://two.example", "Two", privateMode = false, closedAt = now + 1))
             assertEquals(2, repository.recentlyClosed().size)
             repository.clearRecentlyClosed()
             assertTrue(repository.recentlyClosed().isEmpty())
@@ -87,14 +87,15 @@ class RoomSessionRepositoryTest {
         ).allowMainThreadQueries().build()
         try {
             val repository = RoomSessionRepository(database.storageDao())
-            assertFalse(repository.recordRecentlyClosed("file:///private", "Private"))
-            assertFalse(repository.recordRecentlyClosed("resource://android/assets/home.html", "Home"))
+            assertFalse(repository.recordRecentlyClosed("file:///private", "Private", privateMode = false))
+            assertFalse(repository.recordRecentlyClosed("resource://android/assets/home.html", "Home", privateMode = false))
             val baseTime = System.currentTimeMillis()
             repeat(11) { index ->
                 assertTrue(repository.recordRecentlyClosed(
                     "https://$index.example",
                     "Page $index",
-                    baseTime + index
+                    privateMode = false,
+                    closedAt = baseTime + index
                 ))
             }
             assertEquals(10, repository.recentlyClosed().size)
@@ -107,4 +108,26 @@ class RoomSessionRepositoryTest {
             database.close()
         }
     }
+
+    @Test
+    fun privateTabsAreRejectedFromRecentlyClosedStorage() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSessionRepository(database.storageDao())
+            assertFalse(repository.recordRecentlyClosed(
+                "https://private.example", "Private", privateMode = true
+            ))
+            assertTrue(repository.recentlyClosed().isEmpty())
+
+            assertTrue(repository.recordRecentlyClosed(
+                "https://regular.example", "Regular", privateMode = false
+            ))
+            assertEquals(listOf("https://regular.example"), repository.recentlyClosed().map { it.url })
+        } finally {
+            database.close()
+        }
+    }
+
 }
