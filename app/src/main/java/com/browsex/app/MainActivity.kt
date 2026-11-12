@@ -416,6 +416,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkJsonExportLauncher: ActivityResultLauncher<String>
+    private lateinit var sessionExportLauncher: ActivityResultLauncher<String>
+    private var pendingSessionBackup: com.browsex.app.storage.RoomSavedSession? = null
     private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -463,6 +465,28 @@ class MainActivity : AppCompatActivity() {
                     } ?: error("Could not open destination")
                 }.onSuccess { toast("Wren bookmark backup exported") }
                     .onFailure { android.util.Log.e("BrowseX", "Bookmark JSON backup export failed", it); toast("Could not export bookmark backup") }
+            }
+        }
+        sessionExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            val session = pendingSessionBackup
+            pendingSessionBackup = null
+            if (uri != null && session != null) lifecycleScope.launch {
+                runCatching {
+                    val payload = org.json.JSONObject()
+                        .put("format", "wren-session")
+                        .put("version", 1)
+                        .put("name", session.name)
+                        .put("activeIndex", session.activeIndex)
+                        .put("urls", org.json.JSONArray(session.urls))
+                        .toString(2)
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(payload.toByteArray(Charsets.UTF_8))
+                    } ?: error("Could not open destination")
+                }.onSuccess { toast("Wren session backup exported") }
+                    .onFailure { error ->
+                        android.util.Log.e("BrowseX", "Session backup export failed", error)
+                        toast("Could not export session backup")
+                    }
             }
         }
         bookmarkImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1787,6 +1811,7 @@ class MainActivity : AppCompatActivity() {
                     onDeleteSavedSession = ::deleteSavedSession,
                     onSaveCurrentSession = ::saveCurrentSessionNamed,
                     onImportSavedSession = ::importSavedSession,
+                    onExportSavedSession = ::exportSavedSession,
                     onDeleteAllSavedSessions = ::deleteAllSavedSessions,
                     siteInfoOpen = composeSiteInfoOpen.value,
                     siteInfoState = composeSiteInfoState.value,
@@ -2444,21 +2469,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun exportSavedSession(session: com.browsex.app.storage.RoomSavedSession) {
+        pendingSessionBackup = session
+        val safeName = session.name.replace(Regex("[^A-Za-z0-9._-]+"), "-").trim('-').ifBlank { "session" }
+        sessionExportLauncher.launch("wren-$safeName.json")
+    }
+
     private fun importSavedSession(rawName: String, rawText: String) {
-        val urls = rawText.lineSequence()
-            .map { it.trim().replace(Regex("^\\d+[.)]\\s*"), "") }
-            .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
-            .filter(NavigationInput::isValidWebUrl)
-            .distinct()
-            .take(50)
-            .toList()
-        if (urls.isEmpty()) {
-            toast("No valid website URLs found")
-            return
-        }
+        val trimmed = rawText.trim()
+        val imported = runCatching {
+            if (trimmed.startsWith("{")) {
+                val backup = org.json.JSONObject(trimmed)
+                require(backup.optString("format") == "wren-session") { "Unsupported session backup format" }
+                require(backup.optInt("version", -1) == 1) { "Unsupported session backup version" }
+                val name = backup.optString("name").ifBlank { rawName }
+                val array = backup.optJSONArray("urls") ?: error("Session backup has no URL list")
+                require(array.length() in 1..TabSessionState.MAX_TABS) { "Invalid session tab count" }
+                val urls = (0 until array.length()).map { index ->
+                    val url = array.optString(index).trim()
+                    require(url.startsWith("https://", true) || url.startsWith("http://", true))
+                    require(NavigationInput.isValidWebUrl(url)) { "Invalid website URL in backup" }
+                    url
+                }.distinct()
+                require(urls.isNotEmpty()) { "Session backup contains no valid URLs" }
+                val activeIndex = backup.optInt("activeIndex", 0).coerceIn(0, urls.lastIndex)
+                Triple(name, urls, activeIndex)
+            } else {
+                val urls = trimmed.lineSequence()
+                    .map { it.trim().replace(Regex("^\\d+[.)]\\s*"), "") }
+                    .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
+                    .filter(NavigationInput::isValidWebUrl)
+                    .distinct()
+                    .take(TabSessionState.MAX_TABS)
+                    .toList()
+                require(urls.isNotEmpty()) { "No valid website URLs found" }
+                Triple(rawName, urls, 0)
+            }
+        }.onFailure { error ->
+            android.util.Log.w("BrowseX", "Rejected invalid session import", error)
+            toast(error.message ?: "Could not read session backup")
+        }.getOrNull() ?: return
         lifecycleScope.launch {
             val saved = runCatching {
-                storageRuntime.awaitReady().sessions.saveSession(rawName, urls, 0)
+                storageRuntime.awaitReady().sessions.saveSession(imported.first, imported.second, imported.third)
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not import browsing session", it)
             }.getOrDefault(false)
