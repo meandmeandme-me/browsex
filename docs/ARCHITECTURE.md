@@ -66,7 +66,7 @@ Current BrowseX-branded Compose surfaces:
 - `BrowseXSavedPagesScreen.kt`: bookmarks, history, folders, ordering, edit/move/remove, share, and copy actions.
 - `BrowseXPrivacyAndPermissions.kt`: privacy clearing controls and saved per-site permission management.
 - `BrowseXSavedSessionsScreen.kt`: save/import, search/sort, rename/delete, restore, and open-alongside workflows.
-- Saved-session backups use the versioned `wren-session` JSON format (version 1) and are exported/imported one session at a time through Android's document picker. Imports validate the format, version, URL scheme, URL count, and file size before saving. Private tabs, passwords, cookies, permissions, and other secrets are never included.
+- Saved-session backups use the versioned `wren-session` JSON format (version 1) and are exported/imported one session at a time through Android's document picker. Imports validate the format, version, URL scheme, URL count, and a 100 KB payload limit before saving. Imports never overwrite an existing same-named session; they receive a unique suffix, and the 10-session limit is enforced transactionally. Private tabs, passwords, cookies, permissions, and other secrets are never included.
 
 The Compose UI adapts selected address/navigation patterns from the MIT-licensed Kingfisher Browser project. Attribution and the complete license notice are in `THIRD_PARTY_NOTICES.md`. BrowseX uses its own logo, colors, naming, and callbacks; it does not replace GeckoView or the browser domain.
 
