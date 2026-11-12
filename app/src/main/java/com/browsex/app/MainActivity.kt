@@ -2140,6 +2140,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun closeTab(tab: BrowserTab) = tabController.closeTab(tab)
 
+    private fun closeTab(tab: BrowserTab, ensureNonEmpty: Boolean) =
+        tabController.closeTab(tab, ensureNonEmpty)
+
     private fun attachDelegates(tab: BrowserTab) {
         tab.permissionDelegate = BrowseXPermissionDelegate(
             this,
@@ -2457,7 +2460,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         if (replaceRegularTabs) {
-            tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
+            // Do not let closing the final regular tab insert a placeholder home tab:
+            // that placeholder would consume one of the slots reserved for this restore.
+            tabs.filterNot { it.privateMode }.toList().forEach { tab ->
+                closeTab(tab, ensureNonEmpty = false)
+            }
         }
         val opened = mutableListOf<BrowserTab>()
         session.urls.forEach { url ->
@@ -2465,6 +2472,7 @@ class MainActivity : AppCompatActivity() {
             createTab(url)
             if (tabs.size > before) tabs.lastOrNull()?.let(opened::add)
         }
+        if (tabs.isEmpty()) createTab(homePageUrl())
         opened.getOrNull(session.activeIndex.coerceIn(0, (opened.size - 1).coerceAtLeast(0)))?.let(::activateTab)
         if (opened.size < session.urls.size) {
             toast(
