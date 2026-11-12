@@ -36,6 +36,11 @@ internal class BrowserStorageRuntime(context: Context) {
             // runs at a time, while a failed attempt releases the lock for the next caller.
             // This operation is idempotent: only queued/running downloads are transitioned.
             graph.downloads.recoverInterrupted()
+            // The reserved folder is a required parent for every new bookmark. Seed it
+            // idempotently before exposing repositories to the rest of the app.
+            check(graph.bookmarks.ensureDefaultFolder()) {
+                "Could not initialize the default bookmark folder"
+            }
             readyGraph = graph
             return graph
         } finally {
