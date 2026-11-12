@@ -2512,17 +2512,21 @@ class MainActivity : AppCompatActivity() {
             toast(error.message ?: "Could not read session backup")
         }.getOrNull() ?: return
         lifecycleScope.launch {
-            val saved = runCatching {
-                storageRuntime.awaitReady().sessions.saveSession(
+            val importedName = runCatching {
+                storageRuntime.awaitReady().sessions.importSession(
                     imported.name,
                     imported.urls,
                     imported.activeIndex
                 )
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not import browsing session", it)
-            }.getOrDefault(false)
-            toast(if (saved) "Session imported" else "Could not import session. Check the name and the 10-session limit.")
-            if (saved) runCatching { refreshComposeSavedSessions() }
+            }.getOrNull()
+            if (importedName != null) {
+                toast("Session imported as $importedName")
+                runCatching { refreshComposeSavedSessions() }
+            } else {
+                toast("Could not import session. The 10-session limit may have been reached.")
+            }
         }
     }
 
