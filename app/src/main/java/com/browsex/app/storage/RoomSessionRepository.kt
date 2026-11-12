@@ -53,6 +53,11 @@ internal class RoomSessionRepository(
         return dao.removeSavedSession(id)
     }
 
+    /** Removes every saved session and its tab rows in one Room transaction. */
+    suspend fun clearAllSessions() {
+        dao.clearAllSavedSessions()
+    }
+
     suspend fun renameSession(id: String, rawName: String): Boolean {
         val name = normalizeDisplayText(rawName, MAX_SESSION_NAME)
         if (id.isBlank() || name.isBlank()) return false
