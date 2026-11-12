@@ -138,6 +138,17 @@ internal class RoomBookmarkRepository(
 
     suspend fun folders(): List<BookmarkFolderEntity> = dao.folders()
 
+    /** Ensures the reserved destination exists on a brand-new database. Safe to retry. */
+    suspend fun ensureDefaultFolder(): Boolean {
+        val inserted = dao.insertFolder(BookmarkFolderEntity(
+            id = DEFAULT_FOLDER_ID,
+            name = "Unfiled",
+            sortOrder = 0,
+            createdAt = 0L
+        ))
+        return inserted != -1L || dao.folder(DEFAULT_FOLDER_ID) != null
+    }
+
     suspend fun createFolder(name: String, createdAt: Long = System.currentTimeMillis()): String? {
         val normalized = normalizeFolderName(name) ?: return null
         if (createdAt < 0L) return null
