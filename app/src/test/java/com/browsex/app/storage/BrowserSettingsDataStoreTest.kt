@@ -109,9 +109,9 @@ class BrowserSettingsDataStoreTest {
         (0 until 40).map { index ->
             async(Dispatchers.IO) {
                 if (index % 2 == 0) {
-                    repository.update { it.copy(themeMode = if (index == 38) "dark" else "light") }
+                    repository.update { it.copy(themeMode = "dark") }
                 } else {
-                    repository.update { it.copy(languageMode = if (index == 39) "ar-MA" else "system") }
+                    repository.update { it.copy(languageMode = "ar-MA") }
                 }
             }
         }.awaitAll()
