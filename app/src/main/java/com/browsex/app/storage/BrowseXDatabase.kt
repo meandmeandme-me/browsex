@@ -384,6 +384,28 @@ interface BrowseXStorageDao {
         return true
     }
 
+    /** Imports a backup without replacing an existing session with the same name. */
+    @Transaction
+    suspend fun insertImportedSession(
+        session: SavedSessionEntity,
+        tabs: List<SavedSessionTabEntity>,
+        maxNameLength: Int = 40
+    ): String? {
+        val existing = savedSessions(10)
+        if (existing.size >= 10) return null
+        val usedNames = existing.map { it.name }
+        var candidate = session.name
+        var suffixIndex = 2
+        while (usedNames.any { it.equals(candidate, ignoreCase = true) }) {
+            val suffix = " ($suffixIndex)"
+            candidate = session.name.take((maxNameLength - suffix.length).coerceAtLeast(1)) + suffix
+            suffixIndex++
+        }
+        putSessions(listOf(session.copy(name = candidate)))
+        putSessionTabs(tabs)
+        return candidate
+    }
+
     @Transaction
     suspend fun recordRecentlyClosed(tab: RecentlyClosedTabEntity) {
         deleteRecentlyClosedByUrl(tab.url)
