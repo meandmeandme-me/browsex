@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -93,4 +95,30 @@ class BrowserSettingsDataStoreTest {
         assertTrue(normalized.reduceMotion)
         assertTrue(normalized.highContrast)
     }
+    @Test
+    fun concurrentPartialUpdatesDoNotOverwriteUnrelatedSettings() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val isolatedStore = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            produceFile = {
+                File(context.filesDir, "datastore/browsex-concurrent-${UUID.randomUUID()}.preferences_pb")
+            }
+        )
+        val repository = BrowserSettingsDataStore(context, isolatedStore)
+
+        (0 until 40).map { index ->
+            async(Dispatchers.IO) {
+                if (index % 2 == 0) {
+                    repository.update { it.copy(themeMode = if (index == 38) "dark" else "light") }
+                } else {
+                    repository.update { it.copy(languageMode = if (index == 39) "ar-MA" else "system") }
+                }
+            }
+        }.awaitAll()
+
+        val result = repository.snapshot()
+        assertEquals("dark", result.themeMode)
+        assertEquals("ar-MA", result.languageMode)
+    }
+
 }
