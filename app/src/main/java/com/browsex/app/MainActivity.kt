@@ -2517,7 +2517,8 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(tr("Export session backup"))
             .setMessage(
-                tr(
+                BrowseXStrings.text(
+                    this@MainActivity,
                     "The backup includes the full URLs of regular tabs. Some website URLs may contain private information or temporary access tokens. Only share this file with people you trust.",
                     "تتضمن النسخة الاحتياطية عناوين المواقع الكاملة للتبويبات العادية. قد تحتوي بعض العناوين على معلومات خاصة أو رموز وصول مؤقتة. لا تشارك الملف إلا مع أشخاص تثق بهم."
                 )
