@@ -564,6 +564,13 @@ interface BrowseXStorageDao {
     @Query("DELETE FROM saved_sessions")
     suspend fun clearSessions()
 
+    /** Deletes parent and child rows as one unit so a partial clear cannot orphan session tabs. */
+    @Transaction
+    suspend fun clearAllSavedSessions() {
+        clearSessionTabs()
+        clearSessions()
+    }
+
     @Query("DELETE FROM recently_closed_tabs")
     suspend fun clearRecentlyClosed()
 
