@@ -124,11 +124,15 @@ internal class BrowserTabController(
         }
     }
 
-    fun closeTab(tab: BrowserTab, ensureNonEmpty: Boolean = true) {
+    fun closeTab(
+        tab: BrowserTab,
+        ensureNonEmpty: Boolean = true,
+        recordRecentlyClosedTab: Boolean = true
+    ) {
         val index = tabs.indexOfFirst { it === tab }
         if (index < 0) return
         val wasActive = activeTab === tab
-        if (!tab.privateMode) {
+        if (!tab.privateMode && recordRecentlyClosedTab) {
             runCatching { recordRecentlyClosed(tab) }
                 .onFailure { android.util.Log.w("BrowseX", "Could not record recently closed tab", it) }
         }
