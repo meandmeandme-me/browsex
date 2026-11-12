@@ -2435,7 +2435,12 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun refreshComposeSavedSessions() {
         if (!composeSavedSessionsOpen.value) return
-        composeSavedSessionsState.value = storageRuntime.awaitReady().sessions.sessions()
+        runCatching { storageRuntime.awaitReady().sessions.sessions() }
+            .onSuccess { composeSavedSessionsState.value = it }
+            .onFailure { error ->
+                android.util.Log.e("BrowseX", "Could not refresh saved sessions", error)
+                toast(BrowseXStrings.text(this, "Could not refresh saved sessions", "تعذر تحديث الجلسات المحفوظة"))
+            }
     }
 
     private fun restoreSavedSession(session: com.browsex.app.storage.RoomSavedSession, replaceRegularTabs: Boolean) {
