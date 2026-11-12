@@ -2273,7 +2273,7 @@ class MainActivity : AppCompatActivity() {
                         createTab(restored.url)
                     } else {
                         runCatching {
-                            storage.sessions.recordRecentlyClosed(restored.url, restored.title, restored.closedAt)
+                            storage.sessions.recordRecentlyClosed(restored.url, restored.title, privateMode = false, closedAt = restored.closedAt)
                         }.onFailure {
                             android.util.Log.e("BrowseX", "Could not return recently closed tab", it)
                         }
@@ -2308,7 +2308,7 @@ class MainActivity : AppCompatActivity() {
                         val toReturn = restored.drop(capacityNow)
                         toReturn.forEach { item ->
                             runCatching {
-                                storage.sessions.recordRecentlyClosed(item.url, item.title, item.closedAt)
+                                storage.sessions.recordRecentlyClosed(item.url, item.title, privateMode = false, closedAt = item.closedAt)
                             }.onFailure {
                                 android.util.Log.e("BrowseX", "Could not return un-restored tab", it)
                             }
