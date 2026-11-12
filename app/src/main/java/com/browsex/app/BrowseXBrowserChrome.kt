@@ -200,6 +200,7 @@ internal fun BrowseXBrowserChrome(
     onDeleteSavedSession: (String) -> Unit,
     onSaveCurrentSession: (String) -> Unit,
     onImportSavedSession: (String, String) -> Unit,
+    onExportSavedSession: (com.browsex.app.storage.RoomSavedSession) -> Unit,
     onDeleteAllSavedSessions: () -> Unit,
     siteInfoOpen: Boolean,
     siteInfoState: BrowseXSiteInfoState,
@@ -647,6 +648,7 @@ internal fun BrowseXBrowserChrome(
                 onDelete = onDeleteSavedSession,
                 onSaveCurrent = onSaveCurrentSession,
                 onImport = onImportSavedSession,
+                onExport = onExportSavedSession,
                 onDeleteAll = onDeleteAllSavedSessions
             )
         }
