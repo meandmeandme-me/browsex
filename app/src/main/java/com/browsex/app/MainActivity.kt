@@ -473,13 +473,11 @@ class MainActivity : AppCompatActivity() {
             pendingSessionBackup = null
             if (uri != null && session != null) lifecycleScope.launch {
                 runCatching {
-                    val payload = org.json.JSONObject()
-                        .put("format", "wren-session")
-                        .put("version", 1)
-                        .put("name", session.name)
-                        .put("activeIndex", session.activeIndex)
-                        .put("urls", org.json.JSONArray(session.urls))
-                        .toString(2)
+                    val payload = SessionBackupCodec.encode(
+                        session.name,
+                        session.urls,
+                        session.activeIndex
+                    )
                     contentResolver.openOutputStream(uri)?.use { output ->
                         output.write(payload.toByteArray(Charsets.UTF_8))
                     } ?: error("Could not open destination")
@@ -2507,44 +2505,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun importSavedSession(rawName: String, rawText: String) {
-        val trimmed = rawText.trim()
         val imported = runCatching {
-            if (trimmed.startsWith("{")) {
-                val backup = org.json.JSONObject(trimmed)
-                require(backup.optString("format") == "wren-session") { "Unsupported session backup format" }
-                require(backup.optInt("version", -1) == 1) { "Unsupported session backup version" }
-                val name = backup.optString("name").ifBlank { rawName }
-                val array = backup.optJSONArray("urls") ?: error("Session backup has no URL list")
-                require(array.length() in 1..TabSessionState.MAX_TABS) { "Invalid session tab count" }
-                val urls = (0 until array.length()).map { index ->
-                    val url = array.optString(index).trim()
-                    require(url.startsWith("https://", true) || url.startsWith("http://", true))
-                    require(NavigationInput.isValidWebUrl(url)) { "Invalid website URL in backup" }
-                    url
-                }
-                // A backup is an exact tab snapshot: duplicate URLs can represent separate tabs,
-                // so preserve their positions to keep activeIndex pointing at the same tab.
-                require(urls.isNotEmpty()) { "Session backup contains no valid URLs" }
-                val activeIndex = backup.optInt("activeIndex", 0).coerceIn(0, urls.lastIndex)
-                Triple(name, urls, activeIndex)
-            } else {
-                val urls = trimmed.lineSequence()
-                    .map { it.trim().replace(Regex("^\\d+[.)]\\s*"), "") }
-                    .filter { it.startsWith("https://", true) || it.startsWith("http://", true) }
-                    .filter(NavigationInput::isValidWebUrl)
-                    .distinct()
-                    .take(TabSessionState.MAX_TABS)
-                    .toList()
-                require(urls.isNotEmpty()) { "No valid website URLs found" }
-                Triple(rawName, urls, 0)
-            }
+            SessionBackupCodec.decode(rawText, rawName)
         }.onFailure { error ->
             android.util.Log.w("BrowseX", "Rejected invalid session import", error)
             toast(error.message ?: "Could not read session backup")
         }.getOrNull() ?: return
         lifecycleScope.launch {
             val saved = runCatching {
-                storageRuntime.awaitReady().sessions.saveSession(imported.first, imported.second, imported.third)
+                storageRuntime.awaitReady().sessions.saveSession(
+                    imported.name,
+                    imported.urls,
+                    imported.activeIndex
+                )
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not import browsing session", it)
             }.getOrDefault(false)
