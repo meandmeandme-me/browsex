@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
             enforceSessionBudget = ::enforceLiveSessionBudget,
             updateChrome = ::updateChrome,
             showMessage = ::toast,
-            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title) },
+            recordRecentlyClosed = { tab -> storageRuntime.recordRecentlyClosed(tab.url, tab.title, tab.privateMode) },
             dispatchToMain = { action -> runOnUiThread(action) },
             setExtensionTabActive = { session, active ->
                 uBlockOriginManager?.setTabActive(session, active)
