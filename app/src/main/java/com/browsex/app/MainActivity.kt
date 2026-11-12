@@ -2499,9 +2499,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exportSavedSession(session: com.browsex.app.storage.RoomSavedSession) {
-        pendingSessionBackup = session
-        val safeName = session.name.replace(Regex("[^A-Za-z0-9._-]+"), "-").trim('-').ifBlank { "session" }
-        sessionExportLauncher.launch("wren-$safeName.json")
+        AlertDialog.Builder(this)
+            .setTitle(tr("Export session backup"))
+            .setMessage(
+                tr(
+                    "The backup includes the full URLs of regular tabs. Some website URLs may contain private information or temporary access tokens. Only share this file with people you trust.",
+                    "تتضمن النسخة الاحتياطية عناوين المواقع الكاملة للتبويبات العادية. قد تحتوي بعض العناوين على معلومات خاصة أو رموز وصول مؤقتة. لا تشارك الملف إلا مع أشخاص تثق بهم."
+                )
+            )
+            .setNegativeButton(tr("Cancel"), null)
+            .setPositiveButton(tr("Continue")) { _, _ ->
+                pendingSessionBackup = session
+                val safeName = session.name.replace(Regex("[^A-Za-z0-9._-]+"), "-")
+                    .trim('-').ifBlank { "session" }
+                sessionExportLauncher.launch("wren-$safeName.json")
+            }
+            .show()
     }
 
     private fun importSavedSession(rawName: String, rawText: String) {
