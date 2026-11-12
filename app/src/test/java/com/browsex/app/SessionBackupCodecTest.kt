@@ -90,6 +90,13 @@ class SessionBackupCodecTest {
     }
 
     @Test
+    fun rejectsOversizedBackupPayloadsBeforeParsing() {
+        assertThrows(IllegalArgumentException::class.java) {
+            SessionBackupCodec.decode("x".repeat(100_001))
+        }
+    }
+
+    @Test
     fun rejectsEmptyOrNamelessBackups() {
         assertThrows(IllegalArgumentException::class.java) {
             SessionBackupCodec.decode("  ")
