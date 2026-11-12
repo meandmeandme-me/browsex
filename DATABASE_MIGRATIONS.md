@@ -41,3 +41,11 @@ Do not create a speculative v2-to-v3 migration until an actual schema change is 
 - Verify storage corruption handling and backup/restore behavior on real devices.
 - Verify upgrades from the final pre-release build to the first public release.
 - Keep the signing key stable across all releases; signing identity is separate from the Room schema version.
+
+## Continuous integration enforcement
+
+- The database policy checker scans all production Kotlin sources for destructive Room fallback variants.
+- Once the schema advances beyond v2, every committed starting schema must have a continuous explicit migration path to the current version.
+- Migration instrumentation tests must use Room `MigrationTestHelper` and `runMigrationsAndValidate`.
+- CI runs those migration tests on an Android emulator whenever a migration test fixture is present. The current v2 baseline has no schema upgrade to test, so no speculative migration test is created.
+- The CI schema verification derives the expected snapshot filename from the current `@Database` version instead of hard-coding v2.
