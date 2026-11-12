@@ -417,6 +417,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkJsonExportLauncher: ActivityResultLauncher<String>
     private lateinit var sessionExportLauncher: ActivityResultLauncher<String>
+    private lateinit var sessionImportLauncher: ActivityResultLauncher<Array<String>>
     private var pendingSessionBackup: com.browsex.app.storage.RoomSavedSession? = null
     private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
 
@@ -487,6 +488,30 @@ class MainActivity : AppCompatActivity() {
                         android.util.Log.e("BrowseX", "Session backup export failed", error)
                         toast("Could not export session backup")
                     }
+            }
+        }
+        sessionImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) lifecycleScope.launch {
+                runCatching {
+                    val payload = contentResolver.openInputStream(uri)?.use { input ->
+                        val output = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(4096)
+                        var total = 0
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            require(total <= 100_000) { "Session backup file is too large" }
+                            output.write(buffer, 0, count)
+                        }
+                        output.toString(Charsets.UTF_8.name())
+                    } ?: error("Could not open session backup")
+                    require(payload.trimStart().startsWith("{")) { "This file is not a Wren session backup" }
+                    importSavedSession("", payload)
+                }.onFailure { error ->
+                    android.util.Log.w("BrowseX", "Session backup file import failed", error)
+                    toast(error.message ?: "Could not import session backup")
+                }
             }
         }
         bookmarkImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1812,6 +1837,7 @@ class MainActivity : AppCompatActivity() {
                     onSaveCurrentSession = ::saveCurrentSessionNamed,
                     onImportSavedSession = ::importSavedSession,
                     onExportSavedSession = ::exportSavedSession,
+                    onImportSessionBackupFile = { sessionImportLauncher.launch(arrayOf("application/json", "text/json", "text/*")) },
                     onDeleteAllSavedSessions = ::deleteAllSavedSessions,
                     siteInfoOpen = composeSiteInfoOpen.value,
                     siteInfoState = composeSiteInfoState.value,
