@@ -55,6 +55,7 @@ internal fun BrowseXSavedSessionsScreen(
     onSaveCurrent: (String) -> Unit,
     onImport: (String, String) -> Unit,
     onExport: (RoomSavedSession) -> Unit,
+    onImportFile: () -> Unit,
     onDeleteAll: () -> Unit
 ) {
     val context = LocalContext.current
@@ -118,6 +119,9 @@ internal fun BrowseXSavedSessionsScreen(
                     }
                     TextButton(onClick = { importDialogOpen = true }, modifier = Modifier.weight(1f)) {
                         Text(t("Import from text", "استيراد من نص"))
+                    }
+                    TextButton(onClick = onImportFile, modifier = Modifier.weight(1f)) {
+                        Text(t("Import backup", "استيراد نسخة"))
                     }
                     TextButton(onClick = { deleteAllOpen = true }) {
                         Text(t("Delete all", "حذف الكل"))
