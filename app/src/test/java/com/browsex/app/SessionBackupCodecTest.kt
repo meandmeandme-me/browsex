@@ -28,6 +28,17 @@ class SessionBackupCodecTest {
     }
 
     @Test
+    fun preservesWrenHomeTabsInBackup() {
+        val home = HOME_URL
+        val decoded = SessionBackupCodec.decode(
+            SessionBackupCodec.encode("Home", listOf(home, "https://example.com"), 0)
+        )
+
+        assertEquals(listOf(home, "https://example.com"), decoded.urls)
+        assertEquals(0, decoded.activeIndex)
+    }
+
+    @Test
     fun activeIndexIsClampedToAvailableTabs() {
         val payload = SessionBackupCodec.encode(
             "Research",
