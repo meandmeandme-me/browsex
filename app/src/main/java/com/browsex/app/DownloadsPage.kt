@@ -114,7 +114,16 @@ internal class DownloadsPage(
                                 onRemoveStreamRecord = { record ->
                                     activity.lifecycleScope.launch {
                                         runCatching { repository.remove(record.id) }
-                                            .onFailure { android.util.Log.e("BrowseX", "Could not remove download record", it) }
+                                            .onSuccess { removed ->
+                                                if (!removed) toast(
+                                                    "Download record was already removed",
+                                                    "سجل التنزيل محذوف بالفعل"
+                                                )
+                                            }
+                                            .onFailure {
+                                                android.util.Log.e("BrowseX", "Could not remove download record", it)
+                                                toast("Could not remove download record", "تعذر حذف سجل التنزيل")
+                                            }
                                     }
                                 },
                                 onDeleteStreamFile = { record ->
@@ -122,7 +131,20 @@ internal class DownloadsPage(
                                         val uri = runCatching { Uri.parse(record.uri) }.getOrNull()
                                         val deleted = uri != null && deleteOwnedDownloadFile(uri)
                                         if (deleted) {
-                                            repository.remove(record.id)
+                                            runCatching { repository.remove(record.id) }
+                                                .onSuccess { removed ->
+                                                    if (!removed) toast(
+                                                        "File deleted, but its download record was already missing",
+                                                        "تم حذف الملف لكن سجل التنزيل غير موجود"
+                                                    )
+                                                }
+                                                .onFailure {
+                                                    android.util.Log.e("BrowseX", "File deleted but download record cleanup failed", it)
+                                                    toast(
+                                                        "File deleted, but BrowseX could not remove its record",
+                                                        "تم حذف الملف لكن تعذر حذف سجله من Wren"
+                                                    )
+                                                }
                                         } else {
                                             toast(
                                                 "BrowseX could not verify ownership or delete this file. The record was kept.",
@@ -136,7 +158,13 @@ internal class DownloadsPage(
                                 onManagePlatform = ::removePlatform,
                                 onDeletePlatform = ::removePlatform,
                                 onRemoveMissingPlatform = { id ->
-                                    activity.lifecycleScope.launch { repository.removeTrackedPlatformDownload(id) }
+                                    activity.lifecycleScope.launch {
+                                        runCatching { repository.removeTrackedPlatformDownload(id) }
+                                            .onFailure {
+                                                android.util.Log.e("BrowseX", "Could not remove missing platform download record", it)
+                                                toast("Could not update the downloads list", "تعذر تحديث قائمة التنزيلات")
+                                            }
+                                    }
                                 },
                                 text = ::t,
                                 onDismiss = { dialog.dismiss() }
@@ -282,6 +310,13 @@ internal class DownloadsPage(
         if (removed > 0) {
             activity.lifecycleScope.launch {
                 runCatching { activity.storageRuntime.awaitReady().downloads.removeTrackedPlatformDownload(item.id) }
+                    .onFailure {
+                        android.util.Log.e("BrowseX", "Android removed download but BrowseX tracking cleanup failed", it)
+                        toast(
+                            "Android removed the download, but BrowseX could not update its saved list",
+                            "أزال أندرويد التنزيل لكن تعذر على Wren تحديث قائمته المحفوظة"
+                        )
+                    }
             }
         } else {
             toast(
