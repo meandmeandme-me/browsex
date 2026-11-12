@@ -1,14 +1,11 @@
 package com.browsex.app.storage
 
 import android.content.Context
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -23,23 +20,22 @@ internal class BrowserStorageRuntime(context: Context) {
     private val graph = BrowserStorageGraph(appContext)
     val settings = BrowserSettingsDataStore(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val started = AtomicBoolean(false)
-    private val ready = CompletableDeferred<Result<BrowserStorageGraph>>()
+    private val initializationMutex = Mutex()
+    @Volatile private var readyGraph: BrowserStorageGraph? = null
     private val tabSnapshotMutex = Mutex()
     private val tabSnapshotGeneration = AtomicLong(0L)
 
     suspend fun awaitReady(): BrowserStorageGraph {
-        if (started.compareAndSet(false, true)) {
-            scope.launch {
-                val result = runCatching {
-                    // Any work interrupted before process death is made terminal on startup.
-                    graph.downloads.recoverInterrupted()
-                    graph
-                }
-                ready.complete(result)
-            }
+        readyGraph?.let { return it }
+        return initializationMutex.withLock {
+            readyGraph?.let { return@withLock it }
+            // Keep initialization retryable: a transient SQLite/I/O failure must not
+            // permanently poison this process. The mutex ensures only one recovery pass
+            // runs at a time, while a failed attempt releases the lock for the next caller.
+            // This operation is idempotent: only queued/running downloads are transitioned.
+            graph.downloads.recoverInterrupted()
+            graph.also { readyGraph = it }
         }
-        return ready.await().getOrThrow()
     }
 
     suspend fun restoreOpenTabs(): TabSessionSnapshot =
