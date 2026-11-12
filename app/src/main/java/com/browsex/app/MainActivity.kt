@@ -415,6 +415,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notificationPermissionCoordinator: BrowserNotificationPermissionCoordinator
     private lateinit var legacyDownloadPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkExportLauncher: ActivityResultLauncher<String>
+    private lateinit var bookmarkJsonExportLauncher: ActivityResultLauncher<String>
     private lateinit var bookmarkImportLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -450,7 +451,18 @@ class MainActivity : AppCompatActivity() {
                         output.write(payload.toByteArray(Charsets.UTF_8))
                     } ?: error("Could not open destination")
                 }.onSuccess { toast("Bookmarks exported") }
-                    .onFailure { android.util.Log.e("BrowseX", "Bookmark export failed", it); toast("Could not export bookmarks") }
+                    .onFailure { android.util.Log.e("BrowseX", "Bookmark HTML export failed", it); toast("Could not export bookmarks") }
+            }
+        }
+        bookmarkJsonExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) lifecycleScope.launch {
+                runCatching {
+                    val payload = storageRuntime.awaitReady().bookmarks.exportBookmarks()
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(payload.toByteArray(Charsets.UTF_8))
+                    } ?: error("Could not open destination")
+                }.onSuccess { toast("Wren bookmark backup exported") }
+                    .onFailure { android.util.Log.e("BrowseX", "Bookmark JSON backup export failed", it); toast("Could not export bookmark backup") }
             }
         }
         bookmarkImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -2729,7 +2741,16 @@ class MainActivity : AppCompatActivity() {
             BrowseXSettingsAction.DOWNLOADS -> openDownloads()
             BrowseXSettingsAction.IMPORT_BOOKMARKS ->
                 bookmarkImportLauncher.launch(arrayOf("text/html", "application/json", "text/json", "text/plain"))
-            BrowseXSettingsAction.EXPORT_BOOKMARKS -> bookmarkExportLauncher.launch("browsex-bookmarks.html")
+            BrowseXSettingsAction.EXPORT_BOOKMARKS -> AlertDialog.Builder(this)
+                .setTitle(BrowseXStrings.text(this, "Export bookmarks", "تصدير المفضلة"))
+                .setItems(arrayOf(
+                    BrowseXStrings.text(this, "HTML — compatible with other browsers", "HTML — متوافق مع المتصفحات الأخرى"),
+                    BrowseXStrings.text(this, "Wren backup — keeps folder and bookmark details", "نسخة Wren — تحتفظ بتفاصيل المجلدات والمفضلة")
+                )) { _, which ->
+                    if (which == 0) bookmarkExportLauncher.launch("wren-bookmarks.html")
+                    else bookmarkJsonExportLauncher.launch("wren-bookmarks.json")
+                }
+                .show()
             BrowseXSettingsAction.HOME_PAGE -> showHomePreferences()
             BrowseXSettingsAction.PRIVACY_CENTER -> showPrivacyCenter()
             BrowseXSettingsAction.SITE_PERMISSIONS -> showSitePermissionsPage()
