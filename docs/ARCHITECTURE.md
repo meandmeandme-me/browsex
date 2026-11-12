@@ -66,7 +66,7 @@ Current BrowseX-branded Compose surfaces:
 - `BrowseXSavedPagesScreen.kt`: bookmarks, history, folders, ordering, edit/move/remove, share, and copy actions.
 - `BrowseXPrivacyAndPermissions.kt`: privacy clearing controls and saved per-site permission management.
 - `BrowseXSavedSessionsScreen.kt`: save/import, search/sort, rename/delete, restore, and open-alongside workflows.
-- Saved-session backups use the versioned `wren-session` JSON format (version 1) and are exported/imported one session at a time through Android's document picker. Imports validate the format, version, URL scheme, URL count, and a 100 KB payload limit before saving. Imports never overwrite an existing same-named session; they receive a unique suffix, and the 10-session limit is enforced transactionally. Private tabs, passwords, cookies, permissions, and other secrets are never included.
+- Saved-session backups use the versioned `wren-session` JSON format (version 1) and are exported/imported one session at a time through Android's document picker. Imports validate the format, version, URL scheme, URL count, and a 100 KB payload limit before saving. Imports never overwrite an existing same-named session; they receive a unique suffix, and the 10-session limit is enforced transactionally. Private tabs, Wren-managed credentials, cookies, and site permissions are not exported. Full regular-tab URLs are exported, however, and URL paths or query parameters can contain sensitive information (for example, one-time links or access tokens); users should inspect a backup before sharing it.
 
 The Compose UI adapts selected address/navigation patterns from the MIT-licensed Kingfisher Browser project. Attribution and the complete license notice are in `THIRD_PARTY_NOTICES.md`. BrowseX uses its own logo, colors, naming, and callbacks; it does not replace GeckoView or the browser domain.
 
@@ -84,7 +84,7 @@ The home document still lives at `app/src/main/assets/home.html`; it is the fina
 - Private tabs must not be written to history, recently closed, named sessions, or regular-tab snapshots.
 - Private browsing must not reuse saved website permission decisions.
 - Validate URLs and canonical origins at repository/policy boundaries; never trust UI-provided strings.
-- Keep credentials, cookies, and browsing history out of bookmark backup exports.
+- Keep Wren-managed credentials, cookies, and browsing history out of bookmark backup exports. Session backups intentionally include full regular-tab URLs; warn users that URLs can themselves contain sensitive query parameters.
 - Do not weaken Gecko safe browsing or tracking protection as a side effect of adding an extension. When uBlock Origin is unavailable, disabled, or not permitted in private browsing, Gecko tracking protection remains enabled.
 - Website notifications require both a persisted per-origin `allow` decision and Android notification permission; private-browsing notifications are never forwarded to the Android tray.
 - Notification callbacks are asynchronous. Closing a Gecko notification while permission UI or storage IO is pending must prevent a late callback from posting it again.
