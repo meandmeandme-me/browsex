@@ -2388,6 +2388,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun restoreSavedSession(session: com.browsex.app.storage.RoomSavedSession, replaceRegularTabs: Boolean) {
+        // Validate capacity before closing anything. Private tabs are never replaced, so
+        // they reduce the slots available to a restored regular session.
+        val preservedTabCount = if (replaceRegularTabs) tabs.count { it.privateMode } else tabs.size
+        val availableSlots = (TabSessionState.MAX_TABS - preservedTabCount).coerceAtLeast(0)
+        if (session.urls.size > availableSlots) {
+            toast(
+                BrowseXStrings.text(
+                    this,
+                    "Close some tabs before restoring this session",
+                    "أغلق بعض التبويبات قبل استعادة هذه الجلسة"
+                )
+            )
+            return
+        }
         if (replaceRegularTabs) {
             tabs.filterNot { it.privateMode }.toList().forEach(::closeTab)
         }
@@ -2456,8 +2470,7 @@ class MainActivity : AppCompatActivity() {
     private fun deleteAllSavedSessions() {
         lifecycleScope.launch {
             val deleted = runCatching {
-                val repository = storageRuntime.awaitReady().sessions
-                repository.sessions().forEach { repository.deleteSession(it.id) }
+                storageRuntime.awaitReady().sessions.clearAllSessions()
                 true
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not delete all saved sessions", it)
