@@ -4,8 +4,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Versioned, privacy-safe export format for one regular browsing session.
- * Never include private tabs, credentials, cookies, permissions, or browsing history.
+ * Versioned export format for one regular browsing session.
+ * Callers must exclude private tabs; only URLs and session metadata are serialized.
+ * URLs can contain sensitive query parameters, so exported files must be treated as private.
  */
 internal object SessionBackupCodec {
     private const val FORMAT = "wren-session"
