@@ -54,6 +54,7 @@ internal fun BrowseXSavedSessionsScreen(
     onDelete: (String) -> Unit,
     onSaveCurrent: (String) -> Unit,
     onImport: (String, String) -> Unit,
+    onExport: (RoomSavedSession) -> Unit,
     onDeleteAll: () -> Unit
 ) {
     val context = LocalContext.current
@@ -201,6 +202,9 @@ internal fun BrowseXSavedSessionsScreen(
                                         }
                                         TextButton(onClick = { onOpenAlongside(session) }, modifier = Modifier.weight(1f)) {
                                             Text(t("Open alongside", "فتح بجانب الحالي"))
+                                        }
+                                        TextButton(onClick = { onExport(session) }) {
+                                            Text(t("Export", "تصدير"))
                                         }
                                     }
                                 }
