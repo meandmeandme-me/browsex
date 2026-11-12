@@ -2140,8 +2140,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun closeTab(tab: BrowserTab) = tabController.closeTab(tab)
 
-    private fun closeTab(tab: BrowserTab, ensureNonEmpty: Boolean) =
-        tabController.closeTab(tab, ensureNonEmpty)
+    private fun closeTab(
+        tab: BrowserTab,
+        ensureNonEmpty: Boolean,
+        recordRecentlyClosedTab: Boolean = true
+    ) = tabController.closeTab(tab, ensureNonEmpty, recordRecentlyClosedTab)
 
     private fun attachDelegates(tab: BrowserTab) {
         tab.permissionDelegate = BrowseXPermissionDelegate(
@@ -2463,7 +2466,11 @@ class MainActivity : AppCompatActivity() {
             // Do not let closing the final regular tab insert a placeholder home tab:
             // that placeholder would consume one of the slots reserved for this restore.
             tabs.filterNot { it.privateMode }.toList().forEach { tab ->
-                closeTab(tab, ensureNonEmpty = false)
+                closeTab(
+                    tab,
+                    ensureNonEmpty = false,
+                    recordRecentlyClosedTab = false
+                )
             }
         }
         val opened = mutableListOf<BrowserTab>()
