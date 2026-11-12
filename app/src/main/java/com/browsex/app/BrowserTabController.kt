@@ -124,7 +124,7 @@ internal class BrowserTabController(
         }
     }
 
-    fun closeTab(tab: BrowserTab) {
+    fun closeTab(tab: BrowserTab, ensureNonEmpty: Boolean = true) {
         val index = tabs.indexOfFirst { it === tab }
         if (index < 0) return
         val wasActive = activeTab === tab
@@ -144,8 +144,9 @@ internal class BrowserTabController(
         }
         sessionLifecycle.closeAndDiscard(tab)
         registry.removeAt(index)
-        if (tabs.isEmpty()) createTab(homeUrl())
-        else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
+        if (tabs.isEmpty()) {
+            if (ensureNonEmpty) createTab(homeUrl())
+        } else if (wasActive) activateTab(tabs[minOf(index, tabs.lastIndex)])
         else updateChrome()
     }
 
