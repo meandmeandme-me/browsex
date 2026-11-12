@@ -157,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           DATABASE_SOURCE="app/src/main/java/com/browsex/app/storage/BrowseXDatabase.kt"
-          ROOM_VERSION="$(python3 -c 'import re; from pathlib import Path; s=Path("'"$DATABASE_SOURCE"'").read_text(); m=re.search(r"@Database\\([\\s\\S]*?version\\s*=\\s*(\\d+)", s); print(m.group(1) if m else "")')"
+          ROOM_VERSION="$(python3 -c 'import re; from pathlib import Path; s=Path("'"$DATABASE_SOURCE"'").read_text(); m=re.search(r"version\\s*=\\s*(\\d+)", s); print(m.group(1) if m else "")')"
           test -n "$ROOM_VERSION"
           SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/$ROOM_VERSION.json"
           test -s "$SCHEMA"
