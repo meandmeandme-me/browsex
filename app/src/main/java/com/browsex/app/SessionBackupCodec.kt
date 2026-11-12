@@ -65,7 +65,8 @@ internal object SessionBackupCodec {
     }
 
     private fun isSafeWebUrl(url: String): Boolean =
-        url.length <= 4096 &&
-            (url.startsWith("https://", true) || url.startsWith("http://", true)) &&
-            NavigationInput.isValidWebUrl(url)
+        url.length <= 4096 && (
+            NavigationInput.isValidWebUrl(url) ||
+                TabSessionState.normalize(listOf(url), 0, HOME_URL).urls.singleOrNull() == url
+            )
 }
