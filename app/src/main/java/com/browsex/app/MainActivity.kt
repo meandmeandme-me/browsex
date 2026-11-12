@@ -2521,7 +2521,9 @@ class MainActivity : AppCompatActivity() {
                     require(url.startsWith("https://", true) || url.startsWith("http://", true))
                     require(NavigationInput.isValidWebUrl(url)) { "Invalid website URL in backup" }
                     url
-                }.distinct()
+                }
+                // A backup is an exact tab snapshot: duplicate URLs can represent separate tabs,
+                // so preserve their positions to keep activeIndex pointing at the same tab.
                 require(urls.isNotEmpty()) { "Session backup contains no valid URLs" }
                 val activeIndex = backup.optInt("activeIndex", 0).coerceIn(0, urls.lastIndex)
                 Triple(name, urls, activeIndex)
