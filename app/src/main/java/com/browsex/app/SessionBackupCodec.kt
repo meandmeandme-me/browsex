@@ -54,7 +54,7 @@ internal object SessionBackupCodec {
             Snapshot(name, urls, activeIndex)
         } else {
             val urls = trimmed.lineSequence()
-                .map { it.trim().replace(Regex("""^\\d+[.)]\\s*"""), "") }
+                .map { it.trim().replace(Regex("""^\d+[.)]\s*"""), "") }
                 .filter(::isSafeWebUrl)
                 .distinct()
                 .take(TabSessionState.MAX_TABS)
