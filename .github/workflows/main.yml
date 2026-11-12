@@ -90,6 +90,9 @@ jobs:
       - name: Validate Android locale resources
         run: python3 scripts/check_locales.py
 
+      - name: Validate Wren database safety policy
+        run: python3 scripts/check_database_policy.py
+
       - name: Validate BrowseX brand identity
         run: python3 scripts/check_brand_identity.py
 
