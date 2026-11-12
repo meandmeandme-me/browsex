@@ -49,3 +49,11 @@ Do not create a speculative v2-to-v3 migration until an actual schema change is 
 - Migration instrumentation tests must use Room `MigrationTestHelper` and `runMigrationsAndValidate`.
 - CI runs those migration tests on an Android emulator whenever a migration test fixture is present. The current v2 baseline has no schema upgrade to test, so no speculative migration test is created.
 - The CI schema verification derives the expected snapshot filename from the current `@Database` version instead of hard-coding v2.
+
+## Storage ownership boundaries
+
+- Room owns durable browsing records: bookmarks/folders, history, saved sessions, recently closed tabs, site permission decisions, open-tab snapshots, and download metadata/reservations.
+- Preferences DataStore owns non-secret browser settings. Its current file name is `browsex.settings`; keep it stable unless a tested, explicit file migration is implemented.
+- Saved login credentials are deliberately outside Room. `BrowserCredentialVault` stores only AES-GCM ciphertext in the private app preferences file `browsex_credentials_v1`; the AES key is held by Android Keystore and requires recent device authentication. Never move credential plaintext into Room, logs, backups, or ordinary preferences.
+- The credential vault's small process marker for private-tab state is coordination metadata, not browsing history. Keep it process-scoped and fail closed for credential autofill while private tabs are open.
+- Do not rename storage files merely to match visible Wren branding. Storage filenames are compatibility identifiers, not user-facing product labels.
