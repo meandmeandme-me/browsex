@@ -3,6 +3,7 @@ package com.browsex.app.storage
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,14 +28,18 @@ internal class BrowserStorageRuntime(context: Context) {
 
     suspend fun awaitReady(): BrowserStorageGraph {
         readyGraph?.let { return it }
-        return initializationMutex.withLock {
-            readyGraph?.let { return@withLock it }
+        initializationMutex.lock()
+        try {
+            readyGraph?.let { return it }
             // Keep initialization retryable: a transient SQLite/I/O failure must not
             // permanently poison this process. The mutex ensures only one recovery pass
             // runs at a time, while a failed attempt releases the lock for the next caller.
             // This operation is idempotent: only queued/running downloads are transitioned.
             graph.downloads.recoverInterrupted()
-            graph.also { readyGraph = it }
+            readyGraph = graph
+            return graph
+        } finally {
+            initializationMutex.unlock()
         }
     }
 
