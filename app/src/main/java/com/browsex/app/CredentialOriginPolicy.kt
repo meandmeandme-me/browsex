@@ -21,4 +21,21 @@ internal object CredentialOriginPolicy {
         val candidate = if (requestedDomain.contains("://")) requestedDomain else "https://" + requestedDomain
         return saved == canonicalHttpsOrigin(candidate)
     }
+
+    /** Reject malformed or cross-origin records before summaries, autofill, or password reads. */
+    fun isValidStoredCredential(
+        id: String,
+        origin: String,
+        action: String,
+        username: String,
+        password: String,
+        realm: String
+    ): Boolean {
+        if (id.isBlank() || id.length > 128 || canonicalHttpsOrigin(origin) != origin) return false
+        if (username.isBlank() || username.length > 512 ||
+            password.isBlank() || password.length > 4096 || realm.length > 512
+        ) return false
+        if (action.isNotBlank() && canonicalHttpsOrigin(action) != origin) return false
+        return true
+    }
 }
