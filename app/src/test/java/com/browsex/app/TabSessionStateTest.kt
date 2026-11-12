@@ -94,4 +94,23 @@ class TabSessionStateTest {
         assertEquals(listOf("https://one.example", "https://two.example"), state.urls)
         assertEquals(1, state.activeIndex)
     }
+    @Test fun rejectsOversizedAndControlCharacterUrlsWithoutLosingSafeTabs() {
+        val oversized = "https://" + "a".repeat(5000) + ".example"
+        val controlCharacter = "https://bad\u0001.example"
+        val state = TabSessionState.normalize(
+            listOf(oversized, "https://safe.example", controlCharacter, home),
+            1,
+            home
+        )
+        assertEquals(listOf("https://safe.example", home), state.urls)
+        assertEquals(0, state.activeIndex)
+    }
+
+    @Test fun boundsWorkForCorruptSnapshotsBeforeFiltering() {
+        val excessive = (1..(TabSessionState.MAX_TABS * 8)).map { "javascript:alert($it)" } +
+            "https://safe.example"
+        val state = TabSessionState.normalize(excessive, excessive.lastIndex, home)
+        assertEquals(TabSessionState.Snapshot(listOf(home), 0), state)
+    }
+
 }
