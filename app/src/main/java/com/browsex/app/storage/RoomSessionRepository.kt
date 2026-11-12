@@ -73,8 +73,10 @@ internal class RoomSessionRepository(
     suspend fun recordRecentlyClosed(
         url: String,
         title: String,
+        privateMode: Boolean,
         closedAt: Long = System.currentTimeMillis()
     ): Boolean {
+        if (privateMode) return false
         val normalized = url.trim()
         if (!isSafeRestorableUrl(normalized) || normalized == HOME_URL || closedAt < 0L) return false
         val safeTitle = title
