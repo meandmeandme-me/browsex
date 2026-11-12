@@ -89,4 +89,26 @@ class RoomSitePermissionRepositoryTest {
             database.close()
         }
     }
+
+    @Test
+    fun clearingOneOriginPreservesSiblingOriginsAndOtherFeatures() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSitePermissionRepository(database.storageDao())
+            assertTrue(repository.setDecision("https://example.com/path", "camera", "allow", 1L))
+            assertTrue(repository.setDecision("https://example.com", "microphone", "deny", 2L))
+            assertTrue(repository.setDecision("https://sub.example.com", "camera", "deny", 3L))
+
+            assertTrue(repository.clearOrigin("HTTPS://EXAMPLE.COM:443/another-path"))
+
+            assertNull(repository.decision("https://example.com", "camera"))
+            assertNull(repository.decision("https://example.com", "microphone"))
+            assertEquals("deny", repository.decision("https://sub.example.com", "camera"))
+            assertEquals(1, repository.all().size)
+        } finally {
+            database.close()
+        }
+    }
 }
