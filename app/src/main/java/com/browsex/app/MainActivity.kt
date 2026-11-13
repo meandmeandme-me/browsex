@@ -2254,7 +2254,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveCurrentSession() {
-        val regularTabs = tabs.filterNot { it.privateMode }
+        val sessionTabs = tabs.toList()
+        val regularTabs = sessionTabs.filterNot { it.privateMode }
         if (regularTabs.isEmpty()) {
             toast("No regular tabs to save")
             return
@@ -2282,9 +2283,13 @@ class MainActivity : AppCompatActivity() {
                     }
                     val save = {
                         lifecycleScope.launch {
-                            val activeIndex = regularTabs.indexOf(activeTab).takeIf { it >= 0 } ?: 0
                             val saved = runCatching {
-                                storage.sessions.saveSession(name, regularTabs.map { it.url }, activeIndex)
+                                storage.sessions.saveSession(
+                                    name,
+                                    sessionTabs.map { it.url },
+                                    sessionTabs.map { it.privateMode },
+                                    sessionTabs.indexOf(activeTab).coerceAtLeast(0)
+                                )
                             }.getOrDefault(false)
                             toast(if (saved) "Session saved" else "Session name is invalid or the session limit was reached")
                         }
@@ -2493,7 +2498,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveCurrentSessionNamed(rawName: String) {
-        val regularTabs = tabs.filterNot { it.privateMode }
+        val sessionTabs = tabs.toList()
+        val regularTabs = sessionTabs.filterNot { it.privateMode }
         if (regularTabs.isEmpty()) {
             toast("There are no regular tabs to save")
             return
@@ -2502,8 +2508,9 @@ class MainActivity : AppCompatActivity() {
             val saved = runCatching {
                 storageRuntime.awaitReady().sessions.saveSession(
                     rawName,
-                    regularTabs.map { it.url },
-                    regularTabs.indexOf(activeTab).coerceAtLeast(0)
+                    sessionTabs.map { it.url },
+                    sessionTabs.map { it.privateMode },
+                    sessionTabs.indexOf(activeTab).coerceAtLeast(0)
                 )
             }.onFailure {
                 android.util.Log.e("BrowseX", "Could not save named session from Compose", it)
