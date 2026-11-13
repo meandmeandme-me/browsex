@@ -114,7 +114,7 @@ internal enum class BrowseXMenuAction(val label: String) {
 
 internal data class BrowseXChromeState(
     val url: String = "",
-    val title: String = "BrowseX",
+    val title: String = "Wren",
     val progress: Int = 0,
     val tabCount: Int = 0,
     val canGoBack: Boolean = false,
@@ -281,7 +281,7 @@ internal fun BrowseXBrowserChrome(
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_browsex),
-                            contentDescription = "BrowseX logo",
+                            contentDescription = "Wren blue wing",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.size(30.dp)
                         )
@@ -291,7 +291,7 @@ internal fun BrowseXBrowserChrome(
                                 .padding(start = 9.dp)
                         ) {
                             Text(
-                                text = if (state.isPrivate) "BrowseX · Private" else "BrowseX",
+                                text = if (state.isPrivate) "Wren · Private" else "Wren",
                                 color = ink,
                                 style = MaterialTheme.typography.labelLarge
                             )
@@ -884,7 +884,7 @@ private fun BrowseXMenuSheet(
                 .padding(bottom = 22.dp)
         ) {
             Text(
-                text = "BrowseX tools",
+                text = "Wren tools",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
