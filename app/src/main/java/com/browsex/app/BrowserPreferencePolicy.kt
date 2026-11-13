@@ -19,6 +19,8 @@ internal object BrowserPreferencePolicy {
     fun normalizeAddressBarPosition(value: String?): String =
         value?.trim()?.lowercase(Locale.ROOT)?.takeIf(addressBarPositions::contains) ?: "auto"
 
+    fun supportedSearchEngines(): List<String> = searchEngines.toList()
+
     fun normalizeSearchEngine(value: String?): String =
         value?.trim()?.takeIf(searchEngines::contains) ?: "Google"
 
