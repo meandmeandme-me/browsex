@@ -54,8 +54,13 @@ for relative in (
             errors.append(f"Legacy product name remains in visible string value: {relative}")
 
 home_path = ROOT / "app/src/main/assets/home.html"
-if home_path.is_file() and re.search(r"BrowseX", home_path.read_text(encoding="utf-8"), re.IGNORECASE):
-    errors.append("Legacy product name remains in home page visible text.")
+if home_path.is_file():
+    home = home_path.read_text(encoding="utf-8")
+    # Ignore implementation details such as JS storage keys and CSS selectors;
+    # inspect rendered markup and accessibility attributes instead.
+    visible_markup = re.sub(r"<(script|style)\\b[\\s\\S]*?</\\1\\s*>", "", home, flags=re.IGNORECASE)
+    if re.search(r"Browse\\s*X", visible_markup, re.IGNORECASE):
+        errors.append("Legacy product name remains in home page visible markup.")
 
 if errors:
     print("\n".join(f"ERROR: {error}" for error in errors))
