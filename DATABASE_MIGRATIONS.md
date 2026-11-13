@@ -3,9 +3,9 @@
 ## Pre-release baseline
 
 - The Room database is named `wren-browser.db`. Do not rename it as part of a UI or brand change.
-- The current Room schema is version **2**. Its exported schema is committed at `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json`.
+- The current Room schema is version **2**. Its exported schema is committed at `app/schemas/com.wren.app.storage.WrenDatabase/2.json`.
 - The project is still pre-release and has no public user-data compatibility promise yet. The current storage graph intentionally starts from the clean Room baseline; it does not silently import the former SharedPreferences browsing stores.
-- Browser settings are stored separately in the DataStore file `browsex.settings`.
+- Browser settings are stored separately in the DataStore file `wren.settings`.
 - Destructive migration fallback is forbidden. Never add `fallbackToDestructiveMigration()`, `fallbackToDestructiveMigrationOnDowngrade()`, or a destructive fallback for convenience.
 
 ## When changing the schema
@@ -53,7 +53,7 @@ Do not create a speculative v2-to-v3 migration until an actual schema change is 
 ## Storage ownership boundaries
 
 - Room owns durable browsing records: bookmarks/folders, history, saved sessions, recently closed tabs, site permission decisions, open-tab snapshots, and download metadata/reservations.
-- Preferences DataStore owns non-secret browser settings. Its current file name is `browsex.settings`; keep it stable unless a tested, explicit file migration is implemented.
-- Saved login credentials are deliberately outside Room. `BrowserCredentialVault` stores only AES-GCM ciphertext in the private app preferences file `browsex_credentials_v1`; the AES key is held by Android Keystore and requires recent device authentication. Never move credential plaintext into Room, logs, backups, or ordinary preferences.
+- Preferences DataStore owns non-secret browser settings. Its current file name is `wren.settings`; keep it stable unless a tested, explicit file migration is implemented.
+- Saved login credentials are deliberately outside Room. `BrowserCredentialVault` stores only AES-GCM ciphertext in the private app preferences file `wren_credentials_v1`; the AES key is held by Android Keystore and requires recent device authentication. Never move credential plaintext into Room, logs, backups, or ordinary preferences.
 - The credential vault's small process marker for private-tab state is coordination metadata, not browsing history. Keep it process-scoped and fail closed for credential autofill while private tabs are open.
 - Do not rename storage files merely to match visible Wren branding. Storage filenames are compatibility identifiers, not user-facing product labels.

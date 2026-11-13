@@ -7,11 +7,11 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "app/src/main/java/com/browsex/app/storage/BrowseXDatabase.kt"
-SCHEMA_DIR = ROOT / "app/schemas/com.browsex.app.storage.BrowseXDatabase"
+SOURCE = ROOT / "app/src/main/java/com/wren/app/storage/WrenDatabase.kt"
+SCHEMA_DIR = ROOT / "app/schemas/com.wren.app.storage.WrenDatabase"
 GRADLE = ROOT / "app/build.gradle.kts"
-RUNTIME = ROOT / "app/src/main/java/com/browsex/app/storage/BrowserStorageRuntime.kt"
-GRAPH = ROOT / "app/src/main/java/com/browsex/app/storage/BrowserStorageGraph.kt"
+RUNTIME = ROOT / "app/src/main/java/com/wren/app/storage/BrowserStorageRuntime.kt"
+GRAPH = ROOT / "app/src/main/java/com/wren/app/storage/BrowserStorageGraph.kt"
 
 errors = []
 source = SOURCE.read_text(encoding="utf-8")
@@ -68,7 +68,7 @@ if version is not None:
         errors.append(f"Expected the clean pre-release baseline to start at Room v2, found v{versions[0]}.")
 
     if version > 2:
-        storage_sources = list((ROOT / "app/src/main/java/com/browsex/app/storage").rglob("*.kt"))
+        storage_sources = list((ROOT / "app/src/main/java/com/wren/app/storage").rglob("*.kt"))
         migration_source = "\n".join(path.read_text(encoding="utf-8") for path in storage_sources)
         edges = {
             (int(start), int(end))

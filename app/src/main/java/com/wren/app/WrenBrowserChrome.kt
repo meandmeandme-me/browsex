@@ -1,0 +1,1013 @@
+package com.wren.app
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Tab
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
+import org.mozilla.geckoview.GeckoSession
+import java.util.Locale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+
+internal enum class WrenMenuAction(val label: String) {
+    BOOKMARK_TOGGLE("Save / remove bookmark"),
+    BOOKMARKS("Bookmarks"),
+    HISTORY("History"),
+    DOWNLOADS("Downloads"),
+    SHARE("Share page"),
+    COPY_ADDRESS("Copy page address"),
+    FIND_IN_PAGE("Find in page"),
+    READER("Reader mode"),
+    SITE_INFO("Site information"),
+    SEARCH_ENGINE("Search engine"),
+    CLEAR_HISTORY("Clear browsing history"),
+    PRIVACY_CENTER("Privacy center"),
+    SETTINGS("Settings"),
+    PRIVATE_TAB("New private tab"),
+    CLOSE_PRIVATE_TABS("Close private tabs"),
+    RECALL("Find anything"),
+    PASSWORDS("Password manager"),
+    SAVED_SESSIONS("Saved sessions"),
+    SAVE_SESSION("Save current session"),
+    RECENTLY_CLOSED("Recently closed tabs"),
+    CLOSE_ALL_TABS("Close all tabs")
+}
+
+internal data class WrenChromeState(
+    val url: String = "",
+    val title: String = "Wren",
+    val progress: Int = 0,
+    val tabCount: Int = 0,
+    val canGoBack: Boolean = false,
+    val canGoForward: Boolean = false,
+    val isPrivate: Boolean = false,
+    val isDark: Boolean = false,
+    val showNavigationActions: Boolean = true,
+    val dockAtTop: Boolean = false,
+    val reduceTransparency: Boolean = false,
+    val highContrast: Boolean = false,
+    val canvasColor: Int = 0xFFF8F7F4.toInt(),
+    val panelColor: Int = 0xCCFFFFFF.toInt(),
+    val fieldColor: Int = 0xCCFFFFFF.toInt(),
+    val inkColor: Int = 0xFF142238.toInt(),
+    val mutedColor: Int = 0xFF5D6D76.toInt(),
+    val accentColor: Int = 0xFF348F8B.toInt(),
+    val lineColor: Int = 0x40E5E1DB.toInt()
+)
+
+@Composable
+internal fun WrenBrowserChrome(
+    state: WrenChromeState,
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+    onReload: () -> Unit,
+    onHome: () -> Unit,
+    onSiteInfo: () -> Unit,
+    onNewTab: () -> Unit,
+    onOpenTabs: () -> Unit,
+    onMenu: () -> Unit,
+    loadSuggestions: suspend (String) -> List<AddressSuggestion>,
+    onSelectSuggestion: (AddressSuggestion) -> Unit,
+    menuOpen: Boolean,
+    onDismissMenu: () -> Unit,
+    onMenuAction: (WrenMenuAction) -> Unit,
+    tabs: List<BrowserTab>,
+    activeTab: BrowserTab?,
+    tabsOpen: Boolean,
+    onDismissTabs: () -> Unit,
+    onSelectTab: (BrowserTab) -> Unit,
+    onCloseTab: (BrowserTab) -> Unit,
+    onCreateTab: () -> Unit,
+    settingsOpen: Boolean,
+    settings: com.wren.app.storage.BrowserSettings,
+    androidNotificationsEnabled: Boolean,
+    onDismissSettings: () -> Unit,
+    onUpdateSettings: ((com.wren.app.storage.BrowserSettings) -> com.wren.app.storage.BrowserSettings) -> Unit,
+    onSettingsAction: (WrenSettingsAction) -> Unit,
+    savedPagesOpen: Boolean,
+    savedPagesState: WrenSavedPagesState,
+    onDismissSavedPages: () -> Unit,
+    onOpenSavedPage: (String) -> Unit,
+    onRemoveSavedPage: (String) -> Unit,
+    onRenameBookmark: (String, String) -> Unit,
+    onMoveBookmark: (String, String) -> Unit,
+    onMoveBookmarkWithinFolder: (String, String, Int) -> Unit,
+    onCreateBookmarkFolder: (String) -> Unit,
+    onRenameBookmarkFolder: (String, String) -> Unit,
+    onDeleteBookmarkFolder: (String) -> Unit,
+    onClearSavedHistory: () -> Unit,
+    onShareSavedPage: (String) -> Unit,
+    onCopySavedPage: (String) -> Unit,
+    privacyOpen: Boolean,
+    privacySummary: WrenPrivacySummary,
+    onDismissPrivacy: () -> Unit,
+    onManageProtection: () -> Unit,
+    onClearPrivacyData: (Long, Boolean) -> Unit,
+    sitePermissionsOpen: Boolean,
+    sitePermissions: List<com.wren.app.storage.SitePermissionDecisionEntity>,
+    onDismissSitePermissions: () -> Unit,
+    onSetSitePermission: (String, String, String) -> Unit,
+    onResetSitePermissions: () -> Unit,
+    savedSessionsOpen: Boolean,
+    savedSessions: List<com.wren.app.storage.RoomSavedSession>,
+    onDismissSavedSessions: () -> Unit,
+    onRestoreSavedSession: (com.wren.app.storage.RoomSavedSession) -> Unit,
+    onOpenSavedSessionAlongside: (com.wren.app.storage.RoomSavedSession) -> Unit,
+    onRenameSavedSession: (String, String) -> Unit,
+    onDeleteSavedSession: (String) -> Unit,
+    onSaveCurrentSession: (String) -> Unit,
+    onImportSavedSession: (String, String) -> Unit,
+    onExportSavedSession: (com.wren.app.storage.RoomSavedSession) -> Unit,
+    onImportSessionBackupFile: () -> Unit,
+    onDeleteAllSavedSessions: () -> Unit,
+    siteInfoOpen: Boolean,
+    siteInfoState: WrenSiteInfoState,
+    onDismissSiteInfo: () -> Unit,
+    onChangeSiteInfoPermission: (GeckoSession.PermissionDelegate.ContentPermission, Int) -> Unit,
+    onResetSiteInfoPermissions: () -> Unit,
+    onClearSiteInfoData: () -> Unit,
+    onSiteInfoMediaPermissionChange: (String, String) -> Unit,
+    readerOpen: Boolean,
+    readerState: WrenReaderState,
+    onDismissReader: () -> Unit,
+    onCopyReader: () -> Unit,
+    recallOpen: Boolean,
+    recallState: WrenRecallState,
+    onDismissRecall: () -> Unit,
+    onOpenRecall: (String) -> Unit
+) {
+    val primary = Color(state.accentColor)
+    val surface = Color(state.panelColor)
+    val field = Color(state.fieldColor)
+    val ink = Color(state.inkColor)
+    val muted = Color(state.mutedColor)
+    val outline = Color(state.lineColor)
+    val colorScheme = if (state.isDark) {
+        darkColorScheme(
+            primary = primary,
+            onPrimary = Color.White,
+            background = Color(state.canvasColor),
+            surface = surface,
+            onSurface = ink,
+            onSurfaceVariant = muted,
+            outline = outline
+        )
+    } else {
+        lightColorScheme(
+            primary = primary,
+            onPrimary = Color.White,
+            background = Color(state.canvasColor),
+            surface = surface,
+            onSurface = ink,
+            onSurfaceVariant = muted,
+            outline = outline
+        )
+    }
+
+    MaterialTheme(colorScheme = colorScheme, shapes = WrenDesignSystem.shapes) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            val wide = maxWidth >= 600.dp
+            val dockModifier = Modifier
+                .widthIn(
+                    max = (if (wide) {
+                        WrenDesignSystem.TABLET_CONTENT_MAX_WIDTH_DP
+                    } else {
+                        WrenDesignSystem.PHONE_CONTENT_MAX_WIDTH_DP
+                    }).dp
+                )
+                .fillMaxWidth()
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (state.dockAtTop) {
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (state.reduceTransparency || state.highContrast) surface.copy(alpha = 1f) else surface.copy(alpha = 0.76f),
+                        border = BorderStroke(if (state.highContrast) 2.dp else 1.dp, outline),
+                        shadowElevation = if (state.reduceTransparency) 2.dp else 4.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(42.dp)
+                                .padding(horizontal = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_wren),
+                                contentDescription = "Wren logo",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(30.dp)
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 9.dp)
+                            ) {
+                                Text(
+                                    text = if (state.isPrivate) "Wren · Private" else "Wren",
+                                    color = ink,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                                Text(
+                                    text = state.title.ifBlank { "Your browser" },
+                                    color = muted,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (state.isPrivate) {
+                                Text(
+                                    text = "PRIVATE",
+                                    color = primary,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (!state.dockAtTop) Spacer(Modifier.weight(1f))
+
+                Surface(
+                    modifier = dockModifier.align(Alignment.CenterHorizontally),
+                    shape = RoundedCornerShape(27.dp),
+                    color = if (state.reduceTransparency || state.highContrast) surface.copy(alpha = 1f) else surface.copy(alpha = 0.72f),
+                    border = BorderStroke(if (state.highContrast) 2.dp else 1.dp, outline.copy(alpha = if (state.highContrast) 1f else 0.72f)),
+                    shadowElevation = if (state.reduceTransparency) 2.dp else 8.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp)
+                    ) {
+                        if (state.progress in 1..99) {
+                            LinearProgressIndicator(
+                                progress = state.progress / 100f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(2.dp),
+                                color = primary,
+                                trackColor = outline
+                            )
+                            Spacer(Modifier.height(7.dp))
+                        }
+
+                        var input by rememberSaveable { mutableStateOf(state.url) }
+                        var editing by remember { mutableStateOf(false) }
+                        var suggestions by remember { mutableStateOf(emptyList<AddressSuggestion>()) }
+                        val focusManager = LocalFocusManager.current
+                        val keyboard = LocalSoftwareKeyboardController.current
+
+                        LaunchedEffect(state.url) {
+                            if (!editing) input = state.url
+                        }
+                        LaunchedEffect(input, editing, state.isPrivate) {
+                            if (!editing) {
+                                suggestions = emptyList()
+                            } else {
+                                delay(110)
+                                suggestions = runCatching {
+                                    loadSuggestions(input.filterNot(Char::isISOControl).trim().take(256))
+                                }.getOrDefault(emptyList()).take(6)
+                            }
+                        }
+
+                        if (editing) {
+                            val visibleSuggestions = buildList {
+                                addAll(suggestions)
+                                if (input.isNotBlank()) {
+                                    add(
+                                        AddressSuggestion(
+                                            kind = AddressSuggestionKind.SEARCH,
+                                            title = "Search the web",
+                                            subtitle = input.trim().take(256),
+                                            value = input.trim().take(256)
+                                        )
+                                    )
+                                }
+                            }.distinctBy { it.value }.take(7)
+                            if (visibleSuggestions.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(19.dp),
+                                    color = surface,
+                                    border = BorderStroke(1.dp, outline),
+                                    shadowElevation = 6.dp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 7.dp)
+                                ) {
+                                    LazyColumn(
+                                        modifier = Modifier.heightIn(max = 260.dp)
+                                    ) {
+                                        items(visibleSuggestions, key = { "${it.kind.name}:${it.value}" }) { suggestion ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        onSelectSuggestion(suggestion)
+                                                        input = suggestion.value
+                                                        suggestions = emptyList()
+                                                        focusManager.clearFocus()
+                                                        keyboard?.hide()
+                                                    }
+                                                    .padding(horizontal = 13.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val icon = when (suggestion.kind) {
+                                                    AddressSuggestionKind.OPEN_TAB -> Icons.Default.Tab
+                                                    AddressSuggestionKind.BOOKMARK -> Icons.Default.BookmarkBorder
+                                                    AddressSuggestionKind.HISTORY -> Icons.Default.History
+                                                    AddressSuggestionKind.SEARCH -> Icons.Default.Search
+                                                }
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = null,
+                                                    tint = primary,
+                                                    modifier = Modifier.size(21.dp)
+                                                )
+                                                Column(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .padding(start = 11.dp)
+                                                ) {
+                                                    Text(
+                                                        text = suggestion.title,
+                                                        color = ink,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = suggestion.subtitle,
+                                                        color = muted,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(19.dp),
+                            color = if (state.reduceTransparency || state.highContrast) field.copy(alpha = 1f) else field.copy(alpha = 0.82f),
+                            border = BorderStroke(if (state.highContrast) 2.dp else 1.dp, outline)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp)
+                                    .padding(horizontal = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (editing) {
+                                            input = ""
+                                        } else {
+                                            onSiteInfo()
+                                        }
+                                    },
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (editing) Icons.Default.Close else Icons.Default.Info,
+                                        contentDescription = if (editing) "Clear address" else "Site information",
+                                        tint = primary
+                                    )
+                                }
+
+                                TextField(
+                                    value = input,
+                                    onValueChange = { input = it.take(2048) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .onFocusChanged { editing = it.isFocused },
+                                    placeholder = {
+                                        Text("Search or enter address", color = muted)
+                                    },
+                                    singleLine = true,
+                                    textStyle = TextStyle(
+                                        color = ink,
+                                        textDirection = TextDirection.ContentOrLtr
+                                    ),
+                                    keyboardOptions = KeyboardOptions(
+                                        imeAction = ImeAction.Go,
+                                        keyboardType = KeyboardType.Text
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onGo = {
+                                            onNavigate(input)
+                                            focusManager.clearFocus()
+                                            keyboard?.hide()
+                                        },
+                                        onSearch = {
+                                            onNavigate(input)
+                                            focusManager.clearFocus()
+                                            keyboard?.hide()
+                                        }
+                                    ),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent,
+                                        focusedTextColor = ink,
+                                        unfocusedTextColor = ink,
+                                        focusedPlaceholderColor = muted,
+                                        unfocusedPlaceholderColor = muted,
+                                        cursorColor = primary
+                                    )
+                                )
+
+                                IconButton(
+                                    onClick = {
+                                        onReload()
+                                        focusManager.clearFocus()
+                                        keyboard?.hide()
+                                    },
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Reload page",
+                                        tint = ink
+                                    )
+                                }
+                            }
+                        }
+
+                        if (state.showNavigationActions) {
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                ChromeAction(
+                                    label = "Back",
+                                    enabled = state.canGoBack,
+                                    onClick = onBack
+                                ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                                ChromeAction(
+                                    label = "Forward",
+                                    enabled = state.canGoForward,
+                                    onClick = onForward
+                                ) { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) }
+                                ChromeAction(label = "Home", onClick = onHome) {
+                                    Icon(Icons.Default.Home, contentDescription = null)
+                                }
+                                ChromeAction(label = "New tab", onClick = onNewTab) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                }
+                                ChromeAction(label = "Tabs ${state.tabCount}", onClick = onOpenTabs) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Tab, contentDescription = null)
+                                        Text(
+                                            text = state.tabCount.coerceAtMost(99).toString(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = primary
+                                        )
+                                    }
+                                }
+                                ChromeAction(label = "Menu", onClick = onMenu) {
+                                    Icon(Icons.Default.MoreHoriz, contentDescription = null)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (state.dockAtTop) Spacer(Modifier.weight(1f))
+            }
+        }
+
+        if (menuOpen) {
+            WrenMenuSheet(
+                onDismiss = onDismissMenu,
+                onAction = onMenuAction
+            )
+        }
+        if (tabsOpen) {
+            WrenTabsSheet(
+                tabs = tabs,
+                activeTab = activeTab,
+                onDismiss = onDismissTabs,
+                onSelect = onSelectTab,
+                onClose = onCloseTab,
+                onCreateTab = onCreateTab
+            )
+        }
+        if (settingsOpen) {
+            WrenSettingsSheet(
+                settings = settings,
+                androidNotificationsEnabled = androidNotificationsEnabled,
+                onDismiss = onDismissSettings,
+                onUpdateSettings = onUpdateSettings,
+                onAction = onSettingsAction
+            )
+        }
+        if (savedPagesOpen) {
+            WrenSavedPagesScreen(
+                state = savedPagesState,
+                onDismiss = onDismissSavedPages,
+                onOpen = onOpenSavedPage,
+                onRemove = onRemoveSavedPage,
+                onRenameBookmark = onRenameBookmark,
+                onMoveBookmark = onMoveBookmark,
+                onMoveWithinFolder = onMoveBookmarkWithinFolder,
+                onCreateFolder = onCreateBookmarkFolder,
+                onRenameFolder = onRenameBookmarkFolder,
+                onDeleteFolder = onDeleteBookmarkFolder,
+                onClearHistory = onClearSavedHistory,
+                onShare = onShareSavedPage,
+                onCopy = onCopySavedPage
+            )
+        }
+        if (privacyOpen) {
+            WrenPrivacySheet(
+                summary = privacySummary,
+                onDismiss = onDismissPrivacy,
+                onManageProtection = onManageProtection,
+                onClearData = onClearPrivacyData
+            )
+        }
+        if (sitePermissionsOpen) {
+            WrenSitePermissionsSheet(
+                entries = sitePermissions,
+                onDismiss = onDismissSitePermissions,
+                onSetDecision = onSetSitePermission,
+                onResetAll = onResetSitePermissions
+            )
+        }
+        if (savedSessionsOpen) {
+            WrenSavedSessionsScreen(
+                sessions = savedSessions,
+                onDismiss = onDismissSavedSessions,
+                onRestore = onRestoreSavedSession,
+                onOpenAlongside = onOpenSavedSessionAlongside,
+                onRename = onRenameSavedSession,
+                onDelete = onDeleteSavedSession,
+                onSaveCurrent = onSaveCurrentSession,
+                onImport = onImportSavedSession,
+                onExport = onExportSavedSession,
+                onImportFile = onImportSessionBackupFile,
+                onDeleteAll = onDeleteAllSavedSessions
+            )
+        }
+        if (siteInfoOpen) {
+            WrenSiteInfoScreen(
+                state = siteInfoState,
+                onDismiss = onDismissSiteInfo,
+                onPermissionChange = onChangeSiteInfoPermission,
+                onResetPermissions = onResetSiteInfoPermissions,
+                onClearSiteData = onClearSiteInfoData,
+                onMediaPermissionChange = onSiteInfoMediaPermissionChange
+            )
+        }
+        if (readerOpen) {
+            WrenReaderScreen(
+                state = readerState,
+                onDismiss = onDismissReader,
+                onCopy = onCopyReader
+            )
+        }
+        if (recallOpen) {
+            WrenRecallScreen(
+                state = recallState,
+                onDismiss = onDismissRecall,
+                onOpen = onOpenRecall
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WrenTabsSheet(
+    tabs: List<BrowserTab>,
+    activeTab: BrowserTab?,
+    onDismiss: () -> Unit,
+    onSelect: (BrowserTab) -> Unit,
+    onClose: (BrowserTab) -> Unit,
+    onCreateTab: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 22.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Your tabs",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${tabs.size} open",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                androidx.compose.material3.FilledTonalButton(onClick = onCreateTab) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text("New tab", modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            var search by rememberSaveable { mutableStateOf("") }
+            var filter by remember { mutableIntStateOf(0) }
+            TextField(
+                value = search,
+                onValueChange = { search = it.take(128) },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search tabs") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(selected = filter == 0, onClick = { filter = 0 }, label = { Text("All") })
+                FilterChip(selected = filter == 1, onClick = { filter = 1 }, label = { Text("Regular") })
+                FilterChip(selected = filter == 2, onClick = { filter = 2 }, label = { Text("Private") })
+            }
+            val needle = search.trim().lowercase(Locale.ROOT)
+            val visibleTabs = tabs.filter { tab ->
+                (filter == 0 || (filter == 1 && !tab.privateMode) || (filter == 2 && tab.privateMode)) &&
+                    (needle.isBlank() || tab.title.lowercase(Locale.ROOT).contains(needle) ||
+                        tab.url.lowercase(Locale.ROOT).contains(needle))
+            }
+            Spacer(Modifier.height(12.dp))
+            if (visibleTabs.isEmpty()) {
+                Text(
+                    text = "No open tabs",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 240.dp),
+                    modifier = Modifier.heightIn(max = 560.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(visibleTabs, key = { _, tab -> System.identityHashCode(tab.session) }) { _, tab ->
+                        WrenTabCard(
+                            tab = tab,
+                            selected = tab === activeTab,
+                            onSelect = { onSelect(tab) },
+                            onClose = { onClose(tab) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WrenTabCard(
+    tab: BrowserTab,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onClose: () -> Unit
+) {
+    val host = runCatching {
+        android.net.Uri.parse(tab.url).host?.removePrefix("www.")
+    }.getOrNull().orEmpty().ifBlank { "New tab" }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 148.dp)
+            .clickable(onClick = onSelect),
+        shape = RoundedCornerShape(22.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.66f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)
+        },
+        border = BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+        ),
+        shadowElevation = if (selected) 3.dp else 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(13.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tab,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(9.dp).size(19.dp)
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                if (tab.privateMode) {
+                    Text(
+                        text = "PRIVATE",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+                IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close tab",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = tab.title.ifBlank { "New tab" },
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = host,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            if (tab.progress in 1..99) {
+                LinearProgressIndicator(
+                    progress = tab.progress / 100f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp)
+                        .height(3.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WrenMenuSheet(
+    onDismiss: () -> Unit,
+    onAction: (WrenMenuAction) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 22.dp)
+        ) {
+            Text(
+                text = "Wren tools",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            val menuGroups = listOf(
+                "This page" to listOf(
+                    WrenMenuAction.BOOKMARK_TOGGLE,
+                    WrenMenuAction.SHARE,
+                    WrenMenuAction.COPY_ADDRESS,
+                    WrenMenuAction.FIND_IN_PAGE,
+                    WrenMenuAction.READER,
+                    WrenMenuAction.SITE_INFO
+                ),
+                "Library" to listOf(
+                    WrenMenuAction.BOOKMARKS,
+                    WrenMenuAction.HISTORY,
+                    WrenMenuAction.DOWNLOADS,
+                    WrenMenuAction.RECALL,
+                    WrenMenuAction.SAVED_SESSIONS,
+                    WrenMenuAction.SAVE_SESSION,
+                    WrenMenuAction.RECENTLY_CLOSED
+                ),
+                "Privacy & security" to listOf(
+                    WrenMenuAction.PRIVACY_CENTER,
+                    WrenMenuAction.PRIVATE_TAB,
+                    WrenMenuAction.CLOSE_PRIVATE_TABS,
+                    WrenMenuAction.PASSWORDS
+                ),
+                "Browser" to listOf(
+                    WrenMenuAction.SEARCH_ENGINE,
+                    WrenMenuAction.SETTINGS,
+                    WrenMenuAction.CLEAR_HISTORY,
+                    WrenMenuAction.CLOSE_ALL_TABS
+                )
+            )
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 148.dp),
+                modifier = Modifier.heightIn(max = 560.dp),
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                menuGroups.forEach { (groupTitle, actions) ->
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = groupTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
+                        )
+                    }
+                    itemsIndexed(actions, key = { _, action -> action.name }) { _, action ->
+                        val actionIcon = when (action) {
+                            WrenMenuAction.BOOKMARK_TOGGLE,
+                            WrenMenuAction.BOOKMARKS -> Icons.Default.BookmarkBorder
+                            WrenMenuAction.HISTORY,
+                            WrenMenuAction.CLEAR_HISTORY,
+                            WrenMenuAction.RECENTLY_CLOSED,
+                            WrenMenuAction.SAVED_SESSIONS,
+                            WrenMenuAction.SAVE_SESSION -> Icons.Default.History
+                            WrenMenuAction.DOWNLOADS -> Icons.Default.Download
+                            WrenMenuAction.SHARE -> Icons.Default.Share
+                            WrenMenuAction.COPY_ADDRESS -> Icons.Default.ContentCopy
+                            WrenMenuAction.FIND_IN_PAGE,
+                            WrenMenuAction.SEARCH_ENGINE,
+                            WrenMenuAction.RECALL -> Icons.Default.Search
+                            WrenMenuAction.READER -> Icons.Default.MenuBook
+                            WrenMenuAction.SITE_INFO -> Icons.Default.Info
+                            WrenMenuAction.PRIVACY_CENTER -> Icons.Default.Security
+                            WrenMenuAction.SETTINGS -> Icons.Default.Settings
+                            WrenMenuAction.PRIVATE_TAB,
+                            WrenMenuAction.CLOSE_PRIVATE_TABS -> Icons.Default.Security
+                            WrenMenuAction.PASSWORDS -> Icons.Default.Key
+                            WrenMenuAction.CLOSE_ALL_TABS -> Icons.Default.Tab
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 68.dp)
+                                .clickable { onAction(action) },
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = actionIcon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(21.dp)
+                                )
+                                Text(
+                                    text = action.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 10.dp),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChromeAction(
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit
+) {
+    androidx.compose.material3.IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(44.dp).semantics { contentDescription = label }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.material3.LocalContentColor provides
+                    if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            ) {
+                icon()
+            }
+        }
+    }
+}

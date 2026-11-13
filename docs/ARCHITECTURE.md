@@ -1,4 +1,4 @@
-# BrowseX Architecture
+# Wren Architecture
 
 This document describes the current Android application boundaries and the rules that new features must preserve. It is a working architecture guide, not a claim that every roadmap item is already implemented.
 
@@ -6,7 +6,7 @@ This document describes the current Android application boundaries and the rules
 
 ### 1. Application and platform composition
 
-- `BrowseXApplication` owns the process-scoped `BrowserStorageRuntime`.
+- `WrenApplication` owns the process-scoped `BrowserStorageRuntime`.
 - `MainActivity` is the Android host and composition root for browser UI, GeckoView, Android permissions, intents, and lifecycle callbacks.
 - `BrowserRuntimeOwner` creates the single process-wide `GeckoRuntime`.
 - Platform-only services (notifications, autofill, file sharing, Android permission launchers) stay behind dedicated coordinators or bridge classes.
@@ -30,11 +30,11 @@ Do not let UI pages create or close Gecko sessions directly. Inject operations t
 The storage composition root is:
 
 ```text
-BrowseXApplication
+WrenApplication
 └── BrowserStorageRuntime
     ├── BrowserSettingsDataStore
     └── BrowserStorageGraph
-        ├── BrowseXDatabase (Room)
+        ├── WrenDatabase (Room)
         ├── RoomBookmarkRepository
         ├── RoomHistoryRepository
         ├── RoomSessionRepository
@@ -60,20 +60,20 @@ Keep read queries bounded in SQL as well as enforcing write-time retention. A wr
 
 The visible browser shell is hosted by a `ComposeView` in `MainActivity`. It owns presentation only; navigation, tabs, Gecko sessions, permissions, Room access, and download operations remain behind the existing browser controllers.
 
-Current BrowseX-branded Compose surfaces:
-- `BrowseXBrowserChrome.kt`: translucent address dock, navigation actions, address suggestions, menu sheet, and tab workspace.
-- `BrowseXSettingsSheet.kt`: theme, language, accessibility, notifications, library, privacy, and app settings.
-- `BrowseXSavedPagesScreen.kt`: bookmarks, history, folders, ordering, edit/move/remove, share, and copy actions.
-- `BrowseXPrivacyAndPermissions.kt`: privacy clearing controls and saved per-site permission management.
-- `BrowseXSavedSessionsScreen.kt`: save/import, search/sort, rename/delete, restore, and open-alongside workflows.
+Current Wren-branded Compose surfaces:
+- `WrenBrowserChrome.kt`: translucent address dock, navigation actions, address suggestions, menu sheet, and tab workspace.
+- `WrenSettingsSheet.kt`: theme, language, accessibility, notifications, library, privacy, and app settings.
+- `WrenSavedPagesScreen.kt`: bookmarks, history, folders, ordering, edit/move/remove, share, and copy actions.
+- `WrenPrivacyAndPermissions.kt`: privacy clearing controls and saved per-site permission management.
+- `WrenSavedSessionsScreen.kt`: save/import, search/sort, rename/delete, restore, and open-alongside workflows.
 - Saved-session backups use the versioned `wren-session` JSON format (version 1) and are exported/imported one session at a time through Android's document picker. Imports validate the format, version, URL scheme, URL count, and a 100 KB payload limit before saving. Imports never overwrite an existing same-named session; they receive a unique suffix, and the 10-session limit is enforced transactionally. Private tabs, Wren-managed credentials, cookies, and site permissions are not exported. Full regular-tab URLs are exported, however, and URL paths or query parameters can contain sensitive information (for example, one-time links or access tokens); users should inspect a backup before sharing it.
 
-The Compose UI adapts selected address/navigation patterns from the MIT-licensed Kingfisher Browser project. Attribution and the complete license notice are in `THIRD_PARTY_NOTICES.md`. BrowseX uses its own logo, colors, naming, and callbacks; it does not replace GeckoView or the browser domain.
+The Compose UI adapts selected address/navigation patterns from the MIT-licensed Kingfisher Browser project. Attribution and the complete license notice are in `THIRD_PARTY_NOTICES.md`. Wren uses its own logo, colors, naming, and callbacks; it does not replace GeckoView or the browser domain.
 
 Additional Compose destinations now cover:
-- `BrowseXSiteInfoScreen.kt`: active-site identity, live Gecko permission choices, saved media decisions, and per-origin cleanup.
-- `BrowseXReaderScreen.kt`: selectable article text, adjustable typography, and copy.
-- `BrowseXRecallScreen.kt`: bounded search across regular tabs, bookmarks, and recent history.
+- `WrenSiteInfoScreen.kt`: active-site identity, live Gecko permission choices, saved media decisions, and per-origin cleanup.
+- `WrenReaderScreen.kt`: selectable article text, adjustable typography, and copy.
+- `WrenRecallScreen.kt`: bounded search across regular tabs, bookmarks, and recent history.
 
 The remaining large legacy destination is `DownloadsPage`, which still contains the full Android DownloadManager/Gecko stream lifecycle, safe file-ownership deletion checks, cancellation, share/open, and unsupported-state handling. It will be migrated only when those safeguards are preserved. The old `AddressSuggestionsController` is no longer connected to the visible Compose address field and can be removed after the hidden compatibility views are retired.
 
@@ -129,7 +129,7 @@ Before shipping persistent user data:
 3. Verify migration rollback/failure behavior, row preservation, indexes, foreign keys, and backup/restore across upgrades.
 4. Block release if any previously shipped version lacks a tested migration path.
 
-See `docs/DATABASE_MIGRATION_RELEASE_GATE.md` for the required migration and release checklist. The CI workflow expects the generated schema at `app/schemas/com.browsex.app.storage.BrowseXDatabase/2.json`; keep that artifact committed and in sync with the entity definitions.
+See `docs/DATABASE_MIGRATION_RELEASE_GATE.md` for the required migration and release checklist. The CI workflow expects the generated schema at `app/schemas/com.wren.app.storage.WrenDatabase/2.json`; keep that artifact committed and in sync with the entity definitions.
 
 ## Build and verification
 

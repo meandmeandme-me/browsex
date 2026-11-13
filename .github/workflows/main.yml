@@ -1,4 +1,4 @@
-name: BrowseX CI
+name: Wren CI
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: browsex-ci-${{ github.ref }}
+  group: wren-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -42,47 +42,47 @@ jobs:
       - name: Configure stable debug signing (optional)
         shell: bash
         env:
-          BROWSEX_DEBUG_KEYSTORE_BASE64: ${{ secrets.BROWSEX_DEBUG_KEYSTORE_BASE64 }}
-          BROWSEX_DEBUG_STORE_PASSWORD: ${{ secrets.BROWSEX_DEBUG_STORE_PASSWORD }}
-          BROWSEX_DEBUG_KEY_ALIAS: ${{ secrets.BROWSEX_DEBUG_KEY_ALIAS }}
-          BROWSEX_DEBUG_KEY_PASSWORD: ${{ secrets.BROWSEX_DEBUG_KEY_PASSWORD }}
+          WREN_DEBUG_KEYSTORE_BASE64: ${{ secrets.WREN_DEBUG_KEYSTORE_BASE64 }}
+          WREN_DEBUG_STORE_PASSWORD: ${{ secrets.WREN_DEBUG_STORE_PASSWORD }}
+          WREN_DEBUG_KEY_ALIAS: ${{ secrets.WREN_DEBUG_KEY_ALIAS }}
+          WREN_DEBUG_KEY_PASSWORD: ${{ secrets.WREN_DEBUG_KEY_PASSWORD }}
         run: |
-          if [[ -z "$BROWSEX_DEBUG_KEYSTORE_BASE64" ]]; then
+          if [[ -z "$WREN_DEBUG_KEYSTORE_BASE64" ]]; then
             echo "::notice::No stable debug keystore configured; this run will use the runner's temporary debug certificate."
             exit 0
           fi
-          printf '%s' "$BROWSEX_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/browsex-debug.keystore"
+          printf '%s' "$WREN_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/wren-debug.keystore"
           {
-            echo "BROWSEX_DEBUG_KEYSTORE_PATH=$RUNNER_TEMP/browsex-debug.keystore"
-            echo "BROWSEX_DEBUG_STORE_PASSWORD=$BROWSEX_DEBUG_STORE_PASSWORD"
-            echo "BROWSEX_DEBUG_KEY_ALIAS=$BROWSEX_DEBUG_KEY_ALIAS"
-            echo "BROWSEX_DEBUG_KEY_PASSWORD=$BROWSEX_DEBUG_KEY_PASSWORD"
+            echo "WREN_DEBUG_KEYSTORE_PATH=$RUNNER_TEMP/wren-debug.keystore"
+            echo "WREN_DEBUG_STORE_PASSWORD=$WREN_DEBUG_STORE_PASSWORD"
+            echo "WREN_DEBUG_KEY_ALIAS=$WREN_DEBUG_KEY_ALIAS"
+            echo "WREN_DEBUG_KEY_PASSWORD=$WREN_DEBUG_KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
       - name: Configure release signing (optional)
         shell: bash
         env:
-          BROWSEX_RELEASE_KEYSTORE_BASE64: ${{ secrets.BROWSEX_RELEASE_KEYSTORE_BASE64 }}
-          BROWSEX_RELEASE_STORE_PASSWORD: ${{ secrets.BROWSEX_RELEASE_STORE_PASSWORD }}
-          BROWSEX_RELEASE_KEY_ALIAS: ${{ secrets.BROWSEX_RELEASE_KEY_ALIAS }}
-          BROWSEX_RELEASE_KEY_PASSWORD: ${{ secrets.BROWSEX_RELEASE_KEY_PASSWORD }}
+          WREN_RELEASE_KEYSTORE_BASE64: ${{ secrets.WREN_RELEASE_KEYSTORE_BASE64 }}
+          WREN_RELEASE_STORE_PASSWORD: ${{ secrets.WREN_RELEASE_STORE_PASSWORD }}
+          WREN_RELEASE_KEY_ALIAS: ${{ secrets.WREN_RELEASE_KEY_ALIAS }}
+          WREN_RELEASE_KEY_PASSWORD: ${{ secrets.WREN_RELEASE_KEY_PASSWORD }}
         run: |
-          if [[ -z "$BROWSEX_RELEASE_KEYSTORE_BASE64" && -z "$BROWSEX_RELEASE_STORE_PASSWORD" && -z "$BROWSEX_RELEASE_KEY_ALIAS" && -z "$BROWSEX_RELEASE_KEY_PASSWORD" ]]; then
-            echo "BROWSEX_RELEASE_SIGNING_CONFIGURED=false" >> "$GITHUB_ENV"
+          if [[ -z "$WREN_RELEASE_KEYSTORE_BASE64" && -z "$WREN_RELEASE_STORE_PASSWORD" && -z "$WREN_RELEASE_KEY_ALIAS" && -z "$WREN_RELEASE_KEY_PASSWORD" ]]; then
+            echo "WREN_RELEASE_SIGNING_CONFIGURED=false" >> "$GITHUB_ENV"
             echo "::notice::Release signing is not configured; signed release artifacts will be skipped."
             exit 0
           fi
-          if [[ -z "$BROWSEX_RELEASE_KEYSTORE_BASE64" || -z "$BROWSEX_RELEASE_STORE_PASSWORD" || -z "$BROWSEX_RELEASE_KEY_ALIAS" || -z "$BROWSEX_RELEASE_KEY_PASSWORD" ]]; then
-            echo "::error::Configure all four BROWSEX_RELEASE_* secrets or leave all of them empty."
+          if [[ -z "$WREN_RELEASE_KEYSTORE_BASE64" || -z "$WREN_RELEASE_STORE_PASSWORD" || -z "$WREN_RELEASE_KEY_ALIAS" || -z "$WREN_RELEASE_KEY_PASSWORD" ]]; then
+            echo "::error::Configure all four WREN_RELEASE_* secrets or leave all of them empty."
             exit 1
           fi
-          printf '%s' "$BROWSEX_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/browsex-release.keystore"
+          printf '%s' "$WREN_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/wren-release.keystore"
           {
-            echo "BROWSEX_RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/browsex-release.keystore"
-            echo "BROWSEX_RELEASE_STORE_PASSWORD=$BROWSEX_RELEASE_STORE_PASSWORD"
-            echo "BROWSEX_RELEASE_KEY_ALIAS=$BROWSEX_RELEASE_KEY_ALIAS"
-            echo "BROWSEX_RELEASE_KEY_PASSWORD=$BROWSEX_RELEASE_KEY_PASSWORD"
-            echo "BROWSEX_RELEASE_SIGNING_CONFIGURED=true"
+            echo "WREN_RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/wren-release.keystore"
+            echo "WREN_RELEASE_STORE_PASSWORD=$WREN_RELEASE_STORE_PASSWORD"
+            echo "WREN_RELEASE_KEY_ALIAS=$WREN_RELEASE_KEY_ALIAS"
+            echo "WREN_RELEASE_KEY_PASSWORD=$WREN_RELEASE_KEY_PASSWORD"
+            echo "WREN_RELEASE_SIGNING_CONFIGURED=true"
           } >> "$GITHUB_ENV"
 
       - uses: gradle/actions/setup-gradle@v4
@@ -95,7 +95,7 @@ jobs:
       - name: Validate Wren database safety policy
         run: python3 scripts/check_database_policy.py
 
-      - name: Validate BrowseX brand identity
+      - name: Validate Wren brand identity
         run: python3 scripts/check_brand_identity.py
 
       - name: Run tests, lint and build APKs
@@ -122,7 +122,7 @@ jobs:
           for apk in "${APKS[@]}"; do
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
             BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk")"
-            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "package: name='com.wren.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
             unzip -Z1 "$apk" > "$RUNNER_TEMP/release-apk-files.txt"
             grep -q 'lib/.*libxul.so' "$RUNNER_TEMP/release-apk-files.txt"
@@ -147,7 +147,7 @@ jobs:
       - name: Upload Room schema snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: browsex-room-schema
+          name: wren-room-schema
           path: |
             app/schemas/*.json
             app/schemas/**/*.json
@@ -158,10 +158,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DATABASE_SOURCE="app/src/main/java/com/browsex/app/storage/BrowseXDatabase.kt"
+          DATABASE_SOURCE="app/src/main/java/com/wren/app/storage/WrenDatabase.kt"
           ROOM_VERSION="$(python3 -c 'import re; from pathlib import Path; s=Path("'"$DATABASE_SOURCE"'").read_text(); m=re.search(r"version\s*=\s*(\d+)", s); print(m.group(1) if m else "")')"
           test -n "$ROOM_VERSION"
-          SCHEMA="app/schemas/com.browsex.app.storage.BrowseXDatabase/$ROOM_VERSION.json"
+          SCHEMA="app/schemas/com.wren.app.storage.WrenDatabase/$ROOM_VERSION.json"
           test -s "$SCHEMA"
           if ! git diff --quiet -- "$SCHEMA"; then
             echo "::error::Room schema changed. Commit the generated schema JSON and its migration with this change."
@@ -182,7 +182,7 @@ jobs:
           for apk in "${APKS[@]}"; do
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
             BADGING="$("$AAPT" dump badging "$apk")"
-            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "package: name='com.wren.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
             unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-files.txt"
             grep -q 'lib/.*libxul.so' "$RUNNER_TEMP/apk-files.txt"
@@ -197,7 +197,7 @@ jobs:
       - name: Upload ARM64 debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: browsex-arm64-v8a-debug
+          name: wren-arm64-v8a-debug
           path: |
             app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
             app/build/outputs/apk/debug/SHA256SUMS.txt
@@ -207,7 +207,7 @@ jobs:
       - name: Upload ARM32 debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: browsex-armeabi-v7a-debug
+          name: wren-armeabi-v7a-debug
           path: |
             app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
             app/build/outputs/apk/debug/SHA256SUMS.txt
@@ -217,7 +217,7 @@ jobs:
       - name: Upload universal debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: browsex-universal-debug
+          name: wren-universal-debug
           path: |
             app/build/outputs/apk/debug/app-universal-debug.apk
             app/build/outputs/apk/debug/SHA256SUMS.txt

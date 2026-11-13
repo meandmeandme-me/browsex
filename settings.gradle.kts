@@ -13,5 +13,5 @@ dependencyResolutionManagement {
         maven { url = uri("https://maven.mozilla.org/maven2/") }
     }
 }
-rootProject.name = "BrowseX"
+rootProject.name = "Wren"
 include(":app")

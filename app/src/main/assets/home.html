@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#eff5fa">
-<title>BrowseX</title>
+<meta name="theme-color" content="#F8F7F4">
+<title>Wren</title>
 <style>
 :root{color-scheme:light;--canvas:#eef4fb;--ink:#14283d;--muted:#65788c;--blue:#2869e8;--line:#dbe5ef;--card:rgba(255,255,255,.72);--glass:rgba(255,255,255,.58);--shadow:0 18px 48px rgba(35,67,102,.09);--soft-shadow:0 8px 26px rgba(35,67,102,.07)}
 :root[dir="rtl"]{direction:rtl}:root[dir="rtl"] header,:root[dir="rtl"] .section-head,:root[dir="rtl"] .dialog-actions{flex-direction:row-reverse}:root[dir="rtl"] .shortcut-edit{right:auto;left:0}
@@ -120,11 +120,31 @@ body.reduce-motion-mode *::after{
  transform:none!important;
 }
 </style>
+<style id="wren-light-glass">
+:root{color-scheme:light;--canvas:#F8F7F4;--ink:#142238;--muted:#5D6D76;--blue:#348F8B;--line:#E5E1DB;--card:rgba(255,255,255,.88);--glass:rgba(255,255,255,.68);--shadow:0 8px 24px rgba(20,34,56,.065);--soft-shadow:0 3px 12px rgba(20,34,56,.05)}
+body{background:linear-gradient(180deg,#FCFBF8 0%,#F5F3EF 100%);background-attachment:fixed}
+header{margin-bottom:clamp(22px,4vw,34px)}
+.greeting{margin:0 0 26px}.eyebrow{color:#348F8B;letter-spacing:1.2px;margin-bottom:9px}h1{font-size:clamp(27px,6.7vw,38px);line-height:1.12;letter-spacing:-1.15px;margin-bottom:9px;font-weight:720}.greeting p{font-size:14px}
+.section-head{margin-bottom:12px}.section-head h2{font-size:16px;font-weight:680}.shortcuts{gap:clamp(5px,1.7vw,14px);margin-bottom:26px}
+.shortcut{gap:8px;padding:8px 3px}.shortcut-icon{width:58px;height:58px;border-radius:19px;background:#FFFFFFE8;border-color:#FFFFFF;box-shadow:0 2px 8px rgba(20,34,56,.05);color:#348F8B}.shortcut-edit{background:#E5F2F0;color:#286F6C;box-shadow:none;border-color:#FFFFFF}
+.reading-card{padding:9px;border-radius:22px;background:rgba(255,255,255,.76);border-color:rgba(255,255,255,.94);box-shadow:var(--shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.editorial-art{height:clamp(120px,29vw,176px);border-radius:16px;background:linear-gradient(145deg,#EEF3F0 0%,#EEF3F0 62%,#D7E9E3 62%,#D7E9E3 100%)}
+.editorial-art:before{width:clamp(128px,31vw,190px);height:clamp(128px,31vw,190px);right:8%;top:-57%;background:linear-gradient(145deg,#D7ECE7,#AFD6CF);box-shadow:-100px 115px 0 -54px #FFFFFFD0,94px 126px 0 -62px #FFFFFFB5}
+.editorial-art:after{content:none}
+.article-info{padding:12px 6px 4px}.kicker{font-size:9px;color:#348F8B;letter-spacing:1px;margin-bottom:6px}.article-title{font-size:clamp(19px,4.8vw,24px);line-height:1.2;letter-spacing:-.35px;margin-bottom:6px;font-weight:700}
+.home-search-shell{height:56px;gap:9px;padding:5px 6px 5px 15px;border:1px solid #E5E1DB;border-radius:999px;background:rgba(255,255,255,.8);box-shadow:var(--soft-shadow);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.home-search-shell button{width:44px;height:44px;border-radius:50%;background:#348F8B;color:#FFFFFF;font-size:20px}.home-search-shell:focus-within{border-color:#348F8B;box-shadow:0 0 0 3px rgba(52,143,139,.13),var(--soft-shadow)}
+.text-action{color:#348F8B}.search-hint{margin-top:18px}
+body.dark{--canvas:#111C2B;--ink:#F7F6F2;--muted:#B8C3C6;--blue:#79CCC7;--line:#405660;--card:rgba(32,45,59,.9);--glass:rgba(32,45,59,.72);--shadow:0 8px 24px rgba(0,0,0,.24);--soft-shadow:0 3px 12px rgba(0,0,0,.18);background:linear-gradient(180deg,#111C2B,#172737)}
+body.high-contrast-mode{--blue:#286F6C}
+body.dark.high-contrast-mode{--blue:#79CCC7}
+@media(prefers-reduced-transparency:reduce){.reading-card,.home-search-shell,.date-chip,.icon-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:#FFFFFF}}
+</style>
 </head>
 <body>
 <main>
 <header>
- <div class="brand"><div class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" width="42" height="42" role="img" aria-label="BrowseX"><defs><linearGradient id="browsex-mark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#71D6FF"/><stop offset="1" stop-color="#5578FF"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="15" fill="#14243C"/><path d="M14 13 L34 35 M34 13 L14 35" stroke="url(#browsex-mark)" stroke-width="6" stroke-linecap="round"/><circle cx="34" cy="13" r="4" fill="#B69CFF"/><circle cx="14" cy="35" r="2.5" fill="#8BE2FF"/></svg></div><div class="brand-name">BrowseX</div></div>
+ <div class="brand"><div class="mark" aria-hidden="true"><img src="wren-icon-128.png" width="42" height="42" alt="Wren"></div><div class="brand-name">Wren</div></div>
  <div class="header-actions"><span class="date-chip" id="date-chip"></span><button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle appearance">☾</button></div>
 </header>
 <section class="greeting"><div class="eyebrow" id="eyebrow">A BROWSER FOR THE OPEN WEB</div><h1 id="greeting-title">A little curiosity.<br>A wider world.</h1><p id="greeting">Good morning. Where to next?</p></section>
@@ -140,7 +160,7 @@ body.reduce-motion-mode *::after{
   <div class="article-info"><div class="kicker">OPEN WEB&nbsp; / &nbsp;DISCOVERY</div><h3 class="article-title">Follow your curiosity</h3><div class="article-meta">A new idea is one search away</div></div>
  </a>
 </section>
-<p class="search-hint">Search or enter an address in the BrowseX toolbar below.</p>
+<p class="search-hint">Search or enter an address in the Wren toolbar below.</p>
 </main>
 <dialog id="shortcut-dialog" aria-labelledby="dialog-title">
  <form class="dialog-body" id="shortcut-form">
@@ -162,7 +182,7 @@ body.reduce-motion-mode *::after{
  const params=new URLSearchParams(location.search);
  const accentName=params.get('bxaccent')||'ocean';
  const accentTones={
-  ocean:{light:'#236fe3',dark:'#8bc1ff'},
+  ocean:{light:'#0E7C86',dark:'#7FDBE8'},
   violet:{light:'#6844d6',dark:'#b8a5ff'},
   emerald:{light:'#16835a',dark:'#75ddb0'},
   rose:{light:'#c13f70',dark:'#ff9db8'},
@@ -189,7 +209,7 @@ body.reduce-motion-mode *::after{
   main:['فضول صغير.','عالم أوسع.'],everyday:'مساحتك اليومية',reset:'إعادة ضبط',
   begin:'ابدأ من هنا',explore:'استكشف',kicker:'الويب المفتوح / اكتشاف',
   title:'اتبع فضولك',meta:'فكرة جديدة تبدأ ببحث واحد',
-  search:'ابحث أو اكتب عنوانًا في شريط BrowseX بالأسفل.',searchPlaceholder:'ابحث في الويب أو أدخل عنوان موقع',searchLabel:'ابحث في الويب أو أدخل عنوان موقع',searchButton:'بحث',
+  search:'ابحث أو اكتب عنوانًا في شريط Wren بالأسفل.',searchPlaceholder:'ابحث في الويب أو أدخل عنوان موقع',searchLabel:'ابحث في الويب أو أدخل عنوان موقع',searchButton:'بحث',
   favorites:'المواقع المفضلة',themeDark:'التبديل إلى الوضع الفاتح',themeLight:'التبديل إلى الوضع الداكن',
   add:'إضافة موقع',edit:'تعديل',open:'فتح ',delete:'حذف',
   dialogAdd:'إضافة اختصار',dialogEdit:'تعديل الاختصار',
@@ -202,7 +222,7 @@ body.reduce-motion-mode *::after{
   main:['A little curiosity.','A wider world.'],everyday:'Your everyday',reset:'Reset',
   begin:'A place to begin',explore:'Explore',kicker:'OPEN WEB / DISCOVERY',
   title:'Follow your curiosity',meta:'A new idea is one search away',
-  search:'Search or enter an address in the BrowseX toolbar below.',searchPlaceholder:'Search the web or enter an address',searchLabel:'Search the web or enter an address',searchButton:'Search',
+  search:'Search or enter an address in the Wren toolbar below.',searchPlaceholder:'Search the web or enter an address',searchLabel:'Search the web or enter an address',searchButton:'Search',
   favorites:'Favorite websites',themeDark:'Switch to light mode',themeLight:'Switch to dark mode',
   add:'Add site',edit:'Edit',open:'Open ',delete:'Delete',
   dialogAdd:'Add a shortcut',dialogEdit:'Edit shortcut',
@@ -212,7 +232,7 @@ body.reduce-motion-mode *::after{
   morning:'Good morning. Where to next?',afternoon:'Good afternoon. Where to next?',evening:'Good evening. Where to next?'
  };
 
- if(tvMode)copy.search=arabic?'استخدم شريط BrowseX بالأعلى للبحث أو إدخال عنوان موقع.':'Use the BrowseX search bar above to search or enter a website address.';
+ if(tvMode)copy.search=arabic?'استخدم شريط Wren بالأعلى للبحث أو إدخال عنوان موقع.':'Use the Wren search bar above to search or enter a website address.';
  $('home-query').placeholder=copy.searchPlaceholder;$('home-query').setAttribute('aria-label',copy.searchLabel);$('home-search-submit').setAttribute('aria-label',copy.searchButton);
  $('home-search').addEventListener('submit',event=>{event.preventDefault();const value=$('home-query').value.trim();if(!value)return;let destination;if(/^https?:\\/\\//i.test(value))destination=value;else if(!/\\s/.test(value)&&(/^[\\w-]+\\.[a-z]{2,}/i.test(value)||/^localhost(?::\\d+)?$/i.test(value)))destination='https://'+value;else{const bases={Google:'https://www.google.com/search?q=',DuckDuckGo:'https://html.duckduckgo.com/html/?q=',Bing:'https://www.bing.com/search?q=',Brave:'https://search.brave.com/search?q=',Ecosia:'https://www.ecosia.org/search?q=',Startpage:'https://www.startpage.com/sp/search?query=',Yahoo:'https://search.yahoo.com/search?p='};destination=(bases[searchEngine]||bases.Google)+encodeURIComponent(value)}location.href=destination;});
  const defaults=[
@@ -221,7 +241,7 @@ body.reduce-motion-mode *::after{
   {name:'YouTube',url:'https://www.youtube.com'},
   {name:'GitHub',url:'https://github.com'}
  ];
- const key='browsex.home.shortcuts';
+ const key='wren.home.shortcuts';
  let shortcuts=defaults,editing=-1;
  // Treat persisted browser data as untrusted: old versions or edited storage may
  // contain script/data URLs, oversized labels, or malformed entries.

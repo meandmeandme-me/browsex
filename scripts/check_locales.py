@@ -12,7 +12,7 @@ RES = ROOT / "app" / "src" / "main" / "res"
 BASE = RES / "values" / "strings.xml"
 PLACEHOLDER = re.compile(r"(?<!%)%(?!%)(?:[0-9]+\$)?[-#+0,(]*[0-9]*(?:\.[0-9]+)?[sdif]")
 # UI helper calls carry an explicit Arabic fallback at the call site. Missing
-# resource keys are handled by BrowseXStrings with Arabic-only fallback; all
+# resource keys are handled by WrenStrings with Arabic-only fallback; all
 # other selected/system languages receive English instead of accidental Arabic.
 
 
@@ -58,7 +58,7 @@ def main() -> int:
     errors.extend(f"{BASE}: duplicate resource {name}" for name in duplicates)
 
     # UI helper calls can intentionally use call-site English/Arabic fallback text.
-    # BrowseXStrings selects Arabic fallback only for Arabic and English for other
+    # WrenStrings selects Arabic fallback only for Arabic and English for other
     # locales. Resource parity below remains strict for every bundled translation key.
 
     # The in-app language picker supports the full ISO language catalog and follows

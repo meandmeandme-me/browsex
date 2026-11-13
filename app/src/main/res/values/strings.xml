@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BrowseX</string>
+    <string name="app_name">Wren</string>
     <string name="website_notification_channel">Website notifications</string>
-    <string name="website_notification_channel_description">Notifications sent by websites you allow in BrowseX</string>
+    <string name="website_notification_channel_description">Notifications sent by websites you allow in Wren</string>
     <string name="ui_home">Home</string>
     <string name="ui_open_tabs">Open tabs</string>
     <string name="ui_search_suggestions">Search suggestions</string>
@@ -45,7 +45,7 @@
     <string name="ui_site_information">Site information</string>
     <string name="ui_search_engine">Search engine</string>
     <string name="ui_clear_browsing_history">Clear browsing history?</string>
-    <string name="ui_browsex">BrowseX</string>
+    <string name="ui_wren">Wren</string>
     <string name="ui_open_webpage_first">Open webpage first</string>
     <string name="ui_open_a_webpage_first">Open a webpage first</string>
     <string name="ui_preparing_a_clean_reading_view">Preparing a clean reading view…</string>
@@ -95,7 +95,7 @@
     <string name="ui_shortcut_layout">Shortcut layout</string>
     <string name="ui_reset">Reset</string>
     <string name="ui_site_permissions_reset">Site permissions reset</string>
-    <string name="ui_make_browse_x_work_the_way_you_like">Make BrowseX work the way you like</string>
+    <string name="ui_make_wren_work_the_way_you_like">Make Wren work the way you like</string>
     <string name="ui_close_settings">Close settings</string>
     <string name="ui_general">General</string>
     <string name="ui_choose_how_you_browse">Choose how you browse</string>
@@ -132,13 +132,13 @@
     <string name="ui_open_downloaded_files">Open downloaded files</string>
     <string name="ui_privacy_data">Privacy &amp; data</string>
     <string name="ui_review_and_clear_cookies_site_data_and_permissions">Review and clear cookies, site data and permissions</string>
-    <string name="ui_remove_the_browsing_history_stored_by_browse_x">Remove the browsing history stored by Browse X</string>
+    <string name="ui_remove_the_browsing_history_stored_by_wren">Remove the browsing history stored by Wren</string>
     <string name="ui_about">About</string>
-    <string name="ui_about_browse_x">About Browse X</string>
+    <string name="ui_about_wren">About Wren</string>
     <string name="ui_a_calmer_way_to_explore_the_web">A calmer way to explore the web</string>
     <string name="ui_done">Done</string>
-    <string name="ui_browse_x_built_for_the_open_web">Browse X  ·  Built for the open web</string>
-    <string name="ui_your_browse_x_downloads">Your Browse X downloads</string>
+    <string name="ui_wren_built_for_the_open_web">Wren  ·  Built for the open web</string>
+    <string name="ui_your_wren_downloads">Your Wren downloads</string>
     <string name="ui_refresh_downloads">Refresh downloads</string>
     <string name="ui_android_manages_transfers_some_post_downloads_or_protected_requests_may_not_resume_exactly_retry_and_pause_are_not_available_for_every_web_request">Android manages transfers. Some POST downloads or protected requests may not resume exactly; retry and pause are not available for every web request.</string>
     <string name="ui_waiting">Waiting</string>
@@ -173,7 +173,7 @@
     <string name="ui_android_could_not_read_the_download_list_check_app_access_and_refresh_existing_downloads_were_not_removed">Android could not read the download list. Check app access and refresh; existing downloads were not removed.</string>
     <string name="ui_download_no_longer_exists_in_android_downloadmanager">Download no longer exists in Android DownloadManager</string>
     <string name="ui_remove_unavailable_download">Remove unavailable download</string>
-    <string name="ui_no_browsex_downloads_yet_files_you_download_from_websites_will_appear_here">No BrowseX downloads yet. Files you download from websites will appear here.</string>
+    <string name="ui_no_wren_downloads_yet_files_you_download_from_websites_will_appear_here">No Wren downloads yet. Files you download from websites will appear here.</string>
     <string name="ui_pages_you_have_visited">Pages you have visited</string>
     <string name="ui_websites_saved_for_later">Websites saved for later</string>
     <string name="ui_search_browsing_history">Search browsing history</string>
@@ -243,7 +243,7 @@
     <string name="ui_block">Block</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">GeckoView does not support revoking this persistent-storage grant.</string>
     <string name="ui_ok">OK</string>
-    <string name="ui_browse_x_reader">BROWSE X  ·  READER</string>
+    <string name="ui_wren_reader">WREN  ·  READER</string>
     <string name="ui_close_reader">Close reader</string>
     <string name="ui_article">Article</string>
     <string name="ui_decrease_text_size">Decrease text size</string>
@@ -254,11 +254,11 @@
     <string name="ui_replace_all_current_bookmarks_and_folders">Replace all current bookmarks and folders?</string>
     <string name="ui_import_preview_message">Items: %1$d\nValid: %2$d\nSkipped: %3$d\nDuplicates in backup: %4$d\nAlready saved here: %5$d\nFolders: %6$d</string>
     <string name="ui_tabs_title">Tabs</string>
-    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">This removes the history list saved by Browse X. It does not delete downloaded files or bookmarks.</string>
-    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">Browse X is powered by Mozilla GeckoView. Some browser features are still being built.</string>
-    <string name="ui_browsex_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">BrowseX saves the response received from the website directly. Older Android-managed downloads may have different retry and resume limits.</string>
+    <string name="ui_this_removes_the_history_list_saved_by_wren_it_does_not_delete_downloaded_files_or_bookmarks">This removes the history list saved by Wren. It does not delete downloaded files or bookmarks.</string>
+    <string name="ui_wren_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">Wren is powered by Mozilla GeckoView. Some browser features are still being built.</string>
+    <string name="ui_wren_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">Wren saves the response received from the website directly. Older Android-managed downloads may have different retry and resume limits.</string>
     <string name="ui_remove_download_record">Remove download record</string>
-    <string name="ui_remove_this_download_from_browsex_the_saved_file_will_remain_on_your_device">Remove this download from BrowseX? The saved file will remain on your device.</string>
+    <string name="ui_remove_this_download_from_wren_the_saved_file_will_remain_on_your_device">Remove this download from Wren? The saved file will remain on your device.</string>
     <string name="ui_ublock_origin">uBlock Origin</string>
     <string name="ui_ublock_origin_controls">uBlock Origin controls</string>
     <string name="ui_install_and_manage_real_ad_and_tracker_blocking">Install and manage real ad and tracker blocking</string>
@@ -285,9 +285,9 @@
     <string name="ui_could_not_uninstall_ublock_origin">Could not uninstall uBlock Origin</string>
     <string name="ui_ublock_origin_removed">uBlock Origin removed</string>
     <string name="ui_password_autofill">Password autofill</string>
-    <string name="ui_use_browsex_to_fill_saved_passwords_in_supported_android_apps">Use BrowseX to fill saved passwords in supported Android apps</string>
-    <string name="autofill_service_description">BrowseX fills saved HTTPS website passwords after device authentication. Password saving from other apps is not enabled.</string>
-    <string name="ui_unlock_browsex_passwords">Unlock BrowseX passwords</string>
+    <string name="ui_use_wren_to_fill_saved_passwords_in_supported_android_apps">Use Wren to fill saved passwords in supported Android apps</string>
+    <string name="autofill_service_description">Wren fills saved HTTPS website passwords after device authentication. Password saving from other apps is not enabled.</string>
+    <string name="ui_unlock_wren_passwords">Unlock Wren passwords</string>
     <string name="ui_save_this_website_sign_in">Save this website sign-in?</string>
     <string name="ui_verify_your_identity_before_filling_a_saved_sign_in">Verify your identity before filling a saved sign-in</string>
     <string name="ui_choose_a_saved_sign_in">Choose a saved sign-in</string>
@@ -332,10 +332,10 @@
     <string name="ui_share_downloaded_file">Share downloaded file</string>
     <string name="ui_share_download">Share download</string>
     <string name="ui_no_app_can_share_this_file">No app can share this file</string>
-    <string name="ui_remove_this_download_record_from_browsex">Remove this download record from BrowseX?</string>
+    <string name="ui_remove_this_download_record_from_wren">Remove this download record from Wren?</string>
     <string name="ui_delete_this_downloaded_file_from_your_device_and_remove_its_record">Delete this downloaded file from your device and remove its record?</string>
     <string name="ui_delete_file">Delete file</string>
-    <string name="ui_browsex_could_not_verify_ownership_or_delete_this_file_the_record_was_kept">BrowseX could not verify ownership or delete this file. The record was kept.</string>
+    <string name="ui_wren_could_not_verify_ownership_or_delete_this_file_the_record_was_kept">Wren could not verify ownership or delete this file. The record was kept.</string>
     <string name="ui_android_could_not_cancel_this_download_it_is_still_listed_so_you_can_try_again">Android could not cancel this download. It is still listed so you can try again.</string>
     <string name="ui_delete_downloaded_file">Delete downloaded file</string>
     <string name="ui_delete_this_downloaded_file_from_your_device">Delete this downloaded file from your device?</string>
@@ -354,8 +354,6 @@
     <string name="ui_this_bookmark_is_already_at_the_edge_of_its_folder">This bookmark is already at the edge of its folder.</string>
     <string name="ui_settings_are_temporarily_unavailable">Settings are temporarily unavailable</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">Private browsing does not read or save site permission choices.</string>
-    <string name="ui_no_BrowseX_downloads_yet_files_you_download_from_websites_will_appear_here">No BrowseX downloads yet. Files you download from websites will appear here.</string>
-    <string name="ui_BrowseX_browser">BrowseX browser</string>
     <string name="ui_reload_page">Reload page</string>
     <string name="ui_address_bar_position">Address bar position</string>
     <string name="ui_choose_top_or_bottom_on_compact_screens">Choose top or bottom on compact screens</string>

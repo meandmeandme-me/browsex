@@ -1,54 +1,40 @@
-# BrowseX UI replacement and source adoption
+# Wren browser experience
 
-## Direction
+## Visual direction
 
-BrowseX is moving to one coherent Compose-based browser experience. The visual reference and reusable browser-chrome patterns are adapted from **Kingfisher Browser**:
+Wren should feel quiet, quick, and familiar: Chrome's direct navigation and Safari's restrained floating controls, expressed through the Wren bird mark and teal identity. The live web page is the main canvas. Browser controls sit lightly above it and recede while reading.
 
-- Upstream: https://github.com/nazmul-1117/kingfisher-browser
-- License: MIT
-- Upstream stack: Kotlin, Jetpack Compose, GeckoView
-- BrowseX keeps its own package identity, GeckoView runtime, tab/session controllers, Room database, privacy controls, permissions, downloads, localization, accessibility policies, and account/sync contracts.
+## Color and surfaces
 
-The MIT notice and attribution are retained in THIRD_PARTY_NOTICES.md.
+- Use a soft neutral canvas (`#F5F8F9`) for Wren-owned start, tab, and settings surfaces; let websites keep their own colors.
+- Use deep ink (`#16242C`) for primary text and muted slate (`#52636B`) for supporting text.
+- Reserve Wren teal (`#0E7C86`) for actions and selected states. Avoid broad teal fills, saturated gradients, and decorative color blocks.
+- Keep the address/navigation dock at the bottom by default. Use a translucent light or dark surface, a fine edge, and a soft shadow; keep the address field legible and controls easy to reach.
+- Apply transparency only to browser controls and menus over web content. Keep reading content and cards opaque enough to remain legible.
+- When the user enables reduced transparency or high contrast, use opaque surfaces and stronger outlines.
 
-## Replacement rule
+The Android shell uses Compose over GeckoView. Android Compose's regular blur modifier blurs the control itself, not the live page behind it; do not describe that as backdrop blur. The current dock therefore uses translucency, edge definition, and elevation. A future true backdrop blur must be API-aware, measured on real devices, and retain the opaque accessibility fallback.
 
-Replace presentation layers, not browser domain behavior. Existing feature screens are wired to BrowseX callbacks and repositories; deleting their controllers or storage would silently remove real features. Each screen is therefore migrated onto the shared BrowseX Compose design system before obsolete presentation code is removed.
+## Interaction
 
-## Screen inventory and migration target
+- The address field accepts web addresses and search terms and submits them to the active GeckoView session.
+- Back and forward use the active GeckoSession history; reload, home, tab switcher, and page actions stay reachable from the bottom dock.
+- Keep the dock to a small set of frequent actions. Put secondary actions in a grouped page menu.
+- Preserve the current page while opening menus, tab overview, site information, and settings.
+- Use native page content for websites; Wren's start page is the only authored HTML content.
 
-| Existing surface | Target treatment |
-| --- | --- |
-| Browser chrome / address bar | Floating glass address dock with progress, suggestions, site identity, and safe navigation actions |
-| Home page | BrowseX-branded start page, responsive shortcuts, search, discovery, light/dark and reduced-motion support |
-| Tab switcher | Responsive cards/grid, clear private-tab distinction, close/restore actions |
-| Browser menu | Grouped actions with clear icons, labels, and touch targets |
-| Settings | One section hierarchy, shared controls, accessible descriptions and RTL |
-| Bookmarks and folders | Shared list/grid surfaces, folder navigation, import/export and reorder |
-| History / Recall | Search-first lists, readable metadata, empty/error/loading states |
-| Downloads | Explicit queued/running/complete/failed/cancelled states and open/share actions |
-| Privacy center | Protection status, per-site controls, clear-data flow and permissions |
-| Site information / permissions | Origin identity, permission state, allow/block/reset actions |
-| Saved sessions | Session cards, restore, restore alongside, rename, import and delete |
-| Reader mode | Distraction-free reading typography and controls |
-| About / legal / notices | BrowseX identity and complete third-party attributions |
+## Shared behavior and accessibility
 
-## Shared visual rules
+- Keep phone, tablet, foldable, landscape, and keyboard/TV layouts adaptive.
+- Preserve Arabic locale parity and right-to-left direction without reversing URL text.
+- Maintain descriptive accessibility labels, minimum 48 dp touch targets, scalable text, reduced motion, reduced transparency, and high contrast.
+- Private browsing, site permission decisions, notification controls, credential origin checks, credential encryption, Room schema validation, and migration safeguards are product behavior and must remain connected to the same controllers and policies.
+- Keep launcher name, app label, About/legal text, private-mode labels, notifications, and accessibility strings under the Wren identity.
 
-- Brand: BrowseX; the launcher, home page, native labels and private-mode chrome must not show the former Wren identity.
-- Geometry: BrowseXDesignSystem owns shared Material 3 shape sizes and touch-target constants.
-- Color: BrowserPalette remains the single source for light/dark and user-selected accent colors.
-- Layout: preserve adaptive behavior for phones, tablets, foldables, landscape and TV/keyboard navigation.
-- Accessibility: honor RTL, contrast, reduced transparency, reduced motion, scalable text and descriptive control labels.
-- Performance: glass effects must be optional and disabled by the existing reduced-transparency/performance policies.
+## Review checklist
 
-## Completion gates
-
-1. All user-facing pages use the shared BrowseX design system.
-2. No page has placeholder or inert actions.
-3. No old brand name, logo, or launcher banner remains in user-visible resources.
-4. Existing callbacks, storage, browser engine and privacy behavior remain connected.
-5. CI validates resources, locale parity, Kotlin compilation, unit tests, lint and release packaging.
-6. Device testing confirms phone/tablet/RTL behavior before calling the redesign complete.
-
-This document is a migration contract, not a claim that every screen has already been redesigned.
+1. Confirm the start page and open-page dock remain visually quiet at phone and tablet sizes.
+2. Open an actual website and check address submission, back, forward, reload, tabs, and page menu.
+3. Check light, dark, Arabic/RTL, reduced transparency, high contrast, and large text.
+4. Confirm web content remains readable behind the translucent controls and the reduced-transparency mode stays opaque.
+5. Run locale, unit, lint, identity, database policy, and Room schema checks in an Android-capable environment.

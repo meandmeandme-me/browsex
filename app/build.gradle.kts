@@ -7,10 +7,10 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-val stableDebugKeystorePath = System.getenv("BROWSEX_DEBUG_KEYSTORE_PATH")
-val stableDebugStorePassword = System.getenv("BROWSEX_DEBUG_STORE_PASSWORD")
-val stableDebugKeyAlias = System.getenv("BROWSEX_DEBUG_KEY_ALIAS")
-val stableDebugKeyPassword = System.getenv("BROWSEX_DEBUG_KEY_PASSWORD")
+val stableDebugKeystorePath = System.getenv("WREN_DEBUG_KEYSTORE_PATH")
+val stableDebugStorePassword = System.getenv("WREN_DEBUG_STORE_PASSWORD")
+val stableDebugKeyAlias = System.getenv("WREN_DEBUG_KEY_ALIAS")
+val stableDebugKeyPassword = System.getenv("WREN_DEBUG_KEY_PASSWORD")
 val stableDebugSigningValues = listOf(
     stableDebugKeystorePath,
     stableDebugStorePassword,
@@ -19,13 +19,13 @@ val stableDebugSigningValues = listOf(
 )
 val stableDebugSigningConfigured = stableDebugSigningValues.all { !it.isNullOrBlank() }
 if (stableDebugSigningValues.any { !it.isNullOrBlank() } && !stableDebugSigningConfigured) {
-    error("Stable debug signing is partially configured. Set all BROWSEX_DEBUG_* secrets or none.")
+    error("Stable debug signing is partially configured. Set all WREN_DEBUG_* secrets or none.")
 }
 
-val releaseKeystorePath = System.getenv("BROWSEX_RELEASE_KEYSTORE_PATH")
-val releaseStorePassword = System.getenv("BROWSEX_RELEASE_STORE_PASSWORD")
-val releaseKeyAlias = System.getenv("BROWSEX_RELEASE_KEY_ALIAS")
-val releaseKeyPassword = System.getenv("BROWSEX_RELEASE_KEY_PASSWORD")
+val releaseKeystorePath = System.getenv("WREN_RELEASE_KEYSTORE_PATH")
+val releaseStorePassword = System.getenv("WREN_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("WREN_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("WREN_RELEASE_KEY_PASSWORD")
 val releaseSigningValues = listOf(
     releaseKeystorePath,
     releaseStorePassword,
@@ -34,15 +34,15 @@ val releaseSigningValues = listOf(
 )
 val releaseSigningConfigured = releaseSigningValues.all { !it.isNullOrBlank() }
 if (releaseSigningValues.any { !it.isNullOrBlank() } && !releaseSigningConfigured) {
-    error("Release signing is partially configured. Set all BROWSEX_RELEASE_* secrets or none.")
+    error("Release signing is partially configured. Set all WREN_RELEASE_* secrets or none.")
 }
 
 android {
-    namespace = "com.browsex.app"
+    namespace = "com.wren.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.browsex.app"
+        applicationId = "com.wren.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 3
@@ -97,7 +97,7 @@ android {
                 // Keep sideloaded CI/dev release APKs installable on real devices.
                 // This fallback is debug-signed and must not be uploaded to Play Store.
                 signingConfig = signingConfigs.getByName(if (stableDebugSigningConfigured) "stableDebug" else "debug")
-                logger.warn("Wren release APK is debug-signed for device testing; configure all BROWSEX_RELEASE_* secrets for a production signature.")
+                logger.warn("Wren release APK is debug-signed for device testing; configure all WREN_RELEASE_* secrets for a production signature.")
             }
         }
     }
