@@ -24,6 +24,14 @@ class DownloadFileNamePolicyTest {
         assertEquals("download", DownloadFileNamePolicy.sanitize(null))
     }
 
+    @Test fun truncatesWithoutSplittingSupplementaryUnicodeCharacters() {
+        val safeName = DownloadFileNamePolicy.sanitize("a".repeat(139) + "😀" + "b")
+
+        assertEquals(140, safeName.codePointCount(0, safeName.length))
+        assertEquals(141, safeName.length)
+        assertTrue(safeName.endsWith("😀"))
+    }
+
     @Test fun reservesUniqueDestinationWithoutOverwritingExistingFile() {
         val directory = java.nio.file.Files.createTempDirectory("browsex-download-").toFile()
         try {
