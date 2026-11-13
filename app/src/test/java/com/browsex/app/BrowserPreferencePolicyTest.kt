@@ -21,6 +21,17 @@ class BrowserPreferencePolicyTest {
     }
 
     @Test
+    fun exposesEverySupportedSearchEngineInStableOrder() {
+        assertEquals(
+            listOf("Google", "DuckDuckGo", "Bing", "Brave", "Ecosia", "Startpage", "Yahoo"),
+            BrowserPreferencePolicy.supportedSearchEngines()
+        )
+        BrowserPreferencePolicy.supportedSearchEngines().forEach { engine ->
+            assertEquals(engine, BrowserPreferencePolicy.normalizeSearchEngine(engine))
+        }
+    }
+
+    @Test
     fun fallsBackToSystemForInvalidLanguageTags() {
         assertEquals("system", BrowserPreferencePolicy.normalizeLanguageTag(null))
         assertEquals("system", BrowserPreferencePolicy.normalizeLanguageTag("system"))
