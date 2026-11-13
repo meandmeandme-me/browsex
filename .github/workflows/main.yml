@@ -122,7 +122,7 @@ jobs:
           for apk in "${APKS[@]}"; do
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
             BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk")"
-            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "package: name='com.wren.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
             unzip -Z1 "$apk" > "$RUNNER_TEMP/release-apk-files.txt"
             grep -q 'lib/.*libxul.so' "$RUNNER_TEMP/release-apk-files.txt"
@@ -182,7 +182,7 @@ jobs:
           for apk in "${APKS[@]}"; do
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
             BADGING="$("$AAPT" dump badging "$apk")"
-            grep -F "package: name='com.browsex.app'" <<< "$BADGING"
+            grep -F "package: name='com.wren.app'" <<< "$BADGING"
             grep -F "sdkVersion:'26'" <<< "$BADGING"
             unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-files.txt"
             grep -q 'lib/.*libxul.so' "$RUNNER_TEMP/apk-files.txt"
