@@ -40,6 +40,12 @@
     <string name="ui_downloads">Downloads</string>
     <string name="ui_share_page">Share page</string>
     <string name="ui_copy_page_address">Copy page address</string>
+    <string name="ui_find_text_on_page">Find text on this page</string>
+    <string name="ui_type_to_search">Type to search</string>
+    <string name="ui_searching_page">Searching page…</string>
+    <string name="ui_previous">Previous</string>
+    <string name="ui_page_address">Page address</string>
+    <string name="ui_address_copied">Address copied</string>
     <string name="ui_find_in_page">Find in page</string>
     <string name="ui_reader_mode">Reader mode</string>
     <string name="ui_site_information">Site information</string>
