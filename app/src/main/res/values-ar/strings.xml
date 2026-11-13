@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BrowseX</string>
+    <string name="app_name">Wren</string>
     <string name="website_notification_channel">إشعارات المواقع</string>
-    <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل BrowseX</string>
+    <string name="website_notification_channel_description">الإشعارات التي ترسلها المواقع التي تسمح لها داخل Wren</string>
     <string name="ui_home">الرئيسية</string>
     <string name="ui_open_tabs">فتح علامات التبويب</string>
     <string name="ui_search_suggestions">اقتراحات البحث</string>
@@ -45,7 +45,7 @@
     <string name="ui_site_information">معلومات الموقع</string>
     <string name="ui_search_engine">محرك البحث</string>
     <string name="ui_clear_browsing_history">مسح سجل التصفح؟</string>
-    <string name="ui_browsex">BrowseX</string>
+    <string name="ui_browsex">Wren</string>
     <string name="ui_open_webpage_first">افتح صفحة ويب أولًا</string>
     <string name="ui_open_a_webpage_first">افتح صفحة ويب أولًا</string>
     <string name="ui_preparing_a_clean_reading_view">جارٍ تجهيز وضع القراءة…</string>
@@ -95,7 +95,7 @@
     <string name="ui_shortcut_layout">تخطيط الاختصارات</string>
     <string name="ui_reset">إعادة ضبط</string>
     <string name="ui_site_permissions_reset">تمت إعادة ضبط أذونات الموقع</string>
-    <string name="ui_make_browse_x_work_the_way_you_like">خصّص تجربة BrowseX كما تحب</string>
+    <string name="ui_make_browse_x_work_the_way_you_like">خصّص تجربة Wren كما تحب</string>
     <string name="ui_close_settings">إغلاق الإعدادات</string>
     <string name="ui_general">عام</string>
     <string name="ui_choose_how_you_browse">اختر طريقة التصفح</string>
@@ -132,13 +132,13 @@
     <string name="ui_open_downloaded_files">فتح الملفات التي تم تنزيلها</string>
     <string name="ui_privacy_data">الخصوصية والبيانات</string>
     <string name="ui_review_and_clear_cookies_site_data_and_permissions">مراجعة ومسح ملفات الارتباط وبيانات المواقع والأذونات</string>
-    <string name="ui_remove_the_browsing_history_stored_by_browse_x">حذف سجل التصفح المحفوظ في BrowseX</string>
+    <string name="ui_remove_the_browsing_history_stored_by_browse_x">حذف سجل التصفح المحفوظ في Wren</string>
     <string name="ui_about">حول التطبيق</string>
-    <string name="ui_about_browse_x">حول BrowseX</string>
+    <string name="ui_about_browse_x">حول Wren</string>
     <string name="ui_a_calmer_way_to_explore_the_web">طريقة أكثر هدوءًا لاستكشاف الويب</string>
     <string name="ui_done">تم</string>
-    <string name="ui_browse_x_built_for_the_open_web">BrowseX · متصفح للويب المفتوح</string>
-    <string name="ui_your_browse_x_downloads">تنزيلات BrowseX</string>
+    <string name="ui_browse_x_built_for_the_open_web">Wren · متصفح للويب المفتوح</string>
+    <string name="ui_your_browse_x_downloads">تنزيلات Wren</string>
     <string name="ui_refresh_downloads">تحديث التنزيلات</string>
     <string name="ui_android_manages_transfers_some_post_downloads_or_protected_requests_may_not_resume_exactly_retry_and_pause_are_not_available_for_every_web_request">يتولى أندرويد إدارة التنزيل. قد لا تُستأنف بعض تنزيلات POST أو الطلبات المحمية بالطريقة نفسها، كما أن الإيقاف المؤقت والاستئناف غير متاحين لكل الطلبات.</string>
     <string name="ui_waiting">في الانتظار</string>
@@ -243,7 +243,7 @@
     <string name="ui_block">حظر</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">لا يدعم GeckoView إلغاء إذن التخزين الدائم بعد منحه.</string>
     <string name="ui_ok">حسنًا</string>
-    <string name="ui_browse_x_reader">BrowseX · وضع القراءة</string>
+    <string name="ui_browse_x_reader">Wren · وضع القراءة</string>
     <string name="ui_close_reader">إغلاق وضع القراءة</string>
     <string name="ui_article">مقال</string>
     <string name="ui_decrease_text_size">تصغير الخط</string>
@@ -254,11 +254,11 @@
     <string name="ui_replace_all_current_bookmarks_and_folders">استبدال جميع المفضلة والمجلدات الحالية؟</string>
     <string name="ui_import_preview_message">العناصر: %1$d\nالصالح: %2$d\nالمتجاهل: %3$d\nالمكرر في النسخة: %4$d\nالموجود مسبقًا: %5$d\nالمجلدات: %6$d</string>
     <string name="ui_tabs_title">علامات التبويب</string>
-    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">هذا يحذف سجل التصفح المحفوظ في BrowseX. لا يحذف الملفات التي تم تنزيلها أو المفضلة.</string>
-    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">يعمل BrowseX بمحرك Mozilla GeckoView. لا تزال بعض ميزات المتصفح قيد التطوير.</string>
-    <string name="ui_browsex_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">يحفظ BrowseX الاستجابة التي استلمها من الموقع مباشرة. قد تختلف حدود إعادة المحاولة والاستكمال في التنزيلات القديمة التي يديرها أندرويد.</string>
+    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">هذا يحذف سجل التصفح المحفوظ في Wren. لا يحذف الملفات التي تم تنزيلها أو المفضلة.</string>
+    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">يعمل Wren بمحرك Mozilla GeckoView. لا تزال بعض ميزات المتصفح قيد التطوير.</string>
+    <string name="ui_browsex_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">يحفظ Wren الاستجابة التي استلمها من الموقع مباشرة. قد تختلف حدود إعادة المحاولة والاستكمال في التنزيلات القديمة التي يديرها أندرويد.</string>
     <string name="ui_remove_download_record">حذف سجل التنزيل</string>
-    <string name="ui_remove_this_download_from_browsex_the_saved_file_will_remain_on_your_device">إزالة هذا التنزيل من BrowseX؟ سيبقى الملف محفوظًا على جهازك.</string>
+    <string name="ui_remove_this_download_from_browsex_the_saved_file_will_remain_on_your_device">إزالة هذا التنزيل من Wren؟ سيبقى الملف محفوظًا على جهازك.</string>
     <string name="ui_ublock_origin">uBlock Origin</string>
     <string name="ui_ublock_origin_controls">عناصر التحكم في uBlock Origin</string>
     <string name="ui_install_and_manage_real_ad_and_tracker_blocking">تثبيت وإدارة حجب الإعلانات والمتتبعات الفعلي</string>
@@ -285,9 +285,9 @@
     <string name="ui_could_not_uninstall_ublock_origin">تعذرت إزالة uBlock Origin</string>
     <string name="ui_ublock_origin_removed">تمت إزالة uBlock Origin</string>
     <string name="ui_password_autofill">التعبئة التلقائية لكلمات المرور</string>
-    <string name="ui_use_browsex_to_fill_saved_passwords_in_supported_android_apps">استخدم BrowseX لتعبئة كلمات المرور المحفوظة في تطبيقات أندرويد المدعومة</string>
-    <string name="autofill_service_description">يعبّئ BrowseX كلمات مرور مواقع HTTPS المحفوظة بعد التحقق من هوية الجهاز. حفظ كلمات المرور من التطبيقات الأخرى غير مفعّل.</string>
-    <string name="ui_unlock_browsex_passwords">فتح كلمات المرور في BrowseX</string>
+    <string name="ui_use_browsex_to_fill_saved_passwords_in_supported_android_apps">استخدم Wren لتعبئة كلمات المرور المحفوظة في تطبيقات أندرويد المدعومة</string>
+    <string name="autofill_service_description">يعبّئ Wren كلمات مرور مواقع HTTPS المحفوظة بعد التحقق من هوية الجهاز. حفظ كلمات المرور من التطبيقات الأخرى غير مفعّل.</string>
+    <string name="ui_unlock_browsex_passwords">فتح كلمات المرور في Wren</string>
     <string name="ui_save_this_website_sign_in">هل تريد حفظ بيانات تسجيل الدخول لهذا الموقع؟</string>
     <string name="ui_verify_your_identity_before_filling_a_saved_sign_in">تحقق من هويتك قبل تعبئة بيانات تسجيل الدخول المحفوظة</string>
     <string name="ui_choose_a_saved_sign_in">اختر بيانات تسجيل دخول محفوظة</string>
@@ -332,10 +332,10 @@
     <string name="ui_share_downloaded_file">مشاركة الملف الذي تم تنزيله</string>
     <string name="ui_share_download">مشاركة التنزيل</string>
     <string name="ui_no_app_can_share_this_file">لا يوجد تطبيق لمشاركة هذا الملف</string>
-    <string name="ui_remove_this_download_record_from_browsex">إزالة سجل هذا التنزيل من BrowseX؟</string>
+    <string name="ui_remove_this_download_record_from_browsex">إزالة سجل هذا التنزيل من Wren؟</string>
     <string name="ui_delete_this_downloaded_file_from_your_device_and_remove_its_record">حذف الملف المنزّل من جهازك وإزالة سجله؟</string>
     <string name="ui_delete_file">حذف الملف</string>
-    <string name="ui_browsex_could_not_verify_ownership_or_delete_this_file_the_record_was_kept">تعذر على BrowseX التحقق من ملكية الملف أو حذفه. تم الاحتفاظ بالسجل.</string>
+    <string name="ui_browsex_could_not_verify_ownership_or_delete_this_file_the_record_was_kept">تعذر على Wren التحقق من ملكية الملف أو حذفه. تم الاحتفاظ بالسجل.</string>
     <string name="ui_android_could_not_cancel_this_download_it_is_still_listed_so_you_can_try_again">تعذر على أندرويد إلغاء هذا التنزيل. لا يزال ظاهرًا لتتمكن من المحاولة مجددًا.</string>
     <string name="ui_delete_downloaded_file">حذف الملف المنزّل</string>
     <string name="ui_delete_this_downloaded_file_from_your_device">حذف هذا الملف المنزّل من جهازك؟</string>
@@ -354,8 +354,8 @@
     <string name="ui_this_bookmark_is_already_at_the_edge_of_its_folder">هذه المفضلة في آخر موضع متاح داخل المجلد.</string>
     <string name="ui_settings_are_temporarily_unavailable">الإعدادات غير متاحة مؤقتًا</string>
     <string name="ui_private_browsing_does_not_read_or_save_site_permission_choices">التصفح الخاص لا يقرأ اختيارات أذونات المواقع ولا يحفظها.</string>
-    <string name="ui_no_BrowseX_downloads_yet_files_you_download_from_websites_will_appear_here">لا توجد تنزيلات في BrowseX بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.</string>
-    <string name="ui_BrowseX_browser">متصفح BrowseX</string>
+    <string name="ui_no_BrowseX_downloads_yet_files_you_download_from_websites_will_appear_here">لا توجد تنزيلات في Wren بعد. ستظهر هنا الملفات التي تنزّلها من المواقع.</string>
+    <string name="ui_BrowseX_browser">متصفح Wren</string>
     <string name="ui_reload_page">إعادة تحميل الصفحة</string>
     <string name="ui_address_bar_position">موضع شريط العنوان</string>
     <string name="ui_choose_top_or_bottom_on_compact_screens">اختر موضع الشريط أعلى أو أسفل الشاشة الصغيرة</string>
