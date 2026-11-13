@@ -28,7 +28,7 @@ internal class BrowserPageActionsCoordinator(
     private val dp: (Int) -> Int
 ) {
     fun chooseSearchEngine() {
-        val choices = arrayOf("Google", "DuckDuckGo", "Bing", "Brave", "Ecosia", "Startpage", "Yahoo")
+        val choices = BrowserPreferencePolicy.supportedSearchEngines().toTypedArray()
         AlertDialog.Builder(activity).setTitle(activity.getString(R.string.ui_default_search_engine))
             .setSingleChoiceItems(choices, choices.indexOf(currentSearchEngine()).coerceAtLeast(0)) { dialog, which ->
                 updateSearchEngine(choices[which])
