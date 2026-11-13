@@ -92,8 +92,10 @@ internal class BrowserPageActionsCoordinator(
                 session.getFinder().find(null, GeckoSession.FINDER_FIND_BACKWARDS)
             }
         }
+        // Clear highlighted matches for every dismissal path (button, back, or outside tap).
+        dialog.setOnDismissListener { session.getFinder().clear() }
         dialog.show()
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         field.requestFocus()
     }
 
