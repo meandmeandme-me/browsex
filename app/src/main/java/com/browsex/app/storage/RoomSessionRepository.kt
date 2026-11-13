@@ -1,10 +1,11 @@
 package com.browsex.app.storage
 
+import com.browsex.app.BrowserTabPersistencePolicy
 import com.browsex.app.NavigationInput
 import com.browsex.app.TabSessionState
 import java.util.UUID
 
-/** Room-backed named-session and recently-closed-tab lifecycle. Callers must pass regular tabs only. */
+/** Room-backed session lifecycle; private-tab metadata is enforced before durable session writes. */
 internal class RoomSessionRepository(
     private val dao: BrowseXStorageDao
 ) {
@@ -30,12 +31,15 @@ internal class RoomSessionRepository(
     suspend fun saveSession(
         rawName: String,
         urls: List<String>,
+        privateFlags: List<Boolean>,
         activeIndex: Int,
         savedAt: Long = System.currentTimeMillis()
     ): Boolean {
         val name = normalizeDisplayText(rawName, MAX_SESSION_NAME)
-        if (name.isBlank() || urls.isEmpty() || savedAt < 0L) return false
-        val snapshot = TabSessionState.normalize(urls, activeIndex, HOME_URL)
+        if (name.isBlank() || urls.isEmpty() || urls.size != privateFlags.size || savedAt < 0L) return false
+        val snapshot = BrowserTabPersistencePolicy.regularSnapshot(
+            urls, privateFlags, activeIndex, HOME_URL
+        ) ?: return false
         val session = SavedSessionEntity(
             id = "session_${UUID.randomUUID()}",
             name = name,
