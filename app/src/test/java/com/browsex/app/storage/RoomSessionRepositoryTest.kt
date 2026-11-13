@@ -22,10 +22,11 @@ class RoomSessionRepositoryTest {
         ).allowMainThreadQueries().build()
         try {
             val repository = RoomSessionRepository(database.storageDao())
-            assertFalse(repository.saveSession("   ", listOf("https://safe.example"), 0))
+            assertFalse(repository.saveSession("   ", listOf("https://safe.example"), listOf(false), 0))
             assertTrue(repository.saveSession(
                 "Research",
                 listOf("https://one.example", "file:///private", "https://two.example"),
+                listOf(false, false, false),
                 1,
                 10L
             ))
@@ -33,13 +34,46 @@ class RoomSessionRepositoryTest {
             assertEquals(listOf("https://one.example", "https://two.example"), first.urls)
             assertEquals(1, first.activeIndex)
 
-            assertTrue(repository.saveSession(" research ", listOf("https://replacement.example"), 0, 20L))
+            assertTrue(repository.saveSession(" research ", listOf("https://replacement.example"), listOf(false), 0, 20L))
             val updated = repository.sessions().single()
             assertEquals(first.id, updated.id)
             assertEquals(listOf("https://replacement.example"), updated.urls)
             assertEquals(20L, updated.savedAt)
             assertTrue(repository.deleteSession(updated.id))
             assertTrue(repository.sessions().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun namedSessionsExcludePrivateTabsAtTheStorageBoundary() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomSessionRepository(database.storageDao())
+            assertTrue(repository.saveSession(
+                "Mixed",
+                listOf("https://one.example", "https://private.example", "https://two.example"),
+                listOf(false, true, false),
+                2,
+                30L
+            ))
+
+            val saved = repository.sessions().single()
+            assertEquals(listOf("https://one.example", "https://two.example"), saved.urls)
+            assertEquals(1, saved.activeIndex)
+
+            assertFalse(repository.saveSession(
+                "Private only",
+                listOf("https://private-only.example"),
+                listOf(true),
+                0,
+                31L
+            ))
+            assertEquals(listOf("Mixed"), repository.sessions().map { it.name })
+            assertEquals(2, database.storageDao().sessionTabCount())
         } finally {
             database.close()
         }
@@ -53,10 +87,10 @@ class RoomSessionRepositoryTest {
         try {
             val repository = RoomSessionRepository(database.storageDao())
             assertTrue(repository.saveSession(
-                "First", listOf("https://one.example", "https://two.example"), 1, 1L
+                "First", listOf("https://one.example", "https://two.example"), listOf(false, false), 1, 1L
             ))
             assertTrue(repository.saveSession(
-                "Second", listOf("https://three.example"), 0, 2L
+                "Second", listOf("https://three.example"), listOf(false), 0, 2L
             ))
             assertEquals(2, repository.sessions().size)
             assertEquals(3, database.storageDao().sessionTabCount())
@@ -78,7 +112,7 @@ class RoomSessionRepositoryTest {
         try {
             val repository = RoomSessionRepository(database.storageDao())
             assertTrue(repository.saveSession(
-                "Research", listOf("https://original.example"), 0, 1L
+                "Research", listOf("https://original.example"), listOf(false), 0, 1L
             ))
 
             val importedName = repository.importSession(
@@ -103,7 +137,7 @@ class RoomSessionRepositoryTest {
         try {
             val repository = RoomSessionRepository(database.storageDao())
             repeat(10) { index ->
-                assertTrue(repository.saveSession("Session $index", listOf("https://$index.example"), 0, index.toLong()))
+                assertTrue(repository.saveSession("Session $index", listOf("https://$index.example"), listOf(false), 0, index.toLong()))
             }
 
             assertNull(repository.importSession("Session 0", listOf("https://replacement.example"), 0))
@@ -125,9 +159,9 @@ class RoomSessionRepositoryTest {
         try {
             val repository = RoomSessionRepository(database.storageDao())
             repeat(10) { index ->
-                assertTrue(repository.saveSession("Session $index", listOf("https://$index.example"), 0, index.toLong()))
+                assertTrue(repository.saveSession("Session $index", listOf("https://$index.example"), listOf(false), 0, index.toLong()))
             }
-            assertFalse(repository.saveSession("Session 11", listOf("https://eleven.example"), 0))
+            assertFalse(repository.saveSession("Session 11", listOf("https://eleven.example"), listOf(false), 0))
             assertEquals(10, repository.sessions().size)
         } finally {
             database.close()
