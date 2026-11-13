@@ -132,13 +132,13 @@
     <string name="ui_open_downloaded_files">Open downloaded files</string>
     <string name="ui_privacy_data">Privacy &amp; data</string>
     <string name="ui_review_and_clear_cookies_site_data_and_permissions">Review and clear cookies, site data and permissions</string>
-    <string name="ui_remove_the_browsing_history_stored_by_browse_x">Remove the browsing history stored by Browse X</string>
+    <string name="ui_remove_the_browsing_history_stored_by_browse_x">Remove the browsing history stored by Wren</string>
     <string name="ui_about">About</string>
-    <string name="ui_about_browse_x">About Browse X</string>
+    <string name="ui_about_browse_x">About Wren</string>
     <string name="ui_a_calmer_way_to_explore_the_web">A calmer way to explore the web</string>
     <string name="ui_done">Done</string>
-    <string name="ui_browse_x_built_for_the_open_web">Browse X  ·  Built for the open web</string>
-    <string name="ui_your_browse_x_downloads">Your Browse X downloads</string>
+    <string name="ui_browse_x_built_for_the_open_web">Wren  ·  Built for the open web</string>
+    <string name="ui_your_browse_x_downloads">Your Wren downloads</string>
     <string name="ui_refresh_downloads">Refresh downloads</string>
     <string name="ui_android_manages_transfers_some_post_downloads_or_protected_requests_may_not_resume_exactly_retry_and_pause_are_not_available_for_every_web_request">Android manages transfers. Some POST downloads or protected requests may not resume exactly; retry and pause are not available for every web request.</string>
     <string name="ui_waiting">Waiting</string>
@@ -243,7 +243,7 @@
     <string name="ui_block">Block</string>
     <string name="ui_geckoview_does_not_support_revoking_this_persistent_storage_grant">GeckoView does not support revoking this persistent-storage grant.</string>
     <string name="ui_ok">OK</string>
-    <string name="ui_browse_x_reader">BROWSE X  ·  READER</string>
+    <string name="ui_browse_x_reader">Wren  ·  READER</string>
     <string name="ui_close_reader">Close reader</string>
     <string name="ui_article">Article</string>
     <string name="ui_decrease_text_size">Decrease text size</string>
@@ -254,8 +254,8 @@
     <string name="ui_replace_all_current_bookmarks_and_folders">Replace all current bookmarks and folders?</string>
     <string name="ui_import_preview_message">Items: %1$d\nValid: %2$d\nSkipped: %3$d\nDuplicates in backup: %4$d\nAlready saved here: %5$d\nFolders: %6$d</string>
     <string name="ui_tabs_title">Tabs</string>
-    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">This removes the history list saved by Browse X. It does not delete downloaded files or bookmarks.</string>
-    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">Browse X is powered by Mozilla GeckoView. Some browser features are still being built.</string>
+    <string name="ui_this_removes_the_history_list_saved_by_browse_x_it_does_not_delete_downloaded_files_or_bookmarks">This removes the history list saved by Wren. It does not delete downloaded files or bookmarks.</string>
+    <string name="ui_browse_x_is_powered_by_mozilla_geckoview_some_browser_features_are_still_being_built">Wren is powered by Mozilla GeckoView. Some browser features are still being built.</string>
     <string name="ui_browsex_saves_the_response_received_from_the_website_directly_older_android_managed_downloads_may_have_different_retry_and_resume_limits">Wren saves the response received from the website directly. Older Android-managed downloads may have different retry and resume limits.</string>
     <string name="ui_remove_download_record">Remove download record</string>
     <string name="ui_remove_this_download_from_browsex_the_saved_file_will_remain_on_your_device">Remove this download from Wren? The saved file will remain on your device.</string>
