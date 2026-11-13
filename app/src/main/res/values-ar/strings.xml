@@ -40,6 +40,12 @@
     <string name="ui_downloads">التنزيلات</string>
     <string name="ui_share_page">مشاركة الصفحة</string>
     <string name="ui_copy_page_address">نسخ عنوان الصفحة</string>
+    <string name="ui_find_text_on_page">ابحث عن نص في هذه الصفحة</string>
+    <string name="ui_type_to_search">اكتب للبحث</string>
+    <string name="ui_searching_page">جارٍ البحث في الصفحة…</string>
+    <string name="ui_previous">السابق</string>
+    <string name="ui_page_address">عنوان الصفحة</string>
+    <string name="ui_address_copied">تم نسخ العنوان</string>
     <string name="ui_find_in_page">بحث في الصفحة</string>
     <string name="ui_reader_mode">وضع القراءة</string>
     <string name="ui_site_information">معلومات الموقع</string>
