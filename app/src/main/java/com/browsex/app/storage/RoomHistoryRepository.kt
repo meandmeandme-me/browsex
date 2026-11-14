@@ -13,11 +13,11 @@ internal class RoomHistoryRepository(
     suspend fun recordVisit(
         url: String,
         title: String,
-        visitedAt: Long = System.currentTimeMillis(),
-        privateMode: Boolean = false
+        privateMode: Boolean,
+        visitedAt: Long = System.currentTimeMillis()
     ): Boolean {
-        // Do not rely only on the UI/event coordinator: every persistence caller must
-        // explicitly carry the tab's privacy state to this final storage boundary.
+        // Privacy state is required (no fail-open default) and checked before any URL
+        // normalization or database access, even if a caller bypasses the event coordinator.
         if (privateMode) return false
 
         val normalizedUrl = url.trim()
