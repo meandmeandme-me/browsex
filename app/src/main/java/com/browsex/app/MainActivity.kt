@@ -85,13 +85,16 @@ class MainActivity : AppCompatActivity() {
             isActiveTab = { tab -> tab === activeTab },
             updateChrome = ::updateChrome,
             recordHistory = { url, title, privateMode ->
-                lifecycleScope.launch {
-                    runCatching {
-                        storageRuntime.awaitReady().history.recordVisit(url, title, privateMode = privateMode)
-                    }
-                        .onFailure { error ->
+                if (!privateMode) {
+                    lifecycleScope.launch {
+                        runCatching {
+                            storageRuntime.awaitReady().history.recordVisit(
+                                url, title, privateMode = privateMode
+                            )
+                        }.onFailure { error ->
                             android.util.Log.e("BrowseX", "Could not persist browsing history", error)
                         }
+                    }
                 }
             },
             openPopupTab = { parent -> tabController.onNewSession(parent) },
