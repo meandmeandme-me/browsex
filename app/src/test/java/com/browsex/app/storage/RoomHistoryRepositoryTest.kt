@@ -37,6 +37,33 @@ class RoomHistoryRepositoryTest {
     }
 
     @Test
+    fun privateVisitsAreRejectedWithoutChangingExistingHistory() = runBlocking {
+        val database = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
+        ).allowMainThreadQueries().build()
+        try {
+            val repository = RoomHistoryRepository(database.storageDao())
+            assertTrue(repository.recordVisit("https://same.example", "Regular visit", 10L))
+            assertFalse(
+                repository.recordVisit(
+                    "https://same.example",
+                    "Private visit",
+                    20L,
+                    privateMode = true
+                )
+            )
+
+            val entries = repository.recent()
+            assertEquals(1, entries.size)
+            assertEquals("Regular visit", entries.single().title)
+            assertEquals(10L, entries.single().visitedAt)
+            assertEquals(1, entries.single().visitCount)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
     fun historyIsBoundedToThreeHundredAndSupportsRemovalAndClear() = runBlocking {
         val database = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(), BrowseXDatabase::class.java
