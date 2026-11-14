@@ -3,14 +3,23 @@ package com.browsex.app.storage
 import com.browsex.app.NavigationInput
 import java.util.UUID
 
-/** Local history persistence. The caller must exclude private browsing visits. */
+/** Local history persistence; private browsing visits are rejected at this boundary. */
 internal class RoomHistoryRepository(
     private val dao: BrowseXStorageDao
 ) {
     suspend fun recent(limit: Int = MAX_HISTORY): List<HistoryEntryEntity> =
         dao.history(limit.coerceIn(0, MAX_HISTORY))
 
-    suspend fun recordVisit(url: String, title: String, visitedAt: Long = System.currentTimeMillis()): Boolean {
+    suspend fun recordVisit(
+        url: String,
+        title: String,
+        visitedAt: Long = System.currentTimeMillis(),
+        privateMode: Boolean = false
+    ): Boolean {
+        // Do not rely only on the UI/event coordinator: every persistence caller must
+        // explicitly carry the tab's privacy state to this final storage boundary.
+        if (privateMode) return false
+
         val normalizedUrl = url.trim()
         if (normalizedUrl.length > MAX_URL_LENGTH ||
             !NavigationInput.isValidWebUrl(normalizedUrl) || visitedAt < 0L
