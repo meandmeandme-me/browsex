@@ -17,6 +17,22 @@ class BrowserNotificationIdentityPolicyTest {
     }
 
     @Test
+    fun whitespaceOnlyWebTagsAreNonEmptyAndReplaceWithinTheSameOrigin() {
+        val first = BrowserNotificationIdentityPolicy.androidTag(
+            "https://example.com", " ", "first-id"
+        )
+        val second = BrowserNotificationIdentityPolicy.androidTag(
+            "https://example.com", " ", "second-id"
+        )
+        val untagged = BrowserNotificationIdentityPolicy.androidTag(
+            "https://example.com", "", "unique-id"
+        )
+
+        assertEquals(first, second)
+        assertNotEquals(first, untagged)
+    }
+
+    @Test
     fun differentOriginsDoNotShareNotificationIdentity() {
         val first = BrowserNotificationIdentityPolicy.androidTag(
             "https://one.example", "updates", "same-id"
