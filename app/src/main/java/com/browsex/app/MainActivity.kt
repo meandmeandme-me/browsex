@@ -84,9 +84,11 @@ class MainActivity : AppCompatActivity() {
         BrowserTabEventCoordinator(
             isActiveTab = { tab -> tab === activeTab },
             updateChrome = ::updateChrome,
-            recordHistory = { url, title ->
+            recordHistory = { url, title, privateMode ->
                 lifecycleScope.launch {
-                    runCatching { storageRuntime.awaitReady().history.recordVisit(url, title) }
+                    runCatching {
+                        storageRuntime.awaitReady().history.recordVisit(url, title, privateMode = privateMode)
+                    }
                         .onFailure { error ->
                             android.util.Log.e("BrowseX", "Could not persist browsing history", error)
                         }
