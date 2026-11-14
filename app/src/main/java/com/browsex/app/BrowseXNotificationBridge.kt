@@ -40,6 +40,11 @@ internal class BrowseXNotificationBridge(
                 notification.dismiss()
                 return@post
             }
+            // Reject private notifications before they can touch the shared normal-tab identity map.
+            if (notification.privateBrowsing) {
+                notification.dismiss()
+                return@post
+            }
             val tag = notificationTag(notification)
             val previous = currentNotificationsByTag.put(tag, notification)
             if (previous != null && previous !== notification) {
