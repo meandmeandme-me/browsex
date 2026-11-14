@@ -21,10 +21,18 @@ class RoomHistoryRepositoryTest {
         ).allowMainThreadQueries().build()
         try {
             val repository = RoomHistoryRepository(database.storageDao())
-            assertFalse(repository.recordVisit("javascript:alert(1)", "Unsafe", 1L))
-            assertTrue(repository.recordVisit("https://example.test", "First", 10L))
-            assertTrue(repository.recordVisit("https://other.test", "Other", 20L))
-            assertTrue(repository.recordVisit("https://example.test", "Updated", 30L))
+            assertFalse(
+                repository.recordVisit("javascript:alert(1)", "Unsafe", privateMode = false, visitedAt = 1L)
+            )
+            assertTrue(
+                repository.recordVisit("https://example.test", "First", privateMode = false, visitedAt = 10L)
+            )
+            assertTrue(
+                repository.recordVisit("https://other.test", "Other", privateMode = false, visitedAt = 20L)
+            )
+            assertTrue(
+                repository.recordVisit("https://example.test", "Updated", privateMode = false, visitedAt = 30L)
+            )
             val entries = repository.recent()
             assertEquals(2, entries.size)
             assertEquals("https://example.test", entries.first().url)
@@ -43,13 +51,15 @@ class RoomHistoryRepositoryTest {
         ).allowMainThreadQueries().build()
         try {
             val repository = RoomHistoryRepository(database.storageDao())
-            assertTrue(repository.recordVisit("https://same.example", "Regular visit", 10L))
+            assertTrue(
+                repository.recordVisit("https://same.example", "Regular visit", privateMode = false, visitedAt = 10L)
+            )
             assertFalse(
                 repository.recordVisit(
                     "https://same.example",
                     "Private visit",
-                    20L,
-                    privateMode = true
+                    privateMode = true,
+                    visitedAt = 20L
                 )
             )
 
@@ -71,7 +81,14 @@ class RoomHistoryRepositoryTest {
         try {
             val repository = RoomHistoryRepository(database.storageDao())
             repeat(305) { index ->
-                assertTrue(repository.recordVisit("https://page-$index.example", "Page $index", index.toLong()))
+                assertTrue(
+                    repository.recordVisit(
+                        "https://page-$index.example",
+                        "Page $index",
+                        privateMode = false,
+                        visitedAt = index.toLong()
+                    )
+                )
             }
             assertEquals(300, repository.recent().size)
             assertEquals("https://page-304.example", repository.recent().first().url)
