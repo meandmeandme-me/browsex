@@ -28,12 +28,12 @@ internal class BrowserPageActionsCoordinator(
     private val dp: (Int) -> Int
 ) {
     fun chooseSearchEngine() {
-        val choices = arrayOf("Google", "DuckDuckGo", "Bing")
-        AlertDialog.Builder(activity).setTitle("Default search engine")
+        val choices = BrowserPreferencePolicy.supportedSearchEngines().toTypedArray()
+        AlertDialog.Builder(activity).setTitle(activity.getString(R.string.ui_default_search_engine))
             .setSingleChoiceItems(choices, choices.indexOf(currentSearchEngine()).coerceAtLeast(0)) { dialog, which ->
                 updateSearchEngine(choices[which])
                 dialog.dismiss()
-            }.setNegativeButton("Cancel", null).show()
+            }.setNegativeButton(activity.getString(R.string.ui_cancel), null).show()
     }
 
     fun shareCurrentPage() {
@@ -42,19 +42,20 @@ internal class BrowserPageActionsCoordinator(
         activity.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
-        }, "Share page"))
+        }, activity.getString(R.string.ui_share_page)))
     }
 
     /** Uses GeckoView's native finder so matches are highlighted in page content. */
     fun findInPage() {
         val session = activeSession() ?: return
         val field = EditText(activity).apply {
-            hint = "Find text on this page"
+            hint = activity.getString(R.string.ui_find_text_on_page)
+            contentDescription = activity.getString(R.string.ui_find_text_on_page)
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT
         }
         val count = TextView(activity).apply {
-            text = "Type to search"
+            text = activity.getString(R.string.ui_type_to_search)
             setTextColor(mutedColor())
             setPadding(dp(4), dp(8), dp(4), dp(4))
         }
@@ -64,10 +65,10 @@ internal class BrowserPageActionsCoordinator(
             addView(field)
             addView(count)
         }
-        val dialog = AlertDialog.Builder(activity).setTitle("Find in page").setView(panel)
-            .setNegativeButton("Close") { _, _ -> session.getFinder().clear() }
-            .setNeutralButton("Next", null)
-            .setPositiveButton("Previous", null)
+        val dialog = AlertDialog.Builder(activity).setTitle(activity.getString(R.string.ui_find_in_page)).setView(panel)
+            .setNegativeButton(activity.getString(R.string.ui_close)) { _, _ -> session.getFinder().clear() }
+            .setNeutralButton(activity.getString(R.string.ui_next), null)
+            .setPositiveButton(activity.getString(R.string.ui_previous), null)
             .create()
         field.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, countBefore: Int, after: Int) = Unit
@@ -75,10 +76,10 @@ internal class BrowserPageActionsCoordinator(
                 val query = s?.toString().orEmpty()
                 if (query.isBlank()) {
                     session.getFinder().clear()
-                    count.text = "Type to search"
+                    count.text = activity.getString(R.string.ui_type_to_search)
                 } else {
                     session.getFinder().find(query, GeckoSession.FINDER_FIND_FORWARD)
-                    count.text = "Searching page…"
+                    count.text = activity.getString(R.string.ui_searching_page)
                 }
             }
             override fun afterTextChanged(s: android.text.Editable?) = Unit
@@ -91,8 +92,10 @@ internal class BrowserPageActionsCoordinator(
                 session.getFinder().find(null, GeckoSession.FINDER_FIND_BACKWARDS)
             }
         }
+        // Clear highlighted matches for every dismissal path (button, back, or outside tap).
+        dialog.setOnDismissListener { session.getFinder().clear() }
         dialog.show()
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         field.requestFocus()
     }
 
@@ -100,7 +103,7 @@ internal class BrowserPageActionsCoordinator(
         val url = activeUrl().orEmpty()
         if (!url.startsWith("http")) return
         val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Page address", url))
-        showMessage("Address copied")
+        clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.ui_page_address), url))
+        showMessage(activity.getString(R.string.ui_address_copied))
     }
 }

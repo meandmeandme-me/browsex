@@ -42,7 +42,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.browsex.app"
+        // Installed Android identity is Wren; keep the Kotlin namespace stable during this source-package transition.
+        applicationId = "com.wren.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 3
