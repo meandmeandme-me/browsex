@@ -13,7 +13,7 @@ import org.mozilla.geckoview.WebResponse
 internal class BrowserTabEventCoordinator(
     private val isActiveTab: (BrowserTab) -> Boolean,
     private val updateChrome: () -> Unit,
-    private val recordHistory: (String, String) -> Unit,
+    private val recordHistory: (String, String, Boolean) -> Unit,
     private val openPopupTab: (BrowserTab) -> GeckoResult<GeckoSession>?,
     private val setFullscreen: (Boolean) -> Unit,
     private val closeTab: (BrowserTab) -> Unit,
@@ -33,11 +33,11 @@ internal class BrowserTabEventCoordinator(
     override fun onPageStop(tab: BrowserTab, success: Boolean) {
         tab.progress = 100
         if (success) {
-            if (!tab.privateMode) {
-                val historyTitle = tab.title.takeIf { it.isNotBlank() && it != "New tab" }
-                    ?: android.net.Uri.parse(tab.url).host.orEmpty()
-                recordHistory(tab.url, historyTitle)
-            }
+            val historyTitle = tab.title.takeIf { it.isNotBlank() && it != "New tab" }
+                ?: android.net.Uri.parse(tab.url).host.orEmpty()
+            // Carry the privacy state to the persistence boundary. The repository must
+            // enforce this too, so a future caller cannot accidentally persist private visits.
+            recordHistory(tab.url, historyTitle, tab.privateMode)
             tab.recoveryAttempts = 0
             tab.crashed = false
         }
